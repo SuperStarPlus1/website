@@ -11,23 +11,41 @@
             --brand-blue: #0076DA;
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
-            --sidebar-width: 200px;
+            --sidebar-width: 220px; /* הגדלתי מעט את רוחב הסיידבר בשביל הלוגו */
             --header-height: 150px;
         }
 
         html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
 
-        /* --- סיידבר --- */
+        /* --- סיידבר קבוע (Fixed) --- */
         .sidebar { 
-            width: var(--sidebar-width); background: var(--brand-blue); color: white; 
-            height: 100vh; position: sticky; top: 0; padding: 10px; 
-            box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; 
+            width: var(--sidebar-width); 
+            background: var(--brand-blue); 
+            color: white; 
+            height: 100vh; 
+            position: fixed; /* שינוי ל-fixed כדי שיישאר קבוע בגלילה */
+            top: 0; 
+            right: 0; 
+            padding: 15px; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
             z-index: 1200; 
         }
-        .sidebar-logo { width: 100%; max-width: 110px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+
+        /* הגדלת הלוגו */
+        .sidebar-logo { 
+            width: 100%; 
+            max-width: 180px; /* הגדלתי מ-110px */
+            margin-bottom: 20px; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid rgba(255,255,255,0.2); 
+        }
+
         .nav-menu { list-style: none; padding: 0; width: 100%; flex-grow: 1; }
-        .nav-menu li { padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 5px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .nav-menu li { padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 5px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
         .nav-menu li:hover { background: rgba(255,255,255,0.1); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); font-weight: bold; }
         
@@ -46,8 +64,14 @@
         }
         .header-fixed img { height: 100%; width: 100%; object-fit: contain; }
 
-        /* --- תוכן ראשי --- */
-        .main-content { flex-grow: 1; margin-top: var(--header-height); display: flex; flex-direction: column; max-width: calc(100vw - var(--sidebar-width)); }
+        /* --- תוכן ראשי (הוספת margin-right בגלל ה-fixed sidebar) --- */
+        .main-content { 
+            flex-grow: 1; 
+            margin-top: var(--header-height); 
+            margin-right: var(--sidebar-width); /* פיצוי על הסיידבר הקבוע */
+            display: flex; 
+            flex-direction: column; 
+        }
         .page-section { display: none; padding: 25px; box-sizing: border-box; }
         .page-section.active { display: block; }
         .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
@@ -88,7 +112,7 @@
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: sticky; top: 0; z-index: 1300; }
             .header-fixed { right: 0; height: 100px; position: relative; }
-            .main-content { margin-top: 0; max-width: 100vw; }
+            .main-content { margin-top: 0; margin-right: 0; max-width: 100vw; }
             .hero-video { max-height: 250px; }
             .contact-info-container { grid-template-columns: 1fr; }
             .nav-menu { display: flex; overflow-x: auto; white-space: nowrap; }
@@ -107,6 +131,8 @@
         <li onclick="showPage('catalog-page', this)">🛒 קטלוג</li>
         <li onclick="showPage('promos-page', this)">🏷️ מבצעים</li>
         <li onclick="showPage('new-products-page', this)">🆕 חדש על המדף</li>
+        <li onclick="showPage('about-page', this)">📖 אודות</li>
+        <li onclick="showPage('career-page', this)">💼 קריירה</li>
         <li onclick="showPage('directions-page', this)">📞 צור קשר</li>
     </ul>
     <div class="sidebar-actions">
@@ -149,13 +175,28 @@
         <div id="main-catalog-grid" class="grid"></div>
     </div>
 
+    <div id="about-page" class="page-section">
+        <div class="section-title">אודות סופר סטאר</div>
+        <div class="info-card">
+            <p>ברוכים הבאים לסופר סטאר פלוס במג'ד אל-כרום. אצלנו תמצאו חוויית קנייה אחרת עם דגש על טריות, שירות ומחירים ללא תחרות.</p>
+        </div>
+    </div>
+
+    <div id="career-page" class="page-section">
+        <div class="section-title">קריירה אצלנו</div>
+        <div class="info-card">
+            <p>רוצים להצטרף למשפחת סופר סטאר? אנחנו תמיד מחפשים אנשים חרוצים עם חיוך.</p>
+            <p>צרו איתנו קשר בטלפון או שלחו הודעה בוואטסאפ לפרטים נוספים.</p>
+        </div>
+    </div>
+
     <div id="promos-page" class="page-section"><div class="section-title">כל המבצעים</div><div id="full-promo-grid" class="grid"></div></div>
     <div id="new-products-page" class="page-section"><div class="section-title">חדש על המדף</div><div id="full-new-grid" class="grid"></div></div>
     
     <div id="directions-page" class="page-section">
         <div class="section-title">צור קשר ודרכי הגעה</div>
         <div style="width:100%; height:350px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue); margin-bottom: 20px;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.644783321485!2d35.215589!3d32.923831!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c319455555555%3A0x76b8a1c976932a9e!2zU3VwZXIgU3RhciBQbHVzINiz2YjYqNixINiz2KrYp9ixINio2YTYsw!5e0!3m2!1siw!2sil!4v1700000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.5!2d35.21!3d32.92!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzI0LjAiTiAzNcKwMTInMzYuMCJF!5e0!3m2!1she!2sil!4v16200000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
         <div class="contact-info-container">
             <div class="info-card">
@@ -169,10 +210,7 @@
                 <ul class="opening-hours">
                     <span class="dept-title">🛒 סופרמרקט (כללי)</span>
                     <li><span>כל ימות השבוע</span> <span>08:00 - 22:00</span></li>
-                    <span class="dept-title">🥩 מחלקת בשר</span>
-                    <li><span>כל ימות השבוע</span> <span>08:00 - 20:30</span></li>
-                    <span class="dept-title">🐟 מחלקת דגים</span>
-                    <li><span>יום ראשון</span> <span>סגור</span></li>
+                    <span class="dept-title">🥩 מחלקת בשר | 🐟 דגים</span>
                     <li><span>שני - שבת</span> <span>09:00 - 17:00</span></li>
                 </ul>
             </div>
