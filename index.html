@@ -54,9 +54,9 @@
 </head>
 <body>
 
-<header>
-    <div class="logo-placeholder">סופר <span>סטאר</span></div>
-    <div style="font-size: 0.9rem; margin-top: 5px;">האיכות שלנו, החיוך שלכם</div>
+<header style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+    <img src="https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/logo.jpg" alt="סופר סטאר" style="max-width: 150px; height: auto;">
+    <div style="font-size: 1rem; margin-top: 10px; color: white;">האיכות שלנו, החיוך שלכם</div>
 </header>
 
 <div class="promo-section" id="promo-area">
@@ -131,7 +131,7 @@ const CONFIG = {
                 for(let cat in cats) {
                     let section = `<h2 class="category-title">${cat}</h2><div class="grid">`;
                     cats[cat].forEach(p => {
-                        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/products/${p.Barcode.trim()}.jpg`;
+                        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode.trim()}.jpg`;
                         section += `
                             <div class="card">
                                 <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
@@ -151,4 +151,5 @@ const CONFIG = {
 </script>
 
 </body>
+
 </html>
