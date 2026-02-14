@@ -45,21 +45,29 @@
         .page-section.active { display: block; }
         .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
-        /* --- וידאו תדמית עם כפתור סאונד --- */
+        /* --- תיקון וידאו תדמית --- */
         .hero-video-container { 
-            width: 100%; border-radius: 15px; overflow: hidden; margin-bottom: 30px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; position: relative; line-height: 0; 
+            width: 100%; 
+            max-width: 900px; /* הגבלת רוחב כדי שלא יתפוס הכל */
+            margin: 0 auto 30px auto; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            background: #000; 
+            position: relative; 
+            line-height: 0; 
         }
-        .hero-video { width: 100%; height: auto; max-height: 500px; object-fit: cover; }
-        .video-controls {
-            position: absolute; bottom: 20px; left: 20px; z-index: 10;
+        .hero-video { 
+            width: 100%; 
+            max-height: 400px; /* הגבלת גובה משמעותית */
+            object-fit: contain; /* מבטיח שכל הסרטון ייראה בלי להיחתך */
         }
+        .video-controls { position: absolute; bottom: 15px; left: 15px; z-index: 10; }
         .mute-btn {
-            background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; 
-            width: 45px; height: 45px; cursor: pointer; font-size: 1.2rem; transition: 0.3s;
+            background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; 
+            width: 40px; height: 40px; cursor: pointer; transition: 0.3s;
             display: flex; align-items: center; justify-content: center;
         }
-        .mute-btn:hover { background: var(--main-yellow); color: var(--brand-blue); }
 
         /* --- כרטיסים וגריד --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
@@ -70,7 +78,7 @@
         /* --- סליידר מבצעים --- */
         .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; border-radius: 15px; }
         .promo-track { display: inline-flex; animation: scroll-left 50s linear infinite; }
-        .promo-track img { height: 300px; width: auto; margin: 10px; border-radius: 12px; }
+        .promo-track img { height: 250px; width: auto; margin: 10px; border-radius: 12px; }
         @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
         /* --- דף צור קשר --- */
@@ -101,6 +109,7 @@
             .sidebar { width: 100%; height: auto; position: sticky; top: 0; z-index: 1300; }
             .header-fixed { right: 0; height: 100px; position: relative; }
             .main-content { margin-top: 0; }
+            .hero-video { max-height: 250px; } /* במובייל הסרטון יהיה קטן יותר */
             .contact-info-container { grid-template-columns: 1fr; }
             .nav-menu { display: flex; overflow-x: auto; white-space: nowrap; }
             .sidebar-actions, .social-icons { display: none; }
@@ -165,30 +174,24 @@
     <div id="new-products-page" class="page-section"><div class="section-title">חדש על המדף</div><div id="full-new-grid" class="grid"></div></div>
     
     <div id="directions-page" class="page-section">
-        <div class="section-title">צור קשר ודרכי הגעה</div>
+        <div class="section-title">צור קשר</div>
         <div style="width:100%; height:350px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue); margin-bottom: 20px;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.123456789!2d35.2123456789!3d32.9123456789!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU0JzQ0LjQiTiAzNcKwMTInNDQuNCJF!5e0!3m2!1she!2sil!4v1700000000000!5m2!1she!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.352458039206!2d35.21045237583768!3d32.91529197360677!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c2f9d51921f07%3A0xc6654a93883a48e!2zU3VwZXIgU3RhciBQbHVzINiz2YjYqNixINiz2KrYp9ixINio2YTYsw!5e0!3m2!1siw!2sil!4v1707950000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
-
         <div class="contact-info-container">
             <div class="info-card">
                 <h3>📍 פרטי התקשרות</h3>
                 <div class="info-item"><i class="fas fa-map-marker-alt"></i> <span>מג'ד אל-כרום, כביש ראשי</span></div>
                 <div class="info-item"><i class="fas fa-phone-alt"></i> <a href="tel:049076772">04-907-6772</a></div>
                 <div class="info-item"><i class="fas fa-envelope"></i> <span>info@superstarplus.co.il</span></div>
-                <div class="info-item"><i class="fab fa-whatsapp"></i> <a href="https://wa.me/97249076772">שלחו לנו הודעה בוואטסאפ</a></div>
             </div>
-
             <div class="info-card">
                 <h3>⏰ שעות פעילות</h3>
                 <ul class="opening-hours">
-                    <span class="dept-title">🛒 סופרמרקט (כללי)</span>
+                    <span class="dept-title">🛒 סופרמרקט</span>
                     <li><span>כל ימות השבוע</span> <span>08:00 - 22:00</span></li>
-                    <span class="dept-title">🥩 מחלקת בשר</span>
-                    <li><span>כל ימות השבוע</span> <span>08:00 - 20:30</span></li>
-                    <span class="dept-title">🐟 מחלקת דגים</span>
-                    <li><span>יום ראשון</span> <span>סגור</span></li>
-                    <li><span>שני - שבת</span> <span>09:00 - 17:00</span></li>
+                    <span class="dept-title">🥩 בשר | 🐟 דגים (שני-שבת)</span>
+                    <li><span>מחלקות טריות</span> <span>09:00 - 17:00</span></li>
                 </ul>
             </div>
         </div>
@@ -209,7 +212,6 @@ function toggleMute() {
     icon.className = video.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
 }
 
-function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
 function showPage(id, el) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
@@ -223,8 +225,8 @@ function renderGrid(data, container) {
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode}`;
         return `<div class="card" onclick="openLightbox('${imgUrl}')">
             <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-            <h3>${p.Name || 'מוצר'}</h3>
-            <div class="price">₪${p.Price || '0'}</div>
+            <h3>${p.Name}</h3>
+            <div class="price">₪${p.Price}</div>
         </div>`;
     }).join('');
 }
@@ -232,12 +234,14 @@ function renderGrid(data, container) {
 function applyFilters() {
     const term = document.getElementById('catalogSearch').value.toLowerCase();
     const filtered = allProducts.filter(p => {
-        const matchesSearch = (p.Name || "").toLowerCase().includes(term) || (p.Barcode || "").toString().includes(term);
+        const matchesSearch = (p.Name || "").toLowerCase().includes(term);
         const matchesCat = (currentCategory === 'הכל' || p.Catagory === currentCategory);
         return matchesSearch && matchesCat;
     });
     renderGrid(filtered, document.getElementById('main-catalog-grid'));
 }
+
+function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
 
 async function fetchImages(tag, trackId, gridId) {
     try {
@@ -264,7 +268,7 @@ async function init() {
         complete: function(results) {
             allProducts = results.data.map(row => {
                 let clean = {}; for (let key in row) clean[key.trim()] = row[key]; return clean;
-            }).filter(p => p.Barcode || p.Name);
+            });
             const cats = ['הכל', ...new Set(allProducts.map(p => p.Catagory).filter(c => c))];
             const btnContainer = document.getElementById('categoryButtons');
             if(btnContainer) btnContainer.innerHTML = cats.map(c => `<button class="cat-btn" style="padding:5px 12px; border-radius:15px; border:1px solid #ddd; background:#eee; cursor:pointer;" onclick="currentCategory='${c}'; applyFilters();">${c}</button>`).join('');
