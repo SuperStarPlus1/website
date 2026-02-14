@@ -89,28 +89,35 @@ function isPromoActive(folderName) {
 }
 
 async function init() {
-    // 1. טעינת מבצעים אוטומטית לפי תגית
+    // 1. טעינת מבצעים
     try {
+        // הכתובת הזו מחזירה את כל התמונות עם התגית promo
         const res = await fetch(`https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/list/${CONFIG.PROMO_TAG}.json`);
         if (res.ok) {
             const data = await res.json();
             const container = document.getElementById('promo-container');
+            container.innerHTML = ''; 
+
             data.resources.forEach(img => {
-                const pathParts = img.public_id.split('/');
-                const folder = pathParts[1]; 
-                if(isPromoActive(folder)) {
-                    container.innerHTML += `<img src="https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}">`;
+                // לוקח את שם התיקייה מתוך ה-public_id (למשל promotions/05.02.26-10.03.26/image)
+                const parts = img.public_id.split('/');
+                const folderName = parts[1]; 
+
+                if (isPromoActive(folderName)) {
+                    // יוצר את הקישור עם f_auto לטעינה מהירה
+                    const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
+                    container.innerHTML += `<img src="${imgUrl}" class="active">`;
                 }
             });
         }
+        
         if(document.getElementById('promo-container').innerHTML === "") {
             document.getElementById('promo-area').style.display = 'none';
         }
     } catch(e) { 
-        console.log("Promo loading info:", e); 
+        console.error("שגיאה בטעינת מבצעים:", e); 
         document.getElementById('promo-area').style.display = 'none';
     }
-
     // 2. טעינת מוצרים מהגוגל שיטס
     Papa.parse(CONFIG.CSV_URL, {
         download: true, 
@@ -153,3 +160,4 @@ init();
 
 </body>
 </html>
+
