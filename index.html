@@ -11,12 +11,12 @@
             --brand-blue: #0076DA;
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
-            --sidebar-width: 200px; /* סיידבר צר יותר */
+            --sidebar-width: 200px;
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
 
-        /* --- סיידבר מעודכן --- */
+        /* --- סיידבר קבוע בצד --- */
         .sidebar { 
             width: var(--sidebar-width); background: var(--brand-blue); color: white; 
             height: 100vh; position: sticky; top: 0; padding: 10px; 
@@ -28,13 +28,13 @@
         .nav-menu { list-style: none; padding: 0; width: 100%; flex-grow: 1; }
         .nav-menu li { 
             padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; 
-            margin-bottom: 5px; font-size: 0.9rem; /* פונט קטן יותר */
+            margin-bottom: 5px; font-size: 0.9rem;
             display: flex; align-items: center; gap: 8px; 
         }
         .nav-menu li:hover { background: rgba(255,255,255,0.1); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); font-weight: bold; }
 
-        /* --- כפתורי יצירת קשר וניווט בסיידבר --- */
+        /* --- פעולות סיידבר --- */
         .sidebar-actions { width: 100%; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; }
         .action-btn { 
             display: flex; align-items: center; justify-content: center; gap: 8px; 
@@ -42,19 +42,35 @@
         }
         .btn-whatsapp { background: #25D366; }
         .btn-waze { background: #33CCFF; }
-        .action-btn:hover { opacity: 0.9; transform: scale(1.02); }
 
-        /* --- אייקונים חברתיים --- */
         .social-icons { display: flex; justify-content: center; gap: 15px; padding: 15px 0; width: 100%; }
-        .social-icons a { color: white; font-size: 1.2rem; transition: 0.3s; }
-        .social-icons a:hover { color: var(--main-yellow); }
-
-        /* --- באנר עליון --- */
-        .header-container { width: 100%; background-color: var(--brand-blue); display: flex; justify-content: center; align-items: center; min-height: 100px; }
-        .header-container img { width: 100%; height: auto; max-height: 250px; object-fit: contain; display: block; }
+        .social-icons a { color: white; font-size: 1.2rem; }
 
         /* --- תוכן ראשי --- */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-x: hidden; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* --- באנר עליון "נעול" (Sticky) --- */
+        .header-container { 
+            width: 100%; 
+            background-color: var(--brand-blue); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            position: sticky; /* הופך את הבאנר לקבוע בגלילה */
+            top: 0; 
+            z-index: 1000; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header-container img { 
+            width: 100%; 
+            max-width: 1200px; /* שומר על פרופורציות במסכים רחבים */
+            height: auto; 
+            max-height: 180px; 
+            object-fit: contain; 
+            display: block; 
+        }
+
+        /* --- דפים --- */
         .page-section { display: none; padding: 25px; }
         .page-section.active { display: block; }
         .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
@@ -62,7 +78,6 @@
         /* --- גריד וכרטיסים --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%; cursor: pointer; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
         .card img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
         .card h3 { font-size: 0.95rem; margin: 5px 0; min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
         .card .price { color: #d32f2f; font-size: 1.2rem; font-weight: bold; margin-top: auto; }
@@ -70,7 +85,7 @@
         /* --- Lightbox --- */
         #lightbox {
             display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9); justify-content: center; align-items: center; cursor: pointer;
+            background: rgba(0, 0, 0, 0.9); justify-content: center; align-items: center;
         }
         #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; }
 
@@ -82,9 +97,10 @@
 
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; position: relative; }
-            .nav-menu { display: flex; overflow-x: auto; }
-            .sidebar-actions, .social-icons { display: none; } /* הסתרה בנייד כדי לחסוך מקום */
+            .sidebar { width: 100%; height: auto; position: sticky; top: 0; z-index: 1101; }
+            .header-container { position: relative; } /* בנייד עדיף שהבאנר לא יתפוס חצי מסך */
+            .nav-menu { display: flex; overflow-x: auto; white-space: nowrap; }
+            .sidebar-actions, .social-icons { display: none; }
         }
     </style>
 </head>
@@ -120,9 +136,9 @@
 </nav>
 
 <div class="main-content">
-    <div class="header-container">
-        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.jpg" alt="באנר">
-    </div>
+    <header class="header-container">
+        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.jpg" alt="באנר סופר סטאר">
+    </header>
 
     <div id="home" class="page-section active">
         <div class="section-title">המבצעים שלנו</div>
@@ -133,7 +149,7 @@
 
     <div id="catalog-page" class="page-section">
         <div class="section-title">קטלוג מוצרים</div>
-        <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
+        <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <input type="text" id="catalogSearch" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="חפש מוצר או ברקוד..." oninput="applyFilters()">
             <div id="categoryButtons" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
         </div>
@@ -142,7 +158,13 @@
 
     <div id="promos-page" class="page-section"><div class="section-title">כל המבצעים</div><div id="full-promo-grid" class="grid"></div></div>
     <div id="new-products-page" class="page-section"><div class="section-title">חדש על המדף</div><div id="full-new-grid" class="grid"></div></div>
-    <div id="directions-page" class="page-section"><div class="section-title">איך מגיעים?</div><div style="width:100%; height:400px; background:#ddd; border-radius:15px; display:flex; align-items:center; justify-content:center;">מפה כאן</div></div>
+    <div id="directions-page" class="page-section">
+        <div class="section-title">איך מגיעים?</div>
+        <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue);">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.3464522436855!2d35.204555!3d32.923831!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzI1LjgiTiAzNcKwMTInMTYuNCJF!5e0!3m2!1siw!2sil!4v1620000000000" 
+            width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -158,7 +180,9 @@ function closeLightbox() { document.getElementById('lightbox').style.display = '
 function showPage(id, el) { 
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
-    document.getElementById(id).classList.add('active'); el.classList.add('active'); window.scrollTo(0,0);
+    document.getElementById(id).classList.add('active'); el.classList.add('active');
+    // במקום לגלול לראש הדף לגמרי, גוללים לראש התוכן (מתחת לבאנר הקבוע)
+    window.scrollTo(0, 0);
 }
 
 function renderGrid(data, container) {
@@ -207,7 +231,7 @@ async function init() {
             }).filter(p => p.Barcode || p.Name);
             const cats = ['הכל', ...new Set(allProducts.map(p => p.Catagory).filter(c => c))];
             const btnContainer = document.getElementById('categoryButtons');
-            if(btnContainer) btnContainer.innerHTML = cats.map(c => `<button class="cat-btn" style="padding:5px 10px; border-radius:15px; border:none; background:#eee; cursor:pointer;" onclick="currentCategory='${c}'; applyFilters();">${c}</button>`).join('');
+            if(btnContainer) btnContainer.innerHTML = cats.map(c => `<button class="cat-btn" style="padding:5px 12px; border-radius:15px; border:1px solid #ddd; background:#eee; cursor:pointer; font-size:0.85rem;" onclick="currentCategory='${c}'; applyFilters();">${c}</button>`).join('');
             applyFilters();
         }
     });
