@@ -7,57 +7,50 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
-            --main-blue: #0047ba;
-            --banner-blue: #0076DA; /* הצבע שביקשת */
+            --brand-blue: #0076DA; /* הכחול שהגדרת */
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
             --sidebar-width: 250px;
-            --header-height: 180px; /* גובה הבאנר */
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
 
-        /* --- סיידבר קבוע --- */
+        /* --- סיידבר בצבע החדש --- */
         .sidebar { 
-            width: var(--sidebar-width); background: var(--main-blue); color: white; 
+            width: var(--sidebar-width); background: var(--brand-blue); color: white; 
             height: 100vh; position: sticky; top: 0; padding: 10px 15px; 
             box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; 
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1100; 
+            z-index: 1100; 
         }
-        .sidebar-logo { width: 100%; max-width: 140px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo { width: 100%; max-width: 140px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
         .nav-menu { list-style: none; padding: 0; width: 100%; }
         .nav-menu li { padding: 12px 15px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 5px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
         .nav-menu li:hover { background: rgba(255,255,255,0.1); color: var(--main-yellow); }
-        .nav-menu li.active { background: var(--main-yellow); color: var(--main-blue); font-weight: bold; }
+        .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); font-weight: bold; }
 
         /* --- תוכן ראשי --- */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; }
 
-        /* --- באנר עליון מקובע (Sticky Header) --- */
-        .header-wrapper {
-            position: sticky;
-            top: 0;
+        /* --- אזור באנר מלא בכחול (לא מקובע) --- */
+        .header-container {
             width: 100%;
-            height: var(--header-height);
-            background-color: var(--banner-blue); /* מילוי כל הראש בצבע שביקשת */
-            z-index: 1000;
+            background-color: var(--brand-blue);
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             overflow: hidden;
+            padding: 0;
         }
-        .header-wrapper img {
-            height: 100%;
-            width: auto;
-            max-width: 100%;
+        .header-container img {
+            width: 100%;
+            max-height: 250px;
             object-fit: contain;
             display: block;
         }
 
         .page-section { display: none; padding: 25px; }
         .page-section.active { display: block; }
-        .section-title { font-size: 24px; color: var(--main-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
+        .section-title { font-size: 24px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
         /* --- סליידר מבצעים --- */
         .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; white-space: nowrap; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -70,7 +63,7 @@
         .search-box { width: 100%; padding: 12px 15px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
         .category-filter { display: flex; flex-wrap: wrap; gap: 10px; }
         .cat-btn { padding: 8px 16px; background: #eee; border: none; border-radius: 20px; cursor: pointer; transition: 0.3s; font-weight: 500; }
-        .cat-btn.active { background: var(--main-blue); color: white; }
+        .cat-btn.active { background: var(--brand-blue); color: white; }
 
         /* --- גריד --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
@@ -83,9 +76,9 @@
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; padding: 10px; }
-            .header-wrapper { height: 100px; position: sticky; top: 0; }
             .nav-menu { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 5px; }
             .nav-menu li { padding: 8px 15px; white-space: nowrap; margin-bottom: 0; font-size: 0.85rem; }
+            .header-container img { max-height: 150px; }
         }
     </style>
 </head>
@@ -104,9 +97,9 @@
 </nav>
 
 <div class="main-content">
-    <header class="header-wrapper">
+    <div class="header-container">
         <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.jpg" alt="באנר סופר סטאר">
-    </header>
+    </div>
 
     <div id="home" class="page-section active">
         <div class="section-title">המבצעים שלנו</div>
@@ -138,11 +131,10 @@
 
     <div id="directions-page" class="page-section">
         <div class="section-title">איך מגיעים?</div>
-        <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; border:2px solid var(--main-blue);">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.123456789!2d35.2575!3d32.9213!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzE2LjgiTiAzNcKwMTUnMjcuMCJF!5e0!3m2!1she!2sil!4v1620000000000!5m2!1she!2sil" 
+        <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue);">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.354674751416!2d35.2105156!3d32.9152207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c313131313131%3A0x1c1c1c1c1c1c1c1c!2zU3VwZXIgU3RhciAtINmC2YjYqNixINiz2KrYp9ix!5e0!3m2!1siw!2sil!4v123456789" 
             width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
-        <p style="text-align:center; margin-top:15px;"><a href="https://waze.com/ul/hsvc562y69" target="_blank" style="background:var(--main-blue); color:white; padding:12px 25px; border-radius:10px; text-decoration:none; font-weight:bold;">פתח ב-Waze</a></p>
     </div>
 
     <div id="contact" class="page-section">
@@ -150,7 +142,6 @@
         <div class="controls-container">
             <p>📍 <b>כתובת:</b> סלאח אלדין, מג'ד אל-כרום</p>
             <p>📞 <b>טלפון:</b> 04-9076772</p>
-            <p>⏰ <b>שעות פתיחה:</b> כל יום 08:00 - 22:00</p>
         </div>
     </div>
 </div>
