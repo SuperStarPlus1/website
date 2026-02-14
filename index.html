@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>סופר סטאר - הכי טרי שיש</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --main-blue: #0047ba;
+            --main-yellow: #ffcc00;
+            --light-bg: #f8f9fa;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; }
+        
+        /* לוגו וכותרת */
+        header { background: var(--main-blue); color: white; padding: 20px; border-bottom: 5px solid var(--main-yellow); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo-placeholder { font-size: 2.5rem; font-weight: bold; letter-spacing: -1px; }
+        .logo-placeholder span { color: var(--main-yellow); }
+
+        /* מבצעים מתחלפים */
+        .promo-section { max-width: 1000px; margin: 20px auto; padding: 0 15px; }
+        .promo-container { display: flex; overflow-x: auto; gap: 15px; scroll-snap-type: x mandatory; padding-bottom: 10px; }
+        .promo-container img { flex: 0 0 100%; scroll-snap-align: start; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #ddd; }
+
+        /* קטגוריות ומוצרים */
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .category-title { border-right: 5px solid var(--main-blue); padding-right: 15px; margin: 30px 0 20px; text-align: right; color: var(--main-blue); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        
+        .card { background: white; border-radius: 12px; padding: 15px; text-align: center; transition: transform 0.2s; border: 1px solid #eee; position: relative; overflow: hidden; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 140px; object-fit: contain; margin-bottom: 10px; }
+        .card h3 { font-size: 1.1rem; margin: 10px 0; height: 2.4em; overflow: hidden; }
+        .card .price { color: #d32f2f; font-size: 1.4rem; font-weight: bold; }
+        .card .barcode { font-size: 0.75rem; color: #888; margin-top: 10px; display: block; }
+
+        /* כפתורי צד ופעולות */
+        .fab { position: fixed; bottom: 25px; left: 25px; z-index: 1001; display: flex; flex-direction: column; gap: 15px; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.3s; }
+        .btn-whatsapp { background: #25d366; font-size: 30px; }
+        .btn-waze { background: #33ccff; font-size: 20px; font-weight: bold; }
+        
+        .club-banner { background: var(--main-yellow); padding: 15px; border-radius: 8px; margin-top: 40px; font-weight: bold; cursor: pointer; }
+
+        /* התאמה לנייד */
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+            .logo-placeholder { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-placeholder">סופר <span>סטאר</span></div>
+    <div style="font-size: 0.9rem; margin-top: 5px;">האיכות שלנו, החיוך שלכם</div>
+</header>
+
+<div class="promo-section" id="promo-area">
+    <div class="promo-container" id="promo-container">
+        </div>
+</div>
+
+<div class="container">
+    <div id="categories-wrapper">
+        </div>
+
+    <div class="club-banner" onclick="window.open('YOUR_GOOGLE_FORM_LINK')">
+        📍 הצטרפו למועדון הלקוחות שלנו וקבלו מבצעים בלעדיים! >
+    </div>
+</div>
+
+<div class="fab">
+    <a href="https://waze.com/ul/hsvc562y69" class="btn-round btn-waze" target="_blank">WAZE</a>
+    <a href="https://wa.me/97249076772" class="btn-round btn-whatsapp" target="_blank">💬</a>
+</div>
+
+<script>
+const CONFIG = {
+        CLOUD_NAME: "dj56w7nb9", 
+        CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv",
+        PROMO_TAG: "promo"
+    };
+
+    // בדיקת תאריכי מבצעים
+    function isPromoActive(folderName) {
+        try {
+            const [start, end] = folderName.split('-');
+            const parse = (s) => {
+                const [d, m, y] = s.split('.').map(Number);
+                return new Date(2000 + y, m - 1, d);
+            };
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            return today >= parse(start) && today <= parse(end);
+        } catch(e) { return false; }
+    }
+
+    async function init() {
+        // 1. טעינת מבצעים
+        try {
+            const res = await fetch(`https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/list/${CONFIG.PROMO_TAG}.json`);
+            const data = await res.json();
+            const container = document.getElementById('promo-container');
+            data.resources.forEach(img => {
+                const folder = img.public_id.split('/')[1];
+                if(isPromoActive(folder)) {
+                    container.innerHTML += `<img src="https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/${img.public_id}.${img.format}">`;
+                }
+            });
+            if(container.innerHTML === "") document.getElementById('promo-area').style.display = 'none';
+        } catch(e) { console.log("No promos or error"); }
+
+        // 2. טעינת מוצרים
+        Papa.parse(CONFIG.CSV_URL, {
+            download: true, header: true,
+            complete: function(results) {
+                const wrapper = document.getElementById('categories-wrapper');
+                const cats = {};
+                
+                // מיון לקטגוריות
+                results.data.forEach(p => {
+                    if(!p.Category) return;
+                    if(!cats[p.Category]) cats[p.Category] = [];
+                    cats[p.Category].push(p);
+                });
+
+                for(let cat in cats) {
+                    let section = `<h2 class="category-title">${cat}</h2><div class="grid">`;
+                    cats[cat].forEach(p => {
+                        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/products/${p.Barcode.trim()}.jpg`;
+                        section += `
+                            <div class="card">
+                                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                                <h3>${p.Name}</h3>
+                                <div class="price">₪${p.Price}</div>
+                                <span class="barcode">ברקוד: ${p.Barcode}</span>
+                            </div>`;
+                    });
+                    section += `</div>`;
+                    wrapper.innerHTML += section;
+                }
+            }
+        });
+    }
+
+    init();
+</script>
+
+</body>
+</html>
