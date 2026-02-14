@@ -23,11 +23,12 @@
             width: var(--sidebar-width); background: var(--main-blue); color: white; 
             height: 100vh; position: sticky; top: 0; padding: 20px; 
             box-sizing: border-box; flex-shrink: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1000;
+            z-index: 1000; display: flex; flex-direction: column; align-items: center;
         }
 
-        .sidebar h2 { border-bottom: 2px solid var(--main-yellow); padding-bottom: 10px; margin-bottom: 30px; font-size: 1.5rem; }
-        .nav-menu { list-style: none; padding: 0; }
+        .sidebar-logo { width: 100%; max-width: 150px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+        .nav-menu { list-style: none; padding: 0; width: 100%; }
         .nav-menu li { padding: 15px 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 8px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
         .nav-menu li:hover { background: rgba(255,255,255,0.15); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--main-blue); font-weight: bold; }
@@ -37,17 +38,16 @@
         
         header { 
             background: white; padding: 15px 30px; display: flex; align-items: center; 
-            justify-content: flex-start; border-bottom: 4px solid var(--main-blue);
+            justify-content: space-between; border-bottom: 4px solid var(--main-blue);
         }
-        header img { max-width: 130px; margin-left: 20px; }
-        header h1 { font-size: 1.4rem; color: var(--main-blue); margin: 0; }
+        header h1 { font-size: 1.4rem; color: var(--main-blue); margin: 0; font-weight: 800; }
 
         .page-section { display: none; padding: 30px; }
         .page-section.active { display: block; }
 
         .section-title { font-size: 24px; color: var(--main-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
-        /* סליידר מבצעים נע */
+        /* סליידר מבצעים */
         .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; white-space: nowrap; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .promo-track { display: inline-flex; animation: scroll-left 50s linear infinite; }
         .promo-track:hover { animation-play-state: paused; }
@@ -56,11 +56,7 @@
 
         @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
-        /* חלון מרחף לתמונות */
-        .modal { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: zoom-out; }
-        .modal img { max-width: 90%; max-height: 90%; border-radius: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-
-        /* חיפוש וסינון מוצרים */
+        /* חיפוש וסינון */
         .search-bar { background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; display: flex; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-wrap: wrap; }
         .search-bar input, .search-bar select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex: 1; min-width: 200px; font-size: 1rem; }
 
@@ -70,13 +66,17 @@
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
         .card img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 15px; }
         .card h3 { font-size: 1.1rem; margin: 10px 0; color: #444; height: 2.6em; overflow: hidden; }
-        .card .price { color: #d32f2f; font-size: 1.5rem; font-weight: bold; margin: 10px 0; margin-top: auto; }
+        .card .price { color: #d32f2f; font-size: 1.5rem; font-weight: bold; margin-top: auto; }
         .card .category-tag { font-size: 0.8rem; background: #eee; padding: 3px 8px; border-radius: 5px; color: #666; width: fit-content; margin: 0 auto; }
+
+        /* חלון מודל לתמונות */
+        .modal { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: zoom-out; }
+        .modal img { max-width: 90%; max-height: 90%; border-radius: 10px; }
 
         /* כפתורי צד מוקטנים */
         .fab-container { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
-        .fab-btn { width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; display: flex; align-items: center; justify-content: center; background: white; overflow: hidden; }
-        .fab-btn img { width: 25px; height: 25px; object-fit: contain; }
+        .fab-btn { width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; display: flex; align-items: center; justify-content: center; background: white; }
+        .fab-btn img { width: 25px; height: 25px; }
 
         /* מפה */
         .map-wrapper { width: 100%; height: 400px; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; }
@@ -86,8 +86,9 @@
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; padding: 10px; }
-            .nav-menu { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 5px; }
-            .nav-menu li { padding: 8px 15px; white-space: nowrap; font-size: 0.9rem; }
+            .sidebar-logo { max-width: 80px; margin-bottom: 10px; padding-bottom: 0; border-bottom: none; }
+            .nav-menu { display: flex; overflow-x: auto; gap: 10px; }
+            .nav-menu li { padding: 8px 15px; white-space: nowrap; font-size: 0.9rem; margin-bottom: 0; }
             .promo-track img { height: 220px; }
         }
     </style>
@@ -95,7 +96,7 @@
 <body>
 
 <nav class="sidebar">
-    <h2>סופר סטאר</h2>
+    <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופר סטאר" class="sidebar-logo">
     <ul class="nav-menu">
         <li class="active" onclick="showPage('home', this)">🏠 דף הבית</li>
         <li onclick="showPage('promos-page', this)">🏷️ כל המבצעים</li>
@@ -108,16 +109,14 @@
 
 <div class="main-content">
     <header>
-        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופר סטאר">
-        <h1>מג'ד אל-כרום - האיכות שלנו, החיוך שלכם</h1>
+        <h1>מג'ד אל-כרום</h1>
     </header>
 
     <div id="home" class="page-section active">
         <div class="section-title">המבצעים שלנו</div>
-        <div class="promo-section" id="promo-area">
+        <div class="promo-section">
             <div class="promo-track" id="promo-container"></div>
         </div>
-        
         <div class="section-title">טעימה מהמוצרים שלנו</div>
         <div id="home-featured-grid" class="grid"></div>
     </div>
@@ -148,14 +147,12 @@
         <div class="section-title">צור קשר</div>
         <p>📍 כתובת: סלאח אלדין, מג'ד אל-כרום</p>
         <p>📞 טלפון: 04-9076772</p>
-        <p>📧 אימייל: info@superstar.co.il</p>
     </div>
 
     <div id="directions" class="page-section">
         <div class="section-title">איך מגיעים?</div>
-        <p>אנו ממוקמים על הכביש הראשי של מג'ד אל-כרום (סלאח אלדין).</p>
         <div class="map-wrapper">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3368.106596160163!2d35.2646272!3d32.9217983!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdfe9701%3A0x8cd5dcd79c00b884!2z16HXldeX16jXodeY16DXoCDXnteS15PXnCDXkNeo15vXqNeV150!5e0!3m2!1siw!2sil!4v1700000000000" 
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3348.123!2d35.257!3d32.923!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzIyLjgiTiAzNcKwMTUnMjUuMiJF!5e0!3m2!1she!2sil!4v1700000000000" 
             width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
     </div>
@@ -186,6 +183,7 @@ let allProductsData = [];
 let filteredProducts = [];
 let currentIndex = 0;
 
+// פונקציית ניווט
 function showPage(pageId, element) {
     document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
     document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
@@ -194,6 +192,7 @@ function showPage(pageId, element) {
     window.scrollTo(0, 0);
 }
 
+// פתיחת תמונה
 function openModal(src) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImg');
@@ -201,19 +200,7 @@ function openModal(src) {
     modal.style.display = 'flex';
 }
 
-function isPromoActive(folderName) {
-    try {
-        const [start, end] = folderName.split('-');
-        const parseDate = (str) => {
-            const [d, m, y] = str.split('.').map(Number);
-            return new Date(2000 + y, m - 1, d);
-        };
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        return today >= parseDate(start) && today <= parseDate(end);
-    } catch(e) { return true; } // אם אין תאריך, נציג בכל זאת
-}
-
+// פונקציית אתחול
 async function init() {
     // 1. טעינת מבצעים
     try {
@@ -223,28 +210,28 @@ async function init() {
             const track = document.getElementById('promo-container');
             const fullGrid = document.getElementById('full-promo-grid');
             let html = '';
-
             data.resources.forEach(img => {
-                const folder = img.public_id.split('/')[1];
-                if (isPromoActive(folder)) {
-                    const url = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
-                    const imgTag = `<img src="${url}" onclick="openModal('${url}')">`;
-                    html += imgTag;
-                    fullGrid.innerHTML += `<div class="card">${imgTag}</div>`;
-                }
+                const url = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
+                const imgHtml = `<img src="${url}" onclick="openModal('${url}')">`;
+                html += imgHtml;
+                fullGrid.innerHTML += `<div class="card">${imgHtml}</div>`;
             });
             track.innerHTML = html + html;
         }
-    } catch(e) {}
+    } catch(e) { console.error("Promos error:", e); }
 
-    // 2. טעינת מוצרים
+    // 2. טעינת מוצרים מהגוגל שיטס
     Papa.parse(CONFIG.CSV_URL, {
-        download: true, header: true, skipEmptyLines: true,
+        download: true,
+        header: true,
+        skipEmptyLines: true,
         complete: function(results) {
             allProductsData = results.data.filter(p => p.Barcode && p.Name);
+            
+            // מילוי קטגוריות
             const cats = [...new Set(allProductsData.map(p => p.Category))].filter(Boolean).sort();
-            const filter = document.getElementById('categoryFilter');
-            cats.forEach(c => filter.innerHTML += `<option value="${c}">${c}</option>`);
+            const select = document.getElementById('categoryFilter');
+            cats.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
 
             handleFilterChange();
             renderFeatured();
@@ -253,6 +240,7 @@ async function init() {
     });
 }
 
+// ניהול סינון וחיפוש
 function handleFilterChange() {
     const term = document.getElementById('searchInput').value.toLowerCase();
     const cat = document.getElementById('categoryFilter').value;
@@ -268,27 +256,27 @@ function handleFilterChange() {
     loadMore();
 }
 
+// טעינת מוצרים נוספים (Infinite Scroll)
 function loadMore() {
     const grid = document.getElementById('main-products-grid');
     const nextBatch = filteredProducts.slice(currentIndex, currentIndex + CONFIG.PER_PAGE);
     
     nextBatch.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'card';
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode.trim()}`;
-        card.innerHTML = `
-            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-            <span class="category-tag">${p.Category || 'כללי'}</span>
-            <h3>${p.Name}</h3>
-            <div class="price">₪${p.Price}</div>
-            <small>ברקוד: ${p.Barcode}</small>
+        grid.innerHTML += `
+            <div class="card">
+                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                <span class="category-tag">${p.Category || 'כללי'}</span>
+                <h3>${p.Name}</h3>
+                <div class="price">₪${p.Price}</div>
+                <small>ברקוד: ${p.Barcode}</small>
+            </div>
         `;
-        grid.appendChild(card);
     });
-    
     currentIndex += CONFIG.PER_PAGE;
 }
 
+// הגדרת מאזין גלילה
 function setupInfiniteScroll() {
     const observer = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && currentIndex < filteredProducts.length) {
@@ -298,19 +286,21 @@ function setupInfiniteScroll() {
     observer.observe(document.getElementById('loading-sentinel'));
 }
 
+// הצגת מוצרים נבחרים בדף הבית
 function renderFeatured() {
     const grid = document.getElementById('home-featured-grid');
-    const featured = allProductsData.slice(0, 8);
-    grid.innerHTML = featured.map(p => {
+    grid.innerHTML = allProductsData.slice(0, 8).map(p => {
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode.trim()}`;
-        return `<div class="card">
-            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-            <h3>${p.Name}</h3>
-            <div class="price">₪${p.Price}</div>
-        </div>`;
+        return `
+            <div class="card">
+                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                <h3>${p.Name}</h3>
+                <div class="price">₪${p.Price}</div>
+            </div>`;
     }).join('');
 }
 
+// הפעלה
 init();
 </script>
 
