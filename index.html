@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>סופר סטאר - מג'ד אל-כרום</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
     <style>
         :root {
             --main-blue: #0047ba;
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
-            --sidebar-width: 250px;
+            --sidebar-width: 260px;
         }
 
         body { 
@@ -18,78 +19,96 @@
             margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh;
         }
 
-        /* תפריט צד */
+        /* --- תפריט צד (Sidebar) --- */
         .sidebar { 
             width: var(--sidebar-width); background: var(--main-blue); color: white; 
-            height: 100vh; position: sticky; top: 0; padding: 20px; 
-            box-sizing: border-box; flex-shrink: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1000; display: flex; flex-direction: column; align-items: center;
+            height: 100vh; position: sticky; top: 0; padding: 25px 15px; 
+            box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1000;
         }
 
-        .sidebar-logo { width: 100%; max-width: 150px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        /* הלוגו בתוך הסיידבר */
+        .sidebar-logo { 
+            width: 100%; max-width: 160px; margin-bottom: 25px; 
+            padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); 
+        }
 
-        .nav-menu { list-style: none; padding: 0; width: 100%; }
-        .nav-menu li { padding: 15px 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 8px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
-        .nav-menu li:hover { background: rgba(255,255,255,0.15); color: var(--main-yellow); }
+        .nav-menu { list-style: none; padding: 0; width: 100%; margin: 0; }
+        .nav-menu li { 
+            padding: 14px 15px; cursor: pointer; border-radius: 8px; transition: 0.3s; 
+            margin-bottom: 10px; font-size: 1.1rem; display: flex; align-items: center; gap: 12px;
+        }
+        .nav-menu li:hover { background: rgba(255,255,255,0.1); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--main-blue); font-weight: bold; }
 
-        /* תוכן ראשי */
+        /* --- תוכן ראשי --- */
         .main-content { flex-grow: 1; overflow-x: hidden; display: flex; flex-direction: column; }
         
+        /* כותרת הדף הנקייה */
         header { 
-            background: white; padding: 15px 30px; display: flex; align-items: center; 
-            justify-content: space-between; border-bottom: 4px solid var(--main-blue);
+            background: white; padding: 18px 35px; border-bottom: 4px solid var(--main-blue);
+            display: flex; align-items: center; justify-content: flex-start;
         }
-        header h1 { font-size: 1.4rem; color: var(--main-blue); margin: 0; font-weight: 800; }
+        header h1 { font-size: 1.6rem; color: var(--main-blue); margin: 0; font-weight: 800; }
 
-        .page-section { display: none; padding: 30px; }
+        /* ניהול דפים */
+        .page-section { display: none; padding: 35px; }
         .page-section.active { display: block; }
 
-        .section-title { font-size: 24px; color: var(--main-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
+        .section-title { 
+            font-size: 26px; color: var(--main-blue); font-weight: bold; margin-bottom: 25px; 
+            border-right: 6px solid var(--main-yellow); padding-right: 15px; 
+        }
 
-        /* סליידר מבצעים */
-        .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; white-space: nowrap; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .promo-track { display: inline-flex; animation: scroll-left 50s linear infinite; }
-        .promo-track:hover { animation-play-state: paused; }
-        .promo-track img { height: 350px; width: auto; margin: 10px; border-radius: 12px; cursor: pointer; transition: 0.3s; }
-        .promo-track img:hover { transform: scale(1.02); }
+        /* סליידר מבצעים רץ */
+        .promo-section { 
+            width: 100%; background: white; margin-bottom: 35px; overflow: hidden; 
+            white-space: nowrap; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+        .promo-track { display: inline-flex; animation: scroll-left 60s linear infinite; }
+        .promo-track img { height: 350px; width: auto; margin: 10px; border-radius: 12px; cursor: pointer; }
 
         @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
         /* חיפוש וסינון */
-        .search-bar { background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; display: flex; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-wrap: wrap; }
-        .search-bar input, .search-bar select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex: 1; min-width: 200px; font-size: 1rem; }
+        .search-bar { 
+            background: white; padding: 25px; border-radius: 15px; margin-bottom: 35px; 
+            display: flex; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex-wrap: wrap; 
+        }
+        .search-bar input, .search-bar select { 
+            padding: 14px; border: 1px solid #ddd; border-radius: 10px; flex: 1; min-width: 220px; font-size: 1rem; 
+        }
 
         /* גריד מוצרים */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 15px; }
-        .card h3 { font-size: 1.1rem; margin: 10px 0; color: #444; height: 2.6em; overflow: hidden; }
-        .card .price { color: #d32f2f; font-size: 1.5rem; font-weight: bold; margin-top: auto; }
-        .card .category-tag { font-size: 0.8rem; background: #eee; padding: 3px 8px; border-radius: 5px; color: #666; width: fit-content; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; }
+        .card { 
+            background: white; border-radius: 18px; padding: 18px; text-align: center; 
+            border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%;
+        }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 15px; border-radius: 8px; }
+        .card h3 { font-size: 1.15rem; margin: 12px 0; color: #333; height: 2.6em; overflow: hidden; }
+        .card .price { color: #d32f2f; font-size: 1.6rem; font-weight: 900; margin-top: auto; }
+        .card .category-tag { font-size: 0.8rem; background: #f0f0f0; padding: 4px 10px; border-radius: 6px; color: #777; width: fit-content; margin: 0 auto 10px; }
 
-        /* חלון מודל לתמונות */
-        .modal { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: zoom-out; }
-        .modal img { max-width: 90%; max-height: 90%; border-radius: 10px; }
+        /* כפתורים צפים */
+        .fab-container { position: fixed; bottom: 30px; left: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
+        .fab-btn { 
+            width: 50px; height: 50px; border-radius: 50%; box-shadow: 0 6px 20px rgba(0,0,0,0.2); 
+            display: flex; align-items: center; justify-content: center; background: white; transition: 0.3s;
+        }
+        .fab-btn:hover { transform: scale(1.1); }
+        .fab-btn img { width: 30px; height: 30px; }
 
-        /* כפתורי צד מוקטנים */
-        .fab-container { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
-        .fab-btn { width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; display: flex; align-items: center; justify-content: center; background: white; }
-        .fab-btn img { width: 25px; height: 25px; }
-
-        /* מפה */
-        .map-wrapper { width: 100%; height: 400px; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; }
-
-        #loading-sentinel { height: 50px; text-align: center; line-height: 50px; font-weight: bold; color: var(--main-blue); }
-
-        @media (max-width: 768px) {
+        /* התאמה לנייד */
+        @media (max-width: 800px) {
             body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; position: relative; padding: 10px; }
-            .sidebar-logo { max-width: 80px; margin-bottom: 10px; padding-bottom: 0; border-bottom: none; }
+            .sidebar { width: 100%; height: auto; position: relative; padding: 15px; }
+            .sidebar-logo { max-width: 100px; margin-bottom: 10px; border-bottom: none; padding-bottom: 0; }
             .nav-menu { display: flex; overflow-x: auto; gap: 10px; }
-            .nav-menu li { padding: 8px 15px; white-space: nowrap; font-size: 0.9rem; margin-bottom: 0; }
-            .promo-track img { height: 220px; }
+            .nav-menu li { padding: 10px 18px; white-space: nowrap; margin-bottom: 0; }
+            header { padding: 15px 25px; }
+            .promo-track img { height: 240px; }
         }
     </style>
 </head>
@@ -103,7 +122,6 @@
         <li onclick="showPage('products-page', this)">🛒 קטלוג מוצרים</li>
         <li onclick="showPage('about', this)">📖 אודות</li>
         <li onclick="showPage('contact', this)">📞 צור קשר</li>
-        <li onclick="showPage('directions', this)">📍 דרכי הגעה</li>
     </ul>
 </nav>
 
@@ -117,7 +135,7 @@
         <div class="promo-section">
             <div class="promo-track" id="promo-container"></div>
         </div>
-        <div class="section-title">טעימה מהמוצרים שלנו</div>
+        <div class="section-title">מוצרים נבחרים</div>
         <div id="home-featured-grid" class="grid"></div>
     </div>
 
@@ -127,20 +145,19 @@
     </div>
 
     <div id="products-page" class="page-section">
-        <div class="section-title">חיפוש בתוך הקטלוג</div>
+        <div class="section-title">חיפוש בקטלוג</div>
         <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="חפש מוצר או ברקוד..." oninput="handleFilterChange()">
-            <select id="categoryFilter" onchange="handleFilterChange()">
+            <input type="text" id="searchInput" placeholder="חפש לפי שם או ברקוד..." oninput="runFilter()">
+            <select id="categoryFilter" onchange="runFilter()">
                 <option value="">כל המחלקות</option>
             </select>
         </div>
         <div id="main-products-grid" class="grid"></div>
-        <div id="loading-sentinel">טוען מוצרים נוספים...</div>
     </div>
 
     <div id="about" class="page-section">
-        <div class="section-title">אודות סופר סטאר</div>
-        <p>ברוכים הבאים לסופר סטאר מג'ד אל-כרום. אנו מחויבים לספק לכם את חוויית הקנייה הטובה ביותר עם דגש על טריות, שירות אישי ומחירים הוגנים.</p>
+        <div class="section-title">אודותינו</div>
+        <p>סופר סטאר מג'ד אל-כרום מעניק לכם חוויית קנייה מנצחת עם שירות אישי, טריות ומחירים ללא תחרות.</p>
     </div>
 
     <div id="contact" class="page-section">
@@ -148,18 +165,6 @@
         <p>📍 כתובת: סלאח אלדין, מג'ד אל-כרום</p>
         <p>📞 טלפון: 04-9076772</p>
     </div>
-
-    <div id="directions" class="page-section">
-        <div class="section-title">איך מגיעים?</div>
-        <div class="map-wrapper">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3348.123!2d35.257!3d32.923!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzIyLjgiTiAzNcKwMTUnMjUuMiJF!5e0!3m2!1she!2sil!4v1700000000000" 
-            width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="imageModal" onclick="this.style.display='none'">
-    <img id="modalImg" src="">
 </div>
 
 <div class="fab-container">
@@ -167,141 +172,111 @@
         <img src="https://upload.wikimedia.org/wikipedia/commons/6/66/Waze_icon.png" alt="Waze">
     </a>
     <a href="https://wa.me/97249076772" target="_blank" class="fab-btn" style="background: #25D366;">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png" alt="WhatsApp">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png" alt="WA">
     </a>
 </div>
 
 <script>
-const CONFIG = {
-    CLOUD_NAME: "dj56w7nb9", 
+// הגדרות מערכת
+const SETTINGS = {
+    CLOUD_NAME: "dj56w7nb9",
     CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv",
-    PROMO_TAG: "promo",
-    PER_PAGE: 20
+    PROMO_TAG: "promo"
 };
 
-let allProductsData = [];
-let filteredProducts = [];
-let currentIndex = 0;
+let ALL_PRODUCTS = [];
 
-// פונקציית ניווט
+// ניווט בין דפים
 function showPage(pageId, element) {
-    document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
-    document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
     element.classList.add('active');
-    window.scrollTo(0, 0);
+    window.scrollTo(0,0);
 }
 
-// פתיחת תמונה
-function openModal(src) {
-    const modal = document.getElementById('imageModal');
-    const modalImg = document.getElementById('modalImg');
-    modalImg.src = src;
-    modal.style.display = 'flex';
+// יצירת קוד HTML לכרטיס מוצר
+function buildCard(p) {
+    const b = p.Barcode ? p.Barcode.toString().trim() : "";
+    const img = `https://res.cloudinary.com/${SETTINGS.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${b}`;
+    return `
+        <div class="card">
+            <span class="category-tag">${p.Category || 'כללי'}</span>
+            <img src="${img}" onerror="this.src='https://via.placeholder.com/180x180?text=אין+תמונה'">
+            <h3>${p.Name || 'מוצר ללא שם'}</h3>
+            <div class="price">₪${p.Price || '0'}</div>
+            <small style="color:#aaa; font-size:0.75rem;">ברקוד: ${b}</small>
+        </div>
+    `;
 }
 
-// פונקציית אתחול
-async function init() {
-    // 1. טעינת מבצעים
-    try {
-        const res = await fetch(`https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/list/${CONFIG.PROMO_TAG}.json`);
-        if (res.ok) {
-            const data = await res.json();
-            const track = document.getElementById('promo-container');
-            const fullGrid = document.getElementById('full-promo-grid');
-            let html = '';
-            data.resources.forEach(img => {
-                const url = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
-                const imgHtml = `<img src="${url}" onclick="openModal('${url}')">`;
-                html += imgHtml;
-                fullGrid.innerHTML += `<div class="card">${imgHtml}</div>`;
-            });
-            track.innerHTML = html + html;
-        }
-    } catch(e) { console.error("Promos error:", e); }
+// פונקציית הסינון המרכזית (חיפוש + קטגוריה)
+function runFilter() {
+    const term = document.getElementById('searchInput').value.toLowerCase().trim();
+    const cat = document.getElementById('categoryFilter').value;
+    const grid = document.getElementById('main-products-grid');
 
-    // 2. טעינת מוצרים מהגוגל שיטס
-    Papa.parse(CONFIG.CSV_URL, {
+    const filtered = ALL_PRODUCTS.filter(p => {
+        const nameMatch = (p.Name || "").toLowerCase().includes(term);
+        const barcodeMatch = (p.Barcode || "").toString().includes(term);
+        const catMatch = (cat === "" || p.Category === cat);
+        return (nameMatch || barcodeMatch) && catMatch;
+    });
+
+    grid.innerHTML = filtered.map(p => buildCard(p)).join('');
+}
+
+// פונקציית האתחול
+async function initSite() {
+    // 1. טעינת מוצרים מ-CSV
+    Papa.parse(SETTINGS.CSV_URL, {
         download: true,
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            allProductsData = results.data.filter(p => p.Barcode && p.Name);
+            ALL_PRODUCTS = results.data.filter(p => p.Barcode && p.Name);
             
             // מילוי קטגוריות
-            const cats = [...new Set(allProductsData.map(p => p.Category))].filter(Boolean).sort();
+            const categories = [...new Set(ALL_PRODUCTS.map(p => p.Category))].filter(Boolean).sort();
             const select = document.getElementById('categoryFilter');
-            cats.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            categories.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.innerText = c;
+                select.appendChild(opt);
+            });
 
-            handleFilterChange();
-            renderFeatured();
-            setupInfiniteScroll();
+            // רינדור התחלתי
+            runFilter();
+            document.getElementById('home-featured-grid').innerHTML = ALL_PRODUCTS.slice(0, 12).map(p => buildCard(p)).join('');
         }
     });
-}
 
-// ניהול סינון וחיפוש
-function handleFilterChange() {
-    const term = document.getElementById('searchInput').value.toLowerCase();
-    const cat = document.getElementById('categoryFilter').value;
-    
-    filteredProducts = allProductsData.filter(p => {
-        const matchesSearch = p.Name.toLowerCase().includes(term) || p.Barcode.includes(term);
-        const matchesCat = cat === "" || p.Category === cat;
-        return matchesSearch && matchesCat;
-    });
-
-    currentIndex = 0;
-    document.getElementById('main-products-grid').innerHTML = '';
-    loadMore();
-}
-
-// טעינת מוצרים נוספים (Infinite Scroll)
-function loadMore() {
-    const grid = document.getElementById('main-products-grid');
-    const nextBatch = filteredProducts.slice(currentIndex, currentIndex + CONFIG.PER_PAGE);
-    
-    nextBatch.forEach(p => {
-        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode.trim()}`;
-        grid.innerHTML += `
-            <div class="card">
-                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-                <span class="category-tag">${p.Category || 'כללי'}</span>
-                <h3>${p.Name}</h3>
-                <div class="price">₪${p.Price}</div>
-                <small>ברקוד: ${p.Barcode}</small>
-            </div>
-        `;
-    });
-    currentIndex += CONFIG.PER_PAGE;
-}
-
-// הגדרת מאזין גלילה
-function setupInfiniteScroll() {
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && currentIndex < filteredProducts.length) {
-            loadMore();
+    // 2. טעינת תמונות מבצעים מ-Cloudinary
+    try {
+        const res = await fetch(`https://res.cloudinary.com/${SETTINGS.CLOUD_NAME}/image/list/${SETTINGS.PROMO_TAG}.json`);
+        if (res.ok) {
+            const data = await res.json();
+            const track = document.getElementById('promo-container');
+            const fullGrid = document.getElementById('full-promo-grid');
+            
+            let html = '';
+            data.resources.forEach(img => {
+                const url = `https://res.cloudinary.com/${SETTINGS.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
+                const tag = `<img src="${url}" onclick="window.open('${url}', '_blank')">`;
+                html += tag;
+                fullGrid.innerHTML += `<div class="card" style="padding:10px;">${tag}</div>`;
+            });
+            
+            track.innerHTML = html + html; // כפול בשביל הלופ של הסליידר
         }
-    }, { threshold: 0.1 });
-    observer.observe(document.getElementById('loading-sentinel'));
+    } catch (err) {
+        console.error("Cloudinary error:", err);
+    }
 }
 
-// הצגת מוצרים נבחרים בדף הבית
-function renderFeatured() {
-    const grid = document.getElementById('home-featured-grid');
-    grid.innerHTML = allProductsData.slice(0, 8).map(p => {
-        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode.trim()}`;
-        return `
-            <div class="card">
-                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-                <h3>${p.Name}</h3>
-                <div class="price">₪${p.Price}</div>
-            </div>`;
-    }).join('');
-}
-
-// הפעלה
-init();
+// הרצה
+initSite();
 </script>
 
 </body>
