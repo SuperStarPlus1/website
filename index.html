@@ -12,39 +12,45 @@
             --light-bg: #f8f9fa;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; overflow-x: hidden; }
         
         header { background: var(--main-blue); color: white; padding: 20px; border-bottom: 5px solid var(--main-yellow); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         
-        /* עיצוב משופר ללא שוליים לאזור המבצעים */
+        /* אזור המבצעים - גלילה רציפה ללא הפסקה */
         .promo-section { 
-            max-width: 1000px; 
-            margin: 20px auto; 
-            padding: 0 15px; 
-            overflow: hidden; 
+            width: 100%;
+            background: white;
+            margin: 20px 0;
+            padding: 10px 0;
+            overflow: hidden; /* מסתיר את מה שיוצא מהמסך */
+            white-space: nowrap;
             position: relative;
         }
-        
-        .promo-container { 
-            display: flex; 
-            overflow-x: auto; 
-            gap: 0; 
-            scroll-snap-type: x mandatory; 
-            scrollbar-width: none; 
-            -ms-overflow-style: none; 
-            scroll-behavior: smooth;
+
+        .promo-track {
+            display: inline-flex;
+            animation: scroll-left 20s linear infinite; /* תנועה רציפה */
         }
 
-        .promo-container::-webkit-scrollbar { display: none; }
+        /* מניעת רווחים בין תמונות משוכפלות */
+        .promo-track img {
+            height: 400px; /* גובה קבוע שמאפשר לראות את כל התמונה */
+            width: auto;   /* רוחב משתנה לפי התמונה המקורית */
+            display: block;
+            margin-right: 0;
+            border-radius: 8px;
+            margin: 0 5px; /* רווח קטן ונעים בין תמונות */
+        }
 
-        .promo-container img { 
-            flex: 0 0 100%; 
-            width: 100%;
-            height: 400px; /* גובה מותאם לתמונות מרובעות */
-            object-fit: cover; /* מילוי כל השטח ללא שוליים לבנים */
-            scroll-snap-align: start; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        /* אנימציית הגלילה */
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(50%); } /* זז חצי דרך כי אנחנו משכפלים את התוכן */
+        }
+
+        /* עצירת האנימציה כשנוגעים עם העכבר */
+        .promo-section:hover .promo-track {
+            animation-play-state: paused;
         }
 
         .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
@@ -63,12 +69,10 @@
         .btn-round { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.3s; }
         .btn-whatsapp { background: #25d366; font-size: 30px; }
         .btn-waze { background: #33ccff; font-size: 20px; font-weight: bold; }
-        
-        .club-banner { background: var(--main-yellow); padding: 15px; border-radius: 8px; margin-top: 40px; font-weight: bold; cursor: pointer; text-align: center; }
 
         @media (max-width: 600px) {
             .grid { grid-template-columns: repeat(2, 1fr); }
-            .promo-container img { height: 250px; } /* התאמת גובה לנייד */
+            .promo-track img { height: 250px; } /* גובה מותאם לנייד */
         }
     </style>
 </head>
@@ -80,15 +84,12 @@
 </header>
 
 <div class="promo-section" id="promo-area">
-    <div class="promo-container" id="promo-container"></div>
+    <div class="promo-track" id="promo-container">
+        </div>
 </div>
 
 <div class="container">
     <div id="categories-wrapper"></div>
-
-    <div class="club-banner" onclick="window.open('https://forms.google.com')">
-        📍 הצטרפו למועדון הלקוחות שלנו וקבלו מבצעים בלעדיים! >
-    </div>
 </div>
 
 <div class="fab">
@@ -116,24 +117,6 @@ function isPromoActive(folderName) {
     } catch(e) { return false; }
 }
 
-// פונקציה להחלפה אוטומטית של מבצעים בלולאה אינסופית
-function startAutoSlider() {
-    const container = document.getElementById('promo-container');
-    if (!container) return;
-
-    setInterval(() => {
-        const width = container.offsetWidth;
-        const maxScroll = container.scrollWidth - width;
-        
-        // בדיקה האם הגענו לסוף הגלילה (עם טווח ביטחון של 10 פיקסלים)
-        if (container.scrollLeft + width >= maxScroll - 10) {
-            container.scrollTo({ left: 0, behavior: 'smooth' }); // חוזר להתחלה
-        } else {
-            container.scrollBy({ left: width, behavior: 'smooth' }); // גולל לתמונה הבאה
-        }
-    }, 4000); 
-}
-
 async function init() {
     // 1. טעינת מבצעים
     try {
@@ -141,27 +124,24 @@ async function init() {
         if (res.ok) {
             const data = await res.json();
             const container = document.getElementById('promo-container');
-            container.innerHTML = ''; 
+            let imagesHtml = '';
 
-            let count = 0;
             data.resources.forEach(img => {
                 const parts = img.public_id.split('/');
                 const folderName = parts[1]; 
 
                 if (isPromoActive(folderName)) {
                     const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
-                    container.innerHTML += `<img src="${imgUrl}">`;
-                    count++;
+                    imagesHtml += `<img src="${imgUrl}">`;
                 }
             });
-            
-            if (count > 1) {
-                startAutoSlider();
+
+            if (imagesHtml !== '') {
+                // משכפלים את התמונות כדי ליצור רצף אינסופי ללא "קפיצה" בסוף
+                container.innerHTML = imagesHtml + imagesHtml;
+            } else {
+                document.getElementById('promo-area').style.display = 'none';
             }
-        }
-        
-        if(document.getElementById('promo-container').innerHTML === "") {
-            document.getElementById('promo-area').style.display = 'none';
         }
     } catch(e) { 
         console.error("שגיאה בטעינת מבצעים:", e); 
@@ -170,13 +150,10 @@ async function init() {
 
     // 2. טעינת מוצרים
     Papa.parse(CONFIG.CSV_URL, {
-        download: true, 
-        header: true,
-        skipEmptyLines: true,
+        download: true, header: true, skipEmptyLines: true,
         complete: function(results) {
             const wrapper = document.getElementById('categories-wrapper');
             const cats = {};
-            
             results.data.forEach(p => {
                 if(!p.Category || !p.Barcode) return;
                 if(!cats[p.Category]) cats[p.Category] = [];
@@ -188,14 +165,12 @@ async function init() {
                 cats[cat].forEach(p => {
                     const barcode = p.Barcode.trim();
                     const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${barcode}`;
-                    
-                    section += `
-                        <div class="card">
-                            <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-                            <h3>${p.Name}</h3>
-                            <div class="price">₪${p.Price}</div>
-                            <span class="barcode">ברקוד: ${barcode}</span>
-                        </div>`;
+                    section += `<div class="card">
+                        <img src="${imgUrl}" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                        <h3>${p.Name}</h3>
+                        <div class="price">₪${p.Price}</div>
+                        <span class="barcode">ברקוד: ${barcode}</span>
+                    </div>`;
                 });
                 section += `</div>`;
                 wrapper.innerHTML += section;
@@ -206,6 +181,5 @@ async function init() {
 
 init();
 </script>
-
 </body>
 </html>
