@@ -45,6 +45,22 @@
         .page-section.active { display: block; }
         .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
+        /* --- וידאו תדמית עם כפתור סאונד --- */
+        .hero-video-container { 
+            width: 100%; border-radius: 15px; overflow: hidden; margin-bottom: 30px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; position: relative; line-height: 0; 
+        }
+        .hero-video { width: 100%; height: auto; max-height: 500px; object-fit: cover; }
+        .video-controls {
+            position: absolute; bottom: 20px; left: 20px; z-index: 10;
+        }
+        .mute-btn {
+            background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; 
+            width: 45px; height: 45px; cursor: pointer; font-size: 1.2rem; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mute-btn:hover { background: var(--main-yellow); color: var(--brand-blue); }
+
         /* --- כרטיסים וגריד --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%; cursor: pointer; }
@@ -121,6 +137,15 @@
 
 <div class="main-content">
     <div id="home" class="page-section active">
+        <div class="hero-video-container">
+            <video id="promoVideo" class="hero-video" autoplay muted loop playsinline>
+                <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
+            </video>
+            <div class="video-controls">
+                <button class="mute-btn" onclick="toggleMute()"><i id="muteIcon" class="fas fa-volume-mute"></i></button>
+            </div>
+        </div>
+
         <div class="section-title">המבצעים שלנו</div>
         <div class="promo-section"><div class="promo-track" id="promo-container-home"></div></div>
         <div class="section-title">חדש על המדף</div>
@@ -142,7 +167,7 @@
     <div id="directions-page" class="page-section">
         <div class="section-title">צור קשר ודרכי הגעה</div>
         <div style="width:100%; height:350px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue); margin-bottom: 20px;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3363.386341235339!2d35.2155702!3d32.9234125!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c31393521b471%3A0xc3f608933e8b0a5!2z16HXldeW16jXoCDXodeY16DRoCDXpNeo16XXodeo!5e0!3m2!1she!2sil!4v1710000000000!5m2!1she!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.123456789!2d35.2123456789!3d32.9123456789!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU0JzQ0LjQiTiAzNcKwMTInNDQuNCJF!5e0!3m2!1she!2sil!4v1700000000000!5m2!1she!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
 
         <div class="contact-info-container">
@@ -159,10 +184,8 @@
                 <ul class="opening-hours">
                     <span class="dept-title">🛒 סופרמרקט (כללי)</span>
                     <li><span>כל ימות השבוע</span> <span>08:00 - 22:00</span></li>
-                    
                     <span class="dept-title">🥩 מחלקת בשר</span>
                     <li><span>כל ימות השבוע</span> <span>08:00 - 20:30</span></li>
-                    
                     <span class="dept-title">🐟 מחלקת דגים</span>
                     <li><span>יום ראשון</span> <span>סגור</span></li>
                     <li><span>שני - שבת</span> <span>09:00 - 17:00</span></li>
@@ -178,6 +201,13 @@ const CONFIG = {
     CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv" 
 };
 let allProducts = [], currentCategory = 'הכל';
+
+function toggleMute() {
+    const video = document.getElementById('promoVideo');
+    const icon = document.getElementById('muteIcon');
+    video.muted = !video.muted;
+    icon.className = video.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+}
 
 function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
 function showPage(id, el) {
