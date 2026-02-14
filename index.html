@@ -12,7 +12,7 @@
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
             --sidebar-width: 200px;
-            --header-height: 150px; /* גובה הבאנר */
+            --header-height: 150px;
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
@@ -34,7 +34,7 @@
         .header-fixed {
             position: fixed;
             top: 0;
-            right: var(--sidebar-width); /* מתחיל אחרי הסיידבר */
+            right: var(--sidebar-width);
             left: 0;
             height: var(--header-height);
             background-color: var(--brand-blue);
@@ -44,26 +44,15 @@
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .header-fixed img {
-            height: 100%;
-            width: 100%;
-            object-fit: contain;
-            display: block;
-        }
+        .header-fixed img { height: 100%; width: 100%; object-fit: contain; display: block; }
 
         /* --- תוכן ראשי --- */
-        .main-content { 
-            flex-grow: 1; 
-            margin-top: var(--header-height); /* מרווח כדי שהתוכן לא יתחבא מתחת לבאנר */
-            display: flex; 
-            flex-direction: column; 
-        }
-
+        .main-content { flex-grow: 1; margin-top: var(--header-height); display: flex; flex-direction: column; }
         .page-section { display: none; padding: 25px; }
         .page-section.active { display: block; }
         .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
-        /* --- גריד וכרטיסים --- */
+        /* --- כרטיסים וגריד --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%; cursor: pointer; }
         .card img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
@@ -81,7 +70,8 @@
         .btn-whatsapp { background: #25D366; }
         .btn-waze { background: #33CCFF; }
         .social-icons { display: flex; justify-content: center; gap: 15px; padding-top: 10px; }
-        .social-icons a { color: white; font-size: 1.1rem; }
+        .social-icons a { color: white; font-size: 1.1rem; transition: 0.3s; }
+        .social-icons a:hover { color: var(--main-yellow); }
 
         /* --- Lightbox --- */
         #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
@@ -105,18 +95,18 @@
     <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו" class="sidebar-logo">
     <ul class="nav-menu">
         <li class="active" onclick="showPage('home', this)">🏠 דף הבית</li>
-        <li onclick="showPage('catalog-page', this)">🛒 קטלוג מוצרים</li>
-        <li onclick="showPage('promos-page', this)">🏷️ המבצעים שלנו</li>
+        <li onclick="showPage('catalog-page', this)">🛒 קטלוג</li>
+        <li onclick="showPage('promos-page', this)">🏷️ מבצעים</li>
         <li onclick="showPage('new-products-page', this)">🆕 חדש על המדף</li>
-        <li onclick="showPage('directions-page', this)">📍 דרכי הגעה</li>
+        <li onclick="showPage('directions-page', this)">📍 הגעה</li>
     </ul>
     <div class="sidebar-actions">
         <a href="https://wa.me/97249076772" class="action-btn btn-whatsapp" target="_blank"><i class="fab fa-whatsapp"></i> וואטסאפ</a>
         <a href="https://waze.com/ul/hsvc562y69" class="action-btn btn-waze" target="_blank"><i class="fab fa-waze"></i> Waze</a>
         <div class="social-icons">
-            <a href="#"><i class="fab fa-facebook-f"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-tiktok"></i></a>
+            <a href="https://www.facebook.com/SuperStarPLus/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fab fa-instagram"></i></a>
+            <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fab fa-tiktok"></i></a>
         </div>
     </div>
 </nav>
@@ -144,16 +134,20 @@
 
     <div id="promos-page" class="page-section"><div class="section-title">כל המבצעים</div><div id="full-promo-grid" class="grid"></div></div>
     <div id="new-products-page" class="page-section"><div class="section-title">חדש על המדף</div><div id="full-new-grid" class="grid"></div></div>
+    
     <div id="directions-page" class="page-section">
         <div class="section-title">איך מגיעים?</div>
-        <div style="width:100%; height:400px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue);">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.5!2d35.21!3d32.92!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzI0LjAiTiAzNcKwMTInMzYuMCJF!5e0!3m2!1she!2sil!4v1620000000000" width="100%" height="100%" style="border:0;" allowfullscreen=""></iframe>
+        <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue);">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.123456789!2d35.2575!3d32.9231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzIzLjIiTiAzNcKwMTUnMjcuMCJF!5e0!3m2!1she!2sil!4v1620000000000!5m2!1she!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
     </div>
 </div>
 
 <script>
-const CONFIG = { CLOUD_NAME: "dj56w7nb9", CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv" };
+const CONFIG = { 
+    CLOUD_NAME: "dj56w7nb9", 
+    CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv" 
+};
 let allProducts = [], currentCategory = 'הכל';
 
 function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
@@ -168,7 +162,11 @@ function renderGrid(data, container) {
     if(!container) return;
     container.innerHTML = data.map(p => {
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode}`;
-        return `<div class="card" onclick="openLightbox('${imgUrl}')"><img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'"><h3>${p.Name || 'מוצר'}</h3><div class="price">₪${p.Price || '0'}</div></div>`;
+        return `<div class="card" onclick="openLightbox('${imgUrl}')">
+            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+            <h3>${p.Name || 'מוצר'}</h3>
+            <div class="price">₪${p.Price || '0'}</div>
+        </div>`;
     }).join('');
 }
 
