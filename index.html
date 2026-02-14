@@ -5,92 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>סופר סטאר - מג'ד אל-כרום</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
             --brand-blue: #0076DA;
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
-            --sidebar-width: 250px;
+            --sidebar-width: 200px; /* סיידבר צר יותר */
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
 
-        /* --- סיידבר --- */
+        /* --- סיידבר מעודכן --- */
         .sidebar { 
             width: var(--sidebar-width); background: var(--brand-blue); color: white; 
-            height: 100vh; position: sticky; top: 0; padding: 10px 15px; 
+            height: 100vh; position: sticky; top: 0; padding: 10px; 
             box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; 
             z-index: 1100; 
         }
-        .sidebar-logo { width: 100%; max-width: 140px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
-        .nav-menu { list-style: none; padding: 0; width: 100%; }
-        .nav-menu li { padding: 12px 15px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 5px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+        .sidebar-logo { width: 100%; max-width: 110px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        
+        .nav-menu { list-style: none; padding: 0; width: 100%; flex-grow: 1; }
+        .nav-menu li { 
+            padding: 10px; cursor: pointer; border-radius: 8px; transition: 0.3s; 
+            margin-bottom: 5px; font-size: 0.9rem; /* פונט קטן יותר */
+            display: flex; align-items: center; gap: 8px; 
+        }
         .nav-menu li:hover { background: rgba(255,255,255,0.1); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); font-weight: bold; }
 
+        /* --- כפתורי יצירת קשר וניווט בסיידבר --- */
+        .sidebar-actions { width: 100%; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px; }
+        .action-btn { 
+            display: flex; align-items: center; justify-content: center; gap: 8px; 
+            text-decoration: none; color: white; padding: 8px; border-radius: 8px; font-size: 0.85rem; transition: 0.3s;
+        }
+        .btn-whatsapp { background: #25D366; }
+        .btn-waze { background: #33CCFF; }
+        .action-btn:hover { opacity: 0.9; transform: scale(1.02); }
+
+        /* --- אייקונים חברתיים --- */
+        .social-icons { display: flex; justify-content: center; gap: 15px; padding: 15px 0; width: 100%; }
+        .social-icons a { color: white; font-size: 1.2rem; transition: 0.3s; }
+        .social-icons a:hover { color: var(--main-yellow); }
+
         /* --- באנר עליון --- */
-        .header-container { width: 100%; background-color: var(--brand-blue); display: flex; justify-content: center; align-items: center; min-height: 120px; }
-        .header-container img { width: 100%; height: auto; max-height: 300px; object-fit: contain; display: block; }
+        .header-container { width: 100%; background-color: var(--brand-blue); display: flex; justify-content: center; align-items: center; min-height: 100px; }
+        .header-container img { width: 100%; height: auto; max-height: 250px; object-fit: contain; display: block; }
 
         /* --- תוכן ראשי --- */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-x: hidden; }
         .page-section { display: none; padding: 25px; }
         .page-section.active { display: block; }
-        .section-title { font-size: 24px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
+        .section-title { font-size: 22px; color: var(--brand-blue); font-weight: bold; margin-bottom: 20px; border-right: 5px solid var(--main-yellow); padding-right: 15px; }
 
         /* --- גריד וכרטיסים --- */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; height: 100%; cursor: pointer; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 15px; }
-        .card h3 { font-size: 1rem; margin: 5px 0; min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
-        .card .price { color: #d32f2f; font-size: 1.4rem; font-weight: bold; margin-top: auto; }
+        .card img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
+        .card h3 { font-size: 0.95rem; margin: 5px 0; min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
+        .card .price { color: #d32f2f; font-size: 1.2rem; font-weight: bold; margin-top: auto; }
 
-        /* --- Lightbox (תמונה צפה) --- */
+        /* --- Lightbox --- */
         #lightbox {
             display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.9); justify-content: center; align-items: center; cursor: pointer;
         }
-        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        #lightbox .close-btn { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; font-weight: bold; }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; }
 
         /* --- סליידר --- */
-        .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .promo-section { width: 100%; background: white; margin-bottom: 30px; overflow: hidden; border-radius: 15px; }
         .promo-track { display: inline-flex; animation: scroll-left 50s linear infinite; }
-        .promo-track img { height: 350px; width: auto; margin: 10px; border-radius: 12px; cursor: pointer; }
+        .promo-track img { height: 300px; width: auto; margin: 10px; border-radius: 12px; }
         @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
-
-        /* --- בקרות --- */
-        .controls-container { background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .search-box { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; }
-        .category-filter { display: flex; flex-wrap: wrap; gap: 10px; }
-        .cat-btn { padding: 8px 16px; background: #eee; border: none; border-radius: 20px; cursor: pointer; }
-        .cat-btn.active { background: var(--brand-blue); color: white; }
 
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; }
-            .nav-menu { display: flex; overflow-x: auto; gap: 10px; }
+            .nav-menu { display: flex; overflow-x: auto; }
+            .sidebar-actions, .social-icons { display: none; } /* הסתרה בנייד כדי לחסוך מקום */
         }
     </style>
 </head>
 <body>
 
-<div id="lightbox" onclick="closeLightbox()">
-    <span class="close-btn">&times;</span>
-    <img id="lightbox-img" src="">
-</div>
+<div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src=""></div>
 
 <nav class="sidebar">
     <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו" class="sidebar-logo">
+    
     <ul class="nav-menu">
         <li class="active" onclick="showPage('home', this)">🏠 דף הבית</li>
+        <li onclick="showPage('catalog-page', this)">🛒 קטלוג מוצרים</li>
         <li onclick="showPage('promos-page', this)">🏷️ המבצעים שלנו</li>
         <li onclick="showPage('new-products-page', this)">🆕 חדש על המדף</li>
-        <li onclick="showPage('catalog-page', this)">🛒 קטלוג מוצרים</li>
         <li onclick="showPage('directions-page', this)">📍 דרכי הגעה</li>
-        <li onclick="showPage('contact', this)">📞 צור קשר</li>
     </ul>
+
+    <div class="sidebar-actions">
+        <a href="https://wa.me/97249076772" class="action-btn btn-whatsapp" target="_blank">
+            <i class="fab fa-whatsapp"></i> וואטסאפ
+        </a>
+        <a href="https://waze.com/ul/hsvc562y69" class="action-btn btn-waze" target="_blank">
+            <i class="fab fa-waze"></i> ניווט ב-Waze
+        </a>
+    </div>
+
+    <div class="social-icons">
+        <a href="https://facebook.com" target="_blank"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://instagram.com" target="_blank"><i class="fab fa-instagram"></i></a>
+        <a href="https://tiktok.com" target="_blank"><i class="fab fa-tiktok"></i></a>
+    </div>
 </nav>
 
 <div class="main-content">
@@ -107,20 +133,16 @@
 
     <div id="catalog-page" class="page-section">
         <div class="section-title">קטלוג מוצרים</div>
-        <div class="controls-container">
-            <input type="text" id="catalogSearch" class="search-box" placeholder="חפש לפי שם מוצר או ברקוד..." oninput="applyFilters()">
-            <div class="category-filter" id="categoryButtons"></div>
+        <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
+            <input type="text" id="catalogSearch" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="חפש מוצר או ברקוד..." oninput="applyFilters()">
+            <div id="categoryButtons" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
         </div>
         <div id="main-catalog-grid" class="grid"></div>
     </div>
 
     <div id="promos-page" class="page-section"><div class="section-title">כל המבצעים</div><div id="full-promo-grid" class="grid"></div></div>
     <div id="new-products-page" class="page-section"><div class="section-title">חדש על המדף</div><div id="full-new-grid" class="grid"></div></div>
-    <div id="directions-page" class="page-section"><div class="section-title">איך מגיעים?</div><div style="width:100%; height:400px; background:#ddd; border-radius:15px;"></div></div>
-    <div id="contact" class="page-section">
-        <div class="section-title">צור קשר</div>
-        <p>📍 סלאח אלדין, מג'ד אל-כרום | 📞 04-9076772</p>
-    </div>
+    <div id="directions-page" class="page-section"><div class="section-title">איך מגיעים?</div><div style="width:100%; height:400px; background:#ddd; border-radius:15px; display:flex; align-items:center; justify-content:center;">מפה כאן</div></div>
 </div>
 
 <script>
@@ -128,37 +150,22 @@ const CONFIG = {
     CLOUD_NAME: "dj56w7nb9",
     CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv"
 };
-
 let allProducts = [];
 let currentCategory = 'הכל';
 
-// פונקציות Lightbox
-function openLightbox(url) {
-    document.getElementById('lightbox-img').src = url;
-    document.getElementById('lightbox').style.display = 'flex';
-}
-function closeLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
-}
-
-function showPage(id, el) {
+function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
+function closeLightbox() { document.getElementById('lightbox').style.display = 'none'; }
+function showPage(id, el) { 
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    el.classList.add('active');
-    window.scrollTo(0,0);
+    document.getElementById(id).classList.add('active'); el.classList.add('active'); window.scrollTo(0,0);
 }
 
 function renderGrid(data, container) {
     if(!container) return;
     container.innerHTML = data.map(p => {
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode}`;
-        return `
-            <div class="card" onclick="openLightbox('${imgUrl}')">
-                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
-                <h3>${p.Name || 'מוצר'}</h3>
-                <div class="price">₪${p.Price || '0'}</div>
-            </div>`;
+        return `<div class="card" onclick="openLightbox('${imgUrl}')"><img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'"><h3>${p.Name || 'מוצר'}</h3><div class="price">₪${p.Price || '0'}</div></div>`;
     }).join('');
 }
 
@@ -192,19 +199,15 @@ async function init() {
     fetchImages('promo', 'promo-container-home', 'full-promo-grid');
     fetchImages('newproducts', null, 'home-new-grid');
     fetchImages('newproducts', null, 'full-new-grid');
-
     Papa.parse(CONFIG.CSV_URL, {
         download: true, header: true, skipEmptyLines: true,
         complete: function(results) {
             allProducts = results.data.map(row => {
-                let clean = {};
-                for (let key in row) clean[key.trim()] = row[key];
-                return clean;
+                let clean = {}; for (let key in row) clean[key.trim()] = row[key]; return clean;
             }).filter(p => p.Barcode || p.Name);
-
             const cats = ['הכל', ...new Set(allProducts.map(p => p.Catagory).filter(c => c))];
             const btnContainer = document.getElementById('categoryButtons');
-            btnContainer.innerHTML = cats.map(c => `<button class="cat-btn ${c === 'הכל' ? 'active' : ''}" onclick="currentCategory='${c}'; document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); applyFilters();">${c}</button>`).join('');
+            if(btnContainer) btnContainer.innerHTML = cats.map(c => `<button class="cat-btn" style="padding:5px 10px; border-radius:15px; border:none; background:#eee; cursor:pointer;" onclick="currentCategory='${c}'; applyFilters();">${c}</button>`).join('');
             applyFilters();
         }
     });
