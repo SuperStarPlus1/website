@@ -36,23 +36,30 @@
 
         /* תוכן מרכזי */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
-        header { background: white; padding: 20px 40px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 20px; }
-        header img { max-width: 100px; }
+        header { background: white; padding: 15px 40px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
+        header img { max-width: 120px; }
         
         .page-section { display: none; padding: 40px; animation: fadeIn 0.3s ease; }
         .page-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* באנר מבצעים בדף הבית */
+        .promo-banner {
+            width: 100%; border-radius: 20px; margin-bottom: 30px;
+            box-shadow: var(--card-shadow); overflow: hidden;
+        }
+        .promo-banner img { width: 100%; display: block; object-fit: cover; max-height: 400px; }
+
         /* אזור חיפוש */
         .search-container {
-            background: white; padding: 20px 30px; border-radius: 50px; 
+            background: white; padding: 15px 25px; border-radius: 50px; 
             box-shadow: var(--card-shadow); display: flex; gap: 15px; 
             margin-bottom: 40px; align-items: center; flex-wrap: wrap;
         }
         .search-container input { border: none; outline: none; flex: 2; font-size: 1.1rem; min-width: 200px; }
-        .search-container select { border: none; outline: none; background: #f1f2f6; padding: 10px 20px; border-radius: 20px; cursor: pointer; flex: 1; }
+        .search-container select { border: none; outline: none; background: #f1f2f6; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
 
-        /* גריד וכרטיסים */
+        /* גריד קטלוג */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; }
         .card { 
             background: white; border-radius: 20px; padding: 20px; text-align: center;
@@ -65,32 +72,27 @@
         .card .price { font-size: 1.5rem; font-weight: 800; color: var(--main-blue); margin-top: auto; padding-top: 10px; }
         .card .badge { font-size: 0.7rem; background: #f1f2f6; padding: 4px 10px; border-radius: 10px; color: #888; align-self: center; margin-bottom: 5px; }
 
-        /* כפתורי צד מוקטנים ב-50% */
-        .fab-container { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
-        .fab-btn { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.3s; display: flex; align-items: center; justify-content: center; background: white; overflow: hidden; }
-        .fab-btn:hover { transform: scale(1.2); }
-        .fab-btn img { width: 22px; height: 22px; object-fit: contain; }
-
-        /* כפתור חזרה למעלה */
+        /* כפתורי צד (מוקטנים ב-50%) */
+        .fab-container { position: fixed; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 2000; }
+        .fab-btn { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.3s; display: flex; align-items: center; justify-content: center; background: white; }
+        .fab-btn img { width: 20px; height: 20px; }
+        
         #backToTop {
-            position: fixed; bottom: 25px; right: 25px; 
-            background: var(--main-blue); color: white; 
-            width: 35px; height: 35px; border-radius: 50%; 
-            display: none; align-items: center; justify-content: center; 
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-            z-index: 2000; border: none; font-size: 16px; transition: 0.3s;
+            position: fixed; bottom: 20px; right: 20px; background: var(--main-blue); color: white; 
+            width: 35px; height: 35px; border-radius: 50%; display: none; align-items: center; 
+            justify-content: center; cursor: pointer; border: none; z-index: 2000;
         }
 
         /* מפה */
-        .map-container { width: 100%; height: 400px; border-radius: 20px; overflow: hidden; box-shadow: var(--card-shadow); border: 1px solid #eee; margin-top: 20px; }
+        .map-container { width: 100%; height: 400px; border-radius: 20px; overflow: hidden; margin-top: 20px; box-shadow: var(--card-shadow); }
 
-        #loading-sentinel { height: 50px; margin-top: 20px; display: flex; justify-content: center; align-items: center; color: #888; }
+        #loading-sentinel { height: 60px; display: flex; justify-content: center; align-items: center; color: #888; font-weight: bold; }
 
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; padding: 15px; }
             .nav-menu { display: flex; overflow-x: auto; gap: 10px; }
-            .nav-menu li { white-space: nowrap; margin-bottom: 0; padding: 10px 15px; }
+            .nav-menu li { white-space: nowrap; margin-bottom: 0; padding: 10px; }
             .page-section { padding: 20px; }
         }
     </style>
@@ -109,48 +111,55 @@
 
 <div class="main-content">
     <header>
-        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו">
-        <h1 style="font-weight: 400; color: #666;">סופר סטאר מג'ד אל-כרום</h1>
+        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופר סטאר">
+        <h2 style="color: var(--main-blue); margin: 0;">מג'ד אל-כרום</h2>
     </header>
 
     <div id="home" class="page-section active">
-        <h2 style="color: var(--main-blue);">ברוכים הבאים</h2>
-        <p>סופר סטאר מג'ד אל-כרום מזמין אתכם לחוויית קנייה מודרנית ואיכותית.</p>
-        <button onclick="document.querySelector('[onclick*=\'catalog\']').click()" style="background: var(--main-blue); color: white; border: none; padding: 12px 25px; border-radius: 50px; cursor: pointer; font-size: 1rem; font-weight: bold;">לצפייה בקטלוג המוצרים</button>
+        <div class="promo-banner">
+            <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/promo_banner.jpg" onerror="this.src='https://via.placeholder.com/1200x400?text=ברוכים+הבאים+לסופר+סטאר+מג'ד+אל+כרום'">
+        </div>
+        <h1 style="color: var(--main-blue);">המבצעים החמים של השבוע</h1>
+        <div class="grid" id="home-deals">
+            </div>
+        <div style="text-align: center; margin-top: 40px;">
+            <button onclick="document.querySelector('[onclick*=\'catalog\']').click()" style="background: var(--main-blue); color: white; border: none; padding: 15px 40px; border-radius: 50px; cursor: pointer; font-size: 1.2rem; font-weight: bold;">לכל מוצרי הקטלוג ←</button>
+        </div>
     </div>
 
     <div id="catalog" class="page-section">
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="חפש מוצר או ברקוד..." oninput="handleFilterChange()">
+            <input type="text" id="searchInput" placeholder="חפש מוצר, מותג או ברקוד..." oninput="handleFilterChange()">
             <select id="categoryFilter" onchange="handleFilterChange()">
                 <option value="">כל המחלקות</option>
             </select>
         </div>
         <div id="product-grid" class="grid"></div>
-        <div id="loading-sentinel">טוען מוצרים נוספים...</div>
+        <div id="loading-sentinel">טוען מוצרים...</div>
     </div>
 
     <div id="contact" class="page-section">
-        <div class="card" style="max-width: 500px; text-align: right; margin: 0 auto; padding: 30px;">
-            <h2 style="color: var(--main-blue);">צרו איתנו קשר</h2>
-            <p>📍 <b>כתובת:</b> סלאח אלדין, מג'ד אל-כרום</p>
-            <p>📞 <b>טלפון:</b> 04-9076772</p>
-            <p>⏰ <b>שעות פתיחה:</b> כל יום 8:00–22:00</p>
+        <div class="card" style="max-width: 600px; margin: 0 auto; padding: 40px; text-align: right;">
+            <h2 style="color: var(--main-blue);">נשמח לראותכם!</h2>
+            <p>📍 <b>כתובת:</b> סלאח אל-דין, מג'ד אל-כרום</p>
+            <p>📞 <b>טלפון מחלקת הזמנות:</b> 04-9076772</p>
+            <p>⏰ <b>שעות פעילות:</b> א'-שבת: 08:00 - 22:00</p>
+            <hr style="opacity: 0.1; margin: 20px 0;">
+            <p>לכל שאלה או בירור, ניתן לפנות אלינו גם בווטסאפ.</p>
         </div>
     </div>
 
     <div id="directions" class="page-section">
-        <h2 style="color: var(--main-blue);">איך מגיעים אלינו?</h2>
-        <p>סניף מג'ד אל-כרום ממוקם ברחוב הראשי סלאח אלדין.</p>
+        <h2 style="color: var(--main-blue);">ניווט לסניף מג'ד אל-כרום</h2>
         <div class="map-container">
             <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m13!1d3356.123!2d35.2636718!3d32.9198608!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151d3301fdfe9701%3A0x8cd5dc779c00b884!2z16HXldeW16jXodeY16DXqA!5e0!3m2!1siw!2sil!4v1700000000000" 
-                width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.3524675549883!2d35.2155!3d32.9222!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c206987747701%3A0x8cd5d7779c00b884!2sSuper%20Star!5e0!3m2!1sen!2sil!4v1700000000000!5m2!1sen!2sil" 
+                width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy">
             </iframe>
         </div>
-        <div style="margin-top: 20px; text-align: center; display: flex; gap: 10px; justify-content: center;">
-            <a href="https://waze.com/ul/hsvc562y69" target="_blank" style="text-decoration: none; background: #33ccff; color: white; padding: 12px 25px; border-radius: 50px; font-weight: bold;">ניווט ב-Waze</a>
-            <a href="https://maps.app.goo.gl/ChIJAZeq_QEzHBURhLgAnHfc1Yw" target="_blank" style="text-decoration: none; background: #4285F4; color: white; padding: 12px 25px; border-radius: 50px; font-weight: bold;">Google Maps</a>
+        <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+            <a href="https://waze.com/ul/hsvc562y69" target="_blank" style="text-decoration: none; background: #33ccff; color: white; padding: 15px 30px; border-radius: 50px; font-weight: bold;">ניווט ב-Waze</a>
+            <a href="https://maps.app.goo.gl/9Z8S7A3Xv9X9X9X9A" target="_blank" style="text-decoration: none; background: #4285F4; color: white; padding: 15px 30px; border-radius: 50px; font-weight: bold;">Google Maps</a>
         </div>
     </div>
 </div>
@@ -187,7 +196,7 @@ function showPage(id, el) {
 
 window.onscroll = function() {
     const btn = document.getElementById("backToTop");
-    if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+    if (document.documentElement.scrollTop > 300) {
         btn.style.display = "flex";
     } else {
         btn.style.display = "none";
@@ -203,6 +212,8 @@ async function initData() {
         download: true, header: true, skipEmptyLines: true,
         complete: function(results) {
             allProducts = results.data.filter(p => p.Barcode && p.Name);
+            
+            // מילוי קטגוריות
             const cats = [...new Set(allProducts.map(p => p.Category))].filter(Boolean).sort();
             const select = document.getElementById('categoryFilter');
             cats.forEach(c => {
@@ -210,8 +221,10 @@ async function initData() {
                 opt.value = c; opt.textContent = c;
                 select.appendChild(opt);
             });
+
             handleFilterChange();
             setupInfiniteScroll();
+            renderFeaturedDeals();
         }
     });
 }
@@ -237,28 +250,35 @@ function loadMoreItems() {
     const nextBatch = filteredProducts.slice(displayedCount, displayedCount + CONFIG.ITEMS_PER_PAGE);
     
     if (nextBatch.length === 0 && displayedCount === 0) {
-        grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; padding: 50px;'>לא נמצאו מוצרים.</p>";
+        grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; padding: 50px;'>לא נמצאו מוצרים תואמים.</p>";
         document.getElementById('loading-sentinel').style.display = "none";
         return;
     }
 
-    const html = nextBatch.map(p => {
-        const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/w_400,f_auto,q_auto/products/${p.Barcode.trim()}`;
-        return `
-            <div class="card">
-                <span class="badge">${p.Category || 'כללי'}</span>
-                <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/200?text=אין+תמונה'" loading="lazy">
-                <h3>${p.Name}</h3>
-                <div class="price">₪${p.Price}</div>
-                <small style="color: #bbb; font-size: 0.7rem;">ברקוד: ${p.Barcode}</small>
-            </div>
-        `;
-    }).join('');
-
+    const html = nextBatch.map(p => createCardHTML(p)).join('');
     grid.insertAdjacentHTML('beforeend', html);
     displayedCount += nextBatch.length;
-    document.getElementById('loading-sentinel').style.display = 
-        displayedCount >= filteredProducts.length ? "none" : "flex";
+    document.getElementById('loading-sentinel').style.display = displayedCount >= filteredProducts.length ? "none" : "flex";
+}
+
+function createCardHTML(p) {
+    const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/w_400,f_auto,q_auto/products/${p.Barcode.trim()}`;
+    return `
+        <div class="card">
+            <span class="badge">${p.Category || 'כללי'}</span>
+            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/200?text=אין+תמונה'" loading="lazy">
+            <h3>${p.Name}</h3>
+            <div class="price">₪${p.Price}</div>
+            <small style="color: #bbb; font-size: 0.7rem;">ברקוד: ${p.Barcode}</small>
+        </div>
+    `;
+}
+
+function renderFeaturedDeals() {
+    const homeGrid = document.getElementById('home-deals');
+    // מציג 4 מוצרים ראשונים כ"מבצעים" בדף הבית
+    const deals = allProducts.slice(0, 4);
+    homeGrid.innerHTML = deals.map(p => createCardHTML(p)).join('');
 }
 
 function setupInfiniteScroll() {
