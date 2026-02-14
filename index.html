@@ -8,15 +8,22 @@
     <style>
         :root {
             --main-blue: #0047ba;
+            --banner-blue: #0076DA; /* הצבע שביקשת */
             --main-yellow: #ffcc00;
             --light-bg: #f8f9fa;
             --sidebar-width: 250px;
+            --header-height: 180px; /* גובה הבאנר */
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light-bg); color: #333; display: flex; min-height: 100vh; }
 
-        /* --- סיידבר --- */
-        .sidebar { width: var(--sidebar-width); background: var(--main-blue); color: white; height: 100vh; position: sticky; top: 0; padding: 10px 15px; box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1000; }
+        /* --- סיידבר קבוע --- */
+        .sidebar { 
+            width: var(--sidebar-width); background: var(--main-blue); color: white; 
+            height: 100vh; position: sticky; top: 0; padding: 10px 15px; 
+            box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; 
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1100; 
+        }
         .sidebar-logo { width: 100%; max-width: 140px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .nav-menu { list-style: none; padding: 0; width: 100%; }
         .nav-menu li { padding: 12px 15px; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 5px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
@@ -24,9 +31,29 @@
         .nav-menu li.active { background: var(--main-yellow); color: var(--main-blue); font-weight: bold; }
 
         /* --- תוכן ראשי --- */
-        .main-content { flex-grow: 1; overflow-x: hidden; display: flex; flex-direction: column; }
-        .top-banner { width: 100%; background: white; border-bottom: 3px solid var(--main-blue); }
-        .top-banner img { width: 100%; max-height: 250px; object-fit: contain; display: block; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+
+        /* --- באנר עליון מקובע (Sticky Header) --- */
+        .header-wrapper {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: var(--header-height);
+            background-color: var(--banner-blue); /* מילוי כל הראש בצבע שביקשת */
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header-wrapper img {
+            height: 100%;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
+        }
 
         .page-section { display: none; padding: 25px; }
         .page-section.active { display: block; }
@@ -41,7 +68,6 @@
         /* --- בקרות חיפוש וסינון --- */
         .controls-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
         .search-box { width: 100%; padding: 12px 15px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
-        .search-box:focus { border-color: var(--main-blue); }
         .category-filter { display: flex; flex-wrap: wrap; gap: 10px; }
         .cat-btn { padding: 8px 16px; background: #eee; border: none; border-radius: 20px; cursor: pointer; transition: 0.3s; font-weight: 500; }
         .cat-btn.active { background: var(--main-blue); color: white; }
@@ -54,14 +80,12 @@
         .card h3 { font-size: 1rem; margin: 5px 0; font-weight: 600; line-height: 1.3; min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
         .card .price { color: #d32f2f; font-size: 1.4rem; font-weight: bold; margin-top: auto; }
 
-        /* --- מפה --- */
-        .map-container { width: 100%; height: 450px; border-radius: 15px; overflow: hidden; border: 2px solid var(--main-blue); margin-bottom: 20px; }
-
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; padding: 10px; }
+            .header-wrapper { height: 100px; position: sticky; top: 0; }
             .nav-menu { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 5px; }
-            .nav-menu li { padding: 8px 15px; white-space: nowrap; margin-bottom: 0; font-size: 0.9rem; }
+            .nav-menu li { padding: 8px 15px; white-space: nowrap; margin-bottom: 0; font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -80,9 +104,9 @@
 </nav>
 
 <div class="main-content">
-    <div class="top-banner">
-        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.jpg" alt="באנר">
-    </div>
+    <header class="header-wrapper">
+        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.jpg" alt="באנר סופר סטאר">
+    </header>
 
     <div id="home" class="page-section active">
         <div class="section-title">המבצעים שלנו</div>
@@ -107,19 +131,18 @@
         <div class="section-title">קטלוג מוצרים</div>
         <div class="controls-container">
             <input type="text" id="catalogSearch" class="search-box" placeholder="חפש לפי שם מוצר או ברקוד..." oninput="applyFilters()">
-            <div class="category-filter" id="categoryButtons">
-                </div>
+            <div class="category-filter" id="categoryButtons"></div>
         </div>
         <div id="main-catalog-grid" class="grid"></div>
     </div>
 
     <div id="directions-page" class="page-section">
         <div class="section-title">איך מגיעים?</div>
-        <div class="map-container">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3364.555562135687!2d35.2575457!3d32.9231871!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c313271169335%3A0x7e2986427749028!2z157XkteTINecINeb16jXldef!5e0!3m2!1siw!2sil!4v1700000000000" 
+        <div style="width:100%; height:450px; border-radius:15px; overflow:hidden; border:2px solid var(--main-blue);">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3356.123456789!2d35.2575!3d32.9213!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzE2LjgiTiAzNcKwMTUnMjcuMCJF!5e0!3m2!1she!2sil!4v1620000000000!5m2!1she!2sil" 
             width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
         </div>
-        <p style="text-align:center;"><a href="https://waze.com/ul/hsvc562y69" target="_blank" style="background:var(--main-blue); color:white; padding:12px 25px; border-radius:10px; text-decoration:none; font-weight:bold;">פתח ב-Waze</a></p>
+        <p style="text-align:center; margin-top:15px;"><a href="https://waze.com/ul/hsvc562y69" target="_blank" style="background:var(--main-blue); color:white; padding:12px 25px; border-radius:10px; text-decoration:none; font-weight:bold;">פתח ב-Waze</a></p>
     </div>
 
     <div id="contact" class="page-section">
@@ -149,18 +172,14 @@ function showPage(id, el) {
     window.scrollTo(0, 0);
 }
 
-// פונקציית סינון וחיפוש
 function applyFilters() {
     const searchTerm = document.getElementById('catalogSearch').value.toLowerCase();
     const grid = document.getElementById('main-catalog-grid');
-
     const filtered = allProducts.filter(p => {
-        const matchesSearch = (p.Name || "").toLowerCase().includes(searchTerm) || 
-                              (p.Barcode || "").toString().includes(searchTerm);
+        const matchesSearch = (p.Name || "").toLowerCase().includes(searchTerm) || (p.Barcode || "").toString().includes(searchTerm);
         const matchesCategory = (currentCategory === 'הכל' || p.Catagory === currentCategory);
         return matchesSearch && matchesCategory;
     });
-
     renderGrid(filtered, grid);
 }
 
@@ -197,18 +216,16 @@ async function fetchImages(tag, trackId, gridId) {
                 html += imgHtml;
                 if(grid) grid.innerHTML += `<div class="card">${imgHtml}</div>`;
             });
-            if(track) track.innerHTML = html + html; // כפילות לסליידר אינסופי
+            if(track) track.innerHTML = html + html;
         }
     } catch(e) { console.error(e); }
 }
 
 async function init() {
-    // טעינת מבצעים וחדשים מ-Cloudinary
     fetchImages('promo', 'promo-container-home', 'full-promo-grid');
     fetchImages('newproducts', null, 'home-new-grid');
     fetchImages('newproducts', null, 'full-new-grid');
 
-    // טעינת CSV
     Papa.parse(CONFIG.CSV_URL, {
         download: true, header: true, skipEmptyLines: true,
         complete: function(results) {
@@ -218,12 +235,9 @@ async function init() {
                 return clean;
             }).filter(p => p.Barcode || p.Name);
 
-            // בניית כפתורי קטגוריות
             const cats = ['הכל', ...new Set(allProducts.map(p => p.Catagory).filter(c => c))];
             const btnContainer = document.getElementById('categoryButtons');
-            btnContainer.innerHTML = cats.map(c => 
-                `<button class="cat-btn ${c === 'הכל' ? 'active' : ''}" onclick="filterByCategory('${c}', this)">${c}</button>`
-            ).join('');
+            btnContainer.innerHTML = cats.map(c => `<button class="cat-btn ${c === 'הכל' ? 'active' : ''}" onclick="filterByCategory('${c}', this)">${c}</button>`).join('');
 
             applyFilters();
         }
