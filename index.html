@@ -8,54 +8,60 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --brand-blue: #0076DA; --main-yellow: #ffcc00; --bg: #f4f7f9; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 0; overflow-x: hidden; }
 
         /* Header */
-        .sticky-header { position: fixed; top: 0; width: 100%; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .sticky-header { position: fixed; top: 0; width: 100%; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         header { background: var(--brand-blue); height: 85px; display: flex; align-items: center; }
         .header-container { max-width: 1200px; margin: 0 auto; width: 100%; display: flex; align-items: center; padding: 0 20px; }
-        .logo img { height: 140px; margin-top: 30px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
-        .nav-menu { list-style: none; display: flex; gap: 8px; margin: 0 20px; padding: 0; overflow-x: auto; }
-        .nav-menu li { color: white; cursor: pointer; padding: 8px 12px; border-radius: 20px; font-weight: bold; white-space: nowrap; font-size: 0.95rem; }
+        .logo img { height: 140px; margin-top: 30px; cursor: pointer; }
+        .nav-menu { list-style: none; display: flex; gap: 10px; margin: 0 20px; padding: 0; }
+        .nav-menu li { color: white; cursor: pointer; padding: 8px 12px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); }
 
-        /* Main Layout */
         .main-content { max-width: 1200px; margin: 160px auto 50px; padding: 0 20px; }
         .page-section { display: none; }
         .page-section.active { display: block; }
 
-        /* Home Assets */
-        .banner-box { max-width: 450px; margin: 0 auto 20px; }
-        .banner-box img { width: 100%; border-radius: 10px; }
-        
-        .video-box { max-width: 720px; height: 400px; margin: 0 auto 40px; background: #000; border-radius: 15px; overflow: hidden; }
+        /* באנר רחב */
+        .banner-wide { width: 100%; margin-bottom: 25px; }
+        .banner-wide img { width: 100%; border-radius: 15px; display: block; object-fit: cover; }
+
+        /* סרטון */
+        .video-box { max-width: 720px; height: 400px; margin: 0 auto 40px; background: #000; border-radius: 20px; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: contain; }
 
-        /* Sliders (Gallery & Promos) */
-        .slider-box { width: 100%; overflow: hidden; background: #fff; border-radius: 15px; margin-bottom: 30px; padding: 15px 0; }
-        .slider-track { display: flex; width: max-content; animation: scroll 90s linear infinite; gap: 15px; }
-        .slider-track img { height: 200px; border-radius: 10px; flex-shrink: 0; }
+        /* סליידרים */
+        .slider-box { width: 100%; overflow: hidden; background: #fff; border-radius: 15px; margin-bottom: 30px; padding: 10px 0; }
+        .slider-track { display: flex; width: max-content; animation: scroll 80s linear infinite; gap: 15px; }
+        .slider-track img { height: 220px; border-radius: 12px; cursor: pointer; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
-        /* Grid System (Catalog & News) */
+        /* גריד ותיקון שטח לבן במבצעים */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; min-height: 380px; }
-        .card img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 10px; }
-        .card h3 { font-size: 1.05rem; color: #333; margin: 10px 0; line-height: 1.4; flex-grow: 1; } /* הטקסט לא ייחתך */
-        .price { color: #d32f2f; font-weight: bold; font-size: 1.4rem; margin-bottom: 8px; }
-        .barcode { font-size: 0.75rem; color: #888; border-top: 1px solid #f0f0f0; padding-top: 8px; }
+        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; }
+        .catalog-card { min-height: 400px; } /* רק לקטלוג גובה קבוע */
+        .promo-card { min-height: auto; cursor: pointer; } /* למבצעים אין תוספת לבנה */
+        .card img { width: 100%; height: auto; max-height: 250px; object-fit: contain; border-radius: 8px; }
+        .card h3 { font-size: 1.1rem; margin: 10px 0; flex-grow: 1; line-height: 1.4; }
+        .price { color: #d32f2f; font-weight: bold; font-size: 1.5rem; margin-top: auto; }
 
-        /* Contact Section */
+        /* צור קשר - מפה 50% */
         .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .c-card { background: white; padding: 25px; border-radius: 15px; border-right: 6px solid var(--main-yellow); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .map-frame { width: 100%; height: 400px; border-radius: 15px; border: 1px solid #ddd; }
+        .map-box { width: 50%; height: 300px; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 1px solid #ddd; }
+        @media (max-width: 768px) { .map-box { width: 100%; } }
 
-        .floating { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
-        .f-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.3s; }
-        .f-btn:hover { transform: scale(1.1); }
+        /* Lightbox - תמונה צפה */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; cursor: zoom-out; }
+        #lightbox img { max-width: 90%; max-height: 90%; border: 3px solid white; border-radius: 5px; }
+
+        .floating { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        .f-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
+
+<div id="lightbox" onclick="this.style.display='none'"><img src="" id="lightbox-img"></div>
 
 <div class="sticky-header">
     <header>
@@ -66,8 +72,6 @@
                 <li onclick="showPage('catalog-page', this)">קטלוג</li>
                 <li onclick="showPage('promos-page', this)">המבצעים שלנו</li>
                 <li onclick="showPage('new-page', this)">חדש על המדף</li>
-                <li onclick="showPage('about-page', this)">אודות</li>
-                <li onclick="showPage('career-page', this)">קריירה</li>
                 <li onclick="showPage('directions-page', this)">צור קשר</li>
             </ul>
         </div>
@@ -75,58 +79,34 @@
 </div>
 
 <div class="main-content">
-    
     <div id="home" class="page-section active">
-        <div class="banner-box"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
-        <div class="video-box">
-            <video autoplay muted loop playsinline controls>
-                <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
-            </video>
-        </div>
+        <div class="banner-wide"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
+        <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
         
-        <h2 style="border-right: 4px solid var(--main-yellow); padding-right: 10px;">גלריית החנות</h2>
+        <h2>גלריית החנות</h2>
         <div class="slider-box"><div class="slider-track" id="gallery-home"></div></div>
-
-        <h2 style="border-right: 4px solid var(--main-yellow); padding-right: 10px;">המבצעים שלנו</h2>
+        <h2>המבצעים שלנו</h2>
         <div class="slider-box"><div class="slider-track" id="promo-home"></div></div>
-
-        <h2 style="border-right: 4px solid var(--main-yellow); padding-right: 10px;">חדש על המדף</h2>
-        <div id="new-home-grid" class="grid" style="margin-top:20px;"></div>
+        <h2>חדש על המדף</h2>
+        <div id="new-home-grid" class="grid"></div>
     </div>
 
     <div id="catalog-page" class="page-section">
-        <input type="text" id="search" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; margin-bottom:20px; font-size:1rem;" placeholder="חפש מוצר לפי שם או ברקוד..." oninput="searchItems()">
+        <div style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <input type="text" id="search" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem;" placeholder="🔍 חפש מוצר בקטלוג..." oninput="searchItems()">
+        </div>
         <div id="catalog-grid" class="grid"></div>
     </div>
 
-    <div id="promos-page" class="page-section">
-        <h2>כל המבצעים בתוקף</h2>
-        <div id="promo-full-grid" class="grid"></div>
-    </div>
-
-    <div id="new-page" class="page-section">
-        <h2>חדש על המדף</h2>
-        <div id="new-full-grid" class="grid"></div>
-    </div>
-
-    <div id="about-page" class="page-section"><div class="c-card"><h2>אודות</h2><p>סופר סטאר פלוס מג'ד אל כרום - איכות, טריות ושירות מעל הכל.</p></div></div>
-    <div id="career-page" class="page-section"><div class="c-card"><h2>קריירה</h2><p>מחפשים עבודה? הצטרפו למשפחה שלנו. לפרטים: 04-907-6772</p></div></div>
+    <div id="promos-page" class="page-section"><h2>המבצעים שלנו</h2><div id="promo-full-grid" class="grid"></div></div>
+    <div id="new-page" class="page-section"><h2>חדש על המדף</h2><div id="new-full-grid" class="grid"></div></div>
 
     <div id="directions-page" class="page-section">
         <div class="contact-grid">
-            <div class="c-card">
-                <h3>🕒 שעות פעילות</h3>
-                <p><b>סופרמרקט:</b> א'-שבת 08:00 - 22:00</p>
-                <p><b>אטליז:</b> א'-שבת 08:00 - 20:30</p>
-                <p><b>דגים:</b> ב'-שבת 09:00 - 17:00 (א' סגור)</p>
-            </div>
-            <div class="c-card">
-                <h3>📞 צרו קשר</h3>
-                <p>טלפון: 04-907-6772</p>
-                <p>📍 כתובת: מג'ד אל-כרום, כביש ראשי</p>
-            </div>
+            <div class="card" style="text-align:right"><h3>🕒 שעות פעילות</h3><p>א'-שבת: 08:00-22:00</p><p>אטליז: 08:00-20:30</p></div>
+            <div class="card" style="text-align:right"><h3>📞 קשר</h3><p>04-907-6772</p><p>מג'ד אל-כרום</p></div>
         </div>
-        <iframe class="map-frame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.642!2d35.25752!3d32.92348!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c360000000000%3A0x0!2zMzLCsDU1JzI0LjUiTiAzNcKwMTUnMjcuMSJF!5e0!3m2!1she!2sil!4v1700000000000" allowfullscreen="" loading="lazy"></iframe>
+        <div class="map-box"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.6441496739!2d35.2104!3d32.9231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzIzLjIiTiAzNcKwMTInMzcuNCJF!5e0!3m2!1she!2sil!4v16200000000005" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe></div>
     </div>
 </div>
 
@@ -138,7 +118,12 @@
 <script>
 const CLOUD = "dj56w7nb9";
 const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
-let allItems = [];
+let allProducts = [];
+
+function openImg(url) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').style.display = 'flex';
+}
 
 function showPage(id, el) {
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
@@ -148,70 +133,54 @@ function showPage(id, el) {
     window.scrollTo(0,0);
 }
 
-// פונקציית סינון תאריך קשוחה
-function isExpired(publicId) {
+function checkDate(publicId) {
     const match = publicId.match(/(\d{2})-(\d{2})-(\d{4})/);
-    if (!match) return false; // אם אין תאריך, זה בתוקף
+    if (!match) return true;
     const expiry = new Date(`${match[3]}-${match[2]}-${match[1]}`);
     const today = new Date(); today.setHours(0,0,0,0);
-    return expiry < today;
+    return expiry >= today;
 }
 
-async function loadFromCloudinary(tag, elementId, isSlider = false, filterDate = false) {
+async function loadMedia(tag, elementId, isSlider = false, filterDate = false) {
     try {
         const res = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
         const data = await res.json();
         let files = data.resources;
-        
-        if (filterDate) files = files.filter(f => !isExpired(f.public_id));
+        if (filterDate) files = files.filter(f => checkDate(f.public_id));
 
         const html = files.map(f => {
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-            return isSlider ? `<img src="${url}">` : `
-                <div class="card">
-                    <img src="${url}">
-                </div>`;
+            return isSlider ? `<img src="${url}" onclick="openImg('${url}')">` : 
+                `<div class="card promo-card" onclick="openImg('${url}')"><img src="${url}"></div>`;
         }).join('');
 
         const container = document.getElementById(elementId);
         container.innerHTML = isSlider ? (html + html) : html;
-    } catch(e) { console.error("Cloudinary error:", e); }
+    } catch(e) {}
 }
 
 function renderCatalog(data) {
-    document.getElementById('catalog-grid').innerHTML = data.map(i => `
-        <div class="card">
-            <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" onerror="this.src='https://via.placeholder.com/200?text=אין+תמונה'">
-            <h3>${i.Name}</h3>
-            <div class="price">₪${i.Price}</div>
-            <div class="barcode">ברקוד: ${i.Barcode}</div>
+    document.getElementById('catalog-grid').innerHTML = data.map(p => `
+        <div class="card catalog-card">
+            <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${p.Barcode}" onclick="openImg(this.src)" onerror="this.src='https://via.placeholder.com/200'">
+            <h3>${p.Name}</h3>
+            <div class="price">₪${p.Price}</div>
         </div>`).join('');
 }
 
 function searchItems() {
     const term = document.getElementById('search').value.toLowerCase();
-    renderCatalog(allItems.filter(i => i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)));
+    renderCatalog(allProducts.filter(p => p.Name.toLowerCase().includes(term) || p.Barcode.includes(term)));
 }
 
 async function init() {
-    // טעינת מדיה
-    loadFromCloudinary('gallery', 'gallery-home', true, false);
-    loadFromCloudinary('promo', 'promo-home', true, true);
-    loadFromCloudinary('promo', 'promo-full-grid', false, true);
-    loadFromCloudinary('newproducts', 'new-home-grid', false, false);
-    loadFromCloudinary('newproducts', 'new-full-grid', false, false);
-
-    // טעינת CSV
-    Papa.parse(CSV, {
-        download: true,
-        header: true,
-        complete: (results) => {
-            allItems = results.data.filter(row => row.Barcode);
-            renderCatalog(allItems);
-        }
-    });
+    loadMedia('gallery', 'gallery-home', true, false);
+    loadMedia('promo', 'promo-home', true, true);
+    loadMedia('promo', 'promo-full-grid', false, true);
+    loadMedia('newproducts', 'new-home-grid', false, false);
+    loadMedia('newproducts', 'new-full-grid', false, false);
+    Papa.parse(CSV, { download: true, header: true, complete: r => { allProducts = r.data.filter(p => p.Barcode); renderCatalog(allProducts); } });
 }
-
 init();
 </script>
 </body>
