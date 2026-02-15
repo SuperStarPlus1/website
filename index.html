@@ -16,89 +16,56 @@
         html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; scroll-behavior: smooth; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light-bg); color: #333; }
 
-        /* --- תפריט עליון קבוע --- */
-        header {
-            background: var(--brand-blue);
-            position: sticky;
-            top: 0;
-            z-index: 2000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            width: 100%;
-        }
-
-        .header-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 10px;
-        }
-
-        /* לוגו מוגדל */
+        /* --- Header --- */
+        header { background: var(--brand-blue); position: sticky; top: 0; z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; }
+        .header-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; padding: 20px 10px; }
         .logo-area img { height: 130px; width: auto; transition: 0.3s; }
 
-        .nav-menu { 
-            list-style: none; padding: 0; margin: 15px 0 0 0; 
-            display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-        }
-        .nav-menu li { 
-            color: white; padding: 10px 20px; cursor: pointer; border-radius: 25px; 
-            transition: 0.3s; font-weight: bold; font-size: 1.1rem;
-        }
+        .nav-menu { list-style: none; padding: 0; margin: 15px 0 0 0; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .nav-menu li { color: white; padding: 10px 20px; cursor: pointer; border-radius: 25px; transition: 0.3s; font-weight: bold; font-size: 1.1rem; }
         .nav-menu li:hover { background: rgba(255,255,255,0.2); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); }
 
-        /* --- פס פרסומי מתוקן (מימין לשמאל) --- */
-        .construction-ticker {
-            background: #fff;
-            border-bottom: 3px solid var(--main-yellow);
-            padding: 12px 0;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        .ticker-text {
-            display: inline-block;
-            animation: ticker-rtl 25s linear infinite;
-            color: var(--brand-blue);
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-        @keyframes ticker-rtl {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        /* --- פקר פרסומי - כיוון הפוך לתיקון קריאה --- */
+        .construction-ticker { background: #fff; border-bottom: 3px solid var(--main-yellow); padding: 12px 0; overflow: hidden; white-space: nowrap; }
+        .ticker-text { display: inline-block; animation: ticker-fix 30s linear infinite; color: var(--brand-blue); font-weight: bold; font-size: 1.2rem; }
+        @keyframes ticker-fix { 
+            0% { transform: translateX(-100%); } 
+            100% { transform: translateX(100%); } 
         }
 
-        /* --- תוכן ראשי --- */
+        /* --- Main Layout --- */
         .main-content { max-width: 1100px; margin: 30px auto; padding: 0 20px; box-sizing: border-box; min-height: 80vh; }
         .page-section { display: none; }
         .page-section.active { display: block; animation: fadeIn 0.4s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* --- וידאו --- */
-        .hero-video-container { width: 100%; border-radius: 20px; overflow: hidden; background: #000; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: 40px; }
-        .hero-video { width: 100%; display: block; max-height: 550px; object-fit: cover; }
-
-        .section-title { font-size: 26px; color: var(--brand-blue); font-weight: bold; margin: 40px 0 25px 0; border-right: 6px solid var(--main-yellow); padding-right: 15px; }
-
-        /* --- גריד וכרטיסים --- */
+        /* --- Cards & Grid --- */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; width: 100%; }
         .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; cursor: pointer; }
         .card img { width: 100%; height: 180px; object-fit: contain; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .card .price { color: #d32f2f; font-weight: bold; font-size: 1.4rem; margin-top: 10px; }
+        
+        /* --- שעות פעילות מעוצבות --- */
+        .hours-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+        .dept-card { background: white; padding: 20px; border-radius: 15px; border-right: 5px solid var(--main-yellow); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .dept-card h3 { margin-top: 0; color: var(--brand-blue); display: flex; align-items: center; gap: 8px; }
+        .dept-card p { margin: 5px 0; font-size: 0.95rem; }
 
-        /* --- Lightbox (תמונה צפה) --- */
-        #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: zoom-out; }
-        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        /* --- Lightbox --- */
+        #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; }
 
-        /* --- סליידר מבצעים --- */
+        /* --- Video & Slider --- */
+        .hero-video-container { width: 100%; border-radius: 20px; overflow: hidden; background: #000; margin-bottom: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .hero-video { width: 100%; display: block; max-height: 550px; object-fit: cover; }
+        .section-title { font-size: 26px; color: var(--brand-blue); font-weight: bold; margin: 40px 0 25px 0; border-right: 6px solid var(--main-yellow); padding-right: 15px; }
         .promo-slider { width: 100%; overflow: hidden; background: white; border-radius: 15px; margin-bottom: 30px; }
         .promo-track { display: flex; animation: slide 45s linear infinite; }
         .promo-track img { height: 250px; margin: 10px; border-radius: 12px; cursor: pointer; }
         @keyframes slide { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
-        /* --- כפתורים צפים --- */
+        /* --- Floating Buttons --- */
         .floating-contact { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 2500; }
         .float-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
@@ -121,7 +88,7 @@
             <li class="active" onclick="showPage('home', this)">🏠 דף הבית</li>
             <li onclick="showPage('catalog-page', this)">🛒 קטלוג</li>
             <li onclick="showPage('promos-page', this)">🏷️ מבצעים</li>
-            <li onclick="showPage('new-products-page', this)">🆕 חדש על המדף</li>
+            <li onclick="showPage('new-products-page', this)">🆕 חדש</li>
             <li onclick="showPage('about-page', this)">📖 אודות</li>
             <li onclick="showPage('career-page', this)">💼 קריירה</li>
             <li onclick="showPage('directions-page', this)">📞 צור קשר</li>
@@ -131,7 +98,7 @@
 
 <div class="construction-ticker">
     <div class="ticker-text">
-        ✨ האתר בבנייה - בקרוב חוויית קנייה חדשה בסופר סטאר פלוס מג'ד אל-כרום! ✨ &nbsp;&nbsp;&nbsp; ⚠️ בקרוב מבצעים חדשים ובלעדיים ⚠️ &nbsp;&nbsp;&nbsp; 📞 לפרטים: 04-907-6772
+        ✨ האתר בבנייה - בקרוב חוויית קנייה חדשה בסופר סטאר פלוס מג'ד אל-כרום! ✨ &nbsp;&nbsp;&nbsp; ⚠️ הישארו מעודכנים למבצעים החדשים ⚠️ &nbsp;&nbsp;&nbsp; 📞 לכל שאלה: 04-907-6772
     </div>
 </div>
 
@@ -148,26 +115,44 @@
         <div id="home-new-grid" class="grid"></div>
     </div>
 
+    <div id="directions-page" class="page-section">
+        <div class="section-title">צור קשר ודרכי הגעה</div>
+        <div style="width:100%; height:350px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue); margin-bottom:30px;">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3363.344445892404!2d35.2635!3d32.92!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c314055555555%3A0x6b6d5b5b5b5b5b5b!2zU3VwZXIgU3RhciBQbHVz!5e0!3m2!1she!2sil!4v1700000000000!5m2!1she!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+        </div>
+
+        <div class="hours-grid">
+            <div class="dept-card">
+                <h3><i class="fas fa-shopping-basket"></i> סופר (כללי)</h3>
+                <p><strong>א'-שבת:</strong> 08:00 - 22:00</p>
+                <p>זמינות מלאה של כל מוצרי המדף והקפואים.</p>
+            </div>
+            <div class="dept-card">
+                <h3><i class="fas fa-drumstick-bite"></i> מחלקת בשר</h3>
+                <p><strong>א'-ה':</strong> 08:00 - 20:00</p>
+                <p><strong>ו' וערבי חג:</strong> 08:00 - 18:00</p>
+                <p>בשר טרי יום יום וחיתוך לפי בקשה.</p>
+            </div>
+            <div class="dept-card">
+                <h3><i class="fas fa-fish"></i> מחלקת דגים</h3>
+                <p><strong>ג' - ו':</strong> 08:00 - 19:00</p>
+                <p><strong>א', ב', ש':</strong> סגור / לפי מלאי טרי</p>
+                <p>דגים טריים מהים וניקוי במקום.</p>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top:20px; text-align:right;">
+            <p>📍 כתובת: מג'ד אל-כרום, כביש ראשי</p>
+            <p>📞 טלפון סניף: 04-907-6772</p>
+        </div>
+    </div>
+
     <div id="catalog-page" class="page-section">
         <div class="section-title">קטלוג מוצרים</div>
         <input type="text" id="catalogSearch" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; margin-bottom:20px;" placeholder="חפש מוצר..." oninput="applyFilters()">
         <div id="categoryButtons" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;"></div>
         <div id="main-catalog-grid" class="grid"></div>
     </div>
-
-    <div id="directions-page" class="page-section">
-        <div class="section-title">צור קשר ודרכי הגעה</div>
-        <div style="width:100%; height:400px; border-radius:15px; overflow:hidden; border:2px solid var(--brand-blue); margin-bottom:25px;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.447543293847!2d35.2574!3d32.9234!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dcb6e2e8e2b7b%3A0x6b4b4b4b4b4b4b4b!2sSuper%20Star%20Plus!5e0!3m2!1siw!2sil!4v1234567890" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-        </div>
-        <div class="card" style="padding:25px; text-align:right;">
-            <p><strong>📍 כתובת:</strong> מג'ד אל-כרום, כביש ראשי</p>
-            <p><strong>📞 טלפון:</strong> 04-907-6772</p>
-            <p><strong>⏰ שעות פעילות:</strong></p>
-            <p>ראשון - שבת: 08:00 - 22:00</p>
-        </div>
-    </div>
-
     <div id="about-page" class="page-section"><div class="section-title">אודות</div><div class="card" style="padding:40px;">סופר סטאר פלוס - חוויית קנייה מושלמת ואיכות ללא פשרות.</div></div>
     <div id="career-page" class="page-section"><div class="section-title">קריירה</div><div class="card" style="padding:40px;">מחפשים עבודה? צרו קשר בוואטסאפ!</div></div>
     <div id="promos-page" class="page-section"><div class="section-title">כל המבצעים</div><div id="full-promo-grid" class="grid"></div></div>
