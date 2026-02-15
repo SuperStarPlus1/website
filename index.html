@@ -29,31 +29,35 @@
         .page-section { display: none; }
         .page-section.active { display: block; }
 
-        /* סרטון ובאנר - גרסה מקורית (900px) */
-        .hero-container { max-width: 900px; margin: 0 auto 40px; }
-        .hero-container img, .hero-container video { width: 100%; border-radius: 20px; display: block; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        /* באנר צמצום 30% */
+        .banner-small { max-width: 500px; margin: 0 auto 20px; }
+        .banner-small img { width: 100%; border-radius: 10px; display: block; }
+
+        /* סרטון - החזרה למסגרת מוקטנת */
+        .video-frame { max-width: 720px; margin: 0 auto 40px; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+        .video-frame video { width: 100%; display: block; }
 
         /* סליידרים */
         .slider-box { width: 100%; overflow: hidden; background: #fff; border-radius: 15px; margin-bottom: 30px; }
-        .slider-track { display: flex; width: max-content; animation: scroll-slow 80s linear infinite; gap: 15px; padding: 15px; }
-        .slider-track img { height: 230px; border-radius: 12px; cursor: pointer; }
+        .slider-track { display: flex; width: max-content; animation: scroll-slow 85s linear infinite; gap: 15px; padding: 15px; }
+        .slider-track img { height: 210px; border-radius: 12px; cursor: pointer; }
         @keyframes scroll-slow { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
         /* קטלוג */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; height: 400px; }
-        .card img { width: 100%; height: 180px; object-fit: contain; }
-        .card h3 { font-size: clamp(0.9rem, 2.5vw, 1.1rem); margin: 10px 0; height: 3em; overflow: hidden; display: flex; align-items: center; justify-content: center; line-height: 1.2; }
-        .price { color: #d32f2f; font-weight: bold; font-size: 1.5rem; margin-top: auto; }
-        .barcode-info { font-size: 0.8rem; color: #999; margin-top: 5px; border-top: 1px solid #eee; padding-top: 5px; }
+        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; height: 390px; }
+        .card img { width: 100%; height: 160px; object-fit: contain; }
+        .card h3 { font-size: 1rem; margin: 10px 0; height: 3em; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .price { color: #d32f2f; font-weight: bold; font-size: 1.4rem; margin-top: auto; }
+        .barcode-info { font-size: 0.75rem; color: #999; margin-top: 5px; border-top: 1px solid #eee; padding-top: 5px; }
 
-        /* צור קשר */
+        /* צור קשר - מפה 50% */
         .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .info-card { background: white; padding: 20px; border-radius: 15px; border-right: 6px solid var(--main-yellow); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .map-box { width: 50%; height: 350px; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 1px solid #ddd; }
+        .info-card { background: white; padding: 20px; border-radius: 15px; border-right: 6px solid var(--main-yellow); }
+        .map-box { width: 50%; height: 300px; margin: 0 auto; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; }
 
         .floating { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 10000; }
-        .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; text-decoration: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .f-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; text-decoration: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -73,16 +77,19 @@
             </ul>
         </div>
     </header>
-    <div class="ticker"><div class="ticker-text">✨ סופר סטאר פלוס מג'ד אל-כרום! 📞 04-907-6772 ✨ איכות ושירות ברמה אחרת ✨</div></div>
+    <div class="ticker"><div class="ticker-text">✨ סופר סטאר פלוס מג'ד אל-כרום 📞 04-907-6772 ✨ חוויית קנייה מושלמת ✨</div></div>
 </div>
 
 <div class="main-content">
     
     <div id="home" class="page-section active">
-        <div class="hero-container"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png" style="margin-bottom:20px;"></div>
-        <div class="hero-container"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
+        <div class="banner-small"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
         
-        <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px; margin-top:40px;">גלריית החנות</h2>
+        <div class="video-frame">
+            <video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video>
+        </div>
+        
+        <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px;">גלריית החנות</h2>
         <div class="slider-box"><div class="slider-track" id="gallery-home"></div></div>
 
         <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px;">המבצעים שלנו</h2>
@@ -98,30 +105,17 @@
     </div>
 
     <div id="promos-page" class="page-section"><div id="promo-full-grid" class="grid"></div></div>
-
     <div id="new-page" class="page-section"><div id="new-full-grid" class="grid"></div></div>
 
-    <div id="about-page" class="page-section">
-        <div class="info-card">
-            <h2>אודות סופר סטאר פלוס</h2>
-            <p>חוויית הקנייה המובילה במג'ד אל-כרום. טריות יומיומית באטליז ובמחלקת הדגים.</p>
-        </div>
-    </div>
-
-    <div id="career-page" class="page-section">
-        <div class="info-card">
-            <h2>קריירה</h2>
-            <p>הצטרפו למשפחה שלנו! לבירור משרות פנויות: 04-907-6772</p>
-        </div>
-    </div>
+    <div id="about-page" class="page-section"><div class="info-card"><h2>אודות</h2><p>סופר סטאר פלוס - איכות וטריות.</p></div></div>
+    <div id="career-page" class="page-section"><div class="info-card"><h2>קריירה</h2><p>שלחו קורות חיים ל-04-907-6772.</p></div></div>
 
     <div id="directions-page" class="page-section">
         <div class="contact-grid">
-            <div class="info-card"><h3>🛒 סופרמרקט</h3><p>א'-שבת: 08:00 - 22:00</p></div>
-            <div class="info-card"><h3>🥩 אטליז</h3><p>א'-שבת: 08:00 - 20:30</p></div>
-            <div class="info-card"><h3>🐟 דגים</h3><p>ב'-שבת: 09:00 - 17:00 (א' סגור)</p></div>
+            <div class="info-card"><h3>🛒 סופרמרקט</h3><p>08:00 - 22:00</p></div>
+            <div class="info-card"><h3>🥩 אטליז</h3><p>08:00 - 20:30</p></div>
         </div>
-        <div class="map-box"><iframe src="https://maps.google.com/maps?q=32.92348,35.25752&z=15&output=embed" width="100%" height="100%" frameborder="0"></iframe></div>
+        <div class="map-box"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.6441496739!2d35.2104!3d32.9231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDU1JzIzLjIiTiAzNcKwMTInMzcuNCJF!5e0!3m2!1she!2sil!4v16200000000001" width="100%" height="100%" frameborder="0"></iframe></div>
     </div>
 </div>
 
@@ -139,21 +133,19 @@ function showPage(id, el) {
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    if(el) el.classList.add('active'); else document.querySelector('.nav-menu li').classList.add('active');
+    if(el) el.classList.add('active');
     window.scrollTo(0,0);
 }
 
+// לוגיקת סינון תאריך קפדנית מהשם
 function checkDate(publicId) {
-    const parts = publicId.split('/');
-    for (let p of parts) {
-        const match = p.match(/(\d{2})-(\d{2})-(\d{4})/);
-        if (match) {
-            const expiry = new Date(`${match[3]}-${match[2]}-${match[1]}`);
-            const today = new Date(); today.setHours(0,0,0,0);
-            if (expiry < today) return false;
-        }
+    const match = publicId.match(/(\d{2})-(\d{2})-(\d{4})/);
+    if (match) {
+        const expiry = new Date(`${match[3]}-${match[2]}-${match[1]}`);
+        const today = new Date(); today.setHours(0,0,0,0);
+        return expiry >= today;
     }
-    return true;
+    return true; 
 }
 
 async function loadMedia(tag, trackId, gridId, filterDate = false) {
@@ -186,7 +178,7 @@ function filterItems() {
 
 async function init() {
     loadMedia('gallery', 'gallery-home', null, false);
-    loadMedia('promo', 'promo-home', 'promo-full-grid', true);
+    loadMedia('promo', 'promo-home', 'promo-full-grid', true); // סינון מבצעים פעיל
     loadMedia('newproducts', 'new-home', 'new-full-grid', false);
     Papa.parse(CSV, { download: true, header: true, complete: r => { allProducts = r.data; renderCatalog(allProducts); } });
 }
