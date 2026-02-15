@@ -10,29 +10,28 @@
         :root { --blue: #0076DA; --yellow: #ffcc00; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); direction: rtl; }
 
-        /* Header */
         header { background: var(--blue); position: fixed; top: 0; width: 100%; z-index: 1000; height: 85px; }
         .nav-container { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; height: 100%; padding: 0 20px; justify-content: flex-start; }
-        .logo img { height: 130px; margin-top: 30px; cursor: pointer; margin-left: 30px; }
+        
+        /* לוגו מוגדל ב-30% */
+        .logo img { height: 170px; margin-top: 40px; cursor: pointer; margin-left: 30px; }
+        
         .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
 
-        /* הצמדת הבאנר לתפריט ללא רווח */
         main { max-width: 100%; margin: 85px auto 50px; }
         .content-wrap { max-width: 1200px; margin: 30px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
 
-        /* באנר - רקע לבן מקצה לקצה, תמונה במרכז ללא שינוי */
-        .banner-hero { width: 100%; background: white; text-align: center; margin: 0; padding: 0; border-bottom: 1px solid #eee; }
-        .banner-hero img { width: 100%; max-height: 200px; object-fit: contain; display: block; margin: 0 auto; }
+        /* באנר מתוח לצדדים */
+        .banner-hero { width: 100%; background: white; text-align: center; margin: 0; padding: 0; overflow: hidden; }
+        .banner-hero img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
 
-        /* סרטון */
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
 
-        /* סליידר וגלריה */
         .slider-wrap { width: 100%; overflow: hidden; background: #fff; padding: 20px 0; margin-bottom: 40px; border-top: 2px solid var(--yellow); border-bottom: 2px solid var(--yellow); }
         .slider-track { display: flex; width: max-content; animation: scroll 60s linear infinite; gap: 20px; }
         .slider-track img { height: 250px; border-radius: 10px; cursor: pointer; }
@@ -45,16 +44,13 @@
         .price { color: #d32f2f; font-weight: bold; font-size: 1.6rem; }
         .barcode { font-size: 0.8rem; color: #888; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
 
-        /* צור קשר */
         .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
         .dept-card { background: white; padding: 20px; border-radius: 15px; border-top: 4px solid var(--blue); text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .map-wrapper { width: 100%; display: flex; justify-content: center; }
         .map-container { width: 50%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); }
 
-        /* כפתורים צפים */
         .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
-        .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
-        .f-btn:hover { transform: scale(1.1); }
+        .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .waze { background-color: #33CCFF; }
         .whatsapp { background-color: #25D366; }
 
@@ -85,7 +81,6 @@
 <main>
     <div id="home" class="page active">
         <div class="banner-hero"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
-        
         <div class="content-wrap">
             <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
             <h2 class="section-title">המבצעים החמים שלנו</h2>
@@ -99,7 +94,7 @@
 
     <div id="catalog-page" class="page"><div class="content-wrap">
         <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px;">
-            <input type="text" id="search" placeholder="חפש מוצר או ברקוד..." oninput="runFilter()" style="width:100%; padding:15px; border:1px solid #ddd; border-radius:10px;">
+            <input type="text" id="search" placeholder="חפש מוצר..." oninput="runFilter()" style="width:100%; padding:15px; border:1px solid #ddd; border-radius:10px;">
             <div id="cat-btns" style="display:flex; gap:10px; margin-top:15px; overflow-x:auto;"></div>
         </div>
         <div id="catalog-grid" class="grid"></div>
@@ -119,7 +114,7 @@
         </div>
         <div class="map-wrapper">
             <div class="map-container">
-                <iframe src="https://maps.google.com/maps?q=32.92348,35.25752&z=15&output=embed5" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                <iframe src="https://maps.google.com/maps?q=32.92348,35.25752&z=15&output=embed6" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
             </div>
         </div>
     </div></div>
