@@ -18,14 +18,17 @@
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
 
-        main { max-width: 100%; margin: 150px auto 50px; }
-        .content-wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        /* הצמדת הבאנר לתפריט ללא רווח */
+        main { max-width: 100%; margin: 85px auto 50px; }
+        .content-wrap { max-width: 1200px; margin: 30px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
 
-        /* באנר וסרטון */
-        .banner-hero { width: 100%; margin-bottom: 30px; background: white; text-align: center; }
+        /* באנר - רקע לבן מקצה לקצה, תמונה במרכז ללא שינוי */
+        .banner-hero { width: 100%; background: white; text-align: center; margin: 0; padding: 0; border-bottom: 1px solid #eee; }
         .banner-hero img { width: 100%; max-height: 200px; object-fit: contain; display: block; margin: 0 auto; }
+
+        /* סרטון */
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
 
@@ -48,7 +51,7 @@
         .map-wrapper { width: 100%; display: flex; justify-content: center; }
         .map-container { width: 50%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); }
 
-        /* כפתורים צפים - תיקון אייקונים */
+        /* כפתורים צפים */
         .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
         .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
         .f-btn:hover { transform: scale(1.1); }
@@ -82,6 +85,7 @@
 <main>
     <div id="home" class="page active">
         <div class="banner-hero"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
+        
         <div class="content-wrap">
             <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
             <h2 class="section-title">המבצעים החמים שלנו</h2>
@@ -115,23 +119,18 @@
         </div>
         <div class="map-wrapper">
             <div class="map-container">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.3464522432884!2d35.25752!3d32.92348!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c2f9435f3d3d1%3A0x6b4c10657e4e844!2sSuper%20Star%20Plus!5e0!3m2!1sen!2sil!4v1700000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                <iframe src="https://maps.google.com/maps?q=32.92348,35.25752&z=15&output=embed5" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
             </div>
         </div>
     </div></div>
 </main>
 
 <div class="fab">
-    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank" title="שלחו וואטסאפ">
-        <i class="fa-brands fa-whatsapp"></i>
-    </a>
-    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank" title="נווט עם Waze">
-        <i class="fa-brands fa-waze"></i>
-    </a>
+    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
 </div>
 
 <script>
-    // הקוד של ה-JavaScript נשאר בדיוק אותו דבר כפי שהיה
     const CLOUD = "dj56w7nb9";
     const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
     let allItems = [];
