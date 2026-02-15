@@ -16,7 +16,7 @@
         html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; scroll-behavior: smooth; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light-bg); color: #333; }
 
-        /* --- Header: לוגו בימין וגובה מצומצם --- */
+        /* --- Header מתוקן: ללא רווחים מיותרים --- */
         header {
             background: var(--brand-blue);
             position: sticky;
@@ -24,44 +24,42 @@
             z-index: 2000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             width: 100%;
-            height: 90px;
-            display: flex;
-            align-items: center;
+            height: 100px; /* גובה קבוע ונוח */
         }
 
         .header-container {
-            max-width: 1250px;
+            max-width: 1200px;
             margin: 0 auto;
-            width: 100%;
+            height: 100%;
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* לוגו ימין, תפריט צמוד אליו */
             align-items: center;
-            padding: 0 25px;
+            padding: 0 20px;
         }
 
         .logo-area {
             flex-shrink: 0;
-            position: relative;
-            top: 15px; 
+            z-index: 2001;
         }
         .logo-area img { 
-            height: 120px; 
+            height: 140px; /* לוגו גדול שחורג מה-header */
             width: auto; 
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            margin-top: 25px; /* ממרכז את החריגה */
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         }
 
         .nav-menu { 
             list-style: none; padding: 0; margin: 0; 
-            display: flex; gap: 8px; flex-wrap: wrap;
+            display: flex; gap: 5px; /* צמצום רווחים בין כפתורים */
         }
         .nav-menu li { 
             color: white; padding: 8px 15px; cursor: pointer; border-radius: 20px; 
-            transition: 0.3s; font-weight: bold; font-size: 1rem;
+            transition: 0.3s; font-weight: bold; font-size: 1rem; white-space: nowrap;
         }
         .nav-menu li:hover { background: rgba(255,255,255,0.2); color: var(--main-yellow); }
         .nav-menu li.active { background: var(--main-yellow); color: var(--brand-blue); }
 
-        /* --- פס פרסומי --- */
+        /* --- פס פרסומי רץ --- */
         .construction-ticker {
             background: #fff;
             border-bottom: 3px solid var(--main-yellow);
@@ -76,10 +74,7 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
-        @keyframes ticker-fix { 
-            0% { transform: translateX(-100%); } 
-            100% { transform: translateX(100%); } 
-        }
+        @keyframes ticker-fix { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
         /* --- Layout --- */
         .main-content { max-width: 1100px; margin: 40px auto; padding: 0 20px; min-height: 80vh; }
@@ -87,36 +82,37 @@
         .page-section.active { display: block; animation: fadeIn 0.4s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* --- Lightbox --- */
-        #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
-        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; cursor: pointer; }
+        /* --- סליידר מבצעים - גלילה אוטומטית חלקה --- */
+        .promo-slider { width: 100%; overflow: hidden; background: white; border-radius: 15px; margin-bottom: 30px; position: relative; }
+        .promo-track { display: flex; width: max-content; animation: scroll-promo 40s linear infinite; }
+        .promo-track img { height: 280px; margin: 10px; border-radius: 12px; cursor: pointer; }
+        .promo-track:hover { animation-play-state: paused; } /* עוצר במגע */
+        @keyframes scroll-promo { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
-        /* --- Grid & Cards --- */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; width: 100%; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; cursor: pointer; }
+        /* --- קטלוג וברקודים --- */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; position: relative; }
         .card img { width: 100%; height: 160px; object-fit: contain; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .card .price { color: #d32f2f; font-weight: bold; font-size: 1.3rem; margin-top: 10px; }
+        .barcode-label { font-size: 0.75rem; color: #888; margin-top: 5px; display: block; }
+        .price { color: #d32f2f; font-weight: bold; font-size: 1.4rem; margin: 8px 0; }
 
-        /* --- Video --- */
-        .hero-video-container { width: 100%; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        .hero-video { width: 100%; display: block; max-height: 500px; object-fit: cover; }
-        
-        /* --- שעות פעילות מעוצבות --- */
-        .hours-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
-        .dept-card { background: white; padding: 25px; border-radius: 15px; border-right: 5px solid var(--main-yellow); box-shadow: 0 3px 10px rgba(0,0,0,0.05); text-align: right; }
-        .dept-card h3 { color: var(--brand-blue); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .dept-card p { margin: 10px 0; line-height: 1.6; }
+        /* --- צור קשר --- */
+        .contact-info-box { background: white; padding: 25px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .info-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 1.1rem; }
+        .info-item i { color: var(--brand-blue); width: 25px; }
+
+        #lightbox { display: none; position: fixed; z-index: 3000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 10px; }
 
         .floating-contact { position: fixed; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 2500; }
-        .float-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 28px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .float-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; font-size: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
         @media (max-width: 768px) {
             header { height: auto; padding: 10px 0; }
-            .header-container { flex-direction: column; gap: 10px; }
-            .logo-area { top: 0; }
-            .logo-area img { height: 90px; }
-            .nav-menu { justify-content: center; }
+            .header-container { flex-direction: column; }
+            .logo-area img { height: 90px; margin-top: 0; }
+            .nav-menu { flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 10px; }
+            .nav-menu li { font-size: 0.9rem; padding: 6px 10px; }
         }
     </style>
 </head>
@@ -143,53 +139,46 @@
 
 <div class="construction-ticker">
     <div class="ticker-text">
-        ✨ האתר בבנייה - בקרוב חוויית קנייה חדשה בסופר סטאר פלוס מג'ד אל-כרום! ✨     📞 לכל שאלה: 04-907-6772
+        ✨ האתר בבנייה - בקרוב חוויית קנייה חדשה בסופר סטאר פלוס מג'ד אל-כרום! ✨ &nbsp;&nbsp;&nbsp; 📞 לכל שאלה: 04-907-6772
     </div>
 </div>
 
 <div class="main-content">
     <div id="home" class="page-section active">
-        <div class="hero-video-container">
-            <video id="promoVideo" class="hero-video" autoplay muted loop playsinline>
+        <div class="hero-video-container" style="border-radius:20px; overflow:hidden; background:#000;">
+            <video id="promoVideo" style="width:100%; display:block;" autoplay muted loop playsinline>
                 <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
             </video>
         </div>
-        <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px; margin-top:40px;">המבצעים שלנו</h2>
-        <div id="promo-container-home" style="display:flex; overflow-x:auto; gap:15px; padding-bottom:15px;"></div>
-        <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px;">חדש על המדף</h2>
+        <h2 style="color:var(--brand-blue); border-right:6px solid var(--main-yellow); padding-right:15px; margin:40px 0 20px;">המבצעים שלנו</h2>
+        <div class="promo-slider">
+            <div class="promo-track" id="promo-container-home"></div>
+        </div>
+        <h2 style="color:var(--brand-blue); border-right:6px solid var(--main-yellow); padding-right:15px; margin:20px 0;">חדש על המדף</h2>
         <div id="home-new-grid" class="grid"></div>
     </div>
 
-    <div id="directions-page" class="page-section">
-        <h2 style="color:var(--brand-blue); border-right:5px solid var(--main-yellow); padding-right:15px;">שעות פעילות וקשר</h2>
-        <div class="hours-grid">
-            <div class="dept-card">
-                <h3>🛒 סופר (כללי)</h3>
-                <p><strong>א' - שבת:</strong> 08:00 - 22:00</p>
-                <p>זמינות מלאה של כל מוצרי המדף.</p>
-            </div>
-            <div class="dept-card">
-                <h3>🥩 מחלקת בשר</h3>
-                <p><strong>כל ימות השבוע:</strong> 08:00 - 20:30</p>
-                <p>בשר טרי ואיכותי יום יום.</p>
-            </div>
-            <div class="dept-card">
-                <h3>🐟 מחלקת דגים</h3>
-                <p><strong>יום ראשון:</strong> סגור</p>
-                <p><strong>שני - שבת:</strong> 09:00 - 17:00</p>
-                <p>דגים טריים וניקוי במקום.</p>
-            </div>
-        </div>
-        <div style="margin-top:30px; border-radius:15px; overflow:hidden; height:350px; border:1px solid #ddd;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3350.564757530472!2d35.2598853758145!3d32.9229049736035!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c2f9d68800001%3A0xe671959728867a0!2zU3VwZXIgU3RhciBQbHVzINiz2YjYqNixINiz2KrYp9ixINio2YTYsw!5e0!3m2!1sen!2sil!4v1700000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-        </div>
-    </div>
-
     <div id="catalog-page" class="page-section">
-        <input type="text" id="catalogSearch" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; margin-bottom:20px;" placeholder="חפש מוצר..." oninput="applyFilters()">
+        <h2 style="color:var(--brand-blue); border-right:6px solid var(--main-yellow); padding-right:15px; margin-bottom:20px;">קטלוג מוצרים</h2>
+        <input type="text" id="catalogSearch" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; margin-bottom:20px;" placeholder="חפש מוצר או ברקוד..." oninput="applyFilters()">
         <div id="categoryButtons" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;"></div>
         <div id="main-catalog-grid" class="grid"></div>
     </div>
+
+    <div id="directions-page" class="page-section">
+        <h2 style="color:var(--brand-blue); border-right:6px solid var(--main-yellow); padding-right:15px;">צור קשר ודרכי הגעה</h2>
+        <div class="contact-info-box">
+            <div class="info-item"><i class="fas fa-map-marker-alt"></i> <strong>כתובת:</strong> מג'ד אל-כרום, כביש ראשי</div>
+            <div class="info-item"><i class="fas fa-phone-alt"></i> <strong>טלפון:</strong> 04-907-6772</div>
+            <div class="info-item"><i class="fas fa-clock"></i> <strong>סופר (כללי):</strong> א'-שבת 08:00 - 22:00</div>
+            <div class="info-item"><i class="fas fa-meat"></i> <strong>מחלקת בשר:</strong> כל השבוע 08:00 - 20:30</div>
+            <div class="info-item"><i class="fas fa-fish"></i> <strong>מחלקת דגים:</strong> ב'-ש' 09:00 - 17:00 (ראשון סגור)</div>
+        </div>
+        <div style="margin-top:20px; border-radius:15px; overflow:hidden; height:350px; border:1px solid #ddd;">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3363.34444!2d35.263333!3d32.923333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c2f9d86367735%3A0xc33e5c9b68e7d898!2zU3VwZXIgU3RhciAtINmC2YjYqNixINiz2KrYp9ix!5e0!3m2!1sen!2sil!4v1700000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+        </div>
+    </div>
+
     <div id="about-page" class="page-section"><div class="card" style="padding:40px;">סופר סטאר פלוס - איכות ושירות מכל הלב במג'ד אל-כרום.</div></div>
     <div id="career-page" class="page-section"><div class="card" style="padding:40px;">שלחו וואטסאפ לבירור משרות פנויות.</div></div>
     <div id="promos-page" class="page-section"><div id="full-promo-grid" class="grid"></div></div>
@@ -226,9 +215,10 @@ function renderGrid(data, container) {
     container.innerHTML = data.map(p => {
         const imgUrl = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/products/${p.Barcode}`;
         return `<div class="card" onclick="openLightbox('${imgUrl}')">
-            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+            <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/200x150?text=אין+תמונה'">
             <h3>${p.Name}</h3>
             <div class="price">₪${p.Price}</div>
+            <span class="barcode-label">ברקוד: ${p.Barcode}</span>
         </div>`;
     }).join('');
 }
@@ -251,10 +241,10 @@ async function fetchImages(tag, trackId, gridId) {
         let html = '';
         data.resources.forEach(img => {
             const url = `https://res.cloudinary.com/${CONFIG.CLOUD_NAME}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
-            html += `<img src="${url}" style="height:200px; border-radius:10px; cursor:pointer; margin-left:15px;" onclick="openLightbox('${url}')">`;
+            html += `<img src="${url}" onclick="openLightbox('${url}')">`;
             if(grid) grid.innerHTML += `<div class="card" onclick="openLightbox('${url}')"><img src="${url}"></div>`;
         });
-        if(track) track.innerHTML = html;
+        if(track) track.innerHTML = html + html; // כפילות בשביל גלילה אינסופית
     } catch(e) {}
 }
 
