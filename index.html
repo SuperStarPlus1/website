@@ -191,10 +191,13 @@
     </div>
 
     <div id="catalog-page" class="page"><div class="content-wrap">
-        <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px;">
-            <input type="text" id="search" placeholder="חפש מוצר..." oninput="runFilter()" style="width:100%; padding:15px; border:1px solid #ddd; border-radius:10px;">
-            <div id="cat-btns" style="display:flex; gap:10px; margin-top:15px; overflow-x:auto;"></div>
-        </div>
+<div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;">
+    <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
+    
+    <select id="cat-select" onchange="setCategory(this.value)" style="flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--blue); border-radius: 10px; background: white; color: var(--blue); font-weight: bold; cursor: pointer;">
+        <option value="הכל">כל הקטגוריות</option>
+    </select>
+</div>
         <div id="catalog-grid" class="grid"></div>
     </div></div>
 
@@ -294,13 +297,11 @@
         render(filtered);
     }
 
-    function setCategory(cat, btn) {
-        curCat = cat;
-        limit = 20;
-        document.querySelectorAll('#cat-btns button').forEach(b => b.classList.remove('active-cat'));
-        btn.classList.add('active-cat');
-        runFilter();
-    }
+function setCategory(cat) {
+    curCat = cat;
+    limit = 20; // איפוס הטעינה ההדרגתית
+    runFilter();
+}
 
     async function start() {
         loadCloud('promo', 'promo-slider', 'slider', true);
@@ -310,9 +311,14 @@
         loadCloud('newproducts', 'new-full', 'grid', false);
         Papa.parse(CSV, { download: true, header: true, complete: r => {
             allItems = r.data.filter(x => x.Barcode);
-            const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))];
-           document.getElementById('cat-btns').innerHTML = cats.map(c => `<button class="${c === 'הכל' ? 'active-cat' : ''}" onclick="setCategory('${c}', this)">${c}</button>`).join('');
-            render(allItems);
+ // יצירת רשימת קטגוריות ייחודית מה-CSV
+const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))].sort();
+
+// הכנסת הקטגוריות לתיבת הבחירה (Dropdown)
+const catSelect = document.getElementById('cat-select');
+catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
+
+render(allItems);
         }});
     }
     start();
@@ -360,6 +366,7 @@
 </script>
 </body>
 </html>
+
 
 
 
