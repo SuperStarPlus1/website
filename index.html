@@ -194,7 +194,7 @@
 <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;">
     <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
     
-    <select id="cat-select" onchange="setCategory(this.value)" style="flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--blue); border-radius: 10px; background: white; color: var(--blue); font-weight: bold; cursor: pointer;">
+    <select id="cat-select" onchange="setCategory(this.value)" style="flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--blue); border-radius: 10px; background: white; color: var(--blue); font-weight: bold; cursor: pointer; outline: none;">
         <option value="הכל">כל הקטגוריות</option>
     </select>
 </div>
@@ -299,7 +299,7 @@
 
 function setCategory(cat) {
     curCat = cat;
-    limit = 20; // איפוס הטעינה ההדרגתית
+    limit = 20; // איפוס הטעינה ההדרגתית כשמחליפים קטגוריה
     runFilter();
 }
 
@@ -315,7 +315,9 @@ function setCategory(cat) {
 const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))].sort();
 
 // הכנסת הקטגוריות לתיבת הבחירה (Dropdown)
+const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))].sort();
 const catSelect = document.getElementById('cat-select');
+catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
 catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
 
 render(allItems);
@@ -366,6 +368,7 @@ render(allItems);
 </script>
 </body>
 </html>
+
 
 
 
