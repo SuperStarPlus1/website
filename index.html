@@ -131,6 +131,32 @@
             font-size: 1.1rem;
             box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
+        /* הוספה עדינה לאייקונים של רשתות חברתיות */
+        .social-link-item { margin-right: 20px; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; display: flex; gap: 15px; }
+        .social-link-item a { color: white; font-size: 1.2rem; transition: 0.3s; }
+        .social-link-item a:hover { color: var(--yellow); }
+        /* עיצוב אייקונים של מדיה חברתית בתפריט */
+        .social-links-area {
+            margin-right: 30px; /* יוצר רווח מהתפריט הרגיל */
+            display: flex !important;
+            gap: 15px;
+            align-items: center;
+            border-right: 1px solid rgba(255,255,255,0.3); /* קו מפריד עדין */
+            padding-right: 20px;
+        }
+        .social-links-area a {
+            color: white;
+            font-size: 1.3rem;
+            transition: 0.3s ease;
+            text-decoration: none;
+        }
+        .social-links-area a:hover {
+            color: var(--yellow); /* האייקון יהפוך לצהוב כשעוברים עליו */
+            transform: scale(1.1);
+        }
+
+        /* מניעת הפיכת האייקונים לצהובים כשהם לא בשימוש (ביטול עיצוב ליסט רגיל) */
+        .social-links-area:hover { background: transparent !important; }
     </style>
 </head>
 <body>
@@ -140,15 +166,21 @@
 <header>
     <div class="nav-container">
         <div class="logo" onclick="nav('home')"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png"></div>
-        <ul class="nav-links">
-            <li class="active" onclick="nav('home', this)">דף הבית</li>
-            <li onclick="nav('catalog-page', this)">קטלוג</li>
-            <li onclick="nav('promos-page', this)">מבצעים</li>
-            <li onclick="nav('new-page', this)">חדש על המדף</li>
-            <li onclick="nav('about-page', this)">אודות</li>
-            <li onclick="nav('career-page', this)">קריירה</li>
-            <li onclick="nav('directions-page', this)">צור קשר</li>
-        </ul>
+ <ul class="nav-links">
+    <li class="active" onclick="nav('home', this)">דף הבית</li>
+    <li onclick="nav('catalog-page', this)">קטלוג</li>
+    <li onclick="nav('promos-page', this)">מבצעים</li>
+    <li onclick="nav('new-page', this)">חדש על המדף</li>
+    <li onclick="nav('about-page', this)">אודות</li>
+    <li onclick="nav('career-page', this)">קריירה</li>
+    <li onclick="nav('directions-page', this)">צור קשר</li>
+    
+    <li class="social-links-area">
+        <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+    </li>
+</ul>
     </div>
 </header>
 
@@ -464,6 +496,7 @@ async function start() {
 </script>
 </body>
 </html>
+
 
 
 
