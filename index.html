@@ -24,7 +24,30 @@
         .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
-
+/* סרט טקסט רץ */
+        .news-ticker {
+            background: var(--yellow);
+            color: var(--blue);
+            padding: 10px 0;
+            font-weight: bold;
+            font-size: 1.1rem;
+            overflow: hidden;
+            white-space: nowrap;
+            position: fixed;
+            top: 85px; /* בדיוק מתחת לתפריט */
+            width: 100%;
+            z-index: 999;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .ticker-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker 20s linear infinite;
+        }
+        @keyframes ticker {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(100%, 0); }
+        }
       
 
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -75,7 +98,9 @@
         </ul>
     </div>
 </header>
-
+<div class="news-ticker">
+    <div class="ticker-content">אתר חדש בבניה - האתר הסופי בקרוב! &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ברוכים הבאים לסופר סטאר פלוס &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;</div>
+</div>
 <main>
     <div id="home" class="page active">
             <div class="content-wrap">
@@ -197,6 +222,7 @@
 </script>
 </body>
 </html>
+
 
 
 
