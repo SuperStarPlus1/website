@@ -279,14 +279,32 @@
     start();
 </script>
     <script>
-    // רשימת שמות התמונות בתיקייה (עליך לעדכן את השמות המדויקים)
-    const images = ['1.jpg', '2.jpg', '3.jpg', '4.jpg', '5.jpg']; 
-    const folder = 'pictureroll/';
+    async function loadDynamicImages() {
+        // מחליף את שם הענן שלך מה-URL הקודם שנתת
+        const cloudName = 'dj56w7nb9'; 
+        const tagName = 'pictureroll';
+        
+        // כתובת ה-API של קלאודינרי למשיכת רשימת תמונות לפי תגית
+        const url = `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`;
 
-    function setRandomImages() {
-        let shuffle = [...images].sort(() => 0.5 - Math.random());
-        document.getElementById('img1').src = folder + shuffle[0];
-        document.getElementById('img2').src = folder + shuffle[1];
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const allImages = data.resources;
+
+            if (allImages.length >= 2) {
+                // ערבוב רנדומלי של הרשימה שחזרה מהשרת
+                const shuffled = allImages.sort(() => 0.5 - Math.random());
+                
+                // יצירת הכתובת המלאה לתמונה (כולל אופטימיזציה אוטומטית)
+                const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/`;
+                
+                document.getElementById('img1').src = baseUrl + shuffled[0].public_id + '.' + shuffled[0].format;
+                document.getElementById('img2').src = baseUrl + shuffled[1].public_id + '.' + shuffled[1].format;
+            }
+        } catch (error) {
+            console.error("שגיאה במשיכת התמונות מהתיקייה:", error);
+        }
     }
 
     function openImage(container) {
@@ -298,12 +316,11 @@
     }
 
     // הפעלה בטעינה
-    window.onload = () => {
-        setRandomImages();
-    };
+    document.addEventListener('DOMContentLoaded', loadDynamicImages);
 </script>
 </body>
 </html>
+
 
 
 
