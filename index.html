@@ -82,33 +82,33 @@
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; }
         #lightbox img { max-width: 90%; max-height: 90%; border: 3px solid #fff; border-radius: 10px; }
         h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
-        /* מיכל התמונות הרנדומליות */
+        /* מיכל תמונה בודדת בפורמט 16:9 עם רקע שקוף */
 .image-roll-container {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin: 20px auto;
+    width: 100%;
     max-width: 800px; /* תואם לרוחב הסרטון */
-}
-
-.roll-item {
-    flex: 1;
-    aspect-ratio: 1 / 1; /* שומר על תמונות ריבועיות וזהות */
+    margin: 20px auto;
+    aspect-ratio: 16 / 9; /* יחס גובה-רוחב קבוע */
     overflow: hidden;
     border-radius: 8px;
     cursor: pointer;
-    background: #f0f0f0;
-    transition: transform 0.3s ease;
+    background: transparent; /* שינוי לשקוף */
+    position: relative;
+    /* border: 1px solid #ddd;  -- אפשר להסיר או להשאיר בהתאם לטעם */
 }
 
-.roll-item:hover {
-    transform: scale(1.02);
+.roll-item {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .roll-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* מבטיח שהתמונה תמלא את הריבוע בלי להתעוות */
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* שומר על כל התמונה בתוך המסגרת בלי חיתוך */
+    display: block;
 }
 
 /* מודאל להגדלת תמונה (Lightbox) */
@@ -155,9 +155,10 @@
     <div id="home" class="page active">
             <div class="content-wrap">
             <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
-                <div class="image-roll-container" id="imageRoll">
-    <div class="roll-item" onclick="openImage(this)"><img src="" alt="pictureroll" id="img1"></div>
-    <div class="roll-item" onclick="openImage(this)"><img src="" alt="pictureroll" id="img2"></div>
+    <div class="image-roll-container" id="imageRoll" onclick="openImage(this)">
+    <div class="roll-item">
+        <img src="" alt="pictureroll" id="img1">
+    </div>
 </div>
 
 <div class="modal-overlay" id="imageModal" onclick="this.style.display='none'">
@@ -278,13 +279,10 @@
     }
     start();
 </script>
-    <script>
-    async function loadDynamicImages() {
-        // מחליף את שם הענן שלך מה-URL הקודם שנתת
+   <script>
+    async function loadDynamicImage() {
         const cloudName = 'dj56w7nb9'; 
         const tagName = 'pictureroll';
-        
-        // כתובת ה-API של קלאודינרי למשיכת רשימת תמונות לפי תגית
         const url = `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`;
 
         try {
@@ -292,35 +290,39 @@
             const data = await response.json();
             const allImages = data.resources;
 
-            if (allImages.length >= 2) {
-                // ערבוב רנדומלי של הרשימה שחזרה מהשרת
-                const shuffled = allImages.sort(() => 0.5 - Math.random());
+            if (allImages.length > 0) {
+                // בחירת תמונה רנדומלית אחת מהרשימה
+                const randomImg = allImages[Math.floor(Math.random() * allImages.length)];
                 
-                // יצירת הכתובת המלאה לתמונה (כולל אופטימיזציה אוטומטית)
                 const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/`;
+                const imgElement = document.getElementById('img1');
                 
-                document.getElementById('img1').src = baseUrl + shuffled[0].public_id + '.' + shuffled[0].format;
-                document.getElementById('img2').src = baseUrl + shuffled[1].public_id + '.' + shuffled[1].format;
+                // עדכון מקור התמונה
+                imgElement.src = baseUrl + randomImg.public_id + '.' + randomImg.format;
             }
         } catch (error) {
-            console.error("שגיאה במשיכת התמונות מהתיקייה:", error);
+            console.error("שגיאה בטעינת התמונה:", error);
         }
     }
 
+    // פונקציית ההגדלה (Lightbox) נשארת זהה
     function openImage(container) {
         const src = container.querySelector('img').src;
+        if(!src) return;
         const modal = document.getElementById('imageModal');
         const modalImg = document.getElementById('modalImg');
         modalImg.src = src;
         modal.style.display = 'flex';
     }
 
-    // הפעלה בטעינה
-    document.addEventListener('DOMContentLoaded', loadDynamicImages);
-        setInterval(loadDynamicImages, 5000); // מחליף תמונות כל 5 שניות
+    document.addEventListener('DOMContentLoaded', loadDynamicImage);
+    
+    // אופציונלי: החלפת תמונה כל 7 שניות
+    setInterval(loadDynamicImage, 4000);
 </script>
 </body>
 </html>
+
 
 
 
