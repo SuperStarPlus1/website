@@ -25,23 +25,7 @@
         .page { display: none; }
         .page.active { display: block; }
 
-      /* באנר מוקטן ב-50% עם רקע כחול */
-        .banner-hero { 
-            width: 100%; 
-            background-color: var(--blue); 
-            text-align: center; 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden;
-            height: 100px; /* צומצם מ-200 ל-100 */
-        }
-        .banner-hero img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
-            display: block; 
-            margin: 0 auto; 
-        }
+      
 
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
@@ -94,8 +78,7 @@
 
 <main>
     <div id="home" class="page active">
-        <div class="banner-hero"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/cart41.png"></div>
-        <div class="content-wrap">
+            <div class="content-wrap">
             <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
             <h2 class="section-title">המבצעים החמים שלנו</h2>
             <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
@@ -214,6 +197,7 @@
 </script>
 </body>
 </html>
+
 
 
 
