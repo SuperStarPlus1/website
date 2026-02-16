@@ -24,34 +24,34 @@
         .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
-/* סרט טקסט רץ */
+/* סרט טקסט רץ - תיקון גובה, מהירות ומרכוז */
         .news-ticker {
             background: var(--yellow);
             color: var(--blue);
-            padding: 10px 0;
+            height: 40px; /* גובה קבוע וברור */
+            line-height: 40px; /* מרכוז טקסט אנכי */
             font-weight: bold;
             font-size: 1.1rem;
             overflow: hidden;
             white-space: nowrap;
             position: fixed;
-            top: 85px; /* בדיוק מתחת לתפריט */
+            top: 85px; 
             width: 100%;
             z-index: 999;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        /* תיקון אנימציית הטקסט הרץ - משמאל לימין בלופ */
+
         .ticker-content {
             display: inline-block;
-            white-space: nowrap;
             position: absolute;
-            animation: ticker 15s linear infinite;
+            animation: ticker 25s linear infinite; /* מהירות איטית יותר לקריאה נוחה */
             left: 0;
-            transform: translateX(-100%); /* מתחיל מחוץ למסך משמאל */
+            will-change: transform; /* משפר ביצועים למניעת ריצוד */
         }
 
         @keyframes ticker {
-            0% { transform: translateX(-100%); } /* התחלה: מחוץ למסך משמאל */
-            100% { transform: translateX(100vw); } /* סיום: מעבר לקצה המסך מימין */
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100vw); }
         }
       
 
@@ -227,6 +227,7 @@
 </script>
 </body>
 </html>
+
 
 
 
