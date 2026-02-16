@@ -272,7 +272,21 @@
             </div>
         </div>
     </div>
-    <div id="career-page" class="page"><div class="content-wrap"><h2>קריירה</h2><p>הצטרפו לצוות שלנו.</p></div></div>
+    <div id="career-page" class="page">
+        <div class="content-wrap">
+            <h2 class="section-title">הצטרפו לנבחרת של סופרסטאר פלוס</h2>
+            <p>אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:</p>
+            
+            <div id="jobs-grid" class="grid"></div>
+            
+            <div style="margin-top: 40px; text-align: center; background: white; padding: 20px; border-radius: 15px;">
+                <p>מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:</p>
+                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+            </div>
+        </div>
+    </div>
 
 <div id="directions-page" class="page">
         <div class="content-wrap">
@@ -415,6 +429,7 @@ async function start() {
         loadCloud('promo', 'promo-full', 'grid', true);
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
+        loadCloud('jobs', 'jobs-grid', 'grid', false);
         
         // טעינת הנתונים מהאקסל
         Papa.parse(CSV, { download: true, header: true, complete: r => {
