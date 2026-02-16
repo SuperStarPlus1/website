@@ -20,25 +20,24 @@
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
 
-        main { max-width: 100%; margin: 150px auto 50px; }
+        main { max-width: 100%; margin: 120px auto 50px; }
         .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
 /* סרט טקסט רץ - תיקון גובה, מהירות ומרכוז */
 .news-ticker {
-            background: transparent; /* רקע שקוף */
-            color: var(--blue); /* כיתוב כחול */
+            background: transparent;
+            color: var(--blue);
             height: 40px; 
             line-height: 40px; 
             font-weight: bold;
             font-size: 1.1rem;
             overflow: hidden;
             white-space: nowrap;
-            position: fixed;
+            position: absolute; /* שינוי מ-fixed ל-absolute */
             top: 85px; 
             width: 100%;
             z-index: 999;
-            /* הסרתי את הצל כדי לשמור על מראה נקי */
         }
 
         .ticker-content {
@@ -227,6 +226,7 @@
 </script>
 </body>
 </html>
+
 
 
 
