@@ -75,12 +75,18 @@
 }
 @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; }
-        .card img { width: 100%; height: 180px; object-fit: contain; cursor: pointer; }
-        .card h3 { font-size: 1.1rem; margin: 15px 0; flex-grow: 1; }
-        .price { color: #d32f2f; font-weight: bold; font-size: 1.6rem; }
-        .barcode { font-size: 0.8rem; color: #888; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+/* עיצוב קטלוג יוקרתי וקומפקטי */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 130px; object-fit: contain; cursor: pointer; }
+        .card h3 { font-size: 0.9rem; margin: 10px 0; height: 2.4em; overflow: hidden; color: #333; line-height: 1.2; }
+        .price { color: #d32f2f; font-weight: bold; font-size: 1.3rem; }
+        .barcode { font-size: 0.7rem; color: #999; margin-top: auto; padding-top: 8px; border-top: 1px solid #f9f9f9; }
+        
+        /* כפתורי קטגוריות */
+        #cat-btns button { padding: 8px 15px; border-radius: 20px; border: 1px solid var(--blue); background: white; color: var(--blue); cursor: pointer; transition: 0.3s; }
+        #cat-btns button.active-cat { background: var(--blue); color: white; }
 
         .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
         .dept-card { background: white; padding: 20px; border-radius: 15px; border-top: 4px solid var(--blue); text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -259,20 +265,41 @@
         } catch(e) {}
     }
 
+    let limit = 20;
+
+    function render(data) {
+        const container = document.getElementById('catalog-grid');
+        const slice = data.slice(0, limit);
+        
+        container.innerHTML = slice.map(i => `
+            <div class="card">
+                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" 
+                     onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                <h3>${i.Name}</h3>
+                <div class="price">₪${i.Price}</div>
+                <div class="barcode">ברקוד: ${i.Barcode}</div>
+            </div>`).join('');
+
+        const oldBtn = document.getElementById('loadMore');
+        if(oldBtn) oldBtn.remove();
+
+        if (data.length > limit) {
+            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;">טען מוצרים נוספים...</button>`);
+        }
+    }
+
     function runFilter() {
         const term = document.getElementById('search').value.toLowerCase();
         const filtered = allItems.filter(i => (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && (curCat === "הכל" || i.Category === curCat));
         render(filtered);
     }
 
-    function render(data) {
-        document.getElementById('catalog-grid').innerHTML = data.map(i => `
-            <div class="card">
-                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" onclick="zoom(this.src)" onerror="this.src='https://via.placeholder.com/150'">
-                <h3>${i.Name}</h3>
-                <div class="price">₪${i.Price}</div>
-                <div class="barcode">ברקוד: ${i.Barcode}</div>
-            </div>`).join('');
+    function setCategory(cat, btn) {
+        curCat = cat;
+        limit = 20;
+        document.querySelectorAll('#cat-btns button').forEach(b => b.classList.remove('active-cat'));
+        btn.classList.add('active-cat');
+        runFilter();
     }
 
     async function start() {
@@ -284,7 +311,7 @@
         Papa.parse(CSV, { download: true, header: true, complete: r => {
             allItems = r.data.filter(x => x.Barcode);
             const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))];
-            document.getElementById('cat-btns').innerHTML = cats.map(c => `<button style="padding:8px 12px; border-radius:15px; margin-left:5px; cursor:pointer;" onclick="curCat='${c}'; runFilter()">${c}</button>`).join('');
+           document.getElementById('cat-btns').innerHTML = cats.map(c => `<button class="${c === 'הכל' ? 'active-cat' : ''}" onclick="setCategory('${c}', this)">${c}</button>`).join('');
             render(allItems);
         }});
     }
@@ -333,6 +360,7 @@
 </script>
 </body>
 </html>
+
 
 
 
