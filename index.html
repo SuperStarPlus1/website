@@ -223,21 +223,64 @@
         runFilter();
     }
 
-    async function start() {
+async function start() {
+        // טעינת תמונות וסרטונים
         loadCloud('promo', 'promo-slider', 'slider', true);
         loadCloud('promo', 'promo-full', 'grid', true);
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
         
+        // טעינת הנתונים מהאקסל
         Papa.parse(CSV, { download: true, header: true, complete: r => {
-            allItems = r.data.filter(x => x.Barcode);
-            const cats = ["הכל", ...new Set(allItems.map(x => x.Category).filter(Boolean))].sort();
+            // סינון שורות ריקות
+            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+            
+            if (allItems.length === 0) {
+                console.error("לא נמצאו מוצרים! בדוק את קובץ ה-CSV.");
+                return;
+            }
+
+            // --- כאן התיקון החכם ---
+            // הקוד בודק איזו עמודה קיימת: Category, category או קטגוריה
+            const firstItem = allItems[0];
+            const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
+                             firstItem.hasOwnProperty('category') ? 'category' : 
+                             firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+
+            if (!catField) {
+                alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ! וודא שיש עמודה בשם: Category או קטגוריה');
+                return;
+            }
+
+            // יצירת רשימת הקטגוריות
+            const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+            const cats = ["הכל", ...new Set(rawCats)].sort();
+
+            // עדכון ה-Dropdown
             const catSelect = document.getElementById('cat-select');
             if(catSelect) {
                 catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
             }
+
+            // תיקון קטן לפונקציית הסינון שתדע גם היא להשתמש בשם הנכון
+            window.catFieldName = catField; 
+            
             render(allItems);
         }});
+    }
+
+    // עדכון קטן לפונקציית הסינון כדי שתעבוד עם התיקון
+    function runFilter() {
+        const term = document.getElementById('search').value.toLowerCase();
+        // שימוש בשם העמודה שמצאנו (catFieldName)
+        const field = window.catFieldName || 'Category';
+        
+        const filtered = allItems.filter(i => {
+            const iCat = i[field];
+            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && 
+                   (curCat === "הכל" || iCat === curCat);
+        });
+        render(filtered);
     }
 
     async function loadDynamicImage() {
@@ -267,3 +310,4 @@
 </script>
 </body>
 </html>
+
