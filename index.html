@@ -10,68 +10,153 @@
         :root { --blue: #0076DA; --yellow: #ffcc00; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); direction: rtl; }
 
-        /* כותרת וניווט */
         header { background: var(--blue); position: fixed; top: 0; width: 100%; z-index: 1000; height: 85px; }
         .nav-container { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; height: 100%; padding: 0 20px; justify-content: flex-start; }
-        .logo img { height: 170px; margin-top: 30px; cursor: pointer; margin-left: 30px; z-index: 1001; }
-        .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; align-items: center; }
-        .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; transition: 0.3s; }
+        
+        .logo img { height: 170px; margin-top: 30px; cursor: pointer; margin-left: 30px; }
+        
+        .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
+        .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
-        .social-links-area { margin-right: 30px; display: flex; gap: 15px; align-items: center; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; }
-        .social-links-area a { color: white; font-size: 1.3rem; text-decoration: none; }
 
-        /* טקסט רץ */
-        .news-ticker { background: transparent; color: var(--blue); height: 40px; line-height: 40px; font-weight: bold; font-size: 1.1rem; overflow: hidden; white-space: nowrap; position: absolute; top: 85px; width: 100%; z-index: 999; }
-        .ticker-content { display: inline-block; position: absolute; animation: ticker 25s linear infinite; left: 0; }
-        @keyframes ticker { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }
-
-        /* תוכן ראשי */
-        main { max-width: 100%; margin: 140px auto 50px; }
-        .content-wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        main { max-width: 100%; margin: 120px auto 50px; }
+        .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
         .page { display: none; }
         .page.active { display: block; }
 
-        /* אלמנטים בדף הבית */
-        .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        video { width: 100%; height: 100%; object-fit: contain; }
-        .image-roll-container { width: 100%; max-width: 800px; margin: 20px auto; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; cursor: pointer; background: transparent; }
-        .roll-item img { width: 100%; height: 100%; object-fit: contain; }
+        .news-ticker {
+            background: transparent; color: var(--blue); height: 40px; line-height: 40px; 
+            font-weight: bold; font-size: 1.1rem; overflow: hidden; white-space: nowrap; 
+            position: absolute; top: 85px; width: 100%; z-index: 999;
+        }
+        .ticker-content {
+            display: inline-block; position: absolute; animation: ticker 25s linear infinite; left: 0; will-change: transform;
+        }
+        @keyframes ticker { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }
 
-        /* גריד מוצרים וכרטיסים */
+        .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
+
+        .slider-wrap { width: 100%; overflow: hidden; background: transparent; padding: 40px 0; margin-bottom: 40px; }
+        .slider-track { display: flex; width: max-content; animation: scroll 90s linear infinite; gap: 30px; padding: 20px; }
+        .slider-track img { height: 280px; border-radius: 15px; cursor: pointer; box-shadow: 0 15px 35px rgba(0,0,0,0.2); transition: all 0.5s ease; }
+        .slider-track img:hover { transform: scale(1.1) translateY(-10px); box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
+
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
         .card { background: white; border-radius: 12px; padding: 12px; text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .card img { width: 100%; height: 130px; object-fit: contain; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 130px; object-fit: contain; cursor: pointer; }
+        .card h3 { font-size: 0.9rem; margin: 10px 0; height: 2.4em; overflow: hidden; color: #333; line-height: 1.2; }
         .price { color: #d32f2f; font-weight: bold; font-size: 1.3rem; }
+        .barcode { font-size: 0.7rem; color: #999; margin-top: auto; padding-top: 8px; border-top: 1px solid #f9f9f9; }
 
-        /* כפתור צף */
-        .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
-        .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-
-        /* לייטבוקס - חלון צף מתוקן */
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; }
-        #lightbox img { max-width: 90%; max-height: 90%; border: 3px solid #fff; border-radius: 10px; }
-        
-        h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
-
-        /* התאמה למובייל */
-        @media (max-width: 768px) {
-            header { height: auto; padding: 10px 0; }
-            .nav-container { flex-direction: column; height: auto; }
-            .logo img { height: 90px; margin: 0 0 10px 0; }
-            .nav-links { flex-wrap: wrap; justify-content: center; font-size: 0.85rem; }
-            main { margin-top: 230px; }
+        /* עיצוב חדש לצור קשר */
+        .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .dept-card { 
+            background: white; padding: 25px; border-radius: 20px; text-align: center; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; border-bottom: 5px solid #eee;
         }
-
-        /* עיצוב דף צור קשר מהקישור הנכון */
-        .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .dept-card { background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-bottom: 5px solid #eee; }
-        .icon-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 24px; }
+        .dept-card:hover { transform: translateY(-5px); }
+        .icon-circle {
+            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; margin: 0 auto 15px; font-size: 24px;
+        }
         .icon-blue { color: #0076DA; background: #e6f1fa; }
         .icon-red { color: #d32f2f; background: #fdeaea; }
         .icon-green { color: #2e7d32; background: #eaf5eb; }
+        .icon-orange { color: #ef6c00; background: #fff3e0; }
         .work-hours { font-weight: bold; color: var(--blue); font-size: 1.1rem; margin-top: 10px; display: block; }
-        .contact-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 30px; padding: 20px; background: #fff; border-radius: 15px; text-align: center; }
-        .map-container { width: 100%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); margin-top: 20px; }
+        .contact-footer {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-top: 30px; padding: 20px; background: #fff; border-radius: 15px; text-align: center;
+        }
+        .contact-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .map-container { width: 100%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); }
+        .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
+        .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .waze { background-color: #33CCFF; }
+        .whatsapp { background-color: #25D366; }
+
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; }
+        #lightbox img { max-width: 90%; max-height: 90%; border: 3px solid #fff; border-radius: 10px; }
+        h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
+
+        .image-roll-container { width: 100%; max-width: 800px; margin: 20px auto; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; cursor: pointer; background: transparent; position: relative; }
+        .roll-item { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .roll-item img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-overlay img { max-width: 90%; max-height: 90%; border-radius: 5px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+  /* עיצוב משופר לעמוד אודות */
+        .about-header {
+            text-align: center;
+            background: linear-gradient(rgba(0,118,218,0.9), rgba(0,118,218,0.9)), url('https://res.cloudinary.com/dj56w7nb9/image/upload/v1/store-front.jpg');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 60px 20px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+        .about-header h1 { font-size: 2.5rem; margin-bottom: 15px; }
+        .about-header p { font-size: 1.2rem; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .feature-item {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid var(--yellow);
+            transition: 0.3s;
+        }
+        .feature-item:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .feature-item i { font-size: 2.5rem; color: var(--blue); margin-bottom: 15px; }
+        .feature-item h4 { margin: 10px 0; font-size: 1.1rem; color: #333; }
+        .feature-item p { font-size: 0.9rem; color: #666; line-height: 1.4; margin: 0; }
+        
+        .quote-box {
+            background: #fff;
+            border-right: 5px solid var(--blue);
+            padding: 20px;
+            margin: 40px 0;
+            font-style: italic;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        /* הוספה עדינה לאייקונים של רשתות חברתיות */
+        .social-link-item { margin-right: 20px; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; display: flex; gap: 15px; }
+        .social-link-item a { color: white; font-size: 1.2rem; transition: 0.3s; }
+        .social-link-item a:hover { color: var(--yellow); }
+        /* עיצוב אייקונים של מדיה חברתית בתפריט */
+        .social-links-area {
+            margin-right: 30px; /* יוצר רווח מהתפריט הרגיל */
+            display: flex !important;
+            gap: 15px;
+            align-items: center;
+            border-right: 1px solid rgba(255,255,255,0.3); /* קו מפריד עדין */
+            padding-right: 20px;
+        }
+        .social-links-area a {
+            color: white;
+            font-size: 1.3rem;
+            transition: 0.3s ease;
+            text-decoration: none;
+        }
+        .social-links-area a:hover {
+            color: var(--yellow); /* האייקון יהפוך לצהוב כשעוברים עליו */
+            transform: scale(1.1);
+        }
+
+        /* מניעת הפיכת האייקונים לצהובים כשהם לא בשימוש (ביטול עיצוב ליסט רגיל) */
+        .social-links-area:hover { background: transparent !important; }
     </style>
 </head>
 <body>
@@ -81,88 +166,186 @@
 <header>
     <div class="nav-container">
         <div class="logo" onclick="nav('home')"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png"></div>
-        <ul class="nav-links">
-            <li class="active" onclick="nav('home', this)">דף הבית</li>
-            <li onclick="nav('catalog-page', this)">קטלוג</li>
-            <li onclick="nav('promos-page', this)">מבצעים</li>
-            <li onclick="nav('new-page', this)">חדש על המדף</li>
-            <li onclick="nav('about-page', this)">אודות</li>
-            <li onclick="nav('career-page', this)">קריירה</li>
-            <li onclick="nav('directions-page', this)">צור קשר</li>
-            <li class="social-links-area">
-                <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-                <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
-            </li>
-        </ul>
+ <ul class="nav-links">
+    <li class="active" onclick="nav('home', this)">דף הבית</li>
+    <li onclick="nav('catalog-page', this)">קטלוג</li>
+    <li onclick="nav('promos-page', this)">מבצעים</li>
+    <li onclick="nav('new-page', this)">חדש על המדף</li>
+    <li onclick="nav('about-page', this)">אודות</li>
+    <li onclick="nav('career-page', this)">קריירה</li>
+    <li onclick="nav('directions-page', this)">צור קשר</li>
+    
+    <li class="social-links-area">
+        <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+    </li>
+</ul>
     </div>
 </header>
 
 <div class="news-ticker">
-    <div class="ticker-content">אתר חדש בבניה - האתר הסופי בקרוב! | ברוכים הבאים לסופר סטאר פלוס | המבצעים הכי חמים מחכים לכם! |</div>
+    <div class="ticker-content">אתר חדש בבניה - האתר הסופי בקרוב! | ברוכים הבאים לסופר סטאר פלוס |</div>
 </div>
 
 <main>
     <div id="home" class="page active">
         <div class="content-wrap">
             <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
-            <div class="image-roll-container" onclick="zoom(this.querySelector('img').src)">
-                <div class="roll-item"><img src="" id="img1"></div>
+            <div class="image-roll-container" id="imageRoll" onclick="openImage(this)">
+                <div class="roll-item"><img src="" alt="pictureroll" id="img1"></div>
             </div>
             <h2 class="section-title">המבצעים החמים שלנו</h2>
-            <div id="promo-home" class="grid"></div>
+            <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
+            <h2 class="section-title">חדש על המדף</h2>
+            <div id="new-home" class="grid"></div>
         </div>
     </div>
 
     <div id="catalog-page" class="page">
         <div class="content-wrap">
             <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;">
-                <input type="text" id="search" placeholder="חפש מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px;">
-                <select id="cat-select" onchange="setCategory(this.value)" style="flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--blue); border-radius: 10px;"></select>
+                <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
+                <select id="cat-select" onchange="setCategory(this.value)" style="flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--blue); border-radius: 10px; background: white; color: var(--blue); font-weight: bold; cursor: pointer;">
+                    <option value="הכל">כל הקטגוריות</option>
+                </select>
             </div>
             <div id="catalog-grid" class="grid"></div>
         </div>
     </div>
 
-    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">כל המבצעים</h2><div id="promo-full" class="grid"></div></div></div>
+    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
     <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
-
-    <div id="about-page" class="page">
+   <div id="about-page" class="page">
         <div class="content-wrap">
-            <h2 class="section-title">אודותינו</h2>
-            <p>סופרסטאר פלוס - חוויית קנייה יוצאת דופן לכל המשפחה במג'ד אל כרום.</p>
+            <div class="about-header">
+                <h1>סופרסטאר פלוס</h1>
+                <p>חוויית קנייה יוצאת דופן לכל המשפחה. אנו מתחייבים לשירות איכותי, מבצעים משתלמים ומגוון רחב של מוצרים במחירים מעולים.</p>
+            </div>
+
+            <div class="quote-box">
+                "אנו כאן בשבילכם, עם סניפים נוחים ונגישים, וצוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."
+            </div>
+
+            <h2 class="section-title">למה לבחור בנו?</h2>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <i class="fa-solid fa-tags"></i>
+                    <h4>מחירים ללא תחרות</h4>
+                    <p>מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fa-solid fa-bolt"></i>
+                    <h4>קנייה נוחה ומהירה</h4>
+                    <p>חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <h4>שירות מצטיין</h4>
+                    <p>צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fa-solid fa-leaf"></i>
+                    <h4>טריות יומיומית</h4>
+                    <p>ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fa-solid fa-percent"></i>
+                    <h4>מבצעים משתלמים</h4>
+                    <p>מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fa-solid fa-users"></i>
+                    <h4>מעורבות קהילתית</h4>
+                    <p>תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 50px; text-align: center; color: #666;">
+                <p><strong>בסופרסטאר אנו לא מתפשרים על איכות</strong> – איכות המוצרים והשירות תמיד בראש סדר העדיפויות שלנו.</p>
+            </div>
         </div>
     </div>
-
     <div id="career-page" class="page">
         <div class="content-wrap">
-            <h2 class="section-title">קריירה</h2>
+            <h2 class="section-title">הצטרפו לנבחרת של סופרסטאר פלוס</h2>
+            <p>אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:</p>
+            
             <div id="jobs-grid" class="grid"></div>
+            
+            <div style="margin-top: 40px; text-align: center; background: white; padding: 20px; border-radius: 15px;">
+                <p>מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:</p>
+                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+            </div>
         </div>
     </div>
 
-    <div id="directions-page" class="page">
+<div id="directions-page" class="page">
         <div class="content-wrap">
             <h2 class="section-title">שעות פתיחה ומחלקות</h2>
             <div class="contact-section">
-                <div class="dept-card"><div class="icon-circle icon-blue"><i class="fa-solid fa-cart-shopping"></i></div><h3>סופרמרקט</h3><p>א' - שבת</p><span class="work-hours">08:00 - 22:00</span></div>
-                <div class="dept-card"><div class="icon-circle icon-red"><i class="fa-solid fa-drumstick-bite"></i></div><h3>מחלקת בשר</h3><p>א' - שבת</p><span class="work-hours">08:00 - 20:30</span></div>
-                <div class="dept-card"><div class="icon-circle icon-green"><i class="fa-solid fa-fish"></i></div><h3>מחלקת דגים</h3><p>ב' - שבת (א' סגור)</p><span class="work-hours">09:00 - 17:00</span></div>
+                <div class="dept-card" style="border-color: #0076DA;">
+                    <div class="icon-circle icon-blue"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <h3>סופרמרקט</h3>
+                    <p>ימי עבודה: א' - שבת</p>
+                    <span class="work-hours">08:00 - 22:00</span>
+                </div>
+                <div class="dept-card" style="border-color: #d32f2f;">
+                    <div class="icon-circle icon-red"><i class="fa-solid fa-drumstick-bite"></i></div>
+                    <h3>מחלקת בשר</h3>
+                    <p>ימי עבודה: א' - שבת</p>
+                    <span class="work-hours">08:00 - 20:30</span>
+                </div>
+                <div class="dept-card" style="border-color: #2e7d32;">
+                    <div class="icon-circle icon-green"><i class="fa-solid fa-fish"></i></div>
+                    <h3>מחלקת דגים</h3>
+                    <p>ימי עבודה: ב' - שבת</p>
+                    <p style="color: #d32f2f; font-weight: bold; margin: 0;">יום ראשון: סגור</p>
+                    <span class="work-hours">09:00 - 17:00</span>
+                </div>
             </div>
+
+            <h2 class="section-title">פרטי התקשרות</h2>
             <div class="contact-footer">
-                <div><i class="fa-solid fa-phone" style="color:var(--blue)"></i> <strong>טלפון:</strong> 04-907-6772</div>
-                <div><i class="fa-solid fa-location-dot" style="color:var(--blue)"></i> <strong>כתובת:</strong> מג'ד אל כרום, כביש ראשי</div>
+                <a href="tel:049076772" class="contact-link">
+                    <div class="icon-circle icon-blue"><i class="fa-solid fa-phone"></i></div>
+                    <strong>טלפון</strong>
+                    <span>04-907-6772</span>
+                </a>
+                <a href="mailto:info@superstarplus.co.il" class="contact-link">
+                    <div class="icon-circle icon-orange"><i class="fa-solid fa-envelope"></i></div>
+                    <strong>דוא"ל</strong>
+                    <span>info@superstarplus.co.il</span>
+                </a>
+                <div class="contact-link">
+                    <div class="icon-circle icon-green"><i class="fa-solid fa-location-dot"></i></div>
+                    <strong>כתובת</strong>
+                    <span>מג'ד אל כרום, כביש ראשי</span>
+                </div>
             </div>
-            <div class="map-container">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3361.354148110967!2d35.25752!3d32.92348!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c2f0f4e4e5e5f%3A0x5a5e5e5e5e5e5e5e!2zU3VwZXIgU3RhciBQbHVz!5e0!3m2!1siw!2sil!4v1700000000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+
+            <div class="map-wrapper" style="margin-top: 30px; display: flex; justify-content: center;">
+                <div class="map-container">
+               <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
             </div>
         </div>
     </div>
 </main>
 
+<div class="modal-overlay" id="imageModal" onclick="this.style.display='none'"><img src="" id="modalImg"></div>
+
 <div class="fab">
-    <a href="https://wa.me/97249076772" class="f-btn" style="background:#25D366;"><i class="fa-brands fa-whatsapp"></i></a>
-    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn" style="background:#33CCFF;"><i class="fa-brands fa-waze"></i></a>
+    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
 </div>
 
 <script>
@@ -170,6 +353,7 @@
     const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
     let allItems = [];
     let curCat = "הכל";
+    let limit = 20;
 
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -179,31 +363,52 @@
         window.scrollTo(0,0);
     }
 
-    /* פונקציית זום לייטבוקס מתוקנת */
     function zoom(url) {
-        if(!url || url.includes('undefined')) return;
         document.getElementById('lb-img').src = url;
         document.getElementById('lightbox').style.display = 'flex';
     }
 
-    async function loadCloud(tag, divId) {
+    function isFresh(pid) {
+        const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
+        if(!m) return true;
+        const d = new Date(`${m[3]}-${m[2]}-${m[1]}`);
+        const today = new Date(); today.setHours(0,0,0,0);
+        return d >= today;
+    }
+
+    async function loadCloud(tag, divId, type='grid', filter=false) {
         try {
             const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
             const d = await r.json();
-            document.getElementById(divId).innerHTML = d.resources.map(f => {
+            let files = d.resources;
+            if(filter) files = files.filter(f => isFresh(f.public_id));
+            const html = files.map(f => {
                 const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-                return `<div class="card" onclick="zoom('${url}')"><img src="${url}"></div>`;
+                return type === 'slider' ? `<img src="${url}" onclick="zoom('${url}')">` : `<div class="card" onclick="zoom('${url}')"><img src="${url}"></div>`;
             }).join('');
-        } catch(e) {}
+            const target = document.getElementById(divId);
+            if(target) target.innerHTML = type === 'slider' ? (html + html) : html;
+        } catch(e) { console.error("Cloudinary error:", e); }
     }
 
     function render(data) {
-        document.getElementById('catalog-grid').innerHTML = data.slice(0, 40).map(i => `
+        const container = document.getElementById('catalog-grid');
+        const slice = data.slice(0, limit);
+        
+        container.innerHTML = slice.map(i => `
             <div class="card">
-                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" onclick="zoom(this.src)" onerror="this.src='https://via.placeholder.com/150'">
+                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" 
+                     onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
                 <h3>${i.Name}</h3>
                 <div class="price">₪${i.Price}</div>
+                <div class="barcode">ברקוד: ${i.Barcode}</div>
             </div>`).join('');
+
+        const oldBtn = document.getElementById('loadMore');
+        if(oldBtn) oldBtn.remove();
+        if (data.length > limit) {
+            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;">טען מוצרים נוספים...</button>`);
+        }
     }
 
     function runFilter() {
@@ -212,34 +417,104 @@
         render(filtered);
     }
 
-    function setCategory(cat) { curCat = cat; runFilter(); }
+    function setCategory(cat) {
+        curCat = cat;
+        limit = 20;
+        runFilter();
+    }
 
-    async function start() {
-        loadCloud('promo', 'promo-home'); loadCloud('promo', 'promo-full');
-        loadCloud('newproducts', 'new-full'); loadCloud('jobs', 'jobs-grid');
+async function start() {
+        // טעינת תמונות וסרטונים
+        loadCloud('promo', 'promo-slider', 'slider', true);
+        loadCloud('promo', 'promo-full', 'grid', true);
+        loadCloud('newproducts', 'new-home', 'grid', false);
+        loadCloud('newproducts', 'new-full', 'grid', false);
+        loadCloud('jobs', 'jobs-grid', 'grid', false);
         
+        // טעינת הנתונים מהאקסל
         Papa.parse(CSV, { download: true, header: true, complete: r => {
-            allItems = r.data.filter(x => x.Barcode);
-            const cats = ["הכל", ...new Set(allItems.map(x => x.Category))].filter(Boolean);
-            if(document.getElementById('cat-select')) {
-                document.getElementById('cat-select').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            // סינון שורות ריקות
+            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+            
+            if (allItems.length === 0) {
+                console.error("לא נמצאו מוצרים! בדוק את קובץ ה-CSV.");
+                return;
             }
+
+            // --- כאן התיקון החכם ---
+            // הקוד בודק איזו עמודה קיימת: Category, category או קטגוריה
+            const firstItem = allItems[0];
+            const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
+                             firstItem.hasOwnProperty('category') ? 'category' : 
+                             firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+
+            if (!catField) {
+                alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ! וודא שיש עמודה בשם: Category או קטגוריה');
+                return;
+            }
+
+            // יצירת רשימת הקטגוריות
+            const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+            const cats = ["הכל", ...new Set(rawCats)].sort();
+
+            // עדכון ה-Dropdown
+            const catSelect = document.getElementById('cat-select');
+            if(catSelect) {
+                catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
+            }
+
+            // תיקון קטן לפונקציית הסינון שתדע גם היא להשתמש בשם הנכון
+            window.catFieldName = catField; 
+            
             render(allItems);
         }});
     }
 
+    // עדכון קטן לפונקציית הסינון כדי שתעבוד עם התיקון
+    function runFilter() {
+        const term = document.getElementById('search').value.toLowerCase();
+        // שימוש בשם העמודה שמצאנו (catFieldName)
+        const field = window.catFieldName || 'Category';
+        
+        const filtered = allItems.filter(i => {
+            const iCat = i[field];
+            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && 
+                   (curCat === "הכל" || iCat === curCat);
+        });
+        render(filtered);
+    }
+
     async function loadDynamicImage() {
         try {
-            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
-            const d = await r.json();
-            if (d.resources.length > 0) {
-                const img = d.resources[Math.floor(Math.random() * d.resources.length)];
-                document.getElementById('img1').src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${img.public_id}.${img.format}`;
+            const response = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
+            const data = await response.json();
+            if (data.resources.length > 0) {
+                const randomImg = data.resources[Math.floor(Math.random() * data.resources.length)];
+                document.getElementById('img1').src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
             }
         } catch (e) {}
     }
 
-    window.onload = () => { start(); loadDynamicImage(); setInterval(loadDynamicImage, 12000); };
+    function openImage(container) {
+        const src = container.querySelector('img').src;
+        if(src) {
+            document.getElementById('modalImg').src = src;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+    }
+
+    window.onload = () => {
+        start();
+        loadDynamicImage();
+        setInterval(loadDynamicImage, 12000);
+    };
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
