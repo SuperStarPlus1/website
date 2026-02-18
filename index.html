@@ -424,7 +424,7 @@
         container.innerHTML = slice.map(i => `
                         <div class="card">
                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
-                 onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                 onclick="zoom(this.src)" loading="lazy" onerror="this.src=''">
                 <h3>${i.Name}</h3>
                 <div class="price">₪${i.Price}</div>
                 <div class="barcode">ברקוד: ${i.Barcode}</div>
@@ -537,6 +537,7 @@ async function start() {
 </script>
 </body>
 </html>
+
 
 
 
