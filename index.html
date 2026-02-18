@@ -422,10 +422,9 @@
         const slice = data.slice(0, limit);
         
         container.innerHTML = slice.map(i => `
-            <div class="card">
-            // שנה את השורה הזו בתוך ה-map של פונקציית ה-render:
-<img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
-     onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=אין+תמונה'">
+                        <div class="card">
+                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}" 
+                     onclick="zoom(this.src)" loading="lazy" onerror="this.src=''">
                 <h3>${i.Name}</h3>
                 <div class="price">₪${i.Price}</div>
                 <div class="barcode">ברקוד: ${i.Barcode}</div>
@@ -538,6 +537,7 @@ async function start() {
 </script>
 </body>
 </html>
+
 
 
 
