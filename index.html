@@ -157,6 +157,32 @@
 
         /* מניעת הפיכת האייקונים לצהובים כשהם לא בשימוש (ביטול עיצוב ליסט רגיל) */
         .social-links-area:hover { background: transparent !important; }
+        /* תיקון תצוגה לטלפונים - מונע הסתרת תוכן ע"י הלוגו */
+@media (max-width: 768px) {
+    header { 
+        height: auto; 
+        padding: 10px 0; 
+    }
+    .nav-container { 
+        flex-direction: column; 
+        height: auto; 
+    }
+    .logo img { 
+        height: 100px; 
+        margin: 0 0 10px 0; 
+    }
+    .nav-links { 
+        flex-wrap: wrap; 
+        justify-content: center; 
+        gap: 5px;
+    }
+    .news-ticker { 
+        top: 180px; /* דוחף את השורה הרצה מתחת לתפריט בנייד */
+    } 
+    main { 
+        margin-top: 230px; /* דוחף את כל תוכן האתר מתחת ללוגו והתפריט */
+    }
+}
     </style>
 </head>
 <body>
@@ -511,6 +537,7 @@ async function start() {
 </script>
 </body>
 </html>
+
 
 
 
