@@ -240,7 +240,13 @@
         </div>
     </div>
 
-    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
+<div id="promos-page" class="page">
+    <div class="content-wrap">
+        <h2 class="section-title">מבצעים</h2>
+        <div id="promos-container">
+            </div>
+    </div>
+</div>   
     <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
    <div id="about-page" class="page">
         <div class="content-wrap">
@@ -402,6 +408,26 @@
         return d >= today;
     }
 
+    async function loadPromoGroup(dateTag, title) {
+    try {
+        const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${dateTag}.json`);
+        const d = await r.json();
+        if (!d.resources || d.resources.length === 0) return;
+
+        const container = document.getElementById('promos-container');
+        const sectionHtml = `
+            <div class="promo-section" style="margin-bottom: 50px;">
+                <h2 class="section-title">${title}</h2>
+                <div class="grid">
+                    ${d.resources.map(f => {
+                        const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+                        return `<div class="card" onclick="zoom('${url}')"><img src="${url}"></div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        container.insertAdjacentHTML('beforeend', sectionHtml);
+    } catch(e) { console.error(`שגיאה בטעינת קבוצת מבצע ${dateTag}:`, e); }
+}
     async function loadCloud(tag, divId, type='grid', filter=false) {
         try {
             const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
@@ -450,51 +476,46 @@
     }
 
 async function start() {
-        // טעינת תמונות וסרטונים
-        loadCloud('promo', 'promo-slider', 'slider', true);
-        loadCloud('promo', 'promo-full', 'grid', true);
-        loadCloud('newproducts', 'new-home', 'grid', false);
-        loadCloud('newproducts', 'new-full', 'grid', false);
-        loadCloud('jobs', 'jobs-grid', 'grid', false);
-        
-        // טעינת הנתונים מהאקסל
-        Papa.parse(CSV, { download: true, header: true, complete: r => {
-            // סינון שורות ריקות
-            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
-            
-            if (allItems.length === 0) {
-                console.error("לא נמצאו מוצרים! בדוק את קובץ ה-CSV.");
-                return;
-            }
-
-            // --- כאן התיקון החכם ---
-            // הקוד בודק איזו עמודה קיימת: Category, category או קטגוריה
-            const firstItem = allItems[0];
-            const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
-                             firstItem.hasOwnProperty('category') ? 'category' : 
-                             firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
-
-            if (!catField) {
-                alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ! וודא שיש עמודה בשם: Category או קטגוריה');
-                return;
-            }
-
-            // יצירת רשימת הקטגוריות
-            const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
-            const cats = ["הכל", ...new Set(rawCats)].sort();
-
-            // עדכון ה-Dropdown
-            const catSelect = document.getElementById('cat-select');
-            if(catSelect) {
-                catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
-            }
-
-            // תיקון קטן לפונקציית הסינון שתדע גם היא להשתמש בשם הנכון
-            window.catFieldName = catField; 
-            
-            render(allItems);
-        }});
+    // 1. טעינת ה-Slider בדף הבית (נשאר כרגיל לפי תגית promo)
+    loadCloud('promo', 'promo-slider', 'slider', true);
+    
+    // 2. טעינת דף המבצעים מחולק לפי תאריכים (תיקיות)
+    const promoContainer = document.getElementById('promos-container');
+    if(promoContainer) {
+        promoContainer.innerHTML = ''; // ניקוי לפני טעינה
+        // הוסף שורה לכל מבצע חדש כאן:
+        await loadPromoGroup('26-02-26', 'מבצעים בתוקף מ-26.02 עד 05.03');
+        await loadPromoGroup('15-02-26', 'מבצעי חודש פברואר');
     }
+
+    // 3. טעינת שאר התכנים
+    loadCloud('newproducts', 'new-home', 'grid', false);
+    loadCloud('newproducts', 'new-full', 'grid', false);
+    loadCloud('jobs', 'jobs-grid', 'grid', false);
+    
+    // 4. טעינת הנתונים מהאקסל (Papa.parse)
+    Papa.parse(CSV, { download: true, header: true, complete: r => {
+        allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+        if (allItems.length === 0) return;
+
+        const firstItem = allItems[0];
+        const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
+                         firstItem.hasOwnProperty('category') ? 'category' : 
+                         firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+
+        if (!catField) return;
+
+        const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+        const cats = ["הכל", ...new Set(rawCats)].sort();
+
+        const catSelect = document.getElementById('cat-select');
+        if(catSelect) {
+            catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
+        }
+        window.catFieldName = catField; 
+        render(allItems);
+    }});
+}
 
     // עדכון קטן לפונקציית הסינון כדי שתעבוד עם התיקון
     function runFilter() {
@@ -537,6 +558,7 @@ async function start() {
 </script>
 </body>
 </html>
+
 
 
 
