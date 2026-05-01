@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
-    <!-- קישור לקובץ העיצוב שלנו -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -52,11 +51,16 @@
                     <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">
                 </video>
             </div>
+            
             <div class="image-roll-container" id="imageRoll" onclick="openImage(this)">
                 <div class="roll-item"><img src="" alt="pictureroll" id="img1"></div>
             </div>
+
             <h2 class="section-title">המבצעים החמים שלנו</h2>
-            <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
+            <div class="slider-wrap">
+                <div class="slider-track" id="promo-slider"></div>
+            </div>
+
             <h2 class="section-title">חדש על המדף</h2>
             <div id="new-home" class="grid"></div>
         </div>
@@ -76,10 +80,20 @@
     </div>
 
     <!-- מבצעים -->
-    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
+    <div id="promos-page" class="page">
+        <div class="content-wrap">
+            <h2 class="section-title">מבצעים נוכחיים</h2>
+            <div id="promo-full" class="grid"></div>
+        </div>
+    </div>
     
     <!-- חדש על המדף -->
-    <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
+    <div id="new-page" class="page">
+        <div class="content-wrap">
+            <h2 class="section-title">מוצרים חדשים</h2>
+            <div id="new-full" class="grid"></div>
+        </div>
+    </div>
 
     <!-- אודות -->
     <div id="about-page" class="page">
@@ -88,9 +102,7 @@
                 <h1>סופרסטאר פלוס</h1>
                 <p>חוויית קנייה יוצאת דופן לכל המשפחה.</p>
             </div>
-            <div class="quote-box">"אנו כאן בשבילכם, עם צוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."</div>
-            <div class="features-grid" id="features-container">
-                <!-- הפריטים בעיצוב המקורי של האודות -->
+            <div class="features-grid">
                 <div class="feature-item"><i class="fa-solid fa-tags"></i><h4>מחירים ללא תחרות</h4><p>מחירים נמוכים שמתאימים לכל כיס.</p></div>
                 <div class="feature-item"><i class="fa-solid fa-bolt"></i><h4>קנייה נוחה ומהירה</h4><p>חניה נגישה ותורים קצרים.</p></div>
                 <div class="feature-item"><i class="fa-solid fa-heart-pulse"></i><h4>שירות מצטיין</h4><p>צוות מקצועי עם חיוך ולב רחב.</p></div>
@@ -101,7 +113,7 @@
     <!-- קריירה -->
     <div id="career-page" class="page">
         <div class="content-wrap">
-            <h2 class="section-title">הצטרפו לנבחרת</h2>
+            <h2 class="section-title">הצטרפו לנבחרת שלנו</h2>
             <div id="jobs-grid" class="grid"></div>
         </div>
     </div>
@@ -111,12 +123,22 @@
         <div class="content-wrap">
             <h2 class="section-title">שעות פתיחה ומחלקות</h2>
             <div class="contact-section">
-                <!-- כרטיסי מחלקות -->
-                <div class="dept-card blue-border"><h3>סופרמרקט</h3><span class="work-hours">08:00 - 22:00</span></div>
-                <div class="dept-card red-border"><h3>מחלקת בשר</h3><span class="work-hours">08:00 - 20:30</span></div>
+                <div class="dept-card blue-border">
+                    <i class="fa-solid fa-store"></i>
+                    <h3>סופרמרקט</h3>
+                    <div class="hours-row"><span>א' - ה'</span> <strong>08:00 - 22:00</strong></div>
+                    <div class="hours-row"><span>ו' וערבי חג</span> <strong>08:00 - 18:00</strong></div>
+                    <div class="hours-row"><span>שבת</span> <strong>08:00 - 22:00</strong></div>
+                </div>
+                <div class="dept-card red-border">
+                    <i class="fa-solid fa-drumstick-bite"></i>
+                    <h3>מחלקת בשר וקצביה</h3>
+                    <div class="hours-row"><span>א' - ש'</span> <strong>08:00 - 20:30</strong></div>
+                    <p class="note">* מומלץ להגיע עד חצי שעה לפני הסגירה</p>
+                </div>
             </div>
             <div class="map-container">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="400" style="border:0; border-radius:15px;" allowfullscreen></iframe>
             </div>
         </div>
     </div>
@@ -129,7 +151,6 @@
     <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
 </div>
 
-<!-- קישור לקובץ הלוגיקה שלנו -->
 <script src="scripts.js"></script>
 </body>
 </html>
