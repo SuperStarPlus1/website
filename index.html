@@ -386,12 +386,15 @@
             const price = o.UnitPrice || o.Price || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע: ₪${price}` : `מחיר ליח' במבצע: ₪${price}`;
+            const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
                     <img src="${url}" onerror="this.src=''">
                     ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
                     ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
                 </div>`;
         }).join('');
 
@@ -402,12 +405,15 @@
             const valid = o.Valid || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע:` : `מחיר ליח' במבצע:`;
+            const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card">
                     <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src=''">
                     <h3>${desc}</h3>
                     ${price ? `<div class="price"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
                     ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
                 </div>`;
         }).join('');
@@ -419,13 +425,6 @@
     }
 
     async function start() {
-        Papa.parse(CSV_OFFERS, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: r => {
-                const offers = r.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
-                renderOffers(offers);
-            }
-        });
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
@@ -446,6 +445,15 @@
             }
             window.catFieldName = catField;
             render(allItems);
+
+            // טעינת המבצעים אחרי שהקטלוג מוכן
+            Papa.parse(CSV_OFFERS, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: r2 => {
+                    const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                    renderOffers(offers);
+                }
+            });
         }});
     }
 
