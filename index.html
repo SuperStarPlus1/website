@@ -367,7 +367,7 @@
         container.innerHTML = slice.map(i => `
             <div class="card">
                 <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
-                    onclick="zoom(this.src)" loading="lazy" onerror="this.src=''">
+                    onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                 <h3>${i.Name}</h3>
                 <div class="price">₪${i.Price}</div>
                 <div class="barcode">ברקוד: ${i.Barcode}</div>
@@ -391,7 +391,7 @@
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
-                    <img src="${url}" onerror="this.src=''">
+                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                     ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
                     ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel}</div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
@@ -410,7 +410,7 @@
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card">
-                    <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src=''">
+                    <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                     <h3>${desc}</h3>
                     ${price ? `<div class="price"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
