@@ -187,7 +187,13 @@
 </head>
 <body>
 
-<div id="lightbox" onclick="this.style.display='none'"><img src="" id="lb-img"></div>
+<div id="lightbox" onclick="this.style.display='none'">
+    <div style="text-align:center;">
+        <img src="" id="lb-img">
+        <div id="lb-desc" style="color:white; font-size:1.2rem; font-weight:bold; margin-top:10px;"></div>
+        <div id="lb-price" style="color:#ffcc00; font-size:1.5rem; font-weight:bold; margin-top:5px;"></div>
+    </div>
+</div>
 
 <header>
     <div class="nav-container">
@@ -390,10 +396,12 @@
         window.scrollTo(0,0);
     }
 
-    function zoom(url) {
-        document.getElementById('lb-img').src = url;
-        document.getElementById('lightbox').style.display = 'flex';
-    }
+   function zoom(url, desc='', price='') {
+    document.getElementById('lb-img').src = url;
+    document.getElementById('lb-desc').textContent = desc;
+    document.getElementById('lb-price').textContent = price ? `₪${price}` : '';
+    document.getElementById('lightbox').style.display = 'flex';
+}
 
     function isFresh(pid) {
         const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
@@ -457,7 +465,7 @@
     const price = o.UnitPrice || o.Price || "";
     const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
     return `
-        <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}')">
+        <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
             <img src="${url}" onerror="this.src=''">
             ${desc ? `<div style="font-weight:bold; margin-top:5px;">${desc}</div>` : ""}
             ${price ? `<div style="color:#d32f2f; font-weight:bold;">₪${price}</div>` : ""}
