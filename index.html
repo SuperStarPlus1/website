@@ -384,12 +384,14 @@
             const barcode = (o.Barcode || "").trim();
             const desc = o.Description || o.Discreption || o.Name || "";
             const price = o.UnitPrice || o.Price || "";
+            const qty = parseFloat(o.Quantity || o.Quanity || "1");
+            const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע: ₪${price}` : `מחיר ליח' במבצע: ₪${price}`;
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
                     <img src="${url}" onerror="this.src=''">
                     ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
-                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">₪${price}</div>` : ""}
+                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel}</div>` : ""}
                 </div>`;
         }).join('');
 
@@ -398,12 +400,14 @@
             const desc = o.Description || o.Discreption || o.Name || "מוצר במבצע";
             const price = o.UnitPrice || o.Price || "";
             const valid = o.Valid || "";
+            const qty = parseFloat(o.Quantity || o.Quanity || "1");
+            const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע:` : `מחיר ליח' במבצע:`;
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card">
                     <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src=''">
                     <h3>${desc}</h3>
-                    ${price ? `<div class="price">₪${price}</div>` : ""}
+                    ${price ? `<div class="price"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
                     ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
                 </div>`;
         }).join('');
