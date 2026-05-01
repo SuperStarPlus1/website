@@ -377,6 +377,7 @@
 <script>
     const CLOUD = "dj56w7nb9";
     const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+    const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?gid=2140417942&single=true&output=csv";
     let allItems = [];
     let curCat = "הכל";
     let limit = 20;
@@ -449,10 +450,43 @@
         runFilter();
     }
 
-async function start() {
+    function renderOffers(offers) {
+        const sliderHtml = offers.map(o => {
+            const barcode = (o.Barcode || "").trim();
+            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            return `<img src="${url}" onclick="zoom('${url}')" onerror="this.src=''">`;
+        }).join('');
+
+        const gridHtml = offers.map(o => {
+            const barcode = (o.Barcode || "").trim();
+            const desc = o.Description || o.Discreption || o.Name || "מוצר במבצע";
+            const price = o.UnitPrice || o.Price || "";
+            const valid = o.Valid || "";
+            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            return `
+                <div class="card">
+                    <img src="${url}" onclick="zoom('${url}')" onerror="this.src=''">
+                    <h3>${desc}</h3>
+                    ${price ? `<div class="price">₪${price}</div>` : ""}
+                    ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
+                </div>`;
+        }).join('');
+
+        const slider = document.getElementById('promo-slider');
+        const grid = document.getElementById('promo-full');
+        if(slider) slider.innerHTML = sliderHtml + sliderHtml;
+        if(grid) grid.innerHTML = gridHtml;
+    }
+
+    async function start() {
         // טעינת תמונות וסרטונים
-        loadCloud('promo', 'promo-slider', 'slider', true);
-        loadCloud('promo', 'promo-full', 'grid', true);
+        Papa.parse(CSV_OFFERS, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: r => {
+                const offers = r.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                renderOffers(offers);
+            }
+        });
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
@@ -537,5 +571,20 @@ async function start() {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
