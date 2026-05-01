@@ -95,23 +95,26 @@ main {
 .page.active { display: block; }
 .content-wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 
-/* Video & Roll */
-.video-box {
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto 30px;
-    aspect-ratio: 16 / 9;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+/* תיקון וידאו לפי מידות מדויקות */
+.video-box { 
+    max-width: 720px; 
+    max-height: 350px; 
+    margin: 0 auto 50px; 
+    border-radius: 20px; 
+    overflow: hidden; 
+    background: #000; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
 }
 
-.video-box video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+video { 
+    width: 100%; 
+    height: 100%; 
+    max-height: 350px; 
+    display: block; 
+    object-fit: contain; 
 }
 
+/* תמונה בודדת מתחלפת (Image Roll) */
 .image-roll-container {
     width: 100%;
     max-width: 800px;
@@ -129,31 +132,39 @@ main {
     object-fit: contain;
 }
 
-/* Slider */
-.slider-wrap {
-    width: 100%;
-    overflow: hidden;
-    padding: 20px 0;
+/* סליידר מבצעים - הגדרות המידות והמהירות החדשות */
+.slider-wrap { 
+    width: 100%; 
+    overflow: hidden; 
+    background: transparent; 
+    padding: 40px 0; 
+    margin-bottom: 40px; 
 }
 
-.slider-track {
-    display: flex;
-    width: max-content;
-    animation: scroll 40s linear infinite;
-    gap: 20px;
+.slider-track { 
+    display: flex; 
+    width: max-content; 
+    animation: scroll 90s linear infinite; 
+    gap: 30px; 
+    padding: 20px; 
 }
 
-.slider-track img {
-    height: 350px;
-    width: auto;
-    border-radius: 12px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.slider-track img { 
+    height: 280px; 
+    border-radius: 15px; 
+    cursor: pointer; 
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+    transition: all 0.5s ease; 
 }
 
-@keyframes scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(50%); }
+.slider-track img:hover { 
+    transform: scale(1.1) translateY(-10px); 
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3); 
+}
+
+@keyframes scroll { 
+    0% { transform: translateX(0); } 
+    100% { transform: translateX(50%); } 
 }
 
 /* Grid & Cards */
@@ -215,8 +226,6 @@ main {
     border-bottom: 1px solid #eee;
 }
 
-.note { color: #888; font-size: 0.85rem; margin-top: 10px; }
-
 /* FAB */
 .fab {
     position: fixed;
@@ -269,5 +278,5 @@ main {
     .news-ticker { position: relative; top: 0; }
     .contact-section { grid-template-columns: 1fr; }
     .image-roll-container { height: 250px; }
-    .slider-track img { height: 200px; }
+    .slider-track img { height: 180px; }
 }
