@@ -3,47 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Star Plus | סופרסטאר פלוס</title>
+    <title>סופר סטאר פלוס</title>
+    
+    <!-- ספריות חיצוניות -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        :root { --blue: #0076DA; --yellow: #ffcc00; --bg: #f4f7f9; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); direction: rtl; }
-        header { background: var(--blue); position: fixed; top: 0; width: 100%; z-index: 1000; height: 85px; }
-        .nav-container { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; height: 100%; padding: 0 20px; }
-        .logo img { height: 170px; margin-top: 30px; cursor: pointer; margin-left: 30px; }
-        .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
-        .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; }
-        .nav-links li.active { background: var(--yellow); color: var(--blue); }
-
-        main { max-width: 1200px; margin: 120px auto 50px; padding: 0 20px; }
-        .page { display: none; }
-        .page.active { display: block; }
-
-        /* Video Section */
-        .video-box { width: 100%; max-width: 800px; margin: 0 auto 30px; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        video { width: 100%; height: auto; display: block; }
-
-        /* Picture Roll */
-        .pic-roll-box { width: 100%; max-width: 800px; margin: 20px auto; border-radius: 20px; overflow: hidden; height: 350px; border: 3px solid white; }
-        #img1 { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.8s; }
-
-        /* Promo Slider - Speed set to 120s */
-        .slider-wrap { width: 100%; overflow: hidden; padding: 20px 0; background: white; margin: 30px 0; border-radius: 15px; }
-        .slider-track { display: flex; width: max-content; animation: scroll 120s linear infinite; gap: 20px; }
-        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
-
-        /* Grid & Cards */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 12px; padding: 15px; text-align: center; border: 1px solid #eee; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .card img { width: 100%; height: 180px; object-fit: contain; cursor: pointer; }
-        .price { color: #d32f2f; font-weight: bold; font-size: 1.5rem; margin: 10px 0; }
-        .valid-date { font-size: 0.8rem; color: #e65100; font-weight: bold; background: #fff3e0; padding: 4px; border-radius: 5px; }
-        
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; }
-        #lightbox img { max-width: 90%; max-height: 90%; }
-        h2.section-title { border-right: 5px solid var(--yellow); padding-right: 15px; color: var(--blue); margin: 40px 0 20px; }
-    </style>
+    
+    <!-- קישור לקובץ העיצוב שלנו -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -51,169 +18,118 @@
 
 <header>
     <div class="nav-container">
-        <div class="logo" onclick="nav('home')"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png"></div>
+        <div class="logo" onclick="nav('home')">
+            <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png">
+        </div>
         <ul class="nav-links">
             <li class="active" onclick="nav('home', this)">דף הבית</li>
             <li onclick="nav('catalog-page', this)">קטלוג</li>
             <li onclick="nav('promos-page', this)">מבצעים</li>
+            <li onclick="nav('new-page', this)">חדש על המדף</li>
+            <li onclick="nav('about-page', this)">אודות</li>
             <li onclick="nav('career-page', this)">קריירה</li>
             <li onclick="nav('directions-page', this)">צור קשר</li>
+            
+            <li class="social-links-area">
+                <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+                <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+            </li>
         </ul>
     </div>
 </header>
 
+<div class="news-ticker">
+    <div class="ticker-content">חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772 </div>
+</div>
+
 <main>
+    <!-- דף הבית -->
     <div id="home" class="page active">
-        <div class="video-box">
-            <video autoplay muted loop playsinline controls>
-                <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/f_auto,q_auto/promo_video.mp4" type="video/mp4">
-            </video>
+        <div class="content-wrap">
+            <div class="video-box">
+                <video autoplay muted loop playsinline controls>
+                    <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">
+                </video>
+            </div>
+            <div class="image-roll-container" id="imageRoll" onclick="openImage(this)">
+                <div class="roll-item"><img src="" alt="pictureroll" id="img1"></div>
+            </div>
+            <h2 class="section-title">המבצעים החמים שלנו</h2>
+            <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
+            <h2 class="section-title">חדש על המדף</h2>
+            <div id="new-home" class="grid"></div>
         </div>
-        
-        <h2 class="section-title">מבצעים שאסור לפספס</h2>
-        <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
-
-        <div class="pic-roll-box"><img id="img1" src=""></div>
-
-        <h2 class="section-title">חדש על המדף</h2>
-        <div id="new-home" class="grid"></div>
     </div>
 
+    <!-- קטלוג -->
     <div id="catalog-page" class="page">
-        <div style="margin-bottom:20px; display:flex; gap:10px;">
-            <input type="text" id="search" placeholder="חפש מוצר או ברקוד..." oninput="runFilter()" style="padding:12px; flex:2; border-radius:10px; border:1px solid #ddd;">
-            <select id="cat-select" onchange="setCategory(this.value)" style="padding:12px; flex:1; border-radius:10px; border:1px solid var(--blue);"></select>
+        <div class="content-wrap">
+            <div class="filter-bar">
+                <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()">
+                <select id="cat-select" onchange="setCategory(this.value)">
+                    <option value="הכל">כל הקטגוריות</option>
+                </select>
+            </div>
+            <div id="catalog-grid" class="grid"></div>
         </div>
-        <div id="catalog-grid" class="grid"></div>
     </div>
 
-    <div id="promos-page" class="page">
-        <h2 class="section-title">כל המבצעים</h2>
-        <div id="promo-full" class="grid"></div>
+    <!-- מבצעים -->
+    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
+    
+    <!-- חדש על המדף -->
+    <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
+
+    <!-- אודות -->
+    <div id="about-page" class="page">
+        <div class="content-wrap">
+            <div class="about-header">
+                <h1>סופרסטאר פלוס</h1>
+                <p>חוויית קנייה יוצאת דופן לכל המשפחה.</p>
+            </div>
+            <div class="quote-box">"אנו כאן בשבילכם, עם צוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."</div>
+            <div class="features-grid" id="features-container">
+                <!-- הפריטים בעיצוב המקורי של האודות -->
+                <div class="feature-item"><i class="fa-solid fa-tags"></i><h4>מחירים ללא תחרות</h4><p>מחירים נמוכים שמתאימים לכל כיס.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-bolt"></i><h4>קנייה נוחה ומהירה</h4><p>חניה נגישה ותורים קצרים.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-heart-pulse"></i><h4>שירות מצטיין</h4><p>צוות מקצועי עם חיוך ולב רחב.</p></div>
+            </div>
+        </div>
     </div>
 
+    <!-- קריירה -->
     <div id="career-page" class="page">
-        <h2 class="section-title">דרושים לסופרסטאר</h2>
-        <div id="jobs-grid" class="grid"></div>
+        <div class="content-wrap">
+            <h2 class="section-title">הצטרפו לנבחרת</h2>
+            <div id="jobs-grid" class="grid"></div>
+        </div>
     </div>
 
+    <!-- צור קשר -->
     <div id="directions-page" class="page">
-        <h2 class="section-title">שעות פתיחה ומיקום</h2>
-        <p>סלאח א-דין 169, מג'ד אל כרום</p>
-        <div style="height:400px; border-radius:20px; overflow:hidden;">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen></iframe>
+        <div class="content-wrap">
+            <h2 class="section-title">שעות פתיחה ומחלקות</h2>
+            <div class="contact-section">
+                <!-- כרטיסי מחלקות -->
+                <div class="dept-card blue-border"><h3>סופרמרקט</h3><span class="work-hours">08:00 - 22:00</span></div>
+                <div class="dept-card red-border"><h3>מחלקת בשר</h3><span class="work-hours">08:00 - 20:30</span></div>
+            </div>
+            <div class="map-container">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen></iframe>
+            </div>
         </div>
     </div>
 </main>
 
-<script>
-    const CLOUD = "dj56w7nb9";
-    const CSV_MAIN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
-    const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
+<div class="modal-overlay" id="imageModal" onclick="this.style.display='none'"><img src="" id="modalImg"></div>
 
-    let allItems = [];
-    let curCat = "הכל";
+<div class="fab">
+    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
+</div>
 
-    function nav(id, el) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-        if(el) el.classList.add('active');
-        window.scrollTo(0,0);
-    }
-
-    function zoom(url) {
-        document.getElementById('lb-img').src = url;
-        document.getElementById('lightbox').style.display = 'flex';
-    }
-
-    function renderOffers(offers) {
-        const slider = document.getElementById('promo-slider');
-        const grid = document.getElementById('promo-full');
-        
-        const html = offers.map(o => `
-            <div class="card">
-                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${o.Barcode ? o.Barcode.trim() : 'logo'}.jpg" 
-                     onclick="zoom(this.src)" onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'">
-                <h3>${o.Discreption || o.Name || 'מבצע חם'}</h3>
-                <div class="price">₪${o.UnitPrice || '0'}</div>
-                <div class="valid-date">עד: ${o.Valid || '--'}</div>
-            </div>`).join('');
-
-        if(slider) slider.innerHTML = html + html; 
-        if(grid) grid.innerHTML = html;
-    }
-
-    function renderCatalog(data) {
-        const container = document.getElementById('catalog-grid');
-        container.innerHTML = data.map(i => `
-            <div class="card">
-                <img src="https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" onclick="zoom(this.src)" onerror="this.src=''">
-                <h3>${i.Name}</h3>
-                <div class="price">₪${i.Price}</div>
-            </div>`).join('');
-    }
-
-    function runFilter() {
-        const term = document.getElementById('search').value.toLowerCase();
-        const field = window.catFieldName || 'Category';
-        const filtered = allItems.filter(i => (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && (curCat === "הכל" || i[field] === curCat));
-        renderCatalog(filtered);
-    }
-
-    function setCategory(cat) { curCat = cat; runFilter(); }
-
-    async function loadCloud(tag, divId) {
-        try {
-            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
-            const d = await r.json();
-            const div = document.getElementById(divId);
-            if(div) {
-                div.innerHTML = d.resources.map(f => {
-                    const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-                    return `<div class="card" onclick="zoom('${url}')"><img src="${url}"></div>`;
-                }).join('');
-            }
-        } catch(e) {}
-    }
-
-    async function loadRoll() {
-        try {
-            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
-            const d = await r.json();
-            if(d.resources.length) {
-                const rnd = d.resources[Math.floor(Math.random()*d.resources.length)];
-                document.getElementById('img1').src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${rnd.public_id}.${rnd.format}`;
-            }
-        } catch(e){}
-    }
-
-    function start() {
-        loadCloud('newproducts', 'new-home');
-        loadCloud('jobs', 'jobs-grid');
-        loadRoll();
-        setInterval(loadRoll, 8000);
-
-        Papa.parse(CSV_OFFERS, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: res => renderOffers(res.data.filter(o => o.Barcode))
-        });
-
-        Papa.parse(CSV_MAIN, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: r => {
-                allItems = r.data.filter(x => x.Barcode);
-                const first = allItems[0];
-                const catField = first.hasOwnProperty('Category') ? 'Category' : first.hasOwnProperty('קטגוריה') ? 'קטגוריה' : 'category';
-                window.catFieldName = catField;
-                const cats = ["הכל", ...new Set(allItems.map(x => x[catField]))].filter(c => c).sort();
-                document.getElementById('cat-select').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-                renderCatalog(allItems);
-            }
-        });
-    }
-
-    window.onload = start;
-</script>
+<!-- קישור לקובץ הלוגיקה שלנו -->
+<script src="scripts.js"></script>
 </body>
 </html>
