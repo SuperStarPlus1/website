@@ -79,7 +79,10 @@
         .whatsapp { background-color: #25D366; }
 
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; }
-        #lightbox img { max-width: 90%; max-height: 90%; border: 3px solid #fff; border-radius: 10px; }
+        #lightbox-inner { display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90vh; }
+        #lightbox-inner img { max-width: 100%; max-height: 70vh; border: 3px solid #fff; border-radius: 10px; object-fit: contain; }
+        #lb-desc { color: white; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
+        #lb-price { color: #ffcc00; font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
         h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
 
         .image-roll-container { width: 100%; max-width: 800px; margin: 20px auto; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; cursor: pointer; background: transparent; position: relative; }
@@ -88,7 +91,7 @@
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal-overlay img { max-width: 90%; max-height: 90%; border-radius: 5px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-  /* עיצוב משופר לעמוד אודות */
+        /* עיצוב משופר לעמוד אודות */
         .about-header {
             text-align: center;
             background: linear-gradient(rgba(0,118,218,0.9), rgba(0,118,218,0.9)), url('https://res.cloudinary.com/dj56w7nb9/image/upload/v1/store-front.jpg');
@@ -131,17 +134,15 @@
             font-size: 1.1rem;
             box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
-        /* הוספה עדינה לאייקונים של רשתות חברתיות */
         .social-link-item { margin-right: 20px; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; display: flex; gap: 15px; }
         .social-link-item a { color: white; font-size: 1.2rem; transition: 0.3s; }
         .social-link-item a:hover { color: var(--yellow); }
-        /* עיצוב אייקונים של מדיה חברתית בתפריט */
         .social-links-area {
-            margin-right: 30px; /* יוצר רווח מהתפריט הרגיל */
+            margin-right: 30px;
             display: flex !important;
             gap: 15px;
             align-items: center;
-            border-right: 1px solid rgba(255,255,255,0.3); /* קו מפריד עדין */
+            border-right: 1px solid rgba(255,255,255,0.3);
             padding-right: 20px;
         }
         .social-links-area a {
@@ -151,68 +152,48 @@
             text-decoration: none;
         }
         .social-links-area a:hover {
-            color: var(--yellow); /* האייקון יהפוך לצהוב כשעוברים עליו */
+            color: var(--yellow);
             transform: scale(1.1);
         }
-
-        /* מניעת הפיכת האייקונים לצהובים כשהם לא בשימוש (ביטול עיצוב ליסט רגיל) */
         .social-links-area:hover { background: transparent !important; }
-        /* תיקון תצוגה לטלפונים - מונע הסתרת תוכן ע"י הלוגו */
-@media (max-width: 768px) {
-    header { 
-        height: auto; 
-        padding: 10px 0; 
-    }
-    .nav-container { 
-        flex-direction: column; 
-        height: auto; 
-    }
-    .logo img { 
-        height: 100px; 
-        margin: 0 0 10px 0; 
-    }
-    .nav-links { 
-        flex-wrap: wrap; 
-        justify-content: center; 
-        gap: 5px;
-    }
-    .news-ticker { 
-        top: 180px; /* דוחף את השורה הרצה מתחת לתפריט בנייד */
-    } 
-    main { 
-        margin-top: 230px; /* דוחף את כל תוכן האתר מתחת ללוגו והתפריט */
-    }
-}
+
+        @media (max-width: 768px) {
+            header { height: auto; padding: 10px 0; }
+            .nav-container { flex-direction: column; height: auto; }
+            .logo img { height: 100px; margin: 0 0 10px 0; }
+            .nav-links { flex-wrap: wrap; justify-content: center; gap: 5px; }
+            .news-ticker { top: 180px; }
+            main { margin-top: 230px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="lightbox" onclick="this.style.display='none'">
-    <div style="text-align:center;">
+    <div id="lightbox-inner">
         <img src="" id="lb-img">
-        <div id="lb-desc" style="color:white; font-size:1.2rem; font-weight:bold; margin-top:10px;"></div>
-        <div id="lb-price" style="color:#ffcc00; font-size:1.5rem; font-weight:bold; margin-top:5px;"></div>
+        <div id="lb-desc"></div>
+        <div id="lb-price"></div>
     </div>
 </div>
 
 <header>
     <div class="nav-container">
         <div class="logo" onclick="nav('home')"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png"></div>
- <ul class="nav-links">
-    <li class="active" onclick="nav('home', this)">דף הבית</li>
-    <li onclick="nav('catalog-page', this)">קטלוג</li>
-    <li onclick="nav('promos-page', this)">מבצעים</li>
-    <li onclick="nav('new-page', this)">חדש על המדף</li>
-    <li onclick="nav('about-page', this)">אודות</li>
-    <li onclick="nav('career-page', this)">קריירה</li>
-    <li onclick="nav('directions-page', this)">צור קשר</li>
-    
-    <li class="social-links-area">
-        <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-        <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-        <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
-    </li>
-</ul>
+        <ul class="nav-links">
+            <li class="active" onclick="nav('home', this)">דף הבית</li>
+            <li onclick="nav('catalog-page', this)">קטלוג</li>
+            <li onclick="nav('promos-page', this)">מבצעים</li>
+            <li onclick="nav('new-page', this)">חדש על המדף</li>
+            <li onclick="nav('about-page', this)">אודות</li>
+            <li onclick="nav('career-page', this)">קריירה</li>
+            <li onclick="nav('directions-page', this)">צור קשר</li>
+            <li class="social-links-area">
+                <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+                <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+            </li>
+        </ul>
     </div>
 </header>
 
@@ -248,125 +229,82 @@
 
     <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
     <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
-   <div id="about-page" class="page">
+
+    <div id="about-page" class="page">
         <div class="content-wrap">
             <div class="about-header">
                 <h1>סופרסטאר פלוס</h1>
                 <p>חוויית קנייה יוצאת דופן לכל המשפחה. אנו מתחייבים לשירות איכותי, מבצעים משתלמים ומגוון רחב של מוצרים במחירים מעולים.</p>
             </div>
-
             <div class="quote-box">
                 "אנו כאן בשבילכם, עם סניפים נוחים ונגישים, וצוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."
             </div>
-
             <h2 class="section-title">למה לבחור בנו?</h2>
-            
             <div class="features-grid">
-                <div class="feature-item">
-                    <i class="fa-solid fa-tags"></i>
-                    <h4>מחירים ללא תחרות</h4>
-                    <p>מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.</p>
-                </div>
-
-                <div class="feature-item">
-                    <i class="fa-solid fa-bolt"></i>
-                    <h4>קנייה נוחה ומהירה</h4>
-                    <p>חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.</p>
-                </div>
-
-                <div class="feature-item">
-                    <i class="fa-solid fa-heart-pulse"></i>
-                    <h4>שירות מצטיין</h4>
-                    <p>צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.</p>
-                </div>
-
-                <div class="feature-item">
-                    <i class="fa-solid fa-leaf"></i>
-                    <h4>טריות יומיומית</h4>
-                    <p>ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.</p>
-                </div>
-
-                <div class="feature-item">
-                    <i class="fa-solid fa-percent"></i>
-                    <h4>מבצעים משתלמים</h4>
-                    <p>מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.</p>
-                </div>
-
-                <div class="feature-item">
-                    <i class="fa-solid fa-users"></i>
-                    <h4>מעורבות קהילתית</h4>
-                    <p>תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.</p>
-                </div>
+                <div class="feature-item"><i class="fa-solid fa-tags"></i><h4>מחירים ללא תחרות</h4><p>מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-bolt"></i><h4>קנייה נוחה ומהירה</h4><p>חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-heart-pulse"></i><h4>שירות מצטיין</h4><p>צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-leaf"></i><h4>טריות יומיומית</h4><p>ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-percent"></i><h4>מבצעים משתלמים</h4><p>מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.</p></div>
+                <div class="feature-item"><i class="fa-solid fa-users"></i><h4>מעורבות קהילתית</h4><p>תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.</p></div>
             </div>
-
             <div style="margin-top: 50px; text-align: center; color: #666;">
                 <p><strong>בסופרסטאר אנו לא מתפשרים על איכות</strong> – איכות המוצרים והשירות תמיד בראש סדר העדיפויות שלנו.</p>
             </div>
         </div>
     </div>
+
     <div id="career-page" class="page">
         <div class="content-wrap">
             <h2 class="section-title">הצטרפו לנבחרת של סופרסטאר פלוס</h2>
             <p>אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:</p>
-            
             <div id="jobs-grid" class="grid"></div>
-            
             <div style="margin-top: 40px; text-align: center; background: white; padding: 20px; border-radius: 15px;">
                 <p>מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:</p>
-                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;">
-                    <i class="fa-brands fa-whatsapp"></i>
-                </a>
+                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;"><i class="fa-brands fa-whatsapp"></i></a>
             </div>
         </div>
     </div>
 
-<div id="directions-page" class="page">
+    <div id="directions-page" class="page">
         <div class="content-wrap">
             <h2 class="section-title">שעות פתיחה ומחלקות</h2>
             <div class="contact-section">
                 <div class="dept-card" style="border-color: #0076DA;">
                     <div class="icon-circle icon-blue"><i class="fa-solid fa-cart-shopping"></i></div>
-                    <h3>סופרמרקט</h3>
-                    <p>ימי עבודה: א' - שבת</p>
+                    <h3>סופרמרקט</h3><p>ימי עבודה: א' - שבת</p>
                     <span class="work-hours">08:00 - 22:00</span>
                 </div>
                 <div class="dept-card" style="border-color: #d32f2f;">
                     <div class="icon-circle icon-red"><i class="fa-solid fa-drumstick-bite"></i></div>
-                    <h3>מחלקת בשר</h3>
-                    <p>ימי עבודה: א' - שבת</p>
+                    <h3>מחלקת בשר</h3><p>ימי עבודה: א' - שבת</p>
                     <span class="work-hours">08:00 - 20:30</span>
                 </div>
                 <div class="dept-card" style="border-color: #2e7d32;">
                     <div class="icon-circle icon-green"><i class="fa-solid fa-fish"></i></div>
-                    <h3>מחלקת דגים</h3>
-                    <p>ימי עבודה: ב' - שבת</p>
+                    <h3>מחלקת דגים</h3><p>ימי עבודה: ב' - שבת</p>
                     <p style="color: #d32f2f; font-weight: bold; margin: 0;">יום ראשון: סגור</p>
                     <span class="work-hours">09:00 - 17:00</span>
                 </div>
             </div>
-
             <h2 class="section-title">פרטי התקשרות</h2>
             <div class="contact-footer">
                 <a href="tel:049076772" class="contact-link">
                     <div class="icon-circle icon-blue"><i class="fa-solid fa-phone"></i></div>
-                    <strong>טלפון</strong>
-                    <span>04-907-6772</span>
+                    <strong>טלפון</strong><span>04-907-6772</span>
                 </a>
                 <a href="mailto:info@superstarplus.co.il" class="contact-link">
                     <div class="icon-circle icon-orange"><i class="fa-solid fa-envelope"></i></div>
-                    <strong>דוא"ל</strong>
-                    <span>info@superstarplus.co.il</span>
+                    <strong>דוא"ל</strong><span>info@superstarplus.co.il</span>
                 </a>
                 <div class="contact-link">
                     <div class="icon-circle icon-green"><i class="fa-solid fa-location-dot"></i></div>
-                    <strong>כתובת</strong>
-                    <span>מג'ד אל כרום, כביש ראשי</span>
+                    <strong>כתובת</strong><span>מג'ד אל כרום, כביש ראשי</span>
                 </div>
             </div>
-
             <div class="map-wrapper" style="margin-top: 30px; display: flex; justify-content: center;">
                 <div class="map-container">
-               <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
         </div>
@@ -396,12 +334,12 @@
         window.scrollTo(0,0);
     }
 
-   function zoom(url, desc='', price='') {
-    document.getElementById('lb-img').src = url;
-    document.getElementById('lb-desc').textContent = desc;
-    document.getElementById('lb-price').textContent = price ? `₪${price}` : '';
-    document.getElementById('lightbox').style.display = 'flex';
-}
+    function zoom(url, desc='', price='') {
+        document.getElementById('lb-img').src = url;
+        document.getElementById('lb-desc').textContent = desc;
+        document.getElementById('lb-price').textContent = price ? '₪' + price : '';
+        document.getElementById('lightbox').style.display = 'flex';
+    }
 
     function isFresh(pid) {
         const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
@@ -429,16 +367,14 @@
     function render(data) {
         const container = document.getElementById('catalog-grid');
         const slice = data.slice(0, limit);
-        
         container.innerHTML = slice.map(i => `
-                        <div class="card">
-               <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
-                 onclick="zoom(this.src)" loading="lazy" onerror="this.src=''">
+            <div class="card">
+                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
+                    onclick="zoom(this.src)" loading="lazy" onerror="this.src=''">
                 <h3>${i.Name}</h3>
                 <div class="price">₪${i.Price}</div>
                 <div class="barcode">ברקוד: ${i.Barcode}</div>
             </div>`).join('');
-
         const oldBtn = document.getElementById('loadMore');
         if(oldBtn) oldBtn.remove();
         if (data.length > limit) {
@@ -446,31 +382,19 @@
         }
     }
 
-    function runFilter() {
-        const term = document.getElementById('search').value.toLowerCase();
-        const filtered = allItems.filter(i => (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && (curCat === "הכל" || i.Category === curCat));
-        render(filtered);
-    }
-
-    function setCategory(cat) {
-        curCat = cat;
-        limit = 20;
-        runFilter();
-    }
-
     function renderOffers(offers) {
         const sliderHtml = offers.map(o => {
-    const barcode = (o.Barcode || "").trim();
-    const desc = o.Description || o.Discreption || o.Name || "";
-    const price = o.UnitPrice || o.Price || "";
-    const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-    return `
-        <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
-            <img src="${url}" onerror="this.src=''">
-            ${desc ? `<div style="font-weight:bold; margin-top:5px;">${desc}</div>` : ""}
-            ${price ? `<div style="color:#d32f2f; font-weight:bold;">₪${price}</div>` : ""}
-        </div>`;
-}).join('');
+            const barcode = (o.Barcode || "").trim();
+            const desc = o.Description || o.Discreption || o.Name || "";
+            const price = o.UnitPrice || o.Price || "";
+            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            return `
+                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
+                    <img src="${url}" onerror="this.src=''">
+                    ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
+                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">₪${price}</div>` : ""}
+                </div>`;
+        }).join('');
 
         const gridHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
@@ -480,7 +404,7 @@
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card">
-                    <img src="${url}" onclick="zoom('${url}')" onerror="this.src=''">
+                    <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src=''">
                     <h3>${desc}</h3>
                     ${price ? `<div class="price">₪${price}</div>` : ""}
                     ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
@@ -494,7 +418,6 @@
     }
 
     async function start() {
-        // טעינת תמונות וסרטונים
         Papa.parse(CSV_OFFERS, {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
@@ -505,58 +428,41 @@
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
-        
-        // טעינת הנתונים מהאקסל
-        Papa.parse(CSV, { download: true, header: true, complete: r => {
-            // סינון שורות ריקות
-            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
-            
-            if (allItems.length === 0) {
-                console.error("לא נמצאו מוצרים! בדוק את קובץ ה-CSV.");
-                return;
-            }
 
-            // --- כאן התיקון החכם ---
-            // הקוד בודק איזו עמודה קיימת: Category, category או קטגוריה
+        Papa.parse(CSV, { download: true, header: true, complete: r => {
+            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+            if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
             const firstItem = allItems[0];
             const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
                              firstItem.hasOwnProperty('category') ? 'category' : 
                              firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
-
-            if (!catField) {
-                alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ! וודא שיש עמודה בשם: Category או קטגוריה');
-                return;
-            }
-
-            // יצירת רשימת הקטגוריות
+            if (!catField) { alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ!'); return; }
             const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
             const cats = ["הכל", ...new Set(rawCats)].sort();
-
-            // עדכון ה-Dropdown
             const catSelect = document.getElementById('cat-select');
             if(catSelect) {
                 catSelect.innerHTML = cats.map(c => `<option value="${c}">${c === 'הכל' ? 'כל הקטגוריות' : c}</option>`).join('');
             }
-
-            // תיקון קטן לפונקציית הסינון שתדע גם היא להשתמש בשם הנכון
-            window.catFieldName = catField; 
-            
+            window.catFieldName = catField;
             render(allItems);
         }});
     }
 
-    // עדכון קטן לפונקציית הסינון כדי שתעבוד עם התיקון
     function runFilter() {
         const term = document.getElementById('search').value.toLowerCase();
-        // שימוש בשם העמודה שמצאנו (catFieldName)
         const field = window.catFieldName || 'Category';
-        
         const filtered = allItems.filter(i => {
             const iCat = i[field];
             return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && 
                    (curCat === "הכל" || iCat === curCat);
         });
         render(filtered);
+    }
+
+    function setCategory(cat) {
+        curCat = cat;
+        limit = 20;
+        runFilter();
     }
 
     async function loadDynamicImage() {
@@ -586,20 +492,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
