@@ -217,7 +217,8 @@
             <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;">
                 <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
                 <div style="flex:1; min-width:150px; position:relative;">
-                    <input type="text" id="cat-search" placeholder="חפש מחלקה..." oninput="filterCats()" onfocus="showCatDropdown()" style="width:100%; padding:12px; border:1px solid var(--blue); border-radius:10px; background:white; color:var(--blue); font-weight:bold; box-sizing:border-box; font-size:1rem;">
+                    <input type="text" id="cat-search" placeholder="כל הקטגוריות..." oninput="filterCats()" onfocus="showCatDropdown()" style="width:100%; padding:12px 36px 12px 12px; border:1px solid var(--blue); border-radius:10px; background:white; color:var(--blue); font-weight:bold; box-sizing:border-box; font-size:1rem;">
+                    <span id="cat-reset" onclick="resetCat()" style="display:none; position:absolute; left:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:1.2rem; line-height:1;">✕</span>
                     <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;"></div>
                 </div>
             </div>
@@ -517,10 +518,21 @@
 
     function selectCat(cat) {
         const input = document.getElementById('cat-search');
+        const reset = document.getElementById('cat-reset');
         if(input) input.value = cat === 'הכל' ? '' : cat;
+        if(reset) reset.style.display = cat === 'הכל' ? 'none' : 'block';
         const dd = document.getElementById('cat-dropdown');
         if(dd) dd.style.display = 'none';
         setCategory(cat);
+    }
+
+    function resetCat() {
+        const input = document.getElementById('cat-search');
+        const reset = document.getElementById('cat-reset');
+        if(input) input.value = '';
+        if(reset) reset.style.display = 'none';
+        buildCatDropdown(window.allCats);
+        setCategory('הכל');
     }
 
     document.addEventListener('click', function(e) {
