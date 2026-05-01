@@ -39,7 +39,7 @@
 
         .slider-wrap { width: 100%; overflow: hidden; background: transparent; padding: 40px 0; margin-bottom: 40px; }
         .slider-track { display: flex; width: max-content; animation: scroll 1200s linear infinite; gap: 30px; padding: 20px; }
-        .slider-track img { height: 280px; border-radius: 15px; cursor: pointer; box-shadow: 0 15px 35px rgba(0,0,0,0.2); transition: all 0.5s ease; }
+        .slider-track img { height: 196px; border-radius: 15px; cursor: pointer; box-shadow: 0 15px 35px rgba(0,0,0,0.2); transition: all 0.5s ease; }
         .slider-track img:hover { transform: scale(1.1) translateY(-10px); box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
@@ -78,9 +78,8 @@
         .waze { background-color: #33CCFF; }
         .whatsapp { background-color: #25D366; }
 
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; }
-        #lightbox-inner { display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90vh; pointer-events: none; }
-        #lightbox-inner img { max-width: 100%; max-height: 70vh; border: 3px solid #fff; border-radius: 10px; object-fit: contain; }
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; flex-direction: column; }
+        #lb-img { max-width: 90%; max-height: 70vh; border: 3px solid #fff; border-radius: 10px; object-fit: contain; }
         #lb-desc { color: white; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
         #lb-price { color: #ffcc00; font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
         h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
@@ -170,11 +169,9 @@
 <body>
 
 <div id="lightbox" onclick="this.style.display='none'">
-    <div id="lightbox-inner">
-        <img src="" id="lb-img">
-        <div id="lb-desc"></div>
-        <div id="lb-price"></div>
-    </div>
+    <img src="" id="lb-img">
+    <div id="lb-desc"></div>
+    <div id="lb-price"></div>
 </div>
 
 <header>
