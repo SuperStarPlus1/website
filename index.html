@@ -452,10 +452,17 @@
 
     function renderOffers(offers) {
         const sliderHtml = offers.map(o => {
-            const barcode = (o.Barcode || "").trim();
-            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            return `<img src="${url}" onclick="zoom('${url}')" onerror="this.src=''">`;
-        }).join('');
+    const barcode = (o.Barcode || "").trim();
+    const desc = o.Description || o.Discreption || o.Name || "";
+    const price = o.UnitPrice || o.Price || "";
+    const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+    return `
+        <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}')">
+            <img src="${url}" onerror="this.src=''">
+            ${desc ? `<div style="font-weight:bold; margin-top:5px;">${desc}</div>` : ""}
+            ${price ? `<div style="color:#d32f2f; font-weight:bold;">₪${price}</div>` : ""}
+        </div>`;
+}).join('');
 
         const gridHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
