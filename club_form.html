@@ -131,8 +131,30 @@
             <div class="hint error" id="err-email"></div>
         </div>
         <div class="field">
-            <label>כתובת מגורים <span class="req">*</span></label>
-            <input type="text" id="f-address" placeholder="רחוב, מספר בית, עיר" oninput="validateAddress()">
+            <label>מין <span class="req">*</span></label>
+            <div style="display:flex; gap:20px; margin-top:5px;">
+                <label style="font-weight:normal; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="radio" name="gender" value="זכר" id="gender-m"> זכר
+                </label>
+                <label style="font-weight:normal; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="radio" name="gender" value="נקבה" id="gender-f"> נקבה
+                </label>
+            </div>
+            <div class="hint error" id="err-gender"></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div class="field" style="flex:2;">
+                <label>רחוב <span class="req">*</span></label>
+                <input type="text" id="f-street" placeholder="שם הרחוב" oninput="validateAddress()">
+            </div>
+            <div class="field" style="flex:1;">
+                <label>מספר <span class="req">*</span></label>
+                <input type="text" id="f-houseno" placeholder='מס''>
+            </div>
+        </div>
+        <div class="field">
+            <label>עיר <span class="req">*</span></label>
+            <input type="text" id="f-city" placeholder="שם העיר/ישוב" oninput="validateAddress()">
             <div class="hint error" id="err-address"></div>
         </div>
         <button class="btn btn-primary" onclick="sendOTP()">שלח קוד אימות למייל <i class="fa-solid fa-envelope"></i></button>
@@ -179,7 +201,7 @@
     const EMAILJS_PUBLIC_KEY  = "YdRghsPrGyNUZnY7T";   // מ-EmailJS
     const EMAILJS_SERVICE_ID  = "service_hd2wqrm";   // מ-EmailJS
     const EMAILJS_TEMPLATE_ID = "template_ibzzq2r";  // מ-EmailJS
-    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbxq9sy5bEfmJKG-4pjAZxzrCZ8khdzrdl3Z-aMnCLLfRLRvFO_ZExjiqlsxom7RxfJg/exec"; // מ-Google Apps Script
+    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwpSTB-Q2SMn3xq-IfK-WnoCt3sTfbg4djtpsA-m0tS2XUTVc3kpHy3KwnRxBtIfMkQ/exec"; // מ-Google Apps Script
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
@@ -254,11 +276,20 @@
     }
 
     function validateAddress() {
-        const v = document.getElementById('f-address').value.trim();
+        const street = document.getElementById('f-street').value.trim();
+        const city = document.getElementById('f-city').value.trim();
         const err = document.getElementById('err-address');
-        const input = document.getElementById('f-address');
-        if (v.length < 5) { err.textContent = "כתובת לא תקינה"; input.className = 'invalid'; return false; }
-        err.textContent = ""; input.className = 'valid'; return true;
+        if (street.length < 2 || city.length < 2) {
+            err.textContent = "יש למלא רחוב ועיר"; return false;
+        }
+        err.textContent = ""; return true;
+    }
+
+    function validateGender() {
+        const checked = document.querySelector('input[name="gender"]:checked');
+        const err = document.getElementById('err-gender');
+        if (!checked) { err.textContent = "יש לבחור מין"; return false; }
+        err.textContent = ""; return true;
     }
 
     // ==========================================
@@ -286,7 +317,7 @@
     }
 
     async function sendOTP() {
-        if (!validatePhone() | !validateEmail() | !validateAddress()) return;
+        if (!validatePhone() | !validateEmail() | !validateAddress() | !validateGender()) return;
 
         const email = document.getElementById('f-email').value.trim();
         const name = document.getElementById('f-name').value.trim();
@@ -363,13 +394,18 @@
         document.querySelector('#step3 .btn-primary').disabled = true;
         clearInterval(timerInterval);
 
+        const street  = document.getElementById('f-street').value.trim();
+        const houseno = document.getElementById('f-houseno').value.trim();
+        const city    = document.getElementById('f-city').value.trim();
+        const gender  = document.querySelector('input[name="gender"]:checked')?.value || "";
         const payload = {
             name:      document.getElementById('f-name').value.trim(),
             id:        document.getElementById('f-id').value.trim(),
             phone:     document.getElementById('f-phone').value.trim(),
             email:     document.getElementById('f-email').value.trim(),
             birthdate: document.getElementById('f-birth').value,
-            address:   document.getElementById('f-address').value.trim()
+            address:   `${street} ${houseno}, ${city}`,
+            gender:    gender
         };
 
         try {
