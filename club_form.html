@@ -11,80 +11,92 @@
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); direction: rtl; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 
         .form-card {
-            background: white; border-radius: 20px; padding: 40px;
-            max-width: 550px; width: 100%;
+            background: white; border-radius: 20px; padding: 35px 40px;
+            max-width: 600px; width: 100%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
-        .form-header { text-align: center; margin-bottom: 30px; }
-        .form-header img { height: 80px; margin-bottom: 15px; }
-        .form-header h1 { color: var(--blue); font-size: 1.6rem; margin: 0 0 8px; }
+        .form-header { text-align: center; margin-bottom: 25px; }
+        .form-header img { height: 160px; margin-bottom: 12px; }
+        .form-header h1 { color: var(--blue); font-size: 1.6rem; margin: 0 0 6px; }
         .form-header p { color: #666; margin: 0; font-size: 0.95rem; }
 
         .step { display: none; }
         .step.active { display: block; }
 
-        .step-indicator {
-            display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;
-        }
-        .step-dot {
-            width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: 0.3s;
-        }
-        .step-dot.active { background: var(--blue); transform: scale(1.3); }
-        .step-dot.done { background: var(--green); }
+        .row { display: flex; gap: 12px; }
+        .row .field { flex: 1; }
 
-        .field { margin-bottom: 18px; }
-        .field label { display: block; font-weight: bold; color: #333; margin-bottom: 6px; font-size: 0.9rem; }
+        .field { margin-bottom: 14px; }
+        .field label { display: block; font-weight: bold; color: #333; margin-bottom: 5px; font-size: 0.88rem; }
         .field label span.req { color: var(--red); }
-        .field input {
-            width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 10px;
-            font-size: 1rem; transition: 0.2s; outline: none; font-family: inherit;
+        .field input, .field select {
+            width: 100%; padding: 11px 13px; border: 2px solid #e0e0e0; border-radius: 10px;
+            font-size: 0.95rem; transition: 0.2s; outline: none; font-family: inherit; background: white;
         }
-        .field input:focus { border-color: var(--blue); }
+        .field input:focus, .field select:focus { border-color: var(--blue); }
         .field input.valid { border-color: var(--green); }
         .field input.invalid { border-color: var(--red); }
-        .field .hint { font-size: 0.78rem; margin-top: 4px; }
-        .field .hint.error { color: var(--red); }
-        .field .hint.ok { color: var(--green); }
+        .hint { font-size: 0.76rem; margin-top: 3px; }
+        .hint.error { color: var(--red); }
+
+        .radio-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 4px; }
+        .radio-group label {
+            font-weight: normal !important; display: flex; align-items: center;
+            gap: 6px; cursor: pointer; padding: 8px 14px; border: 2px solid #e0e0e0;
+            border-radius: 8px; transition: 0.2s; font-size: 0.9rem;
+        }
+        .radio-group input[type="radio"] { display: none; }
+        .radio-group input[type="radio"]:checked + span { color: var(--blue); font-weight: bold; }
+        .radio-group label:has(input:checked) { border-color: var(--blue); background: #f0f7ff; }
+
+        .section-title {
+            font-size: 0.8rem; font-weight: bold; color: var(--blue);
+            text-transform: uppercase; letter-spacing: 1px;
+            border-bottom: 2px solid #f0f0f0; padding-bottom: 6px;
+            margin: 18px 0 12px;
+        }
 
         .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 12px;
-            font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s;
-            font-family: inherit;
+            width: 100%; padding: 13px; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-family: inherit; margin-top: 8px;
         }
         .btn-primary { background: var(--blue); color: white; }
         .btn-primary:hover { background: #0062b8; }
         .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
-        .btn-secondary { background: #f0f0f0; color: #333; margin-top: 10px; }
-        .btn-secondary:hover { background: #e0e0e0; }
 
-        .otp-inputs { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+        .otp-wrap { text-align: center; padding: 10px 0; }
+        .otp-wrap p { color: #333; margin-bottom: 15px; }
+        .otp-inputs { display: flex; gap: 8px; justify-content: center; margin: 15px 0; }
         .otp-inputs input {
-            width: 50px; height: 55px; text-align: center; font-size: 1.5rem;
+            width: 48px; height: 52px; text-align: center; font-size: 1.4rem;
             font-weight: bold; border: 2px solid #e0e0e0; border-radius: 10px;
-            outline: none; transition: 0.2s;
+            outline: none; transition: 0.2s; padding: 0;
         }
         .otp-inputs input:focus { border-color: var(--blue); }
+
+        .timer { color: #666; font-size: 0.88rem; margin-top: 8px; }
+        .timer span { color: var(--blue); font-weight: bold; }
+        .resend-btn { background: none; border: none; color: var(--blue); cursor: pointer; font-size: 0.88rem; text-decoration: underline; display: none; margin-top: 6px; }
 
         .success-icon { text-align: center; padding: 20px 0; }
         .success-icon i { font-size: 5rem; color: var(--green); }
         .success-icon h2 { color: var(--green); margin-top: 15px; }
         .success-icon p { color: #666; }
 
-        .timer { text-align: center; color: #666; font-size: 0.9rem; margin-top: 10px; }
-        .timer span { color: var(--blue); font-weight: bold; }
-
-        .resend-btn { background: none; border: none; color: var(--blue); cursor: pointer; font-size: 0.9rem; text-decoration: underline; display: none; }
-
-        .loading { display: none; text-align: center; padding: 10px; color: var(--blue); }
-        .loading i { animation: spin 1s linear infinite; }
+        .loading { display: none; text-align: center; padding: 8px; color: var(--blue); font-size: 0.9rem; }
+        .loading i { animation: spin 1s linear infinite; margin-left: 6px; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .privacy-note { font-size: 0.78rem; color: #999; text-align: center; margin-top: 20px; line-height: 1.4; }
+        .privacy-note { font-size: 0.76rem; color: #999; text-align: center; margin-top: 18px; line-height: 1.4; }
+
+        /* שלב OTP */
+        #step-otp { display: none; }
+        #step-otp.active { display: block; }
     </style>
 </head>
 <body>
-
 <div class="form-card">
     <div class="form-header">
         <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו">
@@ -92,97 +104,114 @@
         <p>הצטרפו וקבלו הטבות בלעדיות ומבצעים מיוחדים!</p>
     </div>
 
-    <div class="step-indicator">
-        <div class="step-dot active" id="dot1"></div>
-        <div class="step-dot" id="dot2"></div>
-        <div class="step-dot" id="dot3"></div>
-    </div>
+    <!-- טופס רישום - דף אחד -->
+    <div id="step-form" class="step active">
 
-    <!-- שלב 1: פרטים אישיים -->
-    <div class="step active" id="step1">
-        <div class="field">
-            <label>שם מלא <span class="req">*</span></label>
-            <input type="text" id="f-name" placeholder="ישראל ישראלי" oninput="validateName()">
-            <div class="hint error" id="err-name"></div>
+        <div class="section-title">פרטים אישיים</div>
+        <div class="row">
+            <div class="field">
+                <label>שם פרטי <span class="req">*</span></label>
+                <input type="text" id="f-firstname" placeholder="שם פרטי" oninput="validateFirstName()">
+                <div class="hint error" id="err-firstname"></div>
+            </div>
+            <div class="field">
+                <label>שם משפחה <span class="req">*</span></label>
+                <input type="text" id="f-lastname" placeholder="שם משפחה" oninput="validateLastName()">
+                <div class="hint error" id="err-lastname"></div>
+            </div>
         </div>
-        <div class="field">
-            <label>תעודת זהות <span class="req">*</span></label>
-            <input type="text" id="f-id" placeholder="9 ספרות" maxlength="9" oninput="validateID()">
-            <div class="hint error" id="err-id"></div>
-        </div>
-        <div class="field">
-            <label>תאריך לידה <span class="req">*</span></label>
-            <input type="date" id="f-birth" onchange="validateBirth()">
-            <div class="hint error" id="err-birth"></div>
-        </div>
-        <button class="btn btn-primary" onclick="goStep2()">המשך <i class="fa-solid fa-arrow-left"></i></button>
-    </div>
 
-    <!-- שלב 2: פרטי קשר -->
-    <div class="step" id="step2">
-        <div class="field">
-            <label>טלפון סלולרי <span class="req">*</span></label>
-            <input type="tel" id="f-phone" placeholder="05X-XXXXXXX" maxlength="10" oninput="validatePhone()">
-            <div class="hint error" id="err-phone"></div>
+        <div class="row">
+            <div class="field">
+                <label>תעודת זהות <span class="req">*</span></label>
+                <input type="text" id="f-id" placeholder="9 ספרות" maxlength="9" oninput="validateID()">
+                <div class="hint error" id="err-id"></div>
+            </div>
+            <div class="field">
+                <label>תאריך לידה <span class="req">*</span></label>
+                <input type="date" id="f-birth" onchange="validateBirth()">
+                <div class="hint error" id="err-birth"></div>
+            </div>
         </div>
-        <div class="field">
-            <label>אימייל <span class="req">*</span></label>
-            <input type="email" id="f-email" placeholder="example@email.com" oninput="validateEmail()">
-            <div class="hint error" id="err-email"></div>
-        </div>
+
         <div class="field">
             <label>מין <span class="req">*</span></label>
-            <div style="display:flex; gap:20px; margin-top:5px;">
-                <label style="font-weight:normal; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                    <input type="radio" name="gender" value="זכר" id="gender-m"> זכר
-                </label>
-                <label style="font-weight:normal; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                    <input type="radio" name="gender" value="נקבה" id="gender-f"> נקבה
-                </label>
+            <div class="radio-group">
+                <label><input type="radio" name="gender" value="זכר"><span>זכר</span></label>
+                <label><input type="radio" name="gender" value="נקבה"><span>נקבה</span></label>
             </div>
             <div class="hint error" id="err-gender"></div>
         </div>
-        <div style="display:flex; gap:10px;">
+
+        <div class="section-title">פרטי קשר</div>
+        <div class="row">
+            <div class="field">
+                <label>טלפון סלולרי <span class="req">*</span></label>
+                <input type="tel" id="f-phone" placeholder="05XXXXXXXX" maxlength="10" oninput="validatePhone()">
+                <div class="hint error" id="err-phone"></div>
+            </div>
+            <div class="field">
+                <label>אימייל <span class="req">*</span></label>
+                <input type="email" id="f-email" placeholder="example@email.com" oninput="validateEmail()">
+                <div class="hint error" id="err-email"></div>
+            </div>
+        </div>
+
+        <div class="section-title">כתובת מגורים</div>
+        <div class="row">
             <div class="field" style="flex:2;">
                 <label>רחוב <span class="req">*</span></label>
                 <input type="text" id="f-street" placeholder="שם הרחוב" oninput="validateAddress()">
             </div>
             <div class="field" style="flex:1;">
-                <label>מספר <span class="req">*</span></label>
-                <input type="text" id="f-houseno" placeholder='מס''>
+                <label>מספר</label>
+                <input type="text" id="f-houseno" placeholder="מס'">
             </div>
         </div>
         <div class="field">
-            <label>עיר <span class="req">*</span></label>
-            <input type="text" id="f-city" placeholder="שם העיר/ישוב" oninput="validateAddress()">
+            <label>עיר/ישוב <span class="req">*</span></label>
+            <input type="text" id="f-city" placeholder="שם העיר" oninput="validateAddress()">
             <div class="hint error" id="err-address"></div>
         </div>
-        <button class="btn btn-primary" onclick="sendOTP()">שלח קוד אימות למייל <i class="fa-solid fa-envelope"></i></button>
-        <button class="btn btn-secondary" onclick="goStep(1)"><i class="fa-solid fa-arrow-right"></i> חזור</button>
-        <div class="loading" id="loading2"><i class="fa-solid fa-spinner"></i> שולח קוד אימות...</div>
-    </div>
 
-    <!-- שלב 3: אימות OTP -->
-    <div class="step" id="step3">
-        <p style="text-align:center; color:#333;">הזן את קוד האימות שנשלח לאימייל:<br><strong id="otp-email-display"></strong></p>
-        <div class="otp-inputs">
-            <input type="number" id="otp1" maxlength="1" min="0" max="9" oninput="otpInput(this, 'otp2')">
-            <input type="number" id="otp2" maxlength="1" min="0" max="9" oninput="otpInput(this, 'otp3')">
-            <input type="number" id="otp3" maxlength="1" min="0" max="9" oninput="otpInput(this, 'otp4')">
-            <input type="number" id="otp4" maxlength="1" min="0" max="9" oninput="otpInput(this, 'otp5')">
-            <input type="number" id="otp5" maxlength="1" min="0" max="9" oninput="otpInput(this, 'otp6')">
-            <input type="number" id="otp6" maxlength="1" min="0" max="9" oninput="otpInput(this, null)">
+        <div class="section-title">העדפות</div>
+        <div class="field">
+            <label>שפת דיוור מועדפת <span class="req">*</span></label>
+            <div class="radio-group">
+                <label><input type="radio" name="lang" value="עברית"><span>🇮🇱 עברית</span></label>
+                <label><input type="radio" name="lang" value="ערבית"><span>🇵🇸 عربية</span></label>
+            </div>
+            <div class="hint error" id="err-lang"></div>
         </div>
-        <div class="hint error" id="err-otp" style="text-align:center;"></div>
-        <div class="timer">הקוד בתוקף למשך <span id="timer-count">10:00</span></div>
-        <button class="resend-btn" id="resend-btn" onclick="sendOTP()">שלח קוד חדש</button>
-        <button class="btn btn-primary" onclick="verifyAndRegister()" style="margin-top:20px;">אמת והירשם <i class="fa-solid fa-check"></i></button>
-        <button class="btn btn-secondary" onclick="goStep(2)"><i class="fa-solid fa-arrow-right"></i> חזור</button>
-        <div class="loading" id="loading3"><i class="fa-solid fa-spinner"></i> מאמת ושומר...</div>
+
+        <button class="btn btn-primary" onclick="submitForm()">שלח קוד אימות למייל <i class="fa-solid fa-envelope"></i></button>
+        <div class="loading" id="loading-form"><i class="fa-solid fa-spinner"></i> שולח קוד אימות...</div>
     </div>
 
-    <!-- שלב 4: הצלחה -->
-    <div class="step" id="step4">
+    <!-- שלב אימות OTP -->
+    <div id="step-otp" class="step">
+        <div class="otp-wrap">
+            <i class="fa-solid fa-envelope-open-text" style="font-size:3rem; color:var(--blue);"></i>
+            <p style="margin-top:15px;">הזן את קוד האימות שנשלח לאימייל:<br><strong id="otp-email-display"></strong></p>
+            <div class="otp-inputs">
+                <input type="number" id="otp1" min="0" max="9" oninput="otpInput(this,'otp2')">
+                <input type="number" id="otp2" min="0" max="9" oninput="otpInput(this,'otp3')">
+                <input type="number" id="otp3" min="0" max="9" oninput="otpInput(this,'otp4')">
+                <input type="number" id="otp4" min="0" max="9" oninput="otpInput(this,'otp5')">
+                <input type="number" id="otp5" min="0" max="9" oninput="otpInput(this,'otp6')">
+                <input type="number" id="otp6" min="0" max="9" oninput="otpInput(this,null)">
+            </div>
+            <div class="hint error" id="err-otp"></div>
+            <div class="timer">הקוד בתוקף למשך <span id="timer-count">10:00</span></div>
+            <button class="resend-btn" id="resend-btn" onclick="resendOTP()">שלח קוד חדש</button>
+        </div>
+        <button class="btn btn-primary" onclick="verifyAndRegister()">אמת והירשם <i class="fa-solid fa-check"></i></button>
+        <button class="btn" style="background:#f0f0f0; color:#333;" onclick="backToForm()"><i class="fa-solid fa-arrow-right"></i> חזור לטופס</button>
+        <div class="loading" id="loading-otp"><i class="fa-solid fa-spinner"></i> מאמת ושומר...</div>
+    </div>
+
+    <!-- הצלחה -->
+    <div id="step-success" class="step">
         <div class="success-icon">
             <i class="fa-solid fa-circle-check"></i>
             <h2>ברוכים הבאים למועדון!</h2>
@@ -195,42 +224,52 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-    // ==========================================
-    // ⚙️ הגדרות - יש למלא לפי הנחיות ההתקנה
-    // ==========================================
-    const EMAILJS_PUBLIC_KEY  = "YdRghsPrGyNUZnY7T";   // מ-EmailJS
-    const EMAILJS_SERVICE_ID  = "service_hd2wqrm";   // מ-EmailJS
-    const EMAILJS_TEMPLATE_ID = "template_ibzzq2r";  // מ-EmailJS
-    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwpSTB-Q2SMn3xq-IfK-WnoCt3sTfbg4djtpsA-m0tS2XUTVc3kpHy3KwnRxBtIfMkQ/exec"; // מ-Google Apps Script
+    const EMAILJS_PUBLIC_KEY  = "YdRghsPrGyNUZnY7T";
+    const EMAILJS_SERVICE_ID  = "service_hd2wqrm";
+    const EMAILJS_TEMPLATE_ID = "template_ibzzq2r";
+    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbwpSTB-Q2SMn3xq-IfK-WnoCt3sTfbg4djtpsA-m0tS2XUTVc3kpHy3KwnRxBtIfMkQ/exec";
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
     let otpCode = "";
     let timerInterval = null;
 
-    // ==========================================
+    function showStep(id) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function backToForm() { showStep('step-form'); }
+
     // ולידציות
-    // ==========================================
-    function validateName() {
-        const v = document.getElementById('f-name').value.trim();
-        const err = document.getElementById('err-name');
-        const input = document.getElementById('f-name');
-        if (v.length < 2 || !/^[\u05D0-\u05EAa-zA-Z\s]+$/.test(v)) {
-            err.textContent = "שם לא תקין — אותיות בלבד";
-            input.className = 'invalid'; return false;
+    function validateFirstName() {
+        const v = document.getElementById('f-firstname').value.trim();
+        const err = document.getElementById('err-firstname');
+        const el = document.getElementById('f-firstname');
+        if (v.length < 2 || !/^[\u05D0-\u05FAa-zA-Z\u0600-\u06FF\s]+$/.test(v)) {
+            err.textContent = "שם לא תקין"; el.className = 'invalid'; return false;
         }
-        err.textContent = ""; input.className = 'valid'; return true;
+        err.textContent = ""; el.className = 'valid'; return true;
+    }
+
+    function validateLastName() {
+        const v = document.getElementById('f-lastname').value.trim();
+        const err = document.getElementById('err-lastname');
+        const el = document.getElementById('f-lastname');
+        if (v.length < 2 || !/^[\u05D0-\u05FAa-zA-Z\u0600-\u06FF\s]+$/.test(v)) {
+            err.textContent = "שם לא תקין"; el.className = 'invalid'; return false;
+        }
+        err.textContent = ""; el.className = 'valid'; return true;
     }
 
     function validateID() {
         const v = document.getElementById('f-id').value.trim();
         const err = document.getElementById('err-id');
-        const input = document.getElementById('f-id');
+        const el = document.getElementById('f-id');
         if (!/^\d{9}$/.test(v) || !isValidIsraeliID(v)) {
-            err.textContent = "תעודת זהות לא תקינה";
-            input.className = 'invalid'; return false;
+            err.textContent = "תעודת זהות לא תקינה"; el.className = 'invalid'; return false;
         }
-        err.textContent = ""; input.className = 'valid'; return true;
+        err.textContent = ""; el.className = 'valid'; return true;
     }
 
     function isValidIsraeliID(id) {
@@ -246,112 +285,93 @@
     function validateBirth() {
         const v = document.getElementById('f-birth').value;
         const err = document.getElementById('err-birth');
-        const input = document.getElementById('f-birth');
-        if (!v) { err.textContent = "יש להזין תאריך לידה"; input.className = 'invalid'; return false; }
+        const el = document.getElementById('f-birth');
+        if (!v) { err.textContent = "יש להזין תאריך לידה"; el.className = 'invalid'; return false; }
         const age = Math.floor((new Date() - new Date(v)) / (365.25 * 24 * 3600 * 1000));
-        if (age < 16 || age > 120) { err.textContent = "גיל לא תקין"; input.className = 'invalid'; return false; }
-        err.textContent = ""; input.className = 'valid'; return true;
+        if (age < 16 || age > 120) { err.textContent = "גיל לא תקין"; el.className = 'invalid'; return false; }
+        err.textContent = ""; el.className = 'valid'; return true;
+    }
+
+    function validateGender() {
+        const checked = document.querySelector('input[name="gender"]:checked');
+        document.getElementById('err-gender').textContent = checked ? "" : "יש לבחור מין";
+        return !!checked;
     }
 
     function validatePhone() {
         const v = document.getElementById('f-phone').value.trim();
         const err = document.getElementById('err-phone');
-        const input = document.getElementById('f-phone');
+        const el = document.getElementById('f-phone');
         if (!/^05\d{8}$/.test(v)) {
-            err.textContent = "מספר סלולרי ישראלי בלבד (05XXXXXXXX)";
-            input.className = 'invalid'; return false;
+            err.textContent = "מספר סלולרי ישראלי בלבד (05XXXXXXXX)"; el.className = 'invalid'; return false;
         }
-        err.textContent = ""; input.className = 'valid'; return true;
+        err.textContent = ""; el.className = 'valid'; return true;
     }
 
     function validateEmail() {
         const v = document.getElementById('f-email').value.trim();
         const err = document.getElementById('err-email');
-        const input = document.getElementById('f-email');
+        const el = document.getElementById('f-email');
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-            err.textContent = "כתובת אימייל לא תקינה";
-            input.className = 'invalid'; return false;
+            err.textContent = "כתובת אימייל לא תקינה"; el.className = 'invalid'; return false;
         }
-        err.textContent = ""; input.className = 'valid'; return true;
+        err.textContent = ""; el.className = 'valid'; return true;
     }
 
     function validateAddress() {
         const street = document.getElementById('f-street').value.trim();
         const city = document.getElementById('f-city').value.trim();
         const err = document.getElementById('err-address');
-        if (street.length < 2 || city.length < 2) {
-            err.textContent = "יש למלא רחוב ועיר"; return false;
-        }
+        if (street.length < 2 || city.length < 2) { err.textContent = "יש למלא רחוב ועיר"; return false; }
         err.textContent = ""; return true;
     }
 
-    function validateGender() {
-        const checked = document.querySelector('input[name="gender"]:checked');
-        const err = document.getElementById('err-gender');
-        if (!checked) { err.textContent = "יש לבחור מין"; return false; }
-        err.textContent = ""; return true;
+    function validateLang() {
+        const checked = document.querySelector('input[name="lang"]:checked');
+        document.getElementById('err-lang').textContent = checked ? "" : "יש לבחור שפת דיוור";
+        return !!checked;
     }
 
-    // ==========================================
-    // ניווט בין שלבים
-    // ==========================================
-    function goStep(n) {
-        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.getElementById('step' + n).classList.add('active');
-        for (let i = 1; i <= 3; i++) {
-            const dot = document.getElementById('dot' + i);
-            dot.className = 'step-dot' + (i < n ? ' done' : i == n ? ' active' : '');
-        }
-    }
+    // שליחת טופס
+    async function submitForm() {
+        const valid = validateFirstName() & validateLastName() & validateID() & validateBirth() &
+                      validateGender() & validatePhone() & validateEmail() & validateAddress() & validateLang();
+        if (!valid) return;
 
-    function goStep2() {
-        if (!validateName() | !validateID() | !validateBirth()) return;
-        goStep(2);
-    }
-
-    // ==========================================
-    // שליחת OTP
-    // ==========================================
-    function generateOTP() {
-        return Math.floor(100000 + Math.random() * 900000).toString();
-    }
-
-    async function sendOTP() {
-        if (!validatePhone() | !validateEmail() | !validateAddress() | !validateGender()) return;
+        document.getElementById('loading-form').style.display = 'block';
+        document.querySelector('#step-form .btn-primary').disabled = true;
 
         const email = document.getElementById('f-email').value.trim();
-        const name = document.getElementById('f-name').value.trim();
-        document.getElementById('loading2').style.display = 'block';
-        document.querySelector('#step2 .btn-primary').disabled = true;
-
-        otpCode = generateOTP();
+        const firstname = document.getElementById('f-firstname').value.trim();
+        otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         try {
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
                 to_email: email,
-                to_name: name,
+                to_name: firstname,
                 otp_code: otpCode,
                 store_name: "סופרסטאר פלוס"
             });
 
             document.getElementById('otp-email-display').textContent = email;
-            document.getElementById('loading2').style.display = 'none';
-            document.querySelector('#step2 .btn-primary').disabled = false;
-            goStep(3);
-            startTimer(600);
+            document.getElementById('loading-form').style.display = 'none';
+            document.querySelector('#step-form .btn-primary').disabled = false;
             ['otp1','otp2','otp3','otp4','otp5','otp6'].forEach(id => document.getElementById(id).value = '');
+            showStep('step-otp');
+            startTimer(600);
             document.getElementById('otp1').focus();
 
         } catch(err) {
-            document.getElementById('loading2').style.display = 'none';
-            document.querySelector('#step2 .btn-primary').disabled = false;
+            document.getElementById('loading-form').style.display = 'none';
+            document.querySelector('#step-form .btn-primary').disabled = false;
             alert("שגיאה בשליחת המייל. בדוק את כתובת האימייל ונסה שוב.");
         }
     }
 
-    // ==========================================
-    // טיימר
-    // ==========================================
+    async function resendOTP() {
+        await submitForm();
+    }
+
     function startTimer(seconds) {
         clearInterval(timerInterval);
         document.getElementById('resend-btn').style.display = 'none';
@@ -370,62 +390,53 @@
         }, 1000);
     }
 
-    // ==========================================
-    // קלט OTP
-    // ==========================================
     function otpInput(el, nextId) {
         el.value = el.value.toString().slice(-1);
         if (el.value && nextId) document.getElementById(nextId).focus();
     }
 
-    // ==========================================
-    // אימות ורישום
-    // ==========================================
     async function verifyAndRegister() {
         const entered = ['otp1','otp2','otp3','otp4','otp5','otp6'].map(id => document.getElementById(id).value).join('');
         const err = document.getElementById('err-otp');
 
         if (entered.length < 6) { err.textContent = "יש להזין את כל 6 הספרות"; return; }
-        if (!otpCode) { err.textContent = "הקוד פג תוקף — שלח קוד חדש"; return; }
+        if (!otpCode) { err.textContent = "הקוד פג תוקף — לחץ שלח קוד חדש"; return; }
         if (entered !== otpCode) { err.textContent = "קוד שגוי — נסה שוב"; return; }
 
         err.textContent = "";
-        document.getElementById('loading3').style.display = 'block';
-        document.querySelector('#step3 .btn-primary').disabled = true;
+        document.getElementById('loading-otp').style.display = 'block';
+        document.querySelector('#step-otp .btn-primary').disabled = true;
         clearInterval(timerInterval);
 
         const street  = document.getElementById('f-street').value.trim();
         const houseno = document.getElementById('f-houseno').value.trim();
         const city    = document.getElementById('f-city').value.trim();
-        const gender  = document.querySelector('input[name="gender"]:checked')?.value || "";
+
         const payload = {
-            name:      document.getElementById('f-name').value.trim(),
+            firstname: document.getElementById('f-firstname').value.trim(),
+            lastname:  document.getElementById('f-lastname').value.trim(),
             id:        document.getElementById('f-id').value.trim(),
             phone:     document.getElementById('f-phone').value.trim(),
             email:     document.getElementById('f-email').value.trim(),
             birthdate: document.getElementById('f-birth').value,
-            address:   `${street} ${houseno}, ${city}`,
-            gender:    gender
+            gender:    document.querySelector('input[name="gender"]:checked')?.value || "",
+            lang:      document.querySelector('input[name="lang"]:checked')?.value || "",
+            address:   `${street} ${houseno}, ${city}`
         };
 
         try {
-            const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
+            const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             const result = await res.json();
-
-            document.getElementById('loading3').style.display = 'none';
-            document.querySelector('#step3 .btn-primary').disabled = false;
-
+            document.getElementById('loading-otp').style.display = 'none';
+            document.querySelector('#step-otp .btn-primary').disabled = false;
             if (result.success) {
-                goStep(4);
+                showStep('step-success');
             } else {
                 err.textContent = result.error || "שגיאה בשמירת הנתונים";
             }
         } catch(e) {
-            document.getElementById('loading3').style.display = 'none';
-            document.querySelector('#step3 .btn-primary').disabled = false;
+            document.getElementById('loading-otp').style.display = 'none';
+            document.querySelector('#step-otp .btn-primary').disabled = false;
             err.textContent = "שגיאת רשת — נסה שוב";
         }
     }
