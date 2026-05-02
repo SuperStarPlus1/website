@@ -228,6 +228,130 @@
         }
         .club-form-wrap h2 { color: var(--blue); margin: 0 0 20px; text-align: center; }
 
+        /* כרטיס שטיפת רכב */
+        .carwash-card {
+            background: linear-gradient(135deg, #e8f4fd, #fff);
+            border-radius: 20px; padding: 30px;
+            display: flex; gap: 30px; align-items: center;
+            box-shadow: 0 5px 20px rgba(0,118,218,0.1);
+            border: 2px solid #d0e8f8;
+            margin-bottom: 40px; flex-wrap: wrap;
+        }
+        .carwash-scene {
+            position: relative; width: 280px; height: 130px;
+            flex-shrink: 0; overflow: hidden; border-radius: 12px;
+            background: linear-gradient(180deg, #87CEEB 0%, #b0e0ff 60%, #888 60%, #666 100%);
+        }
+        .road {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+            background: #555;
+        }
+        .road::after {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0;
+            height: 4px; background: repeating-linear-gradient(90deg, #fff 0, #fff 20px, transparent 20px, transparent 40px);
+            transform: translateY(-50%);
+        }
+        .car-wrap {
+            position: absolute; bottom: 15px; left: -80px;
+            animation: drive-car 4s linear infinite;
+        }
+        @keyframes drive-car { 0% { left: -80px; } 100% { left: 320px; } }
+        .car {
+            position: relative; width: 80px; height: 40px;
+        }
+        .car-body {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
+            background: #0076DA; border-radius: 4px 4px 0 0;
+        }
+        .car-roof {
+            position: absolute; top: -16px; left: 12px; right: 12px; height: 18px;
+            background: #005bb5; border-radius: 8px 8px 0 0;
+        }
+        .car-windows { position: absolute; top: -14px; left: 14px; right: 14px; display: flex; gap: 4px; }
+        .win { height: 12px; background: rgba(255,255,255,0.7); border-radius: 3px 3px 0 0; flex: 1; }
+        .car-door-line {
+            position: absolute; top: 6px; left: 38px; width: 1px; height: 16px; background: rgba(255,255,255,0.4);
+        }
+        .wheel {
+            position: absolute; bottom: -6px; width: 16px; height: 16px;
+            background: #222; border-radius: 50%; border: 3px solid #888;
+            animation: spin-wheel 0.5s linear infinite;
+        }
+        .wheel-front { right: 8px; }
+        .wheel-back { left: 8px; }
+        @keyframes spin-wheel { to { transform: rotate(360deg); } }
+
+        .wash-portal {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 50px; height: 90px;
+        }
+        .portal-frame {
+            position: absolute; bottom: 0; left: 0; right: 0; top: 0;
+            border: 6px solid #0076DA; border-bottom: none; border-radius: 4px 4px 0 0;
+            background: rgba(0,118,218,0.1);
+        }
+        .brush {
+            position: absolute; top: 5px; width: 8px; height: 75px;
+            background: repeating-linear-gradient(180deg, #ff6b35 0, #ff6b35 6px, #ffcc00 6px, #ffcc00 12px);
+            border-radius: 4px;
+            animation: brush-spin 0.4s linear infinite;
+        }
+        .brush1 { left: 4px; transform-origin: top center; }
+        .brush2 { right: 4px; transform-origin: top center; animation-direction: reverse; }
+        @keyframes brush-spin { 0% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } 100% { transform: rotate(-15deg); } }
+
+        .water-drops {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+        .water-drops span {
+            position: absolute; width: 3px; height: 8px;
+            background: rgba(100,180,255,0.8); border-radius: 50%;
+            animation: drop-fall 0.6s linear infinite;
+        }
+        .water-drops span:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .water-drops span:nth-child(2) { left: 25%; animation-delay: 0.1s; }
+        .water-drops span:nth-child(3) { left: 40%; animation-delay: 0.2s; }
+        .water-drops span:nth-child(4) { left: 55%; animation-delay: 0.05s; }
+        .water-drops span:nth-child(5) { left: 70%; animation-delay: 0.15s; }
+        .water-drops span:nth-child(6) { left: 85%; animation-delay: 0.25s; }
+        .water-drops span:nth-child(7) { left: 18%; animation-delay: 0.3s; }
+        .water-drops span:nth-child(8) { left: 60%; animation-delay: 0.35s; }
+        @keyframes drop-fall { 0% { top: 0; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        .bubbles span {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(100,180,255,0.3));
+            border: 1px solid rgba(100,180,255,0.5);
+            animation: bubble-rise 1.5s ease-out infinite;
+        }
+        .bubbles span:nth-child(1) { width: 10px; height: 10px; left: 5px; top: 60px; animation-delay: 0s; }
+        .bubbles span:nth-child(2) { width: 7px; height: 7px; left: 25px; top: 50px; animation-delay: 0.3s; }
+        .bubbles span:nth-child(3) { width: 12px; height: 12px; left: 35px; top: 65px; animation-delay: 0.6s; }
+        .bubbles span:nth-child(4) { width: 8px; height: 8px; left: 15px; top: 70px; animation-delay: 0.9s; }
+        .bubbles span:nth-child(5) { width: 6px; height: 6px; left: 42px; top: 55px; animation-delay: 1.2s; }
+        @keyframes bubble-rise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-60px) scale(1.3); opacity: 0; } }
+
+        .sparkles {
+            position: absolute; top: 5px; right: 5px;
+            animation: sparkle-pop 1s ease-in-out infinite alternate;
+            font-size: 0.8rem; letter-spacing: 2px;
+        }
+        @keyframes sparkle-pop { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.1); } }
+
+        .carwash-text { flex: 1; min-width: 200px; }
+        .carwash-badge {
+            display: inline-block; background: var(--yellow); color: var(--blue);
+            padding: 4px 14px; border-radius: 20px; font-weight: bold;
+            font-size: 0.85rem; margin-bottom: 10px;
+        }
+        .carwash-text h3 { color: var(--blue); font-size: 1.3rem; margin: 0 0 10px; }
+        .carwash-text p { color: #555; line-height: 1.6; margin: 0 0 15px; }
+        .carwash-cta {
+            background: var(--blue); color: white; padding: 10px 20px;
+            border-radius: 25px; display: inline-block; font-weight: bold; font-size: 0.9rem;
+        }
+
         /* Iframe טופס */
         .form-iframe { width: 100%; border: none; border-radius: 15px; min-height: 800px; }
 
@@ -391,7 +515,7 @@
             <div class="club-hero">
                 <h1>⭐ מועדון לקוחות סופרסטאר</h1>
                 <p>הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה</p>
-                <div class="hero-badge">🎁 סל קניות ₪41 במתנה לכל חבר חדש!</div>
+                <div class="hero-badge">🎁 סל קניות ₪41 מתנה לכל חברי המועדון!</div>
             </div>
 
             <!-- סטטיסטיקות -->
@@ -420,7 +544,7 @@
                 <div class="benefit-card">
                     <div class="benefit-icon">🛒</div>
                     <h3>סל קניות ₪41 מתנה</h3>
-                    <p>כל חבר חדש מקבל סל קניות בשווי ₪41 — מתנת הצטרפות בלעדית</p>
+                    <p>כל חברי המועדון מקבלים סל קניות ₪41 — מתנה בלעדית לחברים</p>
                 </div>
                 <div class="benefit-card">
                     <div class="benefit-icon">🏷️</div>
@@ -446,6 +570,50 @@
                     <div class="benefit-icon">⚡</div>
                     <h3>קנייה מהירה ונוחה</h3>
                     <p>חנות 1,500 מ"ר עם עיצוב חכם, חניה נגישה ושירות מקצועי תמיד</p>
+                </div>
+            </div>
+
+            <!-- כרטיס שטיפת רכב -->
+            <div class="carwash-card">
+                <div class="carwash-scene">
+                    <div class="road"></div>
+                    <div class="car-wrap">
+                        <div class="car">
+                            <div class="car-body">
+                                <div class="car-roof"></div>
+                                <div class="car-windows">
+                                    <div class="win win-front"></div>
+                                    <div class="win win-back"></div>
+                                </div>
+                                <div class="car-door-line"></div>
+                            </div>
+                            <div class="wheel wheel-front"></div>
+                            <div class="wheel wheel-back"></div>
+                        </div>
+                    </div>
+                    <div class="wash-portal">
+                        <div class="portal-frame"></div>
+                        <div class="brush brush1"></div>
+                        <div class="brush brush2"></div>
+                        <div class="water-drops">
+                            <span></span><span></span><span></span>
+                            <span></span><span></span><span></span>
+                            <span></span><span></span>
+                        </div>
+                        <div class="bubbles">
+                            <span></span><span></span><span></span>
+                            <span></span><span></span>
+                        </div>
+                    </div>
+                    <div class="sparkles">
+                        <span>✨</span><span>✨</span><span>✨</span>
+                    </div>
+                </div>
+                <div class="carwash-text">
+                    <div class="carwash-badge">🎁 הטבת מועדון בלעדית</div>
+                    <h3>שוברון שטיפת רכב חיצונית מתנה!</h3>
+                    <p>בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!</p>
+                    <div class="carwash-cta">קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨</div>
                 </div>
             </div>
 
