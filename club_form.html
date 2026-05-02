@@ -227,7 +227,7 @@
     const EMAILJS_PUBLIC_KEY  = "YdRghsPrGyNUZnY7T";
     const EMAILJS_SERVICE_ID  = "service_hd2wqrm";
     const EMAILJS_TEMPLATE_ID = "template_ibzzq2r";
-    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbxIuOeMzkzXh7oYp8ShLViOc1SGH8QRRlRDMP87GSrJJ2nNZT_GrH4MmmsG3dCnGLg/exec";
+    const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbyqgjzhV4xk91iViPrnPq6yLNCthcYsK-MkW-ge9Km19LYDGzLHIAguRjjTh32HNtmU/exec";
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
@@ -421,7 +421,9 @@
             birthdate: document.getElementById('f-birth').value,
             gender:    document.querySelector('input[name="gender"]:checked')?.value || "",
             lang:      document.querySelector('input[name="lang"]:checked')?.value || "",
-            address:   `${street} ${houseno}, ${city}`
+            street:    street,
+            houseno:   houseno,
+            city:      city
         };
 
         try {
