@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>בדיקת תרגום API</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #f4f7f9; }
+  .box { background: white; border-radius: 10px; padding: 15px; margin: 10px 0; border-right: 5px solid #0076DA; }
+  .ok { border-color: green; } .err { border-color: red; }
+  pre { background: #f8f8f8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; }
+  button { padding: 10px 20px; background: #0076DA; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; margin: 5px; }
+</style>
+</head>
+<body>
+<h2>🔍 בדיקת תרגום API</h2>
+
+<div class="box">
+  <button onclick="testAPI()">1. בדוק קריאת API ישירה</button>
+  <button onclick="testWithSampleData()">2. בדוק תרגום עם נתונים לדוגמה</button>
+  <button onclick="testFullFlow()">3. בדוק זרימה מלאה מהשיטס</button>
+</div>
+
+<div id="out"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<script>
+const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+
+function log(msg, cls='') {
+    const out = document.getElementById('out');
+    out.innerHTML += `<div class="box ${cls}"><pre>${msg}</pre></div>`;
+}
+
+function clear() { document.getElementById('out').innerHTML = ''; }
+
+// TEST 1: Raw API call
+async function testAPI() {
+    clear();
+    log('שולח קריאת API עם 3 מילים לדוגמה...');
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 500,
+                messages: [{ role: "user", content: `Translate to Arabic. Return ONLY JSON, no markdown:\n["חלב", "לחם", "גבינה"]` }]
+            })
+        });
+
+        const data = await response.json();
+        log(`סטטוס HTTP: ${response.status}`, response.ok ? 'ok' : 'err');
+        log(`תשובה מלאה מה-API:\n${JSON.stringify(data, null, 2)}`);
+
+        if (data.error) {
+            log(`❌ API Error: ${data.error.type} — ${data.error.message}`, 'err');
+            return;
+        }
+
+        const text = (data.content || []).map(b => b.text || '').join('');
+        log(`טקסט גולמי שהוחזר:\n${text}`);
+
+        try {
+            const clean = text.replace(/```json|```/g, '').trim();
+            const parsed = JSON.parse(clean);
+            log(`✅ JSON תקין:\n${JSON.stringify(parsed, null, 2)}`, 'ok');
+        } catch(e) {
+            log(`❌ JSON parse נכשל: ${e.message}`, 'err');
+        }
+    } catch(e) {
+        log(`❌ fetch נכשל: ${e.message}\n\nהסיבות האפשריות:\n- אין API key מוגדר (רק עובד בתוך claude.ai)\n- CORS חסימה\n- בעיית רשת`, 'err');
+    }
+}
+
+// TEST 2: Sample data translation
+async function testWithSampleData() {
+    clear();
+    const samples = ["פינוק תחליב רחיצה רוח ים 700 מל", "טיפוח אישי", "מוצרי בית"];
+    log(`בודק תרגום עם נתונים אמיתיים:\n${JSON.stringify(samples)}`);
+
+    try {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 500,
+                messages: [{
+                    role: "user",
+                    content: `Translate each Hebrew text to Arabic. Return ONLY a JSON object mapping Hebrew to Arabic translation. No markdown.
+Example: {"חלב":"حليب"}
+Texts: ${JSON.stringify(samples)}`
+                }]
+            })
+        });
+        const d = await r.json();
+        log(`סטטוס: ${r.status}`, r.ok ? 'ok' : 'err');
+
+        if (d.error) {
+            log(`❌ ${d.error.type}: ${d.error.message}`, 'err');
+            return;
+        }
+
+        const text = (d.content||[]).map(b=>b.text||'').join('');
+        log(`תשובה גולמית:\n${text}`);
+        const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+        log(`✅ תרגום הצליח:\n${JSON.stringify(parsed, null, 2)}`, 'ok');
+    } catch(e) {
+        log(`❌ שגיאה: ${e.message}`, 'err');
+    }
+}
+
+// TEST 3: Full flow from sheets
+async function testFullFlow() {
+    clear();
+    log('טוען נתונים מגוגל שיטס...');
+
+    Papa.parse(CSV, {
+        download: true, header: true,
+        complete: async (r) => {
+            const items = r.data.filter(x => x.Barcode && x.Name);
+            log(`✅ נטענו ${items.length} מוצרים מהשיטס`, 'ok');
+
+            const names = [...new Set(items.map(i=>i.Name).filter(Boolean))].slice(0, 5);
+            log(`5 שמות לדוגמה:\n${JSON.stringify(names)}`);
+
+            log('שולח לתרגום...');
+            try {
+                const r2 = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{
+                            role: "user",
+                            content: `Translate each Hebrew supermarket product name to Arabic. Return ONLY JSON object. No markdown.
+${JSON.stringify(names)}`
+                        }]
+                    })
+                });
+                const d = await r2.json();
+                log(`סטטוס API: ${r2.status}`, r2.ok ? 'ok' : 'err');
+
+                if (d.error) {
+                    log(`❌ API Error: ${JSON.stringify(d.error)}`, 'err');
+                    return;
+                }
+
+                const text = (d.content||[]).map(b=>b.text||'').join('');
+                log(`תשובה:\n${text}`);
+                const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+                log(`✅ תרגום עבד!\n${JSON.stringify(parsed, null, 2)}`, 'ok');
+            } catch(e) {
+                log(`❌ ${e.message}`, 'err');
+            }
+        }
+    });
+}
+</script>
+</body>
+</html>
