@@ -576,6 +576,476 @@
      TRANSLATIONS
 ════════════════════════════════════════════════════════════════ -->
 <script>
+
+    const CLOUD = "dj56w7nb9";
+    const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+    const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
+    let allItems = [];
+    let curCat = "הכל";
+    let limit = 20;
+
+    function nav(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+        if (el) el.classList.add('active');
+        window.scrollTo(0, 0);
+        // announce page change to screen readers
+        const main = document.getElementById('main-content');
+        if (main) { main.focus(); }
+    }
+
+    // Keyboard nav for nav items
+    document.querySelectorAll('.nav-links li[tabindex="0"]').forEach(li => {
+        li.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') this.click();
+        });
+    });
+
+    function zoom(url, desc = '', price = '') {
+        document.getElementById('lb-img').src = url;
+        document.getElementById('lb-img').alt = desc || 'תמונת מוצר';
+        document.getElementById('lb-desc').textContent = desc;
+        document.getElementById('lb-price').textContent = price ? '₪' + price : '';
+        const lb = document.getElementById('lightbox');
+        lb.style.display = 'flex';
+        lb.focus();
+    }
+
+    // Close lightbox on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('lightbox').style.display = 'none';
+            document.getElementById('imageModal').style.display = 'none';
+        }
+    });
+
+    function isFresh(pid) {
+        const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
+        if (!m) return true;
+        const d = new Date(`${m[3]}-${m[2]}-${m[1]}`);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return d >= today;
+    }
+
+    async function loadCloud(tag, divId, type = 'grid', filter = false) {
+        try {
+            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
+            const d = await r.json();
+            let files = d.resources;
+            if (filter) files = files.filter(f => isFresh(f.public_id));
+            const html = files.map(f => {
+                const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+                return type === 'slider'
+                    ? `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`
+                    : `<div class="card" role="listitem" tabindex="0" onclick="zoom('${url}')" onkeypress="if(event.key==='Enter') zoom('${url}')"><img src="${url}" alt="מוצר"></div>`;
+            }).join('');
+            const target = document.getElementById(divId);
+            if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
+        } catch (e) { console.error("Cloudinary error:", e); }
+    }
+
+    function render(data) {
+        const t = TRANSLATIONS[currentLang];
+        const container = document.getElementById('catalog-grid');
+        const slice = data.slice(0, limit);
+        container.innerHTML = slice.map(i => {
+            const tName = getTranslated(currentLang, 'names', i.Name || '');
+            const safeDesc = tName.replace(/'/g, "\\'");
+            return `
+            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||''}')">
+                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
+                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')"
+                    loading="lazy"
+                    alt="${tName || 'מוצר'}"
+                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
+                <h3>${tName || ''}</h3>
+                <div class="price" aria-label="${t.promo_unit} ₪${i.Price}">₪${i.Price || ''}</div>
+                <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
+            </div>`;
+        }).join('');
+        const oldBtn = document.getElementById('loadMore');
+        if (oldBtn) oldBtn.remove();
+        if (data.length > limit) {
+            const btnLabel = currentLang === 'ar' ? 'تحميل المزيد...' : currentLang === 'en' ? 'Load more...' : 'טען מוצרים נוספים...';
+            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;" aria-label="${btnLabel}">${btnLabel}</button>`);
+        }
+    }
+
+    function renderOffers(offers) {
+        const t = TRANSLATIONS[currentLang];
+        window.allOffers = offers;
+        if (!window.activePromoCat) window.activePromoCat = "הכל";
+
+        const field = window.catFieldName || 'Category';
+
+        function normalizeBarcode(b) {
+            if (b === null || b === undefined) return '';
+            let s = String(b).trim();
+            if (s.endsWith('.0')) s = s.slice(0, -2);
+            return s;
+        }
+        function findItemByBarcode(barcode) {
+            const nb = normalizeBarcode(barcode);
+            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
+        }
+
+        const cats = ["הכל", ...new Set(
+            offers.map(o => {
+                const item = findItemByBarcode(o.Barcode);
+                return item ? item[field] : null;
+            }).filter(Boolean)
+        )].sort((a, b) => a === "הכל" ? -1 : a.localeCompare(b, 'he'));
+
+        function buildPromoFilters() {
+            const bar = document.getElementById('promo-filter-bar');
+            if (!bar) return;
+            const allLabel = t.cat_all || "כל הקטגוריות";
+            bar.innerHTML = cats.map(c => {
+                const displayCat = c === "הכל" ? allLabel : getTranslated(currentLang, 'cats', c);
+                return `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${displayCat}</button>`;
+            }).join('');
+        }
+
+        // Normalize barcode: trim, remove .0 suffix, convert to string
+        function normalizeBarcode(b) {
+            if (b === null || b === undefined) return '';
+            let s = String(b).trim();
+            // Remove trailing .0 (Excel sometimes converts barcodes to floats)
+            if (s.endsWith('.0')) s = s.slice(0, -2);
+            return s;
+        }
+
+        // Pre-build a lookup map for faster matching
+        function findItemByBarcode(barcode) {
+            const nb = normalizeBarcode(barcode);
+            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
+        }
+
+        window.filterPromos = function(cat) {
+            window.activePromoCat = cat;
+            buildPromoFilters();
+            const filtered = cat === "הכל"
+                ? window.allOffers
+                : window.allOffers.filter(o => {
+                    const item = findItemByBarcode(o.Barcode);
+                    if (!item) return false;
+                    return item[field] === cat;
+                });
+            renderPromoGrid(filtered);
+        };
+
+        buildPromoFilters();
+
+        // Slider
+        const sliderHtml = offers.map(o => {
+            const barcode = normalizeBarcode(o.Barcode);
+            const rawDesc2 = o.Description || o.Discreption || o.Name || "";
+            const desc = rawDesc2 ? getTranslated(currentLang, 'descs', rawDesc2) : "";
+            const price = o.UnitPrice || o.Price || "";
+            const qty = parseFloat(o.Quantity || o.Quanity || "1");
+            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
+            const catalogItem = findItemByBarcode(o.Barcode);
+            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
+            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            return `
+                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
+                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
+                    ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
+                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel} ₪${price}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">${t.promo_regular}${regularPrice}</div>` : ""}
+                </div>`;
+        }).join('');
+        const slider = document.getElementById('promo-slider');
+        if (slider) slider.innerHTML = sliderHtml + sliderHtml;
+
+        renderPromoGrid(offers);
+    }
+
+    function renderPromoGrid(offers) {
+        const t = TRANSLATIONS[currentLang];
+        const field = window.catFieldName || 'Category';
+        const countEl = document.getElementById('promo-count');
+        if (countEl) countEl.textContent = t.promo_showing.replace('{n}', offers.length);
+
+        function nb(b) { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; }
+        const gridHtml = offers.map(o => {
+            const barcode = nb(o.Barcode);
+            const rawDesc = o.Description || o.Discreption || o.Name || '';
+            const desc = rawDesc
+                ? getTranslated(currentLang, 'descs', rawDesc)
+                : (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
+            const price = o.UnitPrice || o.Price || "";
+            const valid = o.Valid || "";
+            const qty = parseFloat(o.Quantity || o.Quanity || "1");
+            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
+            const catalogItem = allItems.find(x => nb(x.Barcode) === barcode);
+            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
+            const rawCat = catalogItem ? (catalogItem[field] || "") : "";
+            const cat = rawCat ? getTranslated(currentLang, 'cats', rawCat) : "";
+            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            return `
+                <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
+                    <img src="${url}" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
+                    <h3>${desc}</h3>
+                    ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
+                    ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
+                    ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
+                </div>`;
+        }).join('');
+
+        const grid = document.getElementById('promo-full');
+        if (grid) grid.innerHTML = gridHtml;
+    }
+
+    async function start() {
+        loadCloud('newproducts', 'new-home', 'grid', false);
+        loadCloud('newproducts', 'new-full', 'grid', false);
+        loadCloud('jobs', 'jobs-grid', 'grid', false);
+
+        Papa.parse(CSV, {
+            download: true, header: true, complete: r => {
+                allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+                if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
+                const firstItem = allItems[0];
+                const catField = firstItem.hasOwnProperty('Category') ? 'Category' :
+                    firstItem.hasOwnProperty('category') ? 'category' :
+                    firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+                if (!catField) { console.error('שגיאה: לא נמצאה עמודת קטגוריה!'); return; }
+                const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+                window.allCats = ["הכל", ...new Set(rawCats)].sort();
+                buildCatDropdown(window.allCats);
+                window.catFieldName = catField;
+                render(allItems);
+
+                Papa.parse(CSV_OFFERS, {
+                    download: true, header: true, skipEmptyLines: true,
+                    complete: r2 => {
+                        const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                        renderOffers(offers);
+                        // If user switched lang before data loaded, trigger translation now
+                        if (window.pendingLang && window.pendingLang !== 'he') {
+                            const pl = window.pendingLang;
+                            window.pendingLang = null;
+                            setLang(pl);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function runFilter() {
+        const term = document.getElementById('search').value.toLowerCase();
+        const field = window.catFieldName || 'Category';
+        const filtered = allItems.filter(i => {
+            const iCat = i[field];
+            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) &&
+                (curCat === "הכל" || iCat === curCat);
+        });
+        render(filtered);
+    }
+
+    function setCategory(cat) {
+        curCat = cat;
+        limit = 20;
+        runFilter();
+    }
+
+    async function loadDynamicImage() {
+        try {
+            const response = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
+            const data = await response.json();
+            if (data.resources.length > 0) {
+                const randomImg = data.resources[Math.floor(Math.random() * data.resources.length)];
+                const img = document.getElementById('img1');
+                img.src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
+                img.alt = "מבצעי השבוע";
+            }
+        } catch (e) {}
+    }
+
+    function openImage(container) {
+        const src = container.querySelector('img').src;
+        if (src) {
+            document.getElementById('modalImg').src = src;
+            document.getElementById('modalImg').alt = container.querySelector('img').alt || 'תמונה';
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+    }
+
+    let allCats = [];
+
+    function buildCatDropdown(cats) {
+        const t = TRANSLATIONS[currentLang];
+        const dd = document.getElementById('cat-dropdown');
+        if (!dd) return;
+        dd.innerHTML = cats.map(c => {
+            const displayC = c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : getTranslated(currentLang, 'cats', c);
+            return `<div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
+                 role="option" tabindex="0"
+                 onkeypress="if(event.key==='Enter') selectCat('${c}')"
+                 onmouseover="this.style.background='#f4f7f9'" onmouseout="this.style.background='white'">
+                ${displayC}
+            </div>`;
+        }).join('');
+    }
+
+    function showCatDropdown() {
+        const dd = document.getElementById('cat-dropdown');
+        const input = document.getElementById('cat-search');
+        if (dd) { dd.style.display = 'block'; }
+        if (input) input.setAttribute('aria-expanded', 'true');
+    }
+
+    function filterCats() {
+        const term = document.getElementById('cat-search').value.toLowerCase();
+        const filtered = window.allCats.filter(c => c === 'הכל' || c.toLowerCase().includes(term));
+        buildCatDropdown(filtered);
+        showCatDropdown();
+    }
+
+    function selectCat(cat) {
+        const input = document.getElementById('cat-search');
+        const reset = document.getElementById('cat-reset');
+        const dd = document.getElementById('cat-dropdown');
+        const t = TRANSLATIONS[currentLang];
+        if (input) { input.value = cat === 'הכל' ? '' : cat; input.setAttribute('aria-expanded', 'false'); }
+        if (reset) reset.style.display = cat === 'הכל' ? 'none' : 'block';
+        if (dd) dd.style.display = 'none';
+        setCategory(cat);
+    }
+
+    function resetCat() {
+        const input = document.getElementById('cat-search');
+        const reset = document.getElementById('cat-reset');
+        if (input) input.value = '';
+        if (reset) reset.style.display = 'none';
+        buildCatDropdown(window.allCats);
+        setCategory('הכל');
+    }
+
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('cat-search');
+        const dd = document.getElementById('cat-dropdown');
+        if (dd && wrapper && !wrapper.contains(e.target) && !dd.contains(e.target)) {
+            dd.style.display = 'none';
+            if (wrapper) wrapper.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    function closeBanner() {
+        document.getElementById('club-banner').classList.add('hidden');
+        try { localStorage.setItem('club-banner-closed', '1'); } catch(e) {}
+    }
+
+    function initBanner() {
+        try {
+            if (localStorage.getItem('club-registered') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
+            if (localStorage.getItem('club-banner-closed') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
+        } catch(e) {}
+        setTimeout(() => {
+            document.getElementById('club-banner').style.display = 'flex';
+        }, 3000);
+    }
+
+    // ══════════════════════════════════════════
+    //  ACCESSIBILITY LOGIC
+    // ══════════════════════════════════════════
+    let fontSize = 100;
+
+    function toggleA11y(mode) {
+        const body = document.body;
+        const btn = document.getElementById(`btn-${mode}`);
+        if (mode === 'contrast') {
+            body.classList.toggle('high-contrast');
+            const on = body.classList.contains('high-contrast');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        } else if (mode === 'motion') {
+            body.classList.toggle('reduce-motion');
+            const on = body.classList.contains('reduce-motion');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        } else if (mode === 'links') {
+            body.classList.toggle('highlight-links');
+            const on = body.classList.contains('highlight-links');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (on) {
+                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+                    el.style.outline = '2px solid #ffcc00';
+                    el.style.backgroundColor = 'rgba(255,204,0,0.1)';
+                });
+            } else {
+                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+                    el.style.outline = '';
+                    el.style.backgroundColor = '';
+                });
+            }
+        }
+        try { saveA11yPrefs(); } catch(e) {}
+    }
+
+    function changeFont(dir) {
+        fontSize = Math.max(80, Math.min(150, fontSize + dir * 10));
+        document.body.style.fontSize = fontSize + '%';
+        try { localStorage.setItem('a11y-fontsize', fontSize); } catch(e) {}
+    }
+
+    function resetA11y() {
+        document.body.classList.remove('high-contrast', 'reduce-motion', 'highlight-links');
+        document.body.style.fontSize = '';
+        fontSize = 100;
+        document.querySelectorAll('.a11y-btn').forEach(btn => {
+            btn.classList.remove('on');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+            el.style.outline = '';
+            el.style.backgroundColor = '';
+        });
+        try { localStorage.removeItem('a11y-prefs'); localStorage.removeItem('a11y-fontsize'); } catch(e) {}
+    }
+
+    function saveA11yPrefs() {
+        const prefs = {
+            contrast: document.body.classList.contains('high-contrast'),
+            motion: document.body.classList.contains('reduce-motion'),
+            links: document.body.classList.contains('highlight-links'),
+        };
+        localStorage.setItem('a11y-prefs', JSON.stringify(prefs));
+    }
+
+    function loadA11yPrefs() {
+        try {
+            const fs = localStorage.getItem('a11y-fontsize');
+            if (fs) { fontSize = parseInt(fs); document.body.style.fontSize = fontSize + '%'; }
+            const prefs = JSON.parse(localStorage.getItem('a11y-prefs') || '{}');
+            if (prefs.contrast) toggleA11y('contrast');
+            if (prefs.motion) toggleA11y('motion');
+            if (prefs.links) toggleA11y('links');
+        } catch(e) {}
+    }
+
+    // Detect OS prefers-reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.body.classList.add('reduce-motion');
+        const btn = document.getElementById('btn-motion');
+        if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
+    }
+
+    window.onload = () => {
+        start();
+        loadDynamicImage();
+        initBanner();
+        loadA11yPrefs();
+        setInterval(loadDynamicImage, 8000);
+    };
+
+
+
 const TRANSLATIONS = {
     he: {
         lang_dir: "rtl", html_lang: "he",
@@ -831,6 +1301,8 @@ async function translateSheetData(lang) {
 
         translationCache[lang] = { names: tNames, cats: tCats, descs: tDescs };
         console.log(`[i18n] ${lang} cache ready — names:${Object.keys(tNames).length} cats:${Object.keys(tCats).length} descs:${Object.keys(tDescs).length}`);
+        console.log('[i18n] Sample names:', Object.entries(tNames).slice(0,3));
+        console.log('[i18n] Sample cats:', Object.entries(tCats).slice(0,3));
     } catch (e) {
         console.error('Translation error:', e);
         translationCache[lang] = { names: {}, cats: {}, descs: {} };
@@ -841,7 +1313,8 @@ async function translateSheetData(lang) {
 
 function getTranslated(lang, type, original) {
     if (lang === 'he' || !translationCache[lang]) return original;
-    return (translationCache[lang][type] || {})[original] || original;
+    const result = (translationCache[lang][type] || {})[original];
+    return result || original;
 }
 
 function showTranslateSpinner(msg) {
@@ -894,9 +1367,13 @@ async function setLang(lang) {
     if (a11yBar) a11yBar.setAttribute('aria-label', t.a11y_bar_label);
 
     // Translate sheet data then re-render
-    if (allItems.length > 0) {
-        await translateSheetData(lang);
+    if (allItems.length === 0) {
+        // Data not loaded yet — just set flag, render will pick up lang when data arrives
+        window.pendingLang = lang;
+        return;
     }
+
+    await translateSheetData(lang);
 
     if (window.allOffers) renderOffers(window.allOffers);
     if (allItems.length) render(allItems.filter(i => {
@@ -906,472 +1383,7 @@ async function setLang(lang) {
 
     if (window.allCats) buildCatDropdown(window.allCats);
 }
-</script>
 
-<!-- ══════════════════════════════════════════════════════════════
-     MAIN SCRIPTS
-════════════════════════════════════════════════════════════════ -->
-<script>
-    const CLOUD = "dj56w7nb9";
-    const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
-    const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
-    let allItems = [];
-    let curCat = "הכל";
-    let limit = 20;
-
-    function nav(id, el) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-        if (el) el.classList.add('active');
-        window.scrollTo(0, 0);
-        // announce page change to screen readers
-        const main = document.getElementById('main-content');
-        if (main) { main.focus(); }
-    }
-
-    // Keyboard nav for nav items
-    document.querySelectorAll('.nav-links li[tabindex="0"]').forEach(li => {
-        li.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') this.click();
-        });
-    });
-
-    function zoom(url, desc = '', price = '') {
-        document.getElementById('lb-img').src = url;
-        document.getElementById('lb-img').alt = desc || 'תמונת מוצר';
-        document.getElementById('lb-desc').textContent = desc;
-        document.getElementById('lb-price').textContent = price ? '₪' + price : '';
-        const lb = document.getElementById('lightbox');
-        lb.style.display = 'flex';
-        lb.focus();
-    }
-
-    // Close lightbox on Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            document.getElementById('lightbox').style.display = 'none';
-            document.getElementById('imageModal').style.display = 'none';
-        }
-    });
-
-    function isFresh(pid) {
-        const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
-        if (!m) return true;
-        const d = new Date(`${m[3]}-${m[2]}-${m[1]}`);
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        return d >= today;
-    }
-
-    async function loadCloud(tag, divId, type = 'grid', filter = false) {
-        try {
-            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
-            const d = await r.json();
-            let files = d.resources;
-            if (filter) files = files.filter(f => isFresh(f.public_id));
-            const html = files.map(f => {
-                const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-                return type === 'slider'
-                    ? `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`
-                    : `<div class="card" role="listitem" tabindex="0" onclick="zoom('${url}')" onkeypress="if(event.key==='Enter') zoom('${url}')"><img src="${url}" alt="מוצר"></div>`;
-            }).join('');
-            const target = document.getElementById(divId);
-            if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
-        } catch (e) { console.error("Cloudinary error:", e); }
-    }
-
-    function render(data) {
-        const t = TRANSLATIONS[currentLang];
-        const container = document.getElementById('catalog-grid');
-        const slice = data.slice(0, limit);
-        container.innerHTML = slice.map(i => {
-            const tName = getTranslated(currentLang, 'names', i.Name || '');
-            const safeDesc = tName.replace(/'/g, "\\'");
-            return `
-            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||''}')">
-                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
-                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')"
-                    loading="lazy"
-                    alt="${tName || 'מוצר'}"
-                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
-                <h3>${tName || ''}</h3>
-                <div class="price" aria-label="${t.promo_unit} ₪${i.Price}">₪${i.Price || ''}</div>
-                <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
-            </div>`;
-        }).join('');
-        const oldBtn = document.getElementById('loadMore');
-        if (oldBtn) oldBtn.remove();
-        if (data.length > limit) {
-            const btnLabel = currentLang === 'ar' ? 'تحميل المزيد...' : currentLang === 'en' ? 'Load more...' : 'טען מוצרים נוספים...';
-            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;" aria-label="${btnLabel}">${btnLabel}</button>`);
-        }
-    }
-
-    function renderOffers(offers) {
-        const t = TRANSLATIONS[currentLang];
-        window.allOffers = offers;
-        if (!window.activePromoCat) window.activePromoCat = "הכל";
-
-        const field = window.catFieldName || 'Category';
-
-        function normalizeBarcode(b) {
-            if (b === null || b === undefined) return '';
-            let s = String(b).trim();
-            if (s.endsWith('.0')) s = s.slice(0, -2);
-            return s;
-        }
-        function findItemByBarcode(barcode) {
-            const nb = normalizeBarcode(barcode);
-            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
-        }
-
-        const cats = ["הכל", ...new Set(
-            offers.map(o => {
-                const item = findItemByBarcode(o.Barcode);
-                return item ? item[field] : null;
-            }).filter(Boolean)
-        )].sort((a, b) => a === "הכל" ? -1 : a.localeCompare(b, 'he'));
-
-        function buildPromoFilters() {
-            const bar = document.getElementById('promo-filter-bar');
-            if (!bar) return;
-            const allLabel = t.cat_all || "כל הקטגוריות";
-            bar.innerHTML = cats.map(c => {
-                const displayCat = c === "הכל" ? allLabel : getTranslated(currentLang, 'cats', c);
-                return `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${displayCat}</button>`;
-            }).join('');
-        }
-
-        // Normalize barcode: trim, remove .0 suffix, convert to string
-        function normalizeBarcode(b) {
-            if (b === null || b === undefined) return '';
-            let s = String(b).trim();
-            // Remove trailing .0 (Excel sometimes converts barcodes to floats)
-            if (s.endsWith('.0')) s = s.slice(0, -2);
-            return s;
-        }
-
-        // Pre-build a lookup map for faster matching
-        function findItemByBarcode(barcode) {
-            const nb = normalizeBarcode(barcode);
-            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
-        }
-
-        window.filterPromos = function(cat) {
-            window.activePromoCat = cat;
-            buildPromoFilters();
-            const filtered = cat === "הכל"
-                ? window.allOffers
-                : window.allOffers.filter(o => {
-                    const item = findItemByBarcode(o.Barcode);
-                    if (!item) return false;
-                    return item[field] === cat;
-                });
-            renderPromoGrid(filtered);
-        };
-
-        buildPromoFilters();
-
-        // Slider
-        const sliderHtml = offers.map(o => {
-            const barcode = normalizeBarcode(o.Barcode);
-            const rawDesc2 = o.Description || o.Discreption || o.Name || "";
-            const desc = rawDesc2 ? getTranslated(currentLang, 'descs', rawDesc2) : "";
-            const price = o.UnitPrice || o.Price || "";
-            const qty = parseFloat(o.Quantity || o.Quanity || "1");
-            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
-            const catalogItem = findItemByBarcode(o.Barcode);
-            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
-            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            return `
-                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
-                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
-                    ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
-                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel} ₪${price}</div>` : ""}
-                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">${t.promo_regular}${regularPrice}</div>` : ""}
-                </div>`;
-        }).join('');
-        const slider = document.getElementById('promo-slider');
-        if (slider) slider.innerHTML = sliderHtml + sliderHtml;
-
-        renderPromoGrid(offers);
-    }
-
-    function renderPromoGrid(offers) {
-        const t = TRANSLATIONS[currentLang];
-        const field = window.catFieldName || 'Category';
-        const countEl = document.getElementById('promo-count');
-        if (countEl) countEl.textContent = t.promo_showing.replace('{n}', offers.length);
-
-        function nb(b) { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; }
-        const gridHtml = offers.map(o => {
-            const barcode = nb(o.Barcode);
-            const rawDesc = o.Description || o.Discreption || o.Name || '';
-            const desc = rawDesc
-                ? getTranslated(currentLang, 'descs', rawDesc)
-                : (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
-            const price = o.UnitPrice || o.Price || "";
-            const valid = o.Valid || "";
-            const qty = parseFloat(o.Quantity || o.Quanity || "1");
-            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
-            const catalogItem = allItems.find(x => nb(x.Barcode) === barcode);
-            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
-            const rawCat = catalogItem ? (catalogItem[field] || "") : "";
-            const cat = rawCat ? getTranslated(currentLang, 'cats', rawCat) : "";
-            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            return `
-                <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
-                    <img src="${url}" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
-                    <h3>${desc}</h3>
-                    ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
-                    ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
-                    ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
-                    ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
-                </div>`;
-        }).join('');
-
-        const grid = document.getElementById('promo-full');
-        if (grid) grid.innerHTML = gridHtml;
-    }
-
-    async function start() {
-        loadCloud('newproducts', 'new-home', 'grid', false);
-        loadCloud('newproducts', 'new-full', 'grid', false);
-        loadCloud('jobs', 'jobs-grid', 'grid', false);
-
-        Papa.parse(CSV, {
-            download: true, header: true, complete: r => {
-                allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
-                if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
-                const firstItem = allItems[0];
-                const catField = firstItem.hasOwnProperty('Category') ? 'Category' :
-                    firstItem.hasOwnProperty('category') ? 'category' :
-                    firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
-                if (!catField) { console.error('שגיאה: לא נמצאה עמודת קטגוריה!'); return; }
-                const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
-                window.allCats = ["הכל", ...new Set(rawCats)].sort();
-                buildCatDropdown(window.allCats);
-                window.catFieldName = catField;
-                render(allItems);
-
-                Papa.parse(CSV_OFFERS, {
-                    download: true, header: true, skipEmptyLines: true,
-                    complete: r2 => {
-                        const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
-                        renderOffers(offers);
-                    }
-                });
-            }
-        });
-    }
-
-    function runFilter() {
-        const term = document.getElementById('search').value.toLowerCase();
-        const field = window.catFieldName || 'Category';
-        const filtered = allItems.filter(i => {
-            const iCat = i[field];
-            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) &&
-                (curCat === "הכל" || iCat === curCat);
-        });
-        render(filtered);
-    }
-
-    function setCategory(cat) {
-        curCat = cat;
-        limit = 20;
-        runFilter();
-    }
-
-    async function loadDynamicImage() {
-        try {
-            const response = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
-            const data = await response.json();
-            if (data.resources.length > 0) {
-                const randomImg = data.resources[Math.floor(Math.random() * data.resources.length)];
-                const img = document.getElementById('img1');
-                img.src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
-                img.alt = "מבצעי השבוע";
-            }
-        } catch (e) {}
-    }
-
-    function openImage(container) {
-        const src = container.querySelector('img').src;
-        if (src) {
-            document.getElementById('modalImg').src = src;
-            document.getElementById('modalImg').alt = container.querySelector('img').alt || 'תמונה';
-            document.getElementById('imageModal').style.display = 'flex';
-        }
-    }
-
-    let allCats = [];
-
-    function buildCatDropdown(cats) {
-        const t = TRANSLATIONS[currentLang];
-        const dd = document.getElementById('cat-dropdown');
-        if (!dd) return;
-        dd.innerHTML = cats.map(c => {
-            const displayC = c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : getTranslated(currentLang, 'cats', c);
-            return `<div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
-                 role="option" tabindex="0"
-                 onkeypress="if(event.key==='Enter') selectCat('${c}')"
-                 onmouseover="this.style.background='#f4f7f9'" onmouseout="this.style.background='white'">
-                ${displayC}
-            </div>`;
-        }).join('');
-    }
-
-    function showCatDropdown() {
-        const dd = document.getElementById('cat-dropdown');
-        const input = document.getElementById('cat-search');
-        if (dd) { dd.style.display = 'block'; }
-        if (input) input.setAttribute('aria-expanded', 'true');
-    }
-
-    function filterCats() {
-        const term = document.getElementById('cat-search').value.toLowerCase();
-        const filtered = window.allCats.filter(c => c === 'הכל' || c.toLowerCase().includes(term));
-        buildCatDropdown(filtered);
-        showCatDropdown();
-    }
-
-    function selectCat(cat) {
-        const input = document.getElementById('cat-search');
-        const reset = document.getElementById('cat-reset');
-        const dd = document.getElementById('cat-dropdown');
-        const t = TRANSLATIONS[currentLang];
-        if (input) { input.value = cat === 'הכל' ? '' : cat; input.setAttribute('aria-expanded', 'false'); }
-        if (reset) reset.style.display = cat === 'הכל' ? 'none' : 'block';
-        if (dd) dd.style.display = 'none';
-        setCategory(cat);
-    }
-
-    function resetCat() {
-        const input = document.getElementById('cat-search');
-        const reset = document.getElementById('cat-reset');
-        if (input) input.value = '';
-        if (reset) reset.style.display = 'none';
-        buildCatDropdown(window.allCats);
-        setCategory('הכל');
-    }
-
-    document.addEventListener('click', function(e) {
-        const wrapper = document.getElementById('cat-search');
-        const dd = document.getElementById('cat-dropdown');
-        if (dd && wrapper && !wrapper.contains(e.target) && !dd.contains(e.target)) {
-            dd.style.display = 'none';
-            if (wrapper) wrapper.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    function closeBanner() {
-        document.getElementById('club-banner').classList.add('hidden');
-        try { localStorage.setItem('club-banner-closed', '1'); } catch(e) {}
-    }
-
-    function initBanner() {
-        try {
-            if (localStorage.getItem('club-registered') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
-            if (localStorage.getItem('club-banner-closed') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
-        } catch(e) {}
-        setTimeout(() => {
-            document.getElementById('club-banner').style.display = 'flex';
-        }, 3000);
-    }
-
-    // ══════════════════════════════════════════
-    //  ACCESSIBILITY LOGIC
-    // ══════════════════════════════════════════
-    let fontSize = 100;
-
-    function toggleA11y(mode) {
-        const body = document.body;
-        const btn = document.getElementById(`btn-${mode}`);
-        if (mode === 'contrast') {
-            body.classList.toggle('high-contrast');
-            const on = body.classList.contains('high-contrast');
-            btn.classList.toggle('on', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        } else if (mode === 'motion') {
-            body.classList.toggle('reduce-motion');
-            const on = body.classList.contains('reduce-motion');
-            btn.classList.toggle('on', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        } else if (mode === 'links') {
-            body.classList.toggle('highlight-links');
-            const on = body.classList.contains('highlight-links');
-            btn.classList.toggle('on', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            if (on) {
-                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
-                    el.style.outline = '2px solid #ffcc00';
-                    el.style.backgroundColor = 'rgba(255,204,0,0.1)';
-                });
-            } else {
-                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
-                    el.style.outline = '';
-                    el.style.backgroundColor = '';
-                });
-            }
-        }
-        try { saveA11yPrefs(); } catch(e) {}
-    }
-
-    function changeFont(dir) {
-        fontSize = Math.max(80, Math.min(150, fontSize + dir * 10));
-        document.body.style.fontSize = fontSize + '%';
-        try { localStorage.setItem('a11y-fontsize', fontSize); } catch(e) {}
-    }
-
-    function resetA11y() {
-        document.body.classList.remove('high-contrast', 'reduce-motion', 'highlight-links');
-        document.body.style.fontSize = '';
-        fontSize = 100;
-        document.querySelectorAll('.a11y-btn').forEach(btn => {
-            btn.classList.remove('on');
-            btn.setAttribute('aria-pressed', 'false');
-        });
-        document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
-            el.style.outline = '';
-            el.style.backgroundColor = '';
-        });
-        try { localStorage.removeItem('a11y-prefs'); localStorage.removeItem('a11y-fontsize'); } catch(e) {}
-    }
-
-    function saveA11yPrefs() {
-        const prefs = {
-            contrast: document.body.classList.contains('high-contrast'),
-            motion: document.body.classList.contains('reduce-motion'),
-            links: document.body.classList.contains('highlight-links'),
-        };
-        localStorage.setItem('a11y-prefs', JSON.stringify(prefs));
-    }
-
-    function loadA11yPrefs() {
-        try {
-            const fs = localStorage.getItem('a11y-fontsize');
-            if (fs) { fontSize = parseInt(fs); document.body.style.fontSize = fontSize + '%'; }
-            const prefs = JSON.parse(localStorage.getItem('a11y-prefs') || '{}');
-            if (prefs.contrast) toggleA11y('contrast');
-            if (prefs.motion) toggleA11y('motion');
-            if (prefs.links) toggleA11y('links');
-        } catch(e) {}
-    }
-
-    // Detect OS prefers-reduced-motion
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        document.body.classList.add('reduce-motion');
-        const btn = document.getElementById('btn-motion');
-        if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
-    }
-
-    window.onload = () => {
-        start();
-        loadDynamicImage();
-        initBanner();
-        loadA11yPrefs();
-        setInterval(loadDynamicImage, 8000);
-    };
 </script>
 </body>
 </html>
