@@ -578,8 +578,19 @@
 <script>
 
     const CLOUD = "dj56w7nb9";
-    const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+
+    // גיליון PRODUCTS מכיל 3 tabs: he / ar / en (מתורגמים מראש ע"י סקריפט הסנכרון)
+    const SHEET_ID_PRODUCTS = "2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z";
     const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
+
+    // מחזיר URL לגיליון הנכון לפי שפה (he=Sheet1 / ar=גיליון ar / en=גיליון en)
+    function getCsvUrl(lang) {
+        const base = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`;
+        if (lang === 'ar') return base + '&gid=ar';   // שם הגיליון "ar"
+        if (lang === 'en') return base + '&gid=en';   // שם הגיליון "en"
+        return base; // ברירת מחדל — גיליון ראשי עברית
+    }
+
     let allItems = [];
     let curCat = "הכל";
     let limit = 20;
@@ -650,7 +661,7 @@
         const container = document.getElementById('catalog-grid');
         const slice = data.slice(0, limit);
         container.innerHTML = slice.map(i => {
-            const tName = getTranslated(currentLang, 'names', i.Name || '');
+            const tName = i.Name || '';
             const safeDesc = tName.replace(/'/g, "\\'");
             return `
             <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||''}')">
@@ -702,7 +713,7 @@
             if (!bar) return;
             const allLabel = t.cat_all || "כל הקטגוריות";
             bar.innerHTML = cats.map(c => {
-                const displayCat = c === "הכל" ? allLabel : getTranslated(currentLang, 'cats', c);
+                const displayCat = c === "הכל" ? allLabel : c;
                 return `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${displayCat}</button>`;
             }).join('');
         }
@@ -741,7 +752,7 @@
         const sliderHtml = offers.map(o => {
             const barcode = normalizeBarcode(o.Barcode);
             const rawDesc2 = o.Description || o.Discreption || o.Name || "";
-            const desc = rawDesc2 ? getTranslated(currentLang, 'descs', rawDesc2) : "";
+            const desc = rawDesc2 ? rawDesc2 : "";
             const price = o.UnitPrice || o.Price || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
@@ -773,7 +784,7 @@
             const barcode = nb(o.Barcode);
             const rawDesc = o.Description || o.Discreption || o.Name || '';
             const desc = rawDesc
-                ? getTranslated(currentLang, 'descs', rawDesc)
+                ? rawDesc
                 : (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
             const price = o.UnitPrice || o.Price || "";
             const valid = o.Valid || "";
@@ -782,7 +793,7 @@
             const catalogItem = allItems.find(x => nb(x.Barcode) === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
-            const cat = rawCat ? getTranslated(currentLang, 'cats', rawCat) : "";
+            const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
@@ -824,12 +835,7 @@
                     complete: r2 => {
                         const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
                         renderOffers(offers);
-                        // If user switched lang before data loaded, trigger translation now
-                        if (window.pendingLang && window.pendingLang !== 'he') {
-                            const pl = window.pendingLang;
-                            window.pendingLang = null;
-                            setLang(pl);
-                        }
+
                     }
                 });
             }
@@ -882,7 +888,7 @@
         const dd = document.getElementById('cat-dropdown');
         if (!dd) return;
         dd.innerHTML = cats.map(c => {
-            const displayC = c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : getTranslated(currentLang, 'cats', c);
+            const displayC = c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : c;
             return `<div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
                  role="option" tabindex="0"
                  onkeypress="if(event.key==='Enter') selectCat('${c}')"
@@ -1243,79 +1249,8 @@ let currentLang = 'he';
 // ── Translation cache for dynamic sheet data ──
 const translationCache = { he: null, ar: null, en: null };
 
-async function translateBatch(items, targetLang, type) {
-    if (!items.length) return {};
-    const BATCH = 60;
-    const result = {};
-    for (let i = 0; i < items.length; i += BATCH) {
-        const chunk = items.slice(i, i + BATCH);
-        const prompt = `You are a product catalog translator for an Israeli supermarket.
-Translate each Hebrew text to ${targetLang}. Keep brand names and numbers as-is.
-Return ONLY a JSON object mapping each Hebrew key to its translation. No markdown, no extra text.
-Example: {"חלב תנובה 3%":"Tnuva Milk 3%","לחם אחיד":"White Bread"}
 
-Texts to translate: ${JSON.stringify(chunk)}`;
-        try {
-            const r = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 2000,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-            const d = await r.json();
-            if (d.error) { console.error('API error:', d.error); continue; }
-            const text = (d.content || []).map(b => b.text || '').join('');
-            const clean = text.replace(/```json|```/g, '').trim();
-            Object.assign(result, JSON.parse(clean));
-        } catch(e) { console.error('Batch error:', e); }
-    }
-    return result;
-}
 
-async function translateSheetData(lang) {
-    if (lang === 'he') return;
-    if (translationCache[lang]) return;
-
-    const loadingMsg = lang === 'ar' ? 'جاري الترجمة...' : 'Translating...';
-    showTranslateSpinner(loadingMsg);
-
-    try {
-        const field = window.catFieldName || 'Category';
-        const targetLang = lang === 'ar' ? 'Arabic' : 'English';
-
-        const names = [...new Set(allItems.map(i => i.Name).filter(Boolean))];
-        const cats  = [...new Set(allItems.map(i => i[field]).filter(Boolean))];
-        const descs = [...new Set(
-            (window.allOffers || []).map(o => (o.Description || o.Discreption || o.Name || '').trim()).filter(Boolean)
-        )];
-
-        // Run cats first (small, fast), then names+descs in parallel batches
-        const [tCats, tNames, tDescs] = await Promise.all([
-            translateBatch(cats, targetLang, 'cats'),
-            translateBatch(names, targetLang, 'names'),
-            translateBatch(descs, targetLang, 'descs')
-        ]);
-
-        translationCache[lang] = { names: tNames, cats: tCats, descs: tDescs };
-        console.log(`[i18n] ${lang} cache ready — names:${Object.keys(tNames).length} cats:${Object.keys(tCats).length} descs:${Object.keys(tDescs).length}`);
-        console.log('[i18n] Sample names:', Object.entries(tNames).slice(0,3));
-        console.log('[i18n] Sample cats:', Object.entries(tCats).slice(0,3));
-    } catch (e) {
-        console.error('Translation error:', e);
-        translationCache[lang] = { names: {}, cats: {}, descs: {} };
-    } finally {
-        hideTranslateSpinner();
-    }
-}
-
-function getTranslated(lang, type, original) {
-    if (lang === 'he' || !translationCache[lang]) return original;
-    const result = (translationCache[lang][type] || {})[original];
-    return result || original;
-}
 
 function showTranslateSpinner(msg) {
     let el = document.getElementById('translate-spinner');
@@ -1366,22 +1301,32 @@ async function setLang(lang) {
     const a11yBar = document.getElementById('a11y-bar');
     if (a11yBar) a11yBar.setAttribute('aria-label', t.a11y_bar_label);
 
-    // Translate sheet data then re-render
-    if (allItems.length === 0) {
-        // Data not loaded yet — just set flag, render will pick up lang when data arrives
-        window.pendingLang = lang;
-        return;
-    }
+    // טען מחדש את הקטלוג מהגיליון המתאים לשפה
+    curCat = 'הכל';
+    limit = 20;
+    allItems = [];
+    showTranslateSpinner(lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'טוען...');
 
-    await translateSheetData(lang);
-
-    if (window.allOffers) renderOffers(window.allOffers);
-    if (allItems.length) render(allItems.filter(i => {
-        const field = window.catFieldName || 'Category';
-        return curCat === 'הכל' || i[field] === curCat;
-    }));
-
-    if (window.allCats) buildCatDropdown(window.allCats);
+    Papa.parse(getCsvUrl(lang), {
+        download: true, header: true,
+        complete: r => {
+            hideTranslateSpinner();
+            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+            if (!allItems.length) return;
+            const firstItem = allItems[0];
+            const catField = firstItem.hasOwnProperty('Category') ? 'Category' :
+                             firstItem.hasOwnProperty('category') ? 'category' :
+                             firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+            if (!catField) return;
+            window.catFieldName = catField;
+            const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+            window.allCats = ['הכל', ...new Set(rawCats)].sort();
+            buildCatDropdown(window.allCats);
+            render(allItems);
+            if (window.allOffers) renderOffers(window.allOffers);
+        },
+        error: () => { hideTranslateSpinner(); }
+    });
 }
 
 </script>
