@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>בדיקת ברקוד</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<style>
+  body { font-family: monospace; padding: 20px; background: #f4f7f9; direction: rtl; }
+  h2 { color: #0076DA; }
+  .box { background: white; border-radius: 10px; padding: 15px; margin: 10px 0; border-right: 5px solid #0076DA; }
+  .ok { border-color: green; } .err { border-color: red; } .warn { border-color: orange; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 0.85rem; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:10px; font-size:0.8rem; font-weight:bold; }
+  .green { background:#e8f5e9; color:#2e7d32; } .red { background:#fdeaea; color:#c62828; } .blue { background:#e3f2fd; color:#0076DA; }
+</style>
+</head>
+<body>
+<h2>🔍 בדיקת ברקוד בשתי הגיליונות</h2>
+
+<div style="background:white;padding:15px;border-radius:10px;margin-bottom:15px;">
+  <label><b>ברקוד לבדיקה:</b></label>
+  <input id="bc" value="7290100247075" style="padding:8px;border:1px solid #ddd;border-radius:6px;width:200px;font-size:1rem;">
+  <button onclick="runCheck()" style="padding:8px 20px;background:#0076DA;color:white;border:none;border-radius:6px;cursor:pointer;font-size:1rem;">בדוק</button>
+</div>
+
+<div id="out"></div>
+
+<script>
+const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
+
+function nb(b) {
+    let s = String(b || '').trim();
+    if (s.endsWith('.0')) s = s.slice(0, -2);
+    return s;
+}
+
+function row(label, val, cls='') {
+    return `<tr><td style="color:#888;padding:4px 10px;white-space:nowrap">${label}</td><td style="padding:4px 10px"><b>${val}</b></td></tr>`;
+}
+
+function runCheck() {
+    const target = document.getElementById('bc').value.trim();
+    const out = document.getElementById('out');
+    out.innerHTML = '<p>⏳ טוען נתונים...</p>';
+
+    let catalog = [], offers = [];
+
+    Papa.parse(CSV, {
+        download: true, header: true,
+        complete: r1 => {
+            catalog = r1.data.filter(x => x.Barcode && x.Barcode.trim());
+            Papa.parse(CSV_OFFERS, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: r2 => {
+                    offers = r2.data.filter(x => x.Barcode && x.Barcode.trim());
+                    analyze(target, catalog, offers);
+                }
+            });
+        }
+    });
+}
+
+function analyze(target, catalog, offers) {
+    const out = document.getElementById('out');
+    let html = '';
+
+    // --- Headers ---
+    const catHeaders = catalog.length ? Object.keys(catalog[0]) : [];
+    const offHeaders = offers.length ? Object.keys(offers[0]) : [];
+
+    html += `<div class="box blue">
+        <b>עמודות קטלוג:</b> ${catHeaders.map(h=>`<span class="badge blue">${h}</span>`).join(' ')}<br><br>
+        <b>עמודות מבצעים:</b> ${offHeaders.map(h=>`<span class="badge blue">${h}</span>`).join(' ')}
+    </div>`;
+
+    // --- Find in catalog ---
+    const catField = catHeaders.find(h => ['Category','category','קטגוריה'].includes(h)) || catHeaders[2];
+
+    const catExact = catalog.filter(i => i.Barcode && i.Barcode.trim() === target);
+    const catNorm  = catalog.filter(i => nb(i.Barcode) === nb(target));
+    const catPartial = catalog.filter(i => (i.Barcode||'').includes(target) || target.includes((i.Barcode||'').trim()));
+
+    html += `<div class="box ${catNorm.length ? 'ok' : 'err'}">
+        <h3>📦 קטלוג מוצרים (${catalog.length} שורות סה"כ)</h3>
+        <p>חיפוש מדויק: <span class="badge ${catExact.length?'green':'red'}">${catExact.length} תוצאות</span> &nbsp;
+           חיפוש עם normalize: <span class="badge ${catNorm.length?'green':'red'}">${catNorm.length} תוצאות</span></p>`;
+
+    if (catNorm.length) {
+        catNorm.forEach(i => {
+            html += `<table style="border-collapse:collapse;margin-top:8px">`;
+            Object.entries(i).forEach(([k,v]) => { html += row(k, v || '<em style="color:#ccc">ריק</em>'); });
+            html += `</table>`;
+            if (catExact.length === 0) {
+                html += `<p class="badge red">⚠️ הברקוד בקטלוג: <b>${JSON.stringify(i.Barcode)}</b> (${i.Barcode.length} תווים)<br>
+                הברקוד שחיפשנו: <b>${JSON.stringify(target)}</b> (${target.length} תווים)<br>
+                נרמול פתר את הבעיה: <b class="green">כן</b></p>`;
+            }
+        });
+    } else {
+        html += `<p class="badge red">❌ לא נמצא בקטלוג גם אחרי normalize</p>`;
+        if (catPartial.length) {
+            html += `<p>דומים שנמצאו:</p><ul>${catPartial.slice(0,5).map(i=>`<li>${JSON.stringify(i.Barcode)} → ${i.Name||''} [${i[catField]||''}]</li>`).join('')}</ul>`;
+        }
+    }
+    html += `</div>`;
+
+    // --- Find in offers ---
+    const offExact = offers.filter(o => o.Barcode && o.Barcode.trim() === target);
+    const offNorm  = offers.filter(o => nb(o.Barcode) === nb(target));
+
+    html += `<div class="box ${offNorm.length ? 'ok' : 'warn'}">
+        <h3>🏷️ מבצעים (${offers.length} שורות סה"כ)</h3>
+        <p>חיפוש מדויק: <span class="badge ${offExact.length?'green':'red'}">${offExact.length} תוצאות</span> &nbsp;
+           חיפוש עם normalize: <span class="badge ${offNorm.length?'green':'red'}">${offNorm.length} תוצאות</span></p>`;
+
+    if (offNorm.length) {
+        offNorm.forEach(o => {
+            html += `<table style="border-collapse:collapse;margin-top:8px">`;
+            Object.entries(o).forEach(([k,v]) => { html += row(k, v || '<em style="color:#ccc">ריק</em>'); });
+            html += `</table>`;
+        });
+    } else {
+        html += `<p class="badge red">❌ לא נמצא במבצעים</p>`;
+    }
+    html += `</div>`;
+
+    // --- Diagnosis ---
+    html += `<div class="box" style="border-color:#9c27b0">
+        <h3>🩺 אבחון</h3>`;
+
+    const catMatch = catNorm[0];
+    const offMatch = offNorm[0];
+
+    if (!catMatch && !offMatch) {
+        html += `<p class="badge red">הברקוד לא נמצא בשום גיליון</p>`;
+    } else if (!catMatch) {
+        html += `<p class="badge red">נמצא במבצעים אבל לא בקטלוג → לכן לא ניתן לשייך קטגוריה לסינון</p>`;
+    } else if (!offMatch) {
+        html += `<p class="badge red">נמצא בקטלוג אבל לא במבצעים → לא אמור להופיע בדף מבצעים</p>`;
+    } else {
+        const catVal = catMatch[catField] || '';
+        html += `<p><b>קטגוריה בקטלוג (שדה "${catField}"):</b> <span class="badge ${catVal?'green':'red'}">${catVal || 'ריק!'}</span></p>`;
+
+        const bcCat = nb(catMatch.Barcode);
+        const bcOff = nb(offMatch.Barcode);
+        html += `<p><b>ברקוד קטלוג (normalized):</b> <code>${bcCat}</code></p>`;
+        html += `<p><b>ברקוד מבצע (normalized):</b> <code>${bcOff}</code></p>`;
+        html += `<p><b>התאמה אחרי normalize:</b> <span class="badge ${bcCat===bcOff?'green':'red'}">${bcCat===bcOff?'✅ כן':'❌ לא'}</span></p>`;
+
+        if (!catVal) {
+            html += `<p class="badge red">⚠️ הקטגוריה ריקה בקטלוג → הסינון לא יכול לשייך אותו לקטגוריה</p>`;
+        } else if (bcCat === bcOff) {
+            html += `<p class="badge green">✅ הכל תקין — אמור להופיע בסינון תחת "${catVal}"</p>`;
+        } else {
+            html += `<p class="badge red">⚠️ ברקודים לא תואמים אחרי normalize — בעיה בנתונים</p>`;
+        }
+    }
+
+    html += `</div>`;
+    out.innerHTML = html;
+}
+
+// Auto-run on load
+window.onload = () => runCheck();
+</script>
+</body>
+</html>
