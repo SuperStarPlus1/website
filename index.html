@@ -1051,8 +1051,7 @@ async function setLang(lang) {
                 ? window.allOffers
                 : window.allOffers.filter(o => {
                     const item = findItemByBarcode(o.Barcode);
-                    // If item not found in catalog → show in all categories (don't hide it)
-                    if (!item) return true;
+                    if (!item) return false;
                     return item[field] === cat;
                 });
             renderPromoGrid(filtered);
