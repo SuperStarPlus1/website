@@ -583,12 +583,22 @@
     const SHEET_ID_PRODUCTS = "2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z";
     const CSV_OFFERS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
 
-    // מחזיר URL לגיליון הנכון לפי שפה (he=Sheet1 / ar=גיליון ar / en=גיליון en)
+    const SHEET_ID_OFFERS = "2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5";
+
+    // מחזיר URL קטלוג לפי שפה
     function getCsvUrl(lang) {
         const base = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`;
-        if (lang === 'ar') return base + '&gid=ar';   // שם הגיליון "ar"
-        if (lang === 'en') return base + '&gid=en';   // שם הגיליון "en"
-        return base; // ברירת מחדל — גיליון ראשי עברית
+        if (lang === 'ar') return base + '&gid=ar';
+        if (lang === 'en') return base + '&gid=en';
+        return base;
+    }
+
+    // מחזיר URL מבצעים לפי שפה
+    function getOffersUrl(lang) {
+        const base = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv`;
+        if (lang === 'ar') return base + '&gid=ar';
+        if (lang === 'en') return base + '&gid=en';
+        return base;
     }
 
     let allItems = [];
@@ -830,7 +840,7 @@
                 window.catFieldName = catField;
                 render(allItems);
 
-                Papa.parse(CSV_OFFERS, {
+                Papa.parse(getOffersUrl(currentLang), {
                     download: true, header: true, skipEmptyLines: true,
                     complete: r2 => {
                         const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
@@ -1307,23 +1317,34 @@ async function setLang(lang) {
     allItems = [];
     showTranslateSpinner(lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'טוען...');
 
+    // טען קטלוג + מבצעים בשפה הנכונה
     Papa.parse(getCsvUrl(lang), {
         download: true, header: true,
         complete: r => {
-            hideTranslateSpinner();
             allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
-            if (!allItems.length) return;
+            if (!allItems.length) { hideTranslateSpinner(); return; }
             const firstItem = allItems[0];
             const catField = firstItem.hasOwnProperty('Category') ? 'Category' :
                              firstItem.hasOwnProperty('category') ? 'category' :
                              firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
-            if (!catField) return;
+            if (!catField) { hideTranslateSpinner(); return; }
             window.catFieldName = catField;
             const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
             window.allCats = ['הכל', ...new Set(rawCats)].sort();
             buildCatDropdown(window.allCats);
             render(allItems);
-            if (window.allOffers) renderOffers(window.allOffers);
+
+            // טען מבצעים בשפה הנכונה
+            Papa.parse(getOffersUrl(lang), {
+                download: true, header: true, skipEmptyLines: true,
+                complete: r2 => {
+                    hideTranslateSpinner();
+                    const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                    window.activePromoCat = "הכל";
+                    renderOffers(offers);
+                },
+                error: () => { hideTranslateSpinner(); }
+            });
         },
         error: () => { hideTranslateSpinner(); }
     });
