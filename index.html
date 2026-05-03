@@ -935,10 +935,21 @@ function setLang(lang) {
         if (!window.activePromoCat) window.activePromoCat = "הכל";
 
         const field = window.catFieldName || 'Category';
+
+        function normalizeBarcode(b) {
+            if (b === null || b === undefined) return '';
+            let s = String(b).trim();
+            if (s.endsWith('.0')) s = s.slice(0, -2);
+            return s;
+        }
+        function findItemByBarcode(barcode) {
+            const nb = normalizeBarcode(barcode);
+            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
+        }
+
         const cats = ["הכל", ...new Set(
             offers.map(o => {
-                const barcode = (o.Barcode || "").trim();
-                const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+                const item = findItemByBarcode(o.Barcode);
                 return item ? item[field] : null;
             }).filter(Boolean)
         )].sort((a, b) => a === "הכל" ? -1 : a.localeCompare(b, 'he'));
@@ -952,15 +963,31 @@ function setLang(lang) {
             ).join('');
         }
 
+        // Normalize barcode: trim, remove .0 suffix, convert to string
+        function normalizeBarcode(b) {
+            if (b === null || b === undefined) return '';
+            let s = String(b).trim();
+            // Remove trailing .0 (Excel sometimes converts barcodes to floats)
+            if (s.endsWith('.0')) s = s.slice(0, -2);
+            return s;
+        }
+
+        // Pre-build a lookup map for faster matching
+        function findItemByBarcode(barcode) {
+            const nb = normalizeBarcode(barcode);
+            return allItems.find(x => normalizeBarcode(x.Barcode) === nb);
+        }
+
         window.filterPromos = function(cat) {
             window.activePromoCat = cat;
             buildPromoFilters();
             const filtered = cat === "הכל"
                 ? window.allOffers
                 : window.allOffers.filter(o => {
-                    const barcode = (o.Barcode || "").trim();
-                    const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
-                    return item && item[field] === cat;
+                    const item = findItemByBarcode(o.Barcode);
+                    // If item not found in catalog → show in all categories (don't hide it)
+                    if (!item) return true;
+                    return item[field] === cat;
                 });
             renderPromoGrid(filtered);
         };
@@ -969,12 +996,12 @@ function setLang(lang) {
 
         // Slider
         const sliderHtml = offers.map(o => {
-            const barcode = (o.Barcode || "").trim();
+            const barcode = normalizeBarcode(o.Barcode);
             const desc = o.Description || o.Discreption || o.Name || "";
             const price = o.UnitPrice || o.Price || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
-            const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+            const catalogItem = findItemByBarcode(o.Barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
@@ -997,14 +1024,15 @@ function setLang(lang) {
         const countEl = document.getElementById('promo-count');
         if (countEl) countEl.textContent = t.promo_showing.replace('{n}', offers.length);
 
+        function nb(b) { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; }
         const gridHtml = offers.map(o => {
-            const barcode = (o.Barcode || "").trim();
+            const barcode = nb(o.Barcode);
             const desc = o.Description || o.Discreption || o.Name || (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
             const price = o.UnitPrice || o.Price || "";
             const valid = o.Valid || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
-            const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+            const catalogItem = allItems.find(x => nb(x.Barcode) === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const cat = catalogItem ? (catalogItem[field] || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
