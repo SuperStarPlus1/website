@@ -773,6 +773,38 @@ let currentLang = 'he';
 // ── Translation cache for dynamic sheet data ──
 const translationCache = { he: null, ar: null, en: null };
 
+async function translateBatch(items, targetLang, type) {
+    if (!items.length) return {};
+    const BATCH = 60;
+    const result = {};
+    for (let i = 0; i < items.length; i += BATCH) {
+        const chunk = items.slice(i, i + BATCH);
+        const prompt = `You are a product catalog translator for an Israeli supermarket.
+Translate each Hebrew text to ${targetLang}. Keep brand names and numbers as-is.
+Return ONLY a JSON object mapping each Hebrew key to its translation. No markdown, no extra text.
+Example: {"חלב תנובה 3%":"Tnuva Milk 3%","לחם אחיד":"White Bread"}
+
+Texts to translate: ${JSON.stringify(chunk)}`;
+        try {
+            const r = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 2000,
+                    messages: [{ role: "user", content: prompt }]
+                })
+            });
+            const d = await r.json();
+            if (d.error) { console.error('API error:', d.error); continue; }
+            const text = (d.content || []).map(b => b.text || '').join('');
+            const clean = text.replace(/```json|```/g, '').trim();
+            Object.assign(result, JSON.parse(clean));
+        } catch(e) { console.error('Batch error:', e); }
+    }
+    return result;
+}
+
 async function translateSheetData(lang) {
     if (lang === 'he') return;
     if (translationCache[lang]) return;
@@ -782,42 +814,23 @@ async function translateSheetData(lang) {
 
     try {
         const field = window.catFieldName || 'Category';
+        const targetLang = lang === 'ar' ? 'Arabic' : 'English';
+
         const names = [...new Set(allItems.map(i => i.Name).filter(Boolean))];
         const cats  = [...new Set(allItems.map(i => i[field]).filter(Boolean))];
         const descs = [...new Set(
-            (window.allOffers || []).map(o => o.Description || o.Discreption || o.Name || '').filter(Boolean)
+            (window.allOffers || []).map(o => (o.Description || o.Discreption || o.Name || '').trim()).filter(Boolean)
         )];
 
-        const targetLang = lang === 'ar' ? 'Arabic' : 'English';
+        // Run cats first (small, fast), then names+descs in parallel batches
+        const [tCats, tNames, tDescs] = await Promise.all([
+            translateBatch(cats, targetLang, 'cats'),
+            translateBatch(names, targetLang, 'names'),
+            translateBatch(descs, targetLang, 'descs')
+        ]);
 
-        const prompt = `You are a product catalog translator for an Israeli supermarket.
-Translate the following Hebrew texts to ${targetLang}.
-Keep brand names, numbers, and barcodes unchanged.
-Return ONLY a valid JSON object with exactly this structure, no markdown:
-{
-  "names": { "hebrew_name": "translated_name" },
-  "cats":  { "hebrew_cat":  "translated_cat" },
-  "descs": { "hebrew_desc": "translated_desc" }
-}
-
-names: ${JSON.stringify(names)}
-cats: ${JSON.stringify(cats)}
-descs: ${JSON.stringify(descs)}`;
-
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 4000,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
-
-        const data = await response.json();
-        const text = (data.content || []).map(b => b.text || '').join('');
-        const clean = text.replace(/```json|```/g, '').trim();
-        translationCache[lang] = JSON.parse(clean);
+        translationCache[lang] = { names: tNames, cats: tCats, descs: tDescs };
+        console.log(`[i18n] ${lang} cache ready — names:${Object.keys(tNames).length} cats:${Object.keys(tCats).length} descs:${Object.keys(tDescs).length}`);
     } catch (e) {
         console.error('Translation error:', e);
         translationCache[lang] = { names: {}, cats: {}, descs: {} };
