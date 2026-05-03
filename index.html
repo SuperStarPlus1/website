@@ -51,6 +51,28 @@
         .price { color: #d32f2f; font-weight: bold; font-size: 1.3rem; }
         .barcode { font-size: 0.7rem; color: #999; margin-top: auto; padding-top: 8px; border-top: 1px solid #f9f9f9; }
 
+        /* סינון מבצעים */
+        .promo-filter-bar {
+            display: flex; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 20px; padding: 15px;
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .promo-filter-bar button {
+            padding: 8px 18px; border-radius: 20px;
+            border: 2px solid var(--blue); background: white;
+            color: var(--blue); font-weight: bold;
+            font-size: 0.9rem; cursor: pointer; transition: 0.2s;
+            white-space: nowrap;
+        }
+        .promo-filter-bar button.active {
+            background: var(--blue); color: white;
+        }
+        .promo-filter-bar button:hover:not(.active) {
+            background: #e6f1fb;
+        }
+        .promo-count { font-size: 0.85rem; color: #888; margin-bottom: 12px; padding-right: 4px; }
+
         /* עיצוב חדש לצור קשר */
         .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
         .dept-card { 
@@ -426,7 +448,15 @@
         </div>
     </div>
 
-    <div id="promos-page" class="page"><div class="content-wrap"><h2 class="section-title">מבצעים</h2><div id="promo-full" class="grid"></div></div></div>
+    <div id="promos-page" class="page">
+        <div class="content-wrap">
+            <h2 class="section-title">מבצעים</h2>
+            <div class="promo-filter-bar" id="promo-filter-bar"></div>
+            <div class="promo-count" id="promo-count"></div>
+            <div id="promo-full" class="grid"></div>
+        </div>
+    </div>
+
     <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
 
     <div id="about-page" class="page">
@@ -508,17 +538,14 @@
             </div>
         </div>
     </div>
+
     <div id="club-page" class="page">
         <div class="content-wrap">
-
-            <!-- Hero -->
             <div class="club-hero">
                 <h1>⭐ מועדון לקוחות סופרסטאר</h1>
                 <p>הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה</p>
                 <div class="hero-badge">🎁 סל קניות 41 מתנה לכל חברי המועדון!</div>
             </div>
-
-            <!-- סטטיסטיקות -->
             <div class="club-stats">
                 <div class="stat-box">
                     <div class="stat-num">1,500</div>
@@ -537,14 +564,12 @@
                     <div class="stat-label">לפי ממוצע קניות ללקוח</div>
                 </div>
             </div>
-
-            <!-- הטבות -->
             <h2 class="section-title">מה מקבלים חברי המועדון?</h2>
             <div class="benefits-grid">
                 <div class="benefit-card">
                     <div class="benefit-icon">🛒</div>
-                    <h3>סל קניות 41 מתנה</h3>
-                    <p>כל חברי המועדון מקבלים סל קניות 41 — מתנה בלעדית לחברים</p>
+                    <h3>סל קניות ₪41 מתנה</h3>
+                    <p>כל חברי המועדון מקבלים סל קניות ₪41 — מתנה בלעדית לחברים</p>
                 </div>
                 <div class="benefit-card">
                     <div class="benefit-icon">🏷️</div>
@@ -572,8 +597,6 @@
                     <p>חנות 1,500 מ"ר עם עיצוב חכם, חניה נגישה ושירות מקצועי תמיד</p>
                 </div>
             </div>
-
-            <!-- כרטיס שטיפת רכב -->
             <div class="carwash-card">
                 <div class="carwash-scene">
                     <div class="road"></div>
@@ -616,13 +639,10 @@
                     <div class="carwash-cta">קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨</div>
                 </div>
             </div>
-
-            <!-- טופס רישום -->
             <div class="club-form-wrap">
                 <h2>🚀 הצטרפו עכשיו — בחינם!</h2>
                 <iframe src="https://superstarplus1.github.io/website/club_form.html" class="form-iframe" id="club-iframe"></iframe>
             </div>
-
         </div>
     </div>
 
@@ -635,7 +655,6 @@
     <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
 </div>
 
-<!-- באנר מועדון -->
 <div id="club-banner">
     <div class="banner-text">
         🎁 הצטרפו למועדון לקוחות סופרסטאר ו<span>קבלו סל קניות 41 במתנה!</span>
@@ -710,7 +729,48 @@
         }
     }
 
+    // ── מבצעים: בונה כפתורי קטגוריות ומרנדר גריד ──
     function renderOffers(offers) {
+        window.allOffers = offers;
+        window.activePromoCat = "הכל";
+
+        // שלוף קטגוריה לכל מבצע לפי ברקוד מהקטלוג
+        const field = window.catFieldName || 'Category';
+        const cats = ["הכל", ...new Set(
+            offers
+                .map(o => {
+                    const barcode = (o.Barcode || "").trim();
+                    const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+                    return item ? item[field] : null;
+                })
+                .filter(Boolean)
+        )].sort((a, b) => a === "הכל" ? -1 : a.localeCompare(b, 'he'));
+
+        // בנה כפתורי סינון — רק בטאב מבצעים
+        function buildPromoFilters() {
+            const bar = document.getElementById('promo-filter-bar');
+            if (!bar) return;
+            bar.innerHTML = cats.map(c =>
+                `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active"' : ''}>${c}</button>`
+            ).join('');
+        }
+
+        window.filterPromos = function(cat) {
+            window.activePromoCat = cat;
+            buildPromoFilters();
+            const filtered = cat === "הכל"
+                ? window.allOffers
+                : window.allOffers.filter(o => {
+                    const barcode = (o.Barcode || "").trim();
+                    const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+                    return item && item[field] === cat;
+                });
+            renderPromoGrid(filtered);
+        };
+
+        buildPromoFilters();
+
+        // סליידר בדף הבית — ללא סינון, כל המבצעים
         const sliderHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
             const desc = o.Description || o.Discreption || o.Name || "";
@@ -728,6 +788,17 @@
                     ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
                 </div>`;
         }).join('');
+        const slider = document.getElementById('promo-slider');
+        if(slider) slider.innerHTML = sliderHtml + sliderHtml;
+
+        // גריד מבצעים עם כל המוצרים בהתחלה
+        renderPromoGrid(offers);
+    }
+
+    function renderPromoGrid(offers) {
+        const field = window.catFieldName || 'Category';
+        const countEl = document.getElementById('promo-count');
+        if (countEl) countEl.textContent = `מציג ${offers.length} מוצרים`;
 
         const gridHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
@@ -738,20 +809,20 @@
             const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע:` : `מחיר ליח' במבצע:`;
             const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
+            const cat = catalogItem ? (catalogItem[field] || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card">
                     <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                     <h3>${desc}</h3>
+                    ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;">${cat}</div>` : ""}
                     ${price ? `<div class="price"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
                     ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
                 </div>`;
         }).join('');
 
-        const slider = document.getElementById('promo-slider');
         const grid = document.getElementById('promo-full');
-        if(slider) slider.innerHTML = sliderHtml + sliderHtml;
         if(grid) grid.innerHTML = gridHtml;
     }
 
@@ -774,7 +845,6 @@
             window.catFieldName = catField;
             render(allItems);
 
-            // טעינת המבצעים אחרי שהקטלוג מוכן
             Papa.parse(CSV_OFFERS, {
                 download: true, header: true, skipEmptyLines: true,
                 complete: r2 => {
@@ -886,7 +956,6 @@
             document.getElementById('club-banner').classList.add('hidden');
             return;
         }
-        // הצג באנר אחרי 3 שניות
         setTimeout(() => {
             document.getElementById('club-banner').style.display = 'flex';
         }, 3000);
