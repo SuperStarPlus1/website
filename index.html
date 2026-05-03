@@ -770,66 +770,127 @@ const TRANSLATIONS = {
 // ── Current language ──
 let currentLang = 'he';
 
-function setLang(lang) {
+// ── Translation cache for dynamic sheet data ──
+const translationCache = { he: null, ar: null, en: null };
+
+async function translateSheetData(lang) {
+    if (lang === 'he') return;
+    if (translationCache[lang]) return;
+
+    const loadingMsg = lang === 'ar' ? 'جاري الترجمة...' : 'Translating...';
+    showTranslateSpinner(loadingMsg);
+
+    try {
+        const field = window.catFieldName || 'Category';
+        const names = [...new Set(allItems.map(i => i.Name).filter(Boolean))];
+        const cats  = [...new Set(allItems.map(i => i[field]).filter(Boolean))];
+        const descs = [...new Set(
+            (window.allOffers || []).map(o => o.Description || o.Discreption || o.Name || '').filter(Boolean)
+        )];
+
+        const targetLang = lang === 'ar' ? 'Arabic' : 'English';
+
+        const prompt = `You are a product catalog translator for an Israeli supermarket.
+Translate the following Hebrew texts to ${targetLang}.
+Keep brand names, numbers, and barcodes unchanged.
+Return ONLY a valid JSON object with exactly this structure, no markdown:
+{
+  "names": { "hebrew_name": "translated_name" },
+  "cats":  { "hebrew_cat":  "translated_cat" },
+  "descs": { "hebrew_desc": "translated_desc" }
+}
+
+names: ${JSON.stringify(names)}
+cats: ${JSON.stringify(cats)}
+descs: ${JSON.stringify(descs)}`;
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 4000,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        const data = await response.json();
+        const text = (data.content || []).map(b => b.text || '').join('');
+        const clean = text.replace(/```json|```/g, '').trim();
+        translationCache[lang] = JSON.parse(clean);
+    } catch (e) {
+        console.error('Translation error:', e);
+        translationCache[lang] = { names: {}, cats: {}, descs: {} };
+    } finally {
+        hideTranslateSpinner();
+    }
+}
+
+function getTranslated(lang, type, original) {
+    if (lang === 'he' || !translationCache[lang]) return original;
+    return (translationCache[lang][type] || {})[original] || original;
+}
+
+function showTranslateSpinner(msg) {
+    let el = document.getElementById('translate-spinner');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'translate-spinner';
+        el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0076DA;color:white;padding:10px 24px;border-radius:25px;font-weight:bold;z-index:4000;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:flex;align-items:center;gap:10px;';
+        el.innerHTML = '<span style="display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;"></span><span id="translate-msg"></span>';
+        document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+        document.body.appendChild(el);
+    }
+    document.getElementById('translate-msg').textContent = msg;
+    el.style.display = 'flex';
+}
+
+function hideTranslateSpinner() {
+    const el = document.getElementById('translate-spinner');
+    if (el) el.style.display = 'none';
+}
+
+async function setLang(lang) {
     currentLang = lang;
     const t = TRANSLATIONS[lang];
-    const body = document.body;
-    body.setAttribute('data-lang', lang);
+    document.body.setAttribute('data-lang', lang);
     document.documentElement.setAttribute('lang', t.html_lang);
     document.documentElement.setAttribute('dir', t.lang_dir);
     document.title = t.doc_title;
 
-    // Update skip link
     const skip = document.getElementById('skip-to-main');
     if (skip) skip.textContent = t.skip_link;
 
-    // Update all data-i18n elements
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (t[key] !== undefined) {
-            if (el.tagName === 'INPUT') {
-                // skip — handled by placeholder
-            } else {
-                el.innerHTML = t[key];
-            }
-        }
+        if (t[key] !== undefined && el.tagName !== 'INPUT') el.innerHTML = t[key];
     });
 
-    // Update placeholders
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
         if (t[key] !== undefined) el.placeholder = t[key];
     });
 
-    // Update lang buttons
     document.querySelectorAll('.lang-btn').forEach(btn => {
         const btnLang = btn.getAttribute('onclick').replace("setLang('", '').replace("')", '');
         btn.classList.toggle('active', btnLang === lang);
         btn.setAttribute('aria-pressed', btnLang === lang ? 'true' : 'false');
     });
 
-    // Update a11y bar label
     const a11yBar = document.getElementById('a11y-bar');
     if (a11yBar) a11yBar.setAttribute('aria-label', t.a11y_bar_label);
 
-    // Re-render dynamic content with translated labels
+    // Translate sheet data then re-render
+    if (allItems.length > 0) {
+        await translateSheetData(lang);
+    }
+
     if (window.allOffers) renderOffers(window.allOffers);
     if (allItems.length) render(allItems.filter(i => {
         const field = window.catFieldName || 'Category';
-        const iCat = i[field];
-        return curCat === "הכל" || curCat === "جميع" || curCat === "All" || iCat === curCat;
+        return curCat === 'הכל' || i[field] === curCat;
     }));
 
-    // Update promo count
-    if (window.allOffers) {
-        const countEl = document.getElementById('promo-count');
-        if (countEl) {
-            const n = window.allOffers.length;
-            countEl.textContent = t.promo_showing.replace('{n}', n);
-        }
-    }
-
-    // Update "all categories" label in dropdown
     if (window.allCats) buildCatDropdown(window.allCats);
 }
 </script>
@@ -910,17 +971,21 @@ function setLang(lang) {
         const t = TRANSLATIONS[currentLang];
         const container = document.getElementById('catalog-grid');
         const slice = data.slice(0, limit);
-        container.innerHTML = slice.map(i => `
-            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${(i.Name||'').replace(/'/g,"\\'")}', '${i.Price||''}')">
+        container.innerHTML = slice.map(i => {
+            const tName = getTranslated(currentLang, 'names', i.Name || '');
+            const safeDesc = tName.replace(/'/g, "\\'");
+            return `
+            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||''}')">
                 <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
-                    onclick="zoom(this.src, '${(i.Name||'').replace(/'/g,"\\'")}', '${i.Price||''}')"
+                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')"
                     loading="lazy"
-                    alt="${i.Name || 'מוצר'}"
+                    alt="${tName || 'מוצר'}"
                     onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
-                <h3>${i.Name || ''}</h3>
+                <h3>${tName || ''}</h3>
                 <div class="price" aria-label="${t.promo_unit} ₪${i.Price}">₪${i.Price || ''}</div>
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
         const oldBtn = document.getElementById('loadMore');
         if (oldBtn) oldBtn.remove();
         if (data.length > limit) {
@@ -958,9 +1023,10 @@ function setLang(lang) {
             const bar = document.getElementById('promo-filter-bar');
             if (!bar) return;
             const allLabel = t.cat_all || "כל הקטגוריות";
-            bar.innerHTML = cats.map(c =>
-                `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${c === "הכל" ? allLabel : c}</button>`
-            ).join('');
+            bar.innerHTML = cats.map(c => {
+                const displayCat = c === "הכל" ? allLabel : getTranslated(currentLang, 'cats', c);
+                return `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${displayCat}</button>`;
+            }).join('');
         }
 
         // Normalize barcode: trim, remove .0 suffix, convert to string
@@ -997,7 +1063,8 @@ function setLang(lang) {
         // Slider
         const sliderHtml = offers.map(o => {
             const barcode = normalizeBarcode(o.Barcode);
-            const desc = o.Description || o.Discreption || o.Name || "";
+            const rawDesc2 = o.Description || o.Discreption || o.Name || "";
+            const desc = rawDesc2 ? getTranslated(currentLang, 'descs', rawDesc2) : "";
             const price = o.UnitPrice || o.Price || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
@@ -1027,14 +1094,18 @@ function setLang(lang) {
         function nb(b) { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; }
         const gridHtml = offers.map(o => {
             const barcode = nb(o.Barcode);
-            const desc = o.Description || o.Discreption || o.Name || (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
+            const rawDesc = o.Description || o.Discreption || o.Name || '';
+            const desc = rawDesc
+                ? getTranslated(currentLang, 'descs', rawDesc)
+                : (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
             const price = o.UnitPrice || o.Price || "";
             const valid = o.Valid || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = allItems.find(x => nb(x.Barcode) === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
-            const cat = catalogItem ? (catalogItem[field] || "") : "";
+            const rawCat = catalogItem ? (catalogItem[field] || "") : "";
+            const cat = rawCat ? getTranslated(currentLang, 'cats', rawCat) : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
@@ -1127,13 +1198,15 @@ function setLang(lang) {
         const t = TRANSLATIONS[currentLang];
         const dd = document.getElementById('cat-dropdown');
         if (!dd) return;
-        dd.innerHTML = cats.map(c => `
-            <div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
+        dd.innerHTML = cats.map(c => {
+            const displayC = c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : getTranslated(currentLang, 'cats', c);
+            return `<div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
                  role="option" tabindex="0"
                  onkeypress="if(event.key==='Enter') selectCat('${c}')"
                  onmouseover="this.style.background='#f4f7f9'" onmouseout="this.style.background='white'">
-                ${c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : c}
-            </div>`).join('');
+                ${displayC}
+            </div>`;
+        }).join('');
     }
 
     function showCatDropdown() {
