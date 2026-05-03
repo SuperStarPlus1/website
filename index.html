@@ -6,18 +6,102 @@
     <title>סופר סטאר פלוס</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         ACCESSIBILITY STYLES — Israel SI 5568 / WCAG 2.1 AA
+    ════════════════════════════════════════════════════════════ -->
+    <style>
+        /* ─── Skip Link ─────────────────────────────────────── */
+        .skip-link {
+            position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+            background: #ffcc00; color: #0076DA; padding: 10px 20px; border-radius: 0 0 10px 10px;
+            font-weight: bold; font-size: 1rem; z-index: 9999; text-decoration: none;
+            transition: top 0.2s; white-space: nowrap;
+        }
+        .skip-link:focus { top: 0; }
+
+        /* ─── Accessibility Toolbar ─────────────────────────── */
+        #a11y-bar {
+            position: fixed; top: 50%; right: 0; transform: translateY(-50%);
+            z-index: 3000; display: flex; flex-direction: column; gap: 4px;
+            background: white; border-radius: 12px 0 0 12px;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15); padding: 8px 6px;
+            border: 2px solid #0076DA; border-right: none;
+        }
+        .a11y-btn {
+            width: 42px; height: 42px; border-radius: 8px; border: none;
+            background: #f4f7f9; color: #333; cursor: pointer; font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; position: relative; flex-shrink: 0;
+        }
+        .a11y-btn:hover, .a11y-btn.on { background: #0076DA; color: white; }
+        .a11y-btn:focus-visible { outline: 3px solid #ffcc00; outline-offset: 2px; }
+        .a11y-btn[title]:hover::after {
+            content: attr(title); position: absolute; right: 52px; top: 50%; transform: translateY(-50%);
+            background: #333; color: white; padding: 4px 10px; border-radius: 6px;
+            font-size: 0.8rem; white-space: nowrap; pointer-events: none; z-index: 100;
+        }
+
+        /* ─── Lang Switcher ──────────────────────────────────── */
+        #lang-switcher {
+            display: flex; gap: 4px; align-items: center; margin-right: 15px;
+            border-right: 1px solid rgba(255,255,255,0.3); padding-right: 15px;
+        }
+        .lang-btn {
+            padding: 4px 10px; border-radius: 15px; border: 2px solid rgba(255,255,255,0.5);
+            background: transparent; color: white; font-weight: bold; cursor: pointer;
+            font-size: 0.82rem; transition: 0.2s; white-space: nowrap;
+        }
+        .lang-btn.active, .lang-btn:hover { background: var(--yellow); color: var(--blue); border-color: var(--yellow); }
+        .lang-btn:focus-visible { outline: 3px solid #ffcc00; outline-offset: 2px; }
+
+        /* ─── Accessibility Modes ──────────────────────────── */
+        body.high-contrast {
+            filter: contrast(1.6) saturate(0);
+        }
+        body.large-text { font-size: 120% !important; }
+        body.large-text .card h3 { font-size: 1.05rem; }
+        body.large-text .nav-links li { font-size: 1.05rem; }
+
+        /* All focusable elements get visible outline */
+        *:focus-visible {
+            outline: 3px solid #ffcc00 !important;
+            outline-offset: 2px !important;
+            border-radius: 4px;
+        }
+        /* Reduce motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+        }
+        body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+            animation-duration: 0.001ms !important; transition-duration: 0.001ms !important;
+        }
+
+        /* ─── Keyboard Nav Highlight ─────────────────────── */
+        .card:focus-within { outline: 3px solid #0076DA; }
+
+    </style>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN STYLES
+    ════════════════════════════════════════════════════════════ -->
     <style>
         :root { --blue: #0076DA; --yellow: #ffcc00; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); direction: rtl; }
+        body[data-lang="ar"] { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; }
+        body[data-lang="en"] { direction: ltr; font-family: 'Segoe UI', Tahoma, sans-serif; }
 
         header { background: var(--blue); position: fixed; top: 0; width: 100%; z-index: 1000; height: 85px; }
         .nav-container { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; height: 100%; padding: 0 20px; justify-content: flex-start; }
-        
+        body[data-lang="en"] .nav-container { flex-direction: row-reverse; }
+
         .logo img { height: 170px; margin-top: 30px; cursor: pointer; margin-left: 30px; }
-        
+        body[data-lang="en"] .logo img { margin-left: 0; margin-right: 30px; }
+
         .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
+        .nav-links li[tabindex="0"]:focus-visible { outline: 3px solid #ffcc00 !important; }
 
         main { max-width: 100%; margin: 120px auto 50px; }
         .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
@@ -25,13 +109,11 @@
         .page.active { display: block; }
 
         .news-ticker {
-            background: transparent; color: var(--blue); height: 40px; line-height: 40px; 
-            font-weight: bold; font-size: 1.1rem; overflow: hidden; white-space: nowrap; 
+            background: transparent; color: var(--blue); height: 40px; line-height: 40px;
+            font-weight: bold; font-size: 1.1rem; overflow: hidden; white-space: nowrap;
             position: absolute; top: 85px; width: 100%; z-index: 999;
         }
-        .ticker-content {
-            display: inline-block; position: absolute; animation: ticker 25s linear infinite; left: 0; will-change: transform;
-        }
+        .ticker-content { display: inline-block; position: absolute; animation: ticker 25s linear infinite; left: 0; will-change: transform; }
         @keyframes ticker { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }
 
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -51,50 +133,25 @@
         .price { color: #d32f2f; font-weight: bold; font-size: 1.3rem; }
         .barcode { font-size: 0.7rem; color: #999; margin-top: auto; padding-top: 8px; border-top: 1px solid #f9f9f9; }
 
-        /* סינון מבצעים */
-        .promo-filter-bar {
-            display: flex; gap: 8px; flex-wrap: wrap;
-            margin-bottom: 20px; padding: 15px;
-            background: white; border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .promo-filter-bar button {
-            padding: 8px 18px; border-radius: 20px;
-            border: 2px solid var(--blue); background: white;
-            color: var(--blue); font-weight: bold;
-            font-size: 0.9rem; cursor: pointer; transition: 0.2s;
-            white-space: nowrap;
-        }
-        .promo-filter-bar button.active {
-            background: var(--blue); color: white;
-        }
-        .promo-filter-bar button:hover:not(.active) {
-            background: #e6f1fb;
-        }
+        .promo-filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .promo-filter-bar button { padding: 8px 18px; border-radius: 20px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .promo-filter-bar button.active { background: var(--blue); color: white; }
+        .promo-filter-bar button:hover:not(.active) { background: #e6f1fb; }
         .promo-count { font-size: 0.85rem; color: #888; margin-bottom: 12px; padding-right: 4px; }
 
-        /* עיצוב חדש לצור קשר */
         .contact-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .dept-card { 
-            background: white; padding: 25px; border-radius: 20px; text-align: center; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; border-bottom: 5px solid #eee;
-        }
+        .dept-card { background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; border-bottom: 5px solid #eee; }
         .dept-card:hover { transform: translateY(-5px); }
-        .icon-circle {
-            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; margin: 0 auto 15px; font-size: 24px;
-        }
+        .icon-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 24px; }
         .icon-blue { color: #0076DA; background: #e6f1fa; }
         .icon-red { color: #d32f2f; background: #fdeaea; }
         .icon-green { color: #2e7d32; background: #eaf5eb; }
         .icon-orange { color: #ef6c00; background: #fff3e0; }
         .work-hours { font-weight: bold; color: var(--blue); font-size: 1.1rem; margin-top: 10px; display: block; }
-        .contact-footer {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px; margin-top: 30px; padding: 20px; background: #fff; border-radius: 15px; text-align: center;
-        }
+        .contact-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 30px; padding: 20px; background: #fff; border-radius: 15px; text-align: center; }
         .contact-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .map-container { width: 100%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); }
+
         .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
         .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .waze { background-color: #33CCFF; }
@@ -105,276 +162,93 @@
         #lb-desc { color: white; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
         #lb-price { color: #ffcc00; font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
         h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
+        body[data-lang="en"] h2.section-title { border-right: none; border-left: 6px solid var(--yellow); padding-right: 0; padding-left: 15px; }
 
         .image-roll-container { width: 100%; max-width: 800px; margin: 20px auto; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; cursor: pointer; background: transparent; position: relative; }
         .roll-item { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .roll-item img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal-overlay img { max-width: 90%; max-height: 90%; border-radius: 5px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        /* עיצוב משופר לעמוד אודות */
-        .about-header {
-            text-align: center;
-            background: linear-gradient(rgba(0,118,218,0.9), rgba(0,118,218,0.9)), url('https://res.cloudinary.com/dj56w7nb9/image/upload/v1/store-front.jpg');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 60px 20px;
-            border-radius: 20px;
-            margin-bottom: 40px;
-        }
+
+        .about-header { text-align: center; background: linear-gradient(rgba(0,118,218,0.9), rgba(0,118,218,0.9)); background-size: cover; background-position: center; color: white; padding: 60px 20px; border-radius: 20px; margin-bottom: 40px; }
         .about-header h1 { font-size: 2.5rem; margin-bottom: 15px; }
         .about-header p { font-size: 1.2rem; max-width: 800px; margin: 0 auto; line-height: 1.6; }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-        .feature-item {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            border-top: 4px solid var(--yellow);
-            transition: 0.3s;
-        }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 40px; }
+        .feature-item { background: white; padding: 25px; border-radius: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--yellow); transition: 0.3s; }
         .feature-item:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
         .feature-item i { font-size: 2.5rem; color: var(--blue); margin-bottom: 15px; }
         .feature-item h4 { margin: 10px 0; font-size: 1.1rem; color: #333; }
         .feature-item p { font-size: 0.9rem; color: #666; line-height: 1.4; margin: 0; }
-        
-        .quote-box {
-            background: #fff;
-            border-right: 5px solid var(--blue);
-            padding: 20px;
-            margin: 40px 0;
-            font-style: italic;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-        .social-link-item { margin-right: 20px; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; display: flex; gap: 15px; }
-        .social-link-item a { color: white; font-size: 1.2rem; transition: 0.3s; }
-        .social-link-item a:hover { color: var(--yellow); }
-        .social-links-area {
-            margin-right: 30px;
-            display: flex !important;
-            gap: 15px;
-            align-items: center;
-            border-right: 1px solid rgba(255,255,255,0.3);
-            padding-right: 20px;
-        }
-        .social-links-area a {
-            color: white;
-            font-size: 1.3rem;
-            transition: 0.3s ease;
-            text-decoration: none;
-        }
-        .social-links-area a:hover {
-            color: var(--yellow);
-            transform: scale(1.1);
-        }
-        .social-links-area:hover { background: transparent !important; }
+        .quote-box { background: #fff; border-right: 5px solid var(--blue); padding: 20px; margin: 40px 0; font-style: italic; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        body[data-lang="en"] .quote-box { border-right: none; border-left: 5px solid var(--blue); }
 
-        /* באנר מועדון */
-        #club-banner {
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1500;
-            background: linear-gradient(135deg, #0076DA, #005bb5);
-            color: white; padding: 12px 20px;
-            display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-            transition: transform 0.4s ease;
-        }
+        .social-links-area { margin-right: 30px; display: flex !important; gap: 15px; align-items: center; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 20px; }
+        .social-links-area a { color: white; font-size: 1.3rem; transition: 0.3s ease; text-decoration: none; }
+        .social-links-area a:hover { color: var(--yellow); transform: scale(1.1); }
+
+        #club-banner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1500; background: linear-gradient(135deg, #0076DA, #005bb5); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 -4px 20px rgba(0,0,0,0.2); transition: transform 0.4s ease; }
         #club-banner.hidden { transform: translateY(100%); }
         #club-banner .banner-text { font-size: 0.95rem; font-weight: bold; }
         #club-banner .banner-text span { color: var(--yellow); }
         #club-banner .banner-actions { display: flex; gap: 10px; align-items: center; }
-        #club-banner .banner-btn {
-            background: var(--yellow); color: var(--blue); border: none;
-            padding: 8px 18px; border-radius: 20px; font-weight: bold;
-            cursor: pointer; font-size: 0.9rem; white-space: nowrap;
-        }
-        #club-banner .banner-close {
-            background: none; border: none; color: rgba(255,255,255,0.7);
-            font-size: 1.3rem; cursor: pointer; padding: 0 5px; line-height: 1;
-        }
+        #club-banner .banner-btn { background: var(--yellow); color: var(--blue); border: none; padding: 8px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+        #club-banner .banner-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 1.3rem; cursor: pointer; padding: 0 5px; line-height: 1; }
 
-        /* דף מועדון */
-        .club-hero {
-            background: linear-gradient(135deg, #0076DA 0%, #005bb5 100%);
-            color: white; padding: 60px 20px; border-radius: 20px;
-            text-align: center; margin-bottom: 40px; position: relative; overflow: hidden;
-        }
-        .club-hero::before {
-            content: '★'; position: absolute; font-size: 200px; opacity: 0.05;
-            top: -30px; right: -20px; line-height: 1;
-        }
+        .club-hero { background: linear-gradient(135deg, #0076DA 0%, #005bb5 100%); color: white; padding: 60px 20px; border-radius: 20px; text-align: center; margin-bottom: 40px; position: relative; overflow: hidden; }
+        .club-hero::before { content: '★'; position: absolute; font-size: 200px; opacity: 0.05; top: -30px; right: -20px; line-height: 1; }
         .club-hero h1 { font-size: 2.2rem; margin: 0 0 10px; }
         .club-hero p { font-size: 1.1rem; margin: 0; opacity: 0.9; }
-        .club-hero .hero-badge {
-            display: inline-block; background: var(--yellow); color: var(--blue);
-            padding: 8px 25px; border-radius: 30px; font-weight: bold;
-            font-size: 1.1rem; margin-top: 20px;
-        }
+        .club-hero .hero-badge { display: inline-block; background: var(--yellow); color: var(--blue); padding: 8px 25px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; margin-top: 20px; }
 
-        .benefits-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px; margin-bottom: 40px;
-        }
-        .benefit-card {
-            background: white; border-radius: 15px; padding: 25px; text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.06); border-top: 4px solid var(--yellow);
-            transition: 0.3s;
-        }
+        .benefits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .benefit-card { background: white; border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.06); border-top: 4px solid var(--yellow); transition: 0.3s; }
         .benefit-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .benefit-card .benefit-icon { font-size: 2.5rem; margin-bottom: 12px; }
         .benefit-card h3 { color: var(--blue); margin: 0 0 8px; font-size: 1rem; }
         .benefit-card p { color: #666; font-size: 0.88rem; margin: 0; line-height: 1.5; }
 
-        .club-stats {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px; margin-bottom: 40px;
-        }
-        .stat-box {
-            background: var(--blue); color: white; border-radius: 15px;
-            padding: 20px; text-align: center;
-        }
+        .club-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 40px; }
+        .stat-box { background: var(--blue); color: white; border-radius: 15px; padding: 20px; text-align: center; }
         .stat-box .stat-num { font-size: 2rem; font-weight: bold; color: var(--yellow); }
         .stat-box .stat-label { font-size: 0.85rem; opacity: 0.9; margin-top: 5px; }
-
-        .club-form-wrap {
-            background: white; border-radius: 20px; padding: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        }
+        .club-form-wrap { background: white; border-radius: 20px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); }
         .club-form-wrap h2 { color: var(--blue); margin: 0 0 20px; text-align: center; }
 
-        /* כרטיס שטיפת רכב */
-        .carwash-card {
-            background: linear-gradient(135deg, #e8f4fd, #fff);
-            border-radius: 20px; padding: 30px;
-            display: flex; gap: 30px; align-items: center;
-            box-shadow: 0 5px 20px rgba(0,118,218,0.1);
-            border: 2px solid #d0e8f8;
-            margin-bottom: 40px; flex-wrap: wrap;
-        }
-        .carwash-scene {
-            position: relative; width: 280px; height: 130px;
-            flex-shrink: 0; overflow: hidden; border-radius: 12px;
-            background: linear-gradient(180deg, #87CEEB 0%, #b0e0ff 60%, #888 60%, #666 100%);
-        }
-        .road {
-            position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
-            background: #555;
-        }
-        .road::after {
-            content: ''; position: absolute; top: 50%; left: 0; right: 0;
-            height: 4px; background: repeating-linear-gradient(90deg, #fff 0, #fff 20px, transparent 20px, transparent 40px);
-            transform: translateY(-50%);
-        }
-        .car-wrap {
-            position: absolute; bottom: 15px; left: -80px;
-            animation: drive-car 4s linear infinite;
-        }
+        /* Car wash animation */
+        .carwash-card { background: linear-gradient(135deg, #e8f4fd, #fff); border-radius: 20px; padding: 30px; display: flex; gap: 30px; align-items: center; box-shadow: 0 5px 20px rgba(0,118,218,0.1); border: 2px solid #d0e8f8; margin-bottom: 40px; flex-wrap: wrap; }
+        .carwash-scene { position: relative; width: 280px; height: 130px; flex-shrink: 0; overflow: hidden; border-radius: 12px; background: linear-gradient(180deg, #87CEEB 0%, #b0e0ff 60%, #888 60%, #666 100%); }
+        .road { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: #555; }
+        .road::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, #fff 0, #fff 20px, transparent 20px, transparent 40px); transform: translateY(-50%); }
+        .car-wrap { position: absolute; bottom: 15px; left: -80px; animation: drive-car 4s linear infinite; }
         @keyframes drive-car { 0% { left: -80px; } 100% { left: 320px; } }
-        .car {
-            position: relative; width: 80px; height: 40px;
-        }
-        .car-body {
-            position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
-            background: #0076DA; border-radius: 4px 4px 0 0;
-        }
-        .car-roof {
-            position: absolute; top: -16px; left: 12px; right: 12px; height: 18px;
-            background: #005bb5; border-radius: 8px 8px 0 0;
-        }
+        .car { position: relative; width: 80px; height: 40px; }
+        .car-body { position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: #0076DA; border-radius: 4px 4px 0 0; }
+        .car-roof { position: absolute; top: -16px; left: 12px; right: 12px; height: 18px; background: #005bb5; border-radius: 8px 8px 0 0; }
         .car-windows { position: absolute; top: -14px; left: 14px; right: 14px; display: flex; gap: 4px; }
         .win { height: 12px; background: rgba(255,255,255,0.7); border-radius: 3px 3px 0 0; flex: 1; }
-        .car-door-line {
-            position: absolute; top: 6px; left: 38px; width: 1px; height: 16px; background: rgba(255,255,255,0.4);
-        }
-        .wheel {
-            position: absolute; bottom: -6px; width: 16px; height: 16px;
-            background: #222; border-radius: 50%; border: 3px solid #888;
-            animation: spin-wheel 0.5s linear infinite;
-        }
-        .wheel-front { right: 8px; }
-        .wheel-back { left: 8px; }
+        .car-door-line { position: absolute; top: 6px; left: 38px; width: 1px; height: 16px; background: rgba(255,255,255,0.4); }
+        .wheel { position: absolute; bottom: -6px; width: 16px; height: 16px; background: #222; border-radius: 50%; border: 3px solid #888; animation: spin-wheel 0.5s linear infinite; }
+        .wheel-front { right: 8px; } .wheel-back { left: 8px; }
         @keyframes spin-wheel { to { transform: rotate(360deg); } }
-
-        .wash-portal {
-            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-            width: 50px; height: 90px;
-        }
-        .portal-frame {
-            position: absolute; bottom: 0; left: 0; right: 0; top: 0;
-            border: 6px solid #0076DA; border-bottom: none; border-radius: 4px 4px 0 0;
-            background: rgba(0,118,218,0.1);
-        }
-        .brush {
-            position: absolute; top: 5px; width: 8px; height: 75px;
-            background: repeating-linear-gradient(180deg, #ff6b35 0, #ff6b35 6px, #ffcc00 6px, #ffcc00 12px);
-            border-radius: 4px;
-            animation: brush-spin 0.4s linear infinite;
-        }
-        .brush1 { left: 4px; transform-origin: top center; }
-        .brush2 { right: 4px; transform-origin: top center; animation-direction: reverse; }
+        .wash-portal { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 50px; height: 90px; }
+        .portal-frame { position: absolute; bottom: 0; left: 0; right: 0; top: 0; border: 6px solid #0076DA; border-bottom: none; border-radius: 4px 4px 0 0; background: rgba(0,118,218,0.1); }
+        .brush { position: absolute; top: 5px; width: 8px; height: 75px; background: repeating-linear-gradient(180deg, #ff6b35 0, #ff6b35 6px, #ffcc00 6px, #ffcc00 12px); border-radius: 4px; animation: brush-spin 0.4s linear infinite; }
+        .brush1 { left: 4px; transform-origin: top center; } .brush2 { right: 4px; transform-origin: top center; animation-direction: reverse; }
         @keyframes brush-spin { 0% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } 100% { transform: rotate(-15deg); } }
-
-        .water-drops {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-        }
-        .water-drops span {
-            position: absolute; width: 3px; height: 8px;
-            background: rgba(100,180,255,0.8); border-radius: 50%;
-            animation: drop-fall 0.6s linear infinite;
-        }
-        .water-drops span:nth-child(1) { left: 10%; animation-delay: 0s; }
-        .water-drops span:nth-child(2) { left: 25%; animation-delay: 0.1s; }
-        .water-drops span:nth-child(3) { left: 40%; animation-delay: 0.2s; }
-        .water-drops span:nth-child(4) { left: 55%; animation-delay: 0.05s; }
-        .water-drops span:nth-child(5) { left: 70%; animation-delay: 0.15s; }
-        .water-drops span:nth-child(6) { left: 85%; animation-delay: 0.25s; }
-        .water-drops span:nth-child(7) { left: 18%; animation-delay: 0.3s; }
-        .water-drops span:nth-child(8) { left: 60%; animation-delay: 0.35s; }
+        .water-drops { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+        .water-drops span { position: absolute; width: 3px; height: 8px; background: rgba(100,180,255,0.8); border-radius: 50%; animation: drop-fall 0.6s linear infinite; }
+        .water-drops span:nth-child(1){left:10%;animation-delay:0s} .water-drops span:nth-child(2){left:25%;animation-delay:.1s} .water-drops span:nth-child(3){left:40%;animation-delay:.2s} .water-drops span:nth-child(4){left:55%;animation-delay:.05s} .water-drops span:nth-child(5){left:70%;animation-delay:.15s} .water-drops span:nth-child(6){left:85%;animation-delay:.25s} .water-drops span:nth-child(7){left:18%;animation-delay:.3s} .water-drops span:nth-child(8){left:60%;animation-delay:.35s}
         @keyframes drop-fall { 0% { top: 0; opacity: 1; } 100% { top: 100%; opacity: 0; } }
-
-        .bubbles span {
-            position: absolute; border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(100,180,255,0.3));
-            border: 1px solid rgba(100,180,255,0.5);
-            animation: bubble-rise 1.5s ease-out infinite;
-        }
-        .bubbles span:nth-child(1) { width: 10px; height: 10px; left: 5px; top: 60px; animation-delay: 0s; }
-        .bubbles span:nth-child(2) { width: 7px; height: 7px; left: 25px; top: 50px; animation-delay: 0.3s; }
-        .bubbles span:nth-child(3) { width: 12px; height: 12px; left: 35px; top: 65px; animation-delay: 0.6s; }
-        .bubbles span:nth-child(4) { width: 8px; height: 8px; left: 15px; top: 70px; animation-delay: 0.9s; }
-        .bubbles span:nth-child(5) { width: 6px; height: 6px; left: 42px; top: 55px; animation-delay: 1.2s; }
+        .bubbles span { position: absolute; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(100,180,255,0.3)); border: 1px solid rgba(100,180,255,0.5); animation: bubble-rise 1.5s ease-out infinite; }
+        .bubbles span:nth-child(1){width:10px;height:10px;left:5px;top:60px;animation-delay:0s} .bubbles span:nth-child(2){width:7px;height:7px;left:25px;top:50px;animation-delay:.3s} .bubbles span:nth-child(3){width:12px;height:12px;left:35px;top:65px;animation-delay:.6s} .bubbles span:nth-child(4){width:8px;height:8px;left:15px;top:70px;animation-delay:.9s} .bubbles span:nth-child(5){width:6px;height:6px;left:42px;top:55px;animation-delay:1.2s}
         @keyframes bubble-rise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-60px) scale(1.3); opacity: 0; } }
-
-        .sparkles {
-            position: absolute; top: 5px; right: 5px;
-            animation: sparkle-pop 1s ease-in-out infinite alternate;
-            font-size: 0.8rem; letter-spacing: 2px;
-        }
+        .sparkles { position: absolute; top: 5px; right: 5px; animation: sparkle-pop 1s ease-in-out infinite alternate; font-size: 0.8rem; letter-spacing: 2px; }
         @keyframes sparkle-pop { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.1); } }
-
         .carwash-text { flex: 1; min-width: 200px; }
-        .carwash-badge {
-            display: inline-block; background: var(--yellow); color: var(--blue);
-            padding: 4px 14px; border-radius: 20px; font-weight: bold;
-            font-size: 0.85rem; margin-bottom: 10px;
-        }
+        .carwash-badge { display: inline-block; background: var(--yellow); color: var(--blue); padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
         .carwash-text h3 { color: var(--blue); font-size: 1.3rem; margin: 0 0 10px; }
         .carwash-text p { color: #555; line-height: 1.6; margin: 0 0 15px; }
-        .carwash-cta {
-            background: var(--blue); color: white; padding: 10px 20px;
-            border-radius: 25px; display: inline-block; font-weight: bold; font-size: 0.9rem;
-        }
-
-        /* Iframe טופס */
+        .carwash-cta { background: var(--blue); color: white; padding: 10px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 0.9rem; }
         .form-iframe { width: 100%; border: none; border-radius: 15px; min-height: 800px; }
 
         @media (max-width: 768px) {
@@ -384,287 +258,585 @@
             .nav-links { flex-wrap: wrap; justify-content: center; gap: 5px; }
             .news-ticker { top: 180px; }
             main { margin-top: 230px; }
+            #a11y-bar { top: auto; bottom: 100px; transform: none; }
         }
     </style>
 </head>
-<body>
+<body data-lang="he">
 
-<div id="lightbox" onclick="this.style.display='none'">
-    <img src="" id="lb-img">
+<!-- ── Skip to main content (accessibility) ── -->
+<a class="skip-link" href="#main-content" id="skip-to-main">דלג לתוכן הראשי</a>
+
+<!-- ══════════════════════════════════════════
+     ACCESSIBILITY TOOLBAR
+════════════════════════════════════════════ -->
+<div id="a11y-bar" role="complementary" aria-label="סרגל נגישות">
+    <button class="a11y-btn" id="btn-contrast" title="ניגודיות גבוהה" aria-pressed="false" onclick="toggleA11y('contrast')" aria-label="ניגודיות גבוהה">
+        <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i>
+    </button>
+    <button class="a11y-btn" id="btn-text-plus" title="הגדל גופן" onclick="changeFont(1)" aria-label="הגדל גופן">
+        <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
+    </button>
+    <button class="a11y-btn" id="btn-text-minus" title="הקטן גופן" onclick="changeFont(-1)" aria-label="הקטן גופן">
+        <i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i>
+    </button>
+    <button class="a11y-btn" id="btn-motion" title="הפחת תנועה" aria-pressed="false" onclick="toggleA11y('motion')" aria-label="הפחת תנועה">
+        <i class="fa-solid fa-pause" aria-hidden="true"></i>
+    </button>
+    <button class="a11y-btn" id="btn-links" title="הדגש קישורים" aria-pressed="false" onclick="toggleA11y('links')" aria-label="הדגש קישורים">
+        <i class="fa-solid fa-link" aria-hidden="true"></i>
+    </button>
+    <button class="a11y-btn" id="btn-reset" title="איפוס נגישות" onclick="resetA11y()" aria-label="איפוס נגישות">
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    </button>
+    <!-- accessibility statement link -->
+    <a href="#accessibility-statement" class="a11y-btn" title="הצהרת נגישות" aria-label="הצהרת נגישות" style="text-decoration:none; font-size:0.85rem; font-weight:bold;">
+        <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
+    </a>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LIGHTBOX
+════════════════════════════════════════════ -->
+<div id="lightbox" onclick="this.style.display='none'" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת">
+    <img src="" id="lb-img" alt="">
     <div id="lb-desc"></div>
     <div id="lb-price"></div>
 </div>
 
-<header>
+<!-- ══════════════════════════════════════════
+     HEADER + NAV
+════════════════════════════════════════════ -->
+<header role="banner">
     <div class="nav-container">
-        <div class="logo" onclick="nav('home')"><img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png"></div>
-        <ul class="nav-links">
-            <li class="active" onclick="nav('home', this)">דף הבית</li>
-            <li onclick="nav('catalog-page', this)">קטלוג</li>
-            <li onclick="nav('promos-page', this)">מבצעים</li>
-            <li onclick="nav('new-page', this)">חדש על המדף</li>
-            <li onclick="nav('about-page', this)">אודות</li>
-            <li onclick="nav('career-page', this)">קריירה</li>
-            <li onclick="nav('directions-page', this)">צור קשר</li>
-            <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);">⭐ מועדון לקוחות</li>
-            <li class="social-links-area">
-                <a href="https://www.facebook.com/SuperStarPLus" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-                <a href="https://www.instagram.com/super.star.plus/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
-            </li>
-        </ul>
+        <div class="logo" onclick="nav('home')" role="link" tabindex="0" aria-label="דף הבית - סופרסטאר פלוס">
+            <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופרסטאר פלוס">
+        </div>
+        <nav aria-label="ניווט ראשי" role="navigation">
+            <ul class="nav-links">
+                <li class="active" onclick="nav('home', this)" tabindex="0" role="menuitem" data-i18n="nav_home">דף הבית</li>
+                <li onclick="nav('catalog-page', this)" tabindex="0" role="menuitem" data-i18n="nav_catalog">קטלוג</li>
+                <li onclick="nav('promos-page', this)" tabindex="0" role="menuitem" data-i18n="nav_promos">מבצעים</li>
+                <li onclick="nav('new-page', this)" tabindex="0" role="menuitem" data-i18n="nav_new">חדש על המדף</li>
+                <li onclick="nav('about-page', this)" tabindex="0" role="menuitem" data-i18n="nav_about">אודות</li>
+                <li onclick="nav('career-page', this)" tabindex="0" role="menuitem" data-i18n="nav_career">קריירה</li>
+                <li onclick="nav('directions-page', this)" tabindex="0" role="menuitem" data-i18n="nav_contact">צור קשר</li>
+                <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);" tabindex="0" role="menuitem" data-i18n="nav_club">⭐ מועדון לקוחות</li>
+
+                <!-- Language switcher -->
+                <li style="background:transparent; padding:4px 8px;" role="none">
+                    <div id="lang-switcher" role="group" aria-label="בחרו שפה">
+                        <button class="lang-btn active" onclick="setLang('he')" lang="he" aria-pressed="true" aria-label="עברית">עב</button>
+                        <button class="lang-btn" onclick="setLang('ar')" lang="ar" aria-pressed="false" aria-label="العربية">عر</button>
+                        <button class="lang-btn" onclick="setLang('en')" lang="en" aria-pressed="false" aria-label="English">EN</button>
+                    </div>
+                </li>
+
+                <li class="social-links-area" role="none" aria-label="רשתות חברתיות">
+                    <a href="https://www.facebook.com/SuperStarPLus" target="_blank" rel="noopener" aria-label="פייסבוק - נפתח בחלון חדש"><i class="fa-brands fa-facebook" aria-hidden="true"></i></a>
+                    <a href="https://www.instagram.com/super.star.plus/" target="_blank" rel="noopener" aria-label="אינסטגרם - נפתח בחלון חדש"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+                    <a href="https://www.tiktok.com/@superstarmajdelkirum" target="_blank" rel="noopener" aria-label="טיקטוק - נפתח בחלון חדש"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+                </li>
+            </ul>
+        </nav>
     </div>
 </header>
 
-<div class="news-ticker">
-    <div class="ticker-content">חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772  </div>
+<!-- ── News Ticker ── -->
+<div class="news-ticker" role="marquee" aria-live="off" aria-label="חדשות ועדכונים">
+    <div class="ticker-content" data-i18n="ticker">חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772</div>
 </div>
 
-<main>
-    <div id="home" class="page active">
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════════ -->
+<main id="main-content" tabindex="-1">
+
+    <!-- HOME -->
+    <div id="home" class="page active" role="main">
         <div class="content-wrap">
-            <div class="video-box"><video autoplay muted loop playsinline controls><source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4"></video></div>
-            <div class="image-roll-container" id="imageRoll" onclick="openImage(this)">
-                <div class="roll-item"><img src="" alt="pictureroll" id="img1"></div>
+            <div class="video-box" role="region" aria-label="סרטון פרסומי">
+                <video autoplay muted loop playsinline controls aria-label="סרטון פרסומי של סופרסטאר פלוס">
+                    <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
+                    <p data-i18n="video_fallback">הדפדפן שלך אינו תומך בהצגת וידאו. <a href="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">לחץ להורדת הסרטון</a></p>
+                </video>
             </div>
-            <h2 class="section-title">המבצעים החמים שלנו</h2>
-            <div class="slider-wrap"><div class="slider-track" id="promo-slider"></div></div>
-            <h2 class="section-title">חדש על המדף</h2>
-            <div id="new-home" class="grid"></div>
+            <div class="image-roll-container" id="imageRoll" onclick="openImage(this)" tabindex="0" role="button" aria-label="לחץ להגדלת התמונה" onkeypress="if(event.key==='Enter') openImage(this)">
+                <div class="roll-item"><img src="" alt="מבצעי השבוע" id="img1"></div>
+            </div>
+            <h2 class="section-title" data-i18n="home_promos">המבצעים החמים שלנו</h2>
+            <div class="slider-wrap" aria-label="מבצעים" role="region">
+                <div class="slider-track" id="promo-slider"></div>
+            </div>
+            <h2 class="section-title" data-i18n="home_new">חדש על המדף</h2>
+            <div id="new-home" class="grid" role="list" aria-label="מוצרים חדשים"></div>
         </div>
     </div>
 
-    <div id="catalog-page" class="page">
+    <!-- CATALOG -->
+    <div id="catalog-page" class="page" role="main">
         <div class="content-wrap">
-            <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;">
-                <input type="text" id="search" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
+            <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;" role="search" aria-label="חיפוש קטלוג">
+                <label for="search" class="sr-only" data-i18n="catalog_search_label">חפש מוצר</label>
+                <input type="text" id="search" data-i18n-placeholder="catalog_search_ph" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" aria-label="חיפוש לפי שם מוצר או ברקוד" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
                 <div style="flex:1; min-width:150px; position:relative;">
-                    <input type="text" id="cat-search" placeholder="כל הקטגוריות..." oninput="filterCats()" onfocus="showCatDropdown()" style="width:100%; padding:12px 36px 12px 12px; border:1px solid var(--blue); border-radius:10px; background:white; color:var(--blue); font-weight:bold; box-sizing:border-box; font-size:1rem;">
-                    <span id="cat-reset" onclick="resetCat()" style="display:none; position:absolute; left:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:1.2rem; line-height:1;">✕</span>
-                    <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;"></div>
+                    <label for="cat-search" class="sr-only" data-i18n="catalog_cat_label">בחר קטגוריה</label>
+                    <input type="text" id="cat-search" data-i18n-placeholder="catalog_cat_ph" placeholder="כל הקטגוריות..." oninput="filterCats()" onfocus="showCatDropdown()" aria-label="חיפוש קטגוריה" aria-expanded="false" aria-controls="cat-dropdown" role="combobox" style="width:100%; padding:12px 36px 12px 12px; border:1px solid var(--blue); border-radius:10px; background:white; color:var(--blue); font-weight:bold; box-sizing:border-box; font-size:1rem;">
+                    <span id="cat-reset" onclick="resetCat()" style="display:none; position:absolute; left:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:1.2rem; line-height:1;" role="button" aria-label="נקה קטגוריה" tabindex="0">✕</span>
+                    <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;" role="listbox" aria-label="רשימת קטגוריות"></div>
                 </div>
             </div>
-            <div id="catalog-grid" class="grid"></div>
+            <div id="catalog-grid" class="grid" role="list" aria-label="רשימת מוצרים" aria-live="polite"></div>
         </div>
     </div>
 
-    <div id="promos-page" class="page">
+    <!-- PROMOS -->
+    <div id="promos-page" class="page" role="main">
         <div class="content-wrap">
-            <h2 class="section-title">מבצעים</h2>
-            <div class="promo-filter-bar" id="promo-filter-bar"></div>
-            <div class="promo-count" id="promo-count"></div>
-            <div id="promo-full" class="grid"></div>
+            <h2 class="section-title" data-i18n="promos_title">מבצעים</h2>
+            <div class="promo-filter-bar" id="promo-filter-bar" role="group" aria-label="סנן לפי קטגוריה"></div>
+            <div class="promo-count" id="promo-count" aria-live="polite"></div>
+            <div id="promo-full" class="grid" role="list" aria-label="מוצרים במבצע" aria-live="polite"></div>
         </div>
     </div>
 
-    <div id="new-page" class="page"><div class="content-wrap"><h2 class="section-title">חדש על המדף</h2><div id="new-full" class="grid"></div></div></div>
-
-    <div id="about-page" class="page">
+    <!-- NEW ON SHELF -->
+    <div id="new-page" class="page" role="main">
         <div class="content-wrap">
-            <div class="about-header">
-                <h1>סופרסטאר פלוס</h1>
-                <p>חוויית קנייה יוצאת דופן לכל המשפחה. אנו מתחייבים לשירות איכותי, מבצעים משתלמים ומגוון רחב של מוצרים במחירים מעולים.</p>
+            <h2 class="section-title" data-i18n="new_title">חדש על המדף</h2>
+            <div id="new-full" class="grid" role="list" aria-label="מוצרים חדשים"></div>
+        </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div id="about-page" class="page" role="main">
+        <div class="content-wrap">
+            <div class="about-header" role="banner">
+                <h1 data-i18n="about_h1">סופרסטאר פלוס</h1>
+                <p data-i18n="about_intro">חוויית קנייה יוצאת דופן לכל המשפחה. אנו מתחייבים לשירות איכותי, מבצעים משתלמים ומגוון רחב של מוצרים במחירים מעולים.</p>
             </div>
-            <div class="quote-box">
+            <blockquote class="quote-box" data-i18n="about_quote">
                 "אנו כאן בשבילכם, עם סניפים נוחים ונגישים, וצוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."
+            </blockquote>
+            <h2 class="section-title" data-i18n="about_why">למה לבחור בנו?</h2>
+            <div class="features-grid" role="list">
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-tags" aria-hidden="true"></i><h4 data-i18n="feat1_h">מחירים ללא תחרות</h4><p data-i18n="feat1_p">מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.</p></div>
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-bolt" aria-hidden="true"></i><h4 data-i18n="feat2_h">קנייה נוחה ומהירה</h4><p data-i18n="feat2_p">חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.</p></div>
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i><h4 data-i18n="feat3_h">שירות מצטיין</h4><p data-i18n="feat3_p">צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.</p></div>
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-leaf" aria-hidden="true"></i><h4 data-i18n="feat4_h">טריות יומיומית</h4><p data-i18n="feat4_p">ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.</p></div>
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-percent" aria-hidden="true"></i><h4 data-i18n="feat5_h">מבצעים משתלמים</h4><p data-i18n="feat5_p">מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.</p></div>
+                <div class="feature-item" role="listitem"><i class="fa-solid fa-users" aria-hidden="true"></i><h4 data-i18n="feat6_h">מעורבות קהילתית</h4><p data-i18n="feat6_p">תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.</p></div>
             </div>
-            <h2 class="section-title">למה לבחור בנו?</h2>
-            <div class="features-grid">
-                <div class="feature-item"><i class="fa-solid fa-tags"></i><h4>מחירים ללא תחרות</h4><p>מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.</p></div>
-                <div class="feature-item"><i class="fa-solid fa-bolt"></i><h4>קנייה נוחה ומהירה</h4><p>חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.</p></div>
-                <div class="feature-item"><i class="fa-solid fa-heart-pulse"></i><h4>שירות מצטיין</h4><p>צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.</p></div>
-                <div class="feature-item"><i class="fa-solid fa-leaf"></i><h4>טריות יומיומית</h4><p>ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.</p></div>
-                <div class="feature-item"><i class="fa-solid fa-percent"></i><h4>מבצעים משתלמים</h4><p>מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.</p></div>
-                <div class="feature-item"><i class="fa-solid fa-users"></i><h4>מעורבות קהילתית</h4><p>תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.</p></div>
-            </div>
-            <div style="margin-top: 50px; text-align: center; color: #666;">
-                <p><strong>בסופרסטאר אנו לא מתפשרים על איכות</strong> – איכות המוצרים והשירות תמיד בראש סדר העדיפויות שלנו.</p>
-            </div>
+
+            <!-- ── Accessibility Statement ── -->
+            <section id="accessibility-statement" style="margin-top:60px; background:white; border-radius:20px; padding:30px; box-shadow:0 5px 15px rgba(0,0,0,0.05); border-top:4px solid var(--blue);">
+                <h2 style="color:var(--blue);" data-i18n="a11y_title"><i class="fa-solid fa-universal-access" aria-hidden="true"></i> הצהרת נגישות</h2>
+                <p data-i18n="a11y_p1">אתר זה נבנה ומתוחזק בהתאם לתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות) תשע"ג–2013, ובהתאם לתקן הישראלי SI 5568 ותקן WCAG 2.1 ברמה AA.</p>
+                <p data-i18n="a11y_p2">כלי הנגישות באתר מאפשרים: הגדלה/הקטנה של גודל הגופן, ניגודיות גבוהה, הפחתת תנועה, ניווט מקלדת מלא, ותמיכה בקוראי מסך.</p>
+                <p data-i18n="a11y_p3">נגישות האתר נבדקה ב: Chrome + NVDA, Safari + VoiceOver, ומקלדת בלבד.</p>
+                <p><strong data-i18n="a11y_contact_label">לפניות בנושא נגישות:</strong> <a href="mailto:info@superstarplus.co.il" data-i18n="a11y_contact_email">info@superstarplus.co.il</a> | <a href="tel:049076772">04-907-6772</a></p>
+                <p style="font-size:0.85rem; color:#888;" data-i18n="a11y_date">תאריך עדכון הצהרה: ינואר 2025</p>
+            </section>
         </div>
     </div>
 
-    <div id="career-page" class="page">
+    <!-- CAREER -->
+    <div id="career-page" class="page" role="main">
         <div class="content-wrap">
-            <h2 class="section-title">הצטרפו לנבחרת של סופרסטאר פלוס</h2>
-            <p>אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:</p>
-            <div id="jobs-grid" class="grid"></div>
+            <h2 class="section-title" data-i18n="career_title">הצטרפו לנבחרת של סופרסטאר פלוס</h2>
+            <p data-i18n="career_intro">אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:</p>
+            <div id="jobs-grid" class="grid" role="list" aria-label="משרות פתוחות"></div>
             <div style="margin-top: 40px; text-align: center; background: white; padding: 20px; border-radius: 15px;">
-                <p>מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:</p>
-                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;"><i class="fa-brands fa-whatsapp"></i></a>
+                <p data-i18n="career_cta">מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:</p>
+                <a href="https://wa.me/97249076772" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 0 auto;" aria-label="שלח הודעת ווטסאפ לצוות הגיוס"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
             </div>
         </div>
     </div>
 
-    <div id="directions-page" class="page">
+    <!-- CONTACT -->
+    <div id="directions-page" class="page" role="main">
         <div class="content-wrap">
-            <h2 class="section-title">שעות פתיחה ומחלקות</h2>
+            <h2 class="section-title" data-i18n="contact_hours_title">שעות פתיחה ומחלקות</h2>
             <div class="contact-section">
-                <div class="dept-card" style="border-color: #0076DA;">
-                    <div class="icon-circle icon-blue"><i class="fa-solid fa-cart-shopping"></i></div>
-                    <h3>סופרמרקט</h3><p>ימי עבודה: א' - שבת</p>
-                    <span class="work-hours">08:00 - 22:00</span>
+                <div class="dept-card" style="border-color: #0076DA;" role="article">
+                    <div class="icon-circle icon-blue"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></div>
+                    <h3 data-i18n="dept_super">סופרמרקט</h3>
+                    <p data-i18n="dept_days_all">ימי עבודה: א' - שבת</p>
+                    <span class="work-hours" data-i18n="dept_super_hours">08:00 - 22:00</span>
                 </div>
-                <div class="dept-card" style="border-color: #d32f2f;">
-                    <div class="icon-circle icon-red"><i class="fa-solid fa-drumstick-bite"></i></div>
-                    <h3>מחלקת בשר</h3><p>ימי עבודה: א' - שבת</p>
-                    <span class="work-hours">08:00 - 20:30</span>
+                <div class="dept-card" style="border-color: #d32f2f;" role="article">
+                    <div class="icon-circle icon-red"><i class="fa-solid fa-drumstick-bite" aria-hidden="true"></i></div>
+                    <h3 data-i18n="dept_meat">מחלקת בשר</h3>
+                    <p data-i18n="dept_days_all">ימי עבודה: א' - שבת</p>
+                    <span class="work-hours" data-i18n="dept_meat_hours">08:00 - 20:30</span>
                 </div>
-                <div class="dept-card" style="border-color: #2e7d32;">
-                    <div class="icon-circle icon-green"><i class="fa-solid fa-fish"></i></div>
-                    <h3>מחלקת דגים</h3><p>ימי עבודה: ב' - שבת</p>
-                    <p style="color: #d32f2f; font-weight: bold; margin: 0;">יום ראשון: סגור</p>
-                    <span class="work-hours">09:00 - 17:00</span>
+                <div class="dept-card" style="border-color: #2e7d32;" role="article">
+                    <div class="icon-circle icon-green"><i class="fa-solid fa-fish" aria-hidden="true"></i></div>
+                    <h3 data-i18n="dept_fish">מחלקת דגים</h3>
+                    <p data-i18n="dept_days_fish">ימי עבודה: ב' - שבת</p>
+                    <p style="color: #d32f2f; font-weight: bold; margin: 0;" data-i18n="dept_fish_closed">יום ראשון: סגור</p>
+                    <span class="work-hours" data-i18n="dept_fish_hours">09:00 - 17:00</span>
                 </div>
             </div>
-            <h2 class="section-title">פרטי התקשרות</h2>
+            <h2 class="section-title" data-i18n="contact_details_title">פרטי התקשרות</h2>
             <div class="contact-footer">
-                <a href="tel:049076772" class="contact-link">
-                    <div class="icon-circle icon-blue"><i class="fa-solid fa-phone"></i></div>
-                    <strong>טלפון</strong><span>04-907-6772</span>
+                <a href="tel:049076772" class="contact-link" aria-label="התקשר אלינו 04-907-6772">
+                    <div class="icon-circle icon-blue"><i class="fa-solid fa-phone" aria-hidden="true"></i></div>
+                    <strong data-i18n="contact_phone">טלפון</strong><span>04-907-6772</span>
                 </a>
-                <a href="mailto:info@superstarplus.co.il" class="contact-link">
-                    <div class="icon-circle icon-orange"><i class="fa-solid fa-envelope"></i></div>
-                    <strong>דוא"ל</strong><span>info@superstarplus.co.il</span>
+                <a href="mailto:info@superstarplus.co.il" class="contact-link" aria-label="שלח אלינו מייל">
+                    <div class="icon-circle icon-orange"><i class="fa-solid fa-envelope" aria-hidden="true"></i></div>
+                    <strong data-i18n="contact_email_label">דוא"ל</strong><span>info@superstarplus.co.il</span>
                 </a>
-                <div class="contact-link">
-                    <div class="icon-circle icon-green"><i class="fa-solid fa-location-dot"></i></div>
-                    <strong>כתובת</strong><span>מג'ד אל כרום, כביש ראשי</span>
+                <div class="contact-link" role="text" aria-label="כתובת: מג'ד אל כרום, כביש ראשי">
+                    <div class="icon-circle icon-green"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></div>
+                    <strong data-i18n="contact_address_label">כתובת</strong><span data-i18n="contact_address">מג'ד אל כרום, כביש ראשי</span>
                 </div>
             </div>
             <div class="map-wrapper" style="margin-top: 30px; display: flex; justify-content: center;">
                 <div class="map-container">
-                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" title="מיקום סופרסטאר פלוס על המפה"></iframe>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="club-page" class="page">
+    <!-- CLUB -->
+    <div id="club-page" class="page" role="main">
         <div class="content-wrap">
-            <div class="club-hero">
-                <h1>⭐ מועדון לקוחות סופרסטאר</h1>
-                <p>הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה</p>
-                <div class="hero-badge">🎁 סל קניות 41 מתנה לכל חברי המועדון!</div>
+            <div class="club-hero" role="banner">
+                <h1 data-i18n="club_h1">⭐ מועדון לקוחות סופרסטאר</h1>
+                <p data-i18n="club_sub">הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה</p>
+                <div class="hero-badge" data-i18n="club_badge">🎁 סל קניות 41 מתנה לכל חברי המועדון!</div>
             </div>
-            <div class="club-stats">
-                <div class="stat-box">
-                    <div class="stat-num">1,500</div>
-                    <div class="stat-label">מ"ר של מבחר</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-num">7</div>
-                    <div class="stat-label">ימים בשבוע פתוח</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-num">14+</div>
-                    <div class="stat-label">שנות ניסיון</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-num">סל הקניות ה41 מתנה עלינו</div>
-                    <div class="stat-label">לפי ממוצע קניות ללקוח</div>
-                </div>
+            <div class="club-stats" role="list">
+                <div class="stat-box" role="listitem"><div class="stat-num">1,500</div><div class="stat-label" data-i18n="stat1">מ"ר של מבחר</div></div>
+                <div class="stat-box" role="listitem"><div class="stat-num">7</div><div class="stat-label" data-i18n="stat2">ימים בשבוע פתוח</div></div>
+                <div class="stat-box" role="listitem"><div class="stat-num">14+</div><div class="stat-label" data-i18n="stat3">שנות ניסיון</div></div>
+                <div class="stat-box" role="listitem"><div class="stat-num" data-i18n="stat4_num">סל ה-41 מתנה</div><div class="stat-label" data-i18n="stat4_label">לפי ממוצע קניות ללקוח</div></div>
             </div>
-            <h2 class="section-title">מה מקבלים חברי המועדון?</h2>
-            <div class="benefits-grid">
-                <div class="benefit-card">
-                    <div class="benefit-icon">🛒</div>
-                    <h3>סל קניות ₪41 מתנה</h3>
-                    <p>כל חברי המועדון מקבלים סל קניות ₪41 — מתנה בלעדית לחברים</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">🏷️</div>
-                    <h3>מבצעים בלעדיים</h3>
-                    <p>גישה למבצעים מיוחדים לחברי מועדון שלא מפורסמים לכלל הקהל</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">📱</div>
-                    <h3>עדכונים ישירים</h3>
-                    <p>קבלו מבצעי שבוע ועדכוני מוצרים חדשים ישירות למייל בשפה שלכם</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">🎂</div>
-                    <h3>הפתעת יום הולדת</h3>
-                    <p>הפתעה מיוחדת מסופרסטאר בחודש יום ההולדת שלכם</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">🥩</div>
-                    <h3>טריות מובטחת</h3>
-                    <p>מחלקות בשר, דגים וירקות טריים — סטנדרט שאנו מתחייבים אליו כל יום</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">⚡</div>
-                    <h3>קנייה מהירה ונוחה</h3>
-                    <p>חנות 1,500 מ"ר עם עיצוב חכם, חניה נגישה ושירות מקצועי תמיד</p>
-                </div>
+            <h2 class="section-title" data-i18n="club_benefits_title">מה מקבלים חברי המועדון?</h2>
+            <div class="benefits-grid" role="list">
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">🛒</div><h3 data-i18n="ben1_h">סל קניות ₪41 מתנה</h3><p data-i18n="ben1_p">כל חברי המועדון מקבלים סל קניות ₪41 — מתנה בלעדית לחברים</p></div>
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">🏷️</div><h3 data-i18n="ben2_h">מבצעים בלעדיים</h3><p data-i18n="ben2_p">גישה למבצעים מיוחדים לחברי מועדון שלא מפורסמים לכלל הקהל</p></div>
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">📱</div><h3 data-i18n="ben3_h">עדכונים ישירים</h3><p data-i18n="ben3_p">קבלו מבצעי שבוע ועדכוני מוצרים חדשים ישירות למייל בשפה שלכם</p></div>
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">🎂</div><h3 data-i18n="ben4_h">הפתעת יום הולדת</h3><p data-i18n="ben4_p">הפתעה מיוחדת מסופרסטאר בחודש יום ההולדת שלכם</p></div>
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">🥩</div><h3 data-i18n="ben5_h">טריות מובטחת</h3><p data-i18n="ben5_p">מחלקות בשר, דגים וירקות טריים — סטנדרט שאנו מתחייבים אליו כל יום</p></div>
+                <div class="benefit-card" role="listitem"><div class="benefit-icon">⚡</div><h3 data-i18n="ben6_h">קנייה מהירה ונוחה</h3><p data-i18n="ben6_p">חנות 1,500 מ"ר עם עיצוב חכם, חניה נגישה ושירות מקצועי תמיד</p></div>
             </div>
-            <div class="carwash-card">
-                <div class="carwash-scene">
+            <div class="carwash-card" role="region" aria-label="הטבת שטיפת רכב">
+                <div class="carwash-scene" aria-hidden="true">
                     <div class="road"></div>
-                    <div class="car-wrap">
-                        <div class="car">
-                            <div class="car-body">
-                                <div class="car-roof"></div>
-                                <div class="car-windows">
-                                    <div class="win win-front"></div>
-                                    <div class="win win-back"></div>
-                                </div>
-                                <div class="car-door-line"></div>
-                            </div>
-                            <div class="wheel wheel-front"></div>
-                            <div class="wheel wheel-back"></div>
-                        </div>
-                    </div>
-                    <div class="wash-portal">
-                        <div class="portal-frame"></div>
-                        <div class="brush brush1"></div>
-                        <div class="brush brush2"></div>
-                        <div class="water-drops">
-                            <span></span><span></span><span></span>
-                            <span></span><span></span><span></span>
-                            <span></span><span></span>
-                        </div>
-                        <div class="bubbles">
-                            <span></span><span></span><span></span>
-                            <span></span><span></span>
-                        </div>
-                    </div>
-                    <div class="sparkles">
-                        <span>✨</span><span>✨</span><span>✨</span>
-                    </div>
+                    <div class="car-wrap"><div class="car"><div class="car-body"><div class="car-roof"></div><div class="car-windows"><div class="win win-front"></div><div class="win win-back"></div></div><div class="car-door-line"></div></div><div class="wheel wheel-front"></div><div class="wheel wheel-back"></div></div></div>
+                    <div class="wash-portal"><div class="portal-frame"></div><div class="brush brush1"></div><div class="brush brush2"></div><div class="water-drops"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="bubbles"><span></span><span></span><span></span><span></span><span></span></div></div>
+                    <div class="sparkles"><span>✨</span><span>✨</span><span>✨</span></div>
                 </div>
                 <div class="carwash-text">
-                    <div class="carwash-badge">🎁 הטבת מועדון בלעדית</div>
-                    <h3>שובר שטיפת רכב חיצונית מתנה!</h3>
-                    <p>בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!</p>
-                    <div class="carwash-cta">קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨</div>
+                    <div class="carwash-badge" data-i18n="cw_badge">🎁 הטבת מועדון בלעדית</div>
+                    <h3 data-i18n="cw_title">שובר שטיפת רכב חיצונית מתנה!</h3>
+                    <p data-i18n="cw_desc">בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!</p>
+                    <div class="carwash-cta" role="text" data-i18n="cw_cta">קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨</div>
                 </div>
             </div>
             <div class="club-form-wrap">
-                <h2>🚀 הצטרפו עכשיו — בחינם!</h2>
-                <iframe src="https://superstarplus1.github.io/website/club_form.html" class="form-iframe" id="club-iframe"></iframe>
+                <h2 data-i18n="club_form_title">🚀 הצטרפו עכשיו — בחינם!</h2>
+                <iframe src="https://superstarplus1.github.io/website/club_form.html" class="form-iframe" id="club-iframe" title="טופס הצטרפות למועדון לקוחות" aria-label="טופס הצטרפות למועדון לקוחות"></iframe>
             </div>
         </div>
     </div>
 
 </main>
 
-<div class="modal-overlay" id="imageModal" onclick="this.style.display='none'"><img src="" id="modalImg"></div>
-
-<div class="fab">
-    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
-    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank"><i class="fa-brands fa-waze"></i></a>
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="imageModal" onclick="this.style.display='none'" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת">
+    <img src="" id="modalImg" alt="תמונה מוגדלת">
 </div>
 
-<div id="club-banner">
-    <div class="banner-text">
-        🎁 הצטרפו למועדון לקוחות סופרסטאר ו<span>קבלו סל קניות 41 במתנה!</span>
+<!-- ── FAB buttons ── -->
+<div class="fab" role="complementary" aria-label="כפתורי פעולה מהירה">
+    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank" rel="noopener" aria-label="פתח שיחת ווטסאפ - נפתח בחלון חדש"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank" rel="noopener" aria-label="נווט אלינו בוויז - נפתח בחלון חדש"><i class="fa-brands fa-waze" aria-hidden="true"></i></a>
+</div>
+
+<!-- ── Club Banner ── -->
+<div id="club-banner" role="alertdialog" aria-live="polite" aria-label="מועדון לקוחות">
+    <div class="banner-text" data-i18n="banner_text">
+        🎁 הצטרפו למועדון לקוחות סופרסטאר ו<span data-i18n="banner_span">קבלו סל קניות 41 במתנה!</span>
     </div>
     <div class="banner-actions">
-        <button class="banner-btn" onclick="nav('club-page'); closeBanner()">הצטרפו עכשיו</button>
-        <button class="banner-close" onclick="closeBanner()">✕</button>
+        <button class="banner-btn" onclick="nav('club-page'); closeBanner()" data-i18n="banner_btn">הצטרפו עכשיו</button>
+        <button class="banner-close" onclick="closeBanner()" aria-label="סגור באנר"><span aria-hidden="true">✕</span></button>
     </div>
 </div>
 
+<!-- ── SR-only helper ── -->
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}</style>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TRANSLATIONS
+════════════════════════════════════════════════════════════════ -->
+<script>
+const TRANSLATIONS = {
+    he: {
+        lang_dir: "rtl", html_lang: "he",
+        doc_title: "סופר סטאר פלוס",
+        skip_link: "דלג לתוכן הראשי",
+        nav_home: "דף הבית", nav_catalog: "קטלוג", nav_promos: "מבצעים",
+        nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
+        nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות",
+        ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
+        home_promos: "המבצעים החמים שלנו", home_new: "חדש על המדף",
+        catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
+        catalog_cat_label: "בחר קטגוריה", catalog_cat_ph: "כל הקטגוריות...",
+        promos_title: "מבצעים", new_title: "חדש על המדף",
+        about_h1: "סופרסטאר פלוס",
+        about_intro: "חוויית קנייה יוצאת דופן לכל המשפחה. אנו מתחייבים לשירות איכותי, מבצעים משתלמים ומגוון רחב של מוצרים במחירים מעולים.",
+        about_quote: '"אנו כאן בשבילכם, עם סניפים נוחים ונגישים, וצוות מקצועי שיעזור לכם למצוא בדיוק את מה שאתם צריכים."',
+        about_why: "למה לבחור בנו?",
+        feat1_h: "מחירים ללא תחרות", feat1_p: "מחירים נמוכים שמתאימים לכל כיס – אנו מתחייבים למחירים תחרותיים בכל יום.",
+        feat2_h: "קנייה נוחה ומהירה", feat2_p: "חניה נגישה, עיצוב חכם ותורים קצרים בקופות לחוויה זורמת.",
+        feat3_h: "שירות מצטיין", feat3_p: "צוות מקצועי שתמיד מקבל את פניכם עם חיוך ולב רחב.",
+        feat4_h: "טריות יומיומית", feat4_p: "ירקות ופירות טריים יום יום – ישירות מהשדה למדף שלכם.",
+        feat5_h: "מבצעים משתלמים", feat5_p: "מבצעים עמוקים לאורך כל השנה. לא תאמינו כמה תחסכו בכל קנייה.",
+        feat6_h: "מעורבות קהילתית", feat6_p: "תומכים ביוזמות מקומיות, דואגים לסביבה וצומחים יחד עם הקהילה.",
+        a11y_title: "הצהרת נגישות",
+        a11y_p1: "אתר זה נבנה ומתוחזק בהתאם לתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות) תשע\"ג–2013, ובהתאם לתקן הישראלי SI 5568 ותקן WCAG 2.1 ברמה AA.",
+        a11y_p2: "כלי הנגישות באתר מאפשרים: הגדלה/הקטנה של גודל הגופן, ניגודיות גבוהה, הפחתת תנועה, ניווט מקלדת מלא, ותמיכה בקוראי מסך.",
+        a11y_p3: "נגישות האתר נבדקה ב: Chrome + NVDA, Safari + VoiceOver, ומקלדת בלבד.",
+        a11y_contact_label: "לפניות בנושא נגישות:", a11y_contact_email: "info@superstarplus.co.il", a11y_date: "תאריך עדכון הצהרה: ינואר 2025",
+        career_title: "הצטרפו לנבחרת של סופרסטאר פלוס",
+        career_intro: "אנחנו תמיד מחפשים אנשים חרוצים עם חיוך. מוזמנים להתרשם מהמשרות הפתוחות שלנו:",
+        career_cta: "מעוניינים להגיש מועמדות? שלחו לנו הודעה בוואטסאפ:",
+        contact_hours_title: "שעות פתיחה ומחלקות",
+        dept_super: "סופרמרקט", dept_days_all: "ימי עבודה: א' - שבת",
+        dept_super_hours: "08:00 - 22:00", dept_meat: "מחלקת בשר",
+        dept_meat_hours: "08:00 - 20:30", dept_fish: "מחלקת דגים",
+        dept_days_fish: "ימי עבודה: ב' - שבת", dept_fish_closed: "יום ראשון: סגור",
+        dept_fish_hours: "09:00 - 17:00",
+        contact_details_title: "פרטי התקשרות", contact_phone: "טלפון",
+        contact_email_label: 'דוא"ל', contact_address_label: "כתובת",
+        contact_address: "מג'ד אל כרום, כביש ראשי",
+        club_h1: "⭐ מועדון לקוחות סופרסטאר",
+        club_sub: "הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה",
+        club_badge: "🎁 סל קניות 41 מתנה לכל חברי המועדון!",
+        stat1: 'מ"ר של מבחר', stat2: "ימים בשבוע פתוח", stat3: "שנות ניסיון",
+        stat4_num: "סל ה-41 מתנה", stat4_label: "לפי ממוצע קניות ללקוח",
+        club_benefits_title: "מה מקבלים חברי המועדון?",
+        ben1_h: "סל קניות ₪41 מתנה", ben1_p: "כל חברי המועדון מקבלים סל קניות ₪41 — מתנה בלעדית לחברים",
+        ben2_h: "מבצעים בלעדיים", ben2_p: "גישה למבצעים מיוחדים לחברי מועדון שלא מפורסמים לכלל הקהל",
+        ben3_h: "עדכונים ישירים", ben3_p: "קבלו מבצעי שבוע ועדכוני מוצרים חדשים ישירות למייל בשפה שלכם",
+        ben4_h: "הפתעת יום הולדת", ben4_p: "הפתעה מיוחדת מסופרסטאר בחודש יום ההולדת שלכם",
+        ben5_h: "טריות מובטחת", ben5_p: "מחלקות בשר, דגים וירקות טריים — סטנדרט שאנו מתחייבים אליו כל יום",
+        ben6_h: "קנייה מהירה ונוחה", ben6_p: "חנות 1,500 מ\"ר עם עיצוב חכם, חניה נגישה ושירות מקצועי תמיד",
+        cw_badge: "🎁 הטבת מועדון בלעדית", cw_title: "שובר שטיפת רכב חיצונית מתנה!",
+        cw_desc: "בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!",
+        cw_cta: "קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨",
+        club_form_title: "🚀 הצטרפו עכשיו — בחינם!",
+        banner_text: "🎁 הצטרפו למועדון לקוחות סופרסטאר ו", banner_span: "קבלו סל קניות 41 במתנה!",
+        banner_btn: "הצטרפו עכשיו",
+        video_fallback: "הדפדפן שלך אינו תומך בהצגת וידאו.",
+        promo_showing: "מציג {n} מוצרים", promo_regular: "מחיר רגיל: ₪", promo_unit: "מחיר ליח' במבצע:",
+        promo_kg: 'מחיר ק"ג במבצע:', promo_valid: "בתוקף עד:", barcode_label: "ברקוד:",
+        a11y_bar_label: "סרגל נגישות", cat_all: "כל הקטגוריות"
+    },
+
+    ar: {
+        lang_dir: "rtl", html_lang: "ar",
+        doc_title: "سوبر ستار بلوس",
+        skip_link: "تخطى إلى المحتوى الرئيسي",
+        nav_home: "الرئيسية", nav_catalog: "الكتالوج", nav_promos: "العروض",
+        nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
+        nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء",
+        ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
+        home_promos: "أفضل عروضنا", home_new: "جديد على الرف",
+        catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
+        catalog_cat_label: "اختر فئة", catalog_cat_ph: "جميع الفئات...",
+        promos_title: "العروض", new_title: "جديد على الرف",
+        about_h1: "سوبر ستار بلوس",
+        about_intro: "تجربة تسوق استثنائية لكل العائلة. نلتزم بخدمة عالية الجودة وعروض مغرية ومجموعة واسعة من المنتجات بأسعار ممتازة.",
+        about_quote: '"نحن هنا من أجلكم، مع فروع مريحة ومتاحة، وفريق محترف يساعدكم في إيجاد ما تحتاجون بالضبط."',
+        about_why: "لماذا تختارنا؟",
+        feat1_h: "أسعار لا تُنافَس", feat1_p: "أسعار منخفضة تناسب كل ميزانية – نلتزم بالأسعار التنافسية كل يوم.",
+        feat2_h: "تسوق مريح وسريع", feat2_p: "موقف سيارات ميسور، تصميم ذكي وطوابير قصيرة عند الصناديق.",
+        feat3_h: "خدمة متميزة", feat3_p: "فريق محترف يستقبلكم دائماً بابتسامة وقلب مفتوح.",
+        feat4_h: "طازج يومياً", feat4_p: "خضروات وفواكه طازجة كل يوم – مباشرة من الحقل إلى رفوفنا.",
+        feat5_h: "عروض مميزة", feat5_p: "عروض عمقية على مدار العام. لن تصدقوا كم ستوفرون في كل عملية شراء.",
+        feat6_h: "مشاركة مجتمعية", feat6_p: "ندعم المبادرات المحلية، ونحرص على البيئة وننمو مع المجتمع.",
+        a11y_title: "إعلان إمكانية الوصول",
+        a11y_p1: "تم بناء هذا الموقع وصيانته وفقاً لقانون تكافؤ فرص الأشخاص ذوي الإعاقة والمعيار الإسرائيلي SI 5568 ومعيار WCAG 2.1 مستوى AA.",
+        a11y_p2: "تتيح أدوات إمكانية الوصول: تكبير/تصغير الخط، التباين العالي، تقليل الحركة، التنقل الكامل بلوحة المفاتيح، ودعم قارئات الشاشة.",
+        a11y_p3: "تم اختبار إمكانية الوصول على: Chrome + NVDA، Safari + VoiceOver، ولوحة المفاتيح فقط.",
+        a11y_contact_label: "للتواصل بشأن إمكانية الوصول:", a11y_contact_email: "info@superstarplus.co.il", a11y_date: "تاريخ تحديث الإعلان: يناير 2025",
+        career_title: "انضم إلى فريق سوبر ستار بلوس",
+        career_intro: "نبحث دائماً عن أشخاص مجتهدين بابتسامة. تفضلوا بالاطلاع على وظائفنا الشاغرة:",
+        career_cta: "هل تريد التقديم؟ أرسل لنا رسالة واتساب:",
+        contact_hours_title: "أوقات العمل والأقسام",
+        dept_super: "السوبرماركت", dept_days_all: "أيام العمل: الأحد - السبت",
+        dept_super_hours: "08:00 - 22:00", dept_meat: "قسم اللحوم",
+        dept_meat_hours: "08:00 - 20:30", dept_fish: "قسم الأسماك",
+        dept_days_fish: "أيام العمل: الاثنين - السبت", dept_fish_closed: "الأحد: مغلق",
+        dept_fish_hours: "09:00 - 17:00",
+        contact_details_title: "معلومات التواصل", contact_phone: "هاتف",
+        contact_email_label: "البريد الإلكتروني", contact_address_label: "العنوان",
+        contact_address: "مجد الكروم، الطريق الرئيسي",
+        club_h1: "⭐ نادي عملاء سوبر ستار",
+        club_sub: "انضم إلى آلاف العملاء الراضين واستمتع بمزايا حصرية طوال العام",
+        club_badge: "🎁 سلة تسوق بـ₪41 هدية لجميع أعضاء النادي!",
+        stat1: "م² من التشكيلة", stat2: "أيام في الأسبوع مفتوح", stat3: "سنوات خبرة",
+        stat4_num: "السلة الـ41 هدية", stat4_label: "حسب متوسط مشتريات العميل",
+        club_benefits_title: "ماذا يحصل أعضاء النادي؟",
+        ben1_h: "سلة تسوق ₪41 هدية", ben1_p: "جميع أعضاء النادي يحصلون على سلة تسوق ₪41 — هدية حصرية للأعضاء",
+        ben2_h: "عروض حصرية", ben2_p: "وصول لعروض خاصة لأعضاء النادي غير المنشورة للجمهور العام",
+        ben3_h: "تحديثات مباشرة", ben3_p: "احصل على عروض الأسبوع وتحديثات المنتجات الجديدة مباشرة إلى بريدك بلغتك",
+        ben4_h: "مفاجأة عيد الميلاد", ben4_p: "مفاجأة خاصة من سوبر ستار في شهر عيد ميلادك",
+        ben5_h: "طازج مضمون", ben5_p: "أقسام اللحوم والأسماك والخضروات الطازجة — معيار نلتزم به كل يوم",
+        ben6_h: "تسوق سريع ومريح", ben6_p: "متجر 1,500 م² بتصميم ذكي وموقف ميسور وخدمة احترافية دائماً",
+        cw_badge: "🎁 ميزة حصرية للنادي", cw_title: "قسيمة غسيل سيارة خارجي مجاناً!",
+        cw_desc: "مع كل عملية شراء تتجاوز <strong>₪300</strong> — يحصل أعضاء النادي على قسيمة غسيل سيارة خارجي كامل، مجاناً تماماً!",
+        cw_cta: "اشترِ فوق ₪300 ← احصل على قسيمة غسيل 🚗✨",
+        club_form_title: "🚀 انضم الآن — مجاناً!",
+        banner_text: "🎁 انضم لنادي عملاء سوبر ستار و", banner_span: "احصل على سلة تسوق ₪41 هدية!",
+        banner_btn: "انضم الآن",
+        video_fallback: "متصفحك لا يدعم تشغيل الفيديو.",
+        promo_showing: "عرض {n} منتجاً", promo_regular: "السعر العادي: ₪", promo_unit: "سعر الوحدة في العرض:",
+        promo_kg: "سعر الكيلو في العرض:", promo_valid: "صالح حتى:", barcode_label: "الباركود:",
+        a11y_bar_label: "شريط إمكانية الوصول", cat_all: "جميع الفئات"
+    },
+
+    en: {
+        lang_dir: "ltr", html_lang: "en",
+        doc_title: "Super Star Plus",
+        skip_link: "Skip to main content",
+        nav_home: "Home", nav_catalog: "Catalog", nav_promos: "Deals",
+        nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
+        nav_contact: "Contact", nav_club: "⭐ Loyalty Club",
+        ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
+        home_promos: "Our Best Deals", home_new: "New Arrivals",
+        catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",
+        catalog_cat_label: "Select category", catalog_cat_ph: "All categories...",
+        promos_title: "Deals & Promotions", new_title: "New Arrivals",
+        about_h1: "Super Star Plus",
+        about_intro: "An exceptional shopping experience for the whole family. We are committed to quality service, great deals and a wide range of products at excellent prices.",
+        about_quote: '"We are here for you, with convenient and accessible branches, and a professional team that will help you find exactly what you need."',
+        about_why: "Why choose us?",
+        feat1_h: "Unbeatable prices", feat1_p: "Low prices that fit every budget – we commit to competitive prices every day.",
+        feat2_h: "Fast & convenient shopping", feat2_p: "Accessible parking, smart layout and short checkout queues for a smooth experience.",
+        feat3_h: "Outstanding service", feat3_p: "A professional team that always welcomes you with a smile and open heart.",
+        feat4_h: "Daily freshness", feat4_p: "Fresh vegetables and fruits daily – straight from the field to your shelf.",
+        feat5_h: "Great promotions", feat5_p: "Deep discounts throughout the year. You won't believe how much you'll save each visit.",
+        feat6_h: "Community involvement", feat6_p: "Supporting local initiatives, caring for the environment and growing together with the community.",
+        a11y_title: "Accessibility Statement",
+        a11y_p1: "This website was built and is maintained in accordance with the Israeli Equal Rights for Persons with Disabilities Regulations (Service Accessibility Accommodations) and the WCAG 2.1 Level AA standard.",
+        a11y_p2: "Accessibility tools include: font size increase/decrease, high contrast, reduced motion, full keyboard navigation, and screen reader support.",
+        a11y_p3: "Accessibility was tested on: Chrome + NVDA, Safari + VoiceOver, and keyboard-only navigation.",
+        a11y_contact_label: "Accessibility contact:", a11y_contact_email: "info@superstarplus.co.il", a11y_date: "Last updated: January 2025",
+        career_title: "Join the Super Star Plus Team",
+        career_intro: "We are always looking for hard-working people with a smile. Check out our open positions:",
+        career_cta: "Interested in applying? Send us a WhatsApp message:",
+        contact_hours_title: "Opening Hours & Departments",
+        dept_super: "Supermarket", dept_days_all: "Working days: Sun - Sat",
+        dept_super_hours: "08:00 - 22:00", dept_meat: "Meat Department",
+        dept_meat_hours: "08:00 - 20:30", dept_fish: "Fish Department",
+        dept_days_fish: "Working days: Mon - Sat", dept_fish_closed: "Sunday: Closed",
+        dept_fish_hours: "09:00 - 17:00",
+        contact_details_title: "Contact Information", contact_phone: "Phone",
+        contact_email_label: "Email", contact_address_label: "Address",
+        contact_address: "Majd Al-Krum, Main Road",
+        club_h1: "⭐ Super Star Loyalty Club",
+        club_sub: "Join thousands of satisfied customers and enjoy exclusive benefits all year round",
+        club_badge: "🎁 Free ₪41 shopping basket for all club members!",
+        stat1: "sqm of selection", stat2: "days a week open", stat3: "years of experience",
+        stat4_num: "41st basket free", stat4_label: "Based on average customer purchases",
+        club_benefits_title: "What do club members get?",
+        ben1_h: "₪41 shopping basket gift", ben1_p: "All club members receive a ₪41 shopping basket — an exclusive member gift",
+        ben2_h: "Exclusive deals", ben2_p: "Access to special promotions for club members not published to the general public",
+        ben3_h: "Direct updates", ben3_p: "Receive weekly deals and new product updates directly to your email in your language",
+        ben4_h: "Birthday surprise", ben4_p: "A special surprise from Super Star in your birthday month",
+        ben5_h: "Guaranteed freshness", ben5_p: "Meat, fish and fresh vegetable departments — a standard we commit to every day",
+        ben6_h: "Fast & convenient shopping", ben6_p: "1,500 sqm store with smart design, accessible parking and always professional service",
+        cw_badge: "🎁 Exclusive club benefit", cw_title: "Free exterior car wash voucher!",
+        cw_desc: "On every purchase over <strong>₪300</strong> — club members receive a full exterior car wash voucher, completely free!",
+        cw_cta: "Buy over ₪300 ← Get a car wash voucher 🚗✨",
+        club_form_title: "🚀 Join now — it's free!",
+        banner_text: "🎁 Join the Super Star loyalty club and ", banner_span: "get a ₪41 shopping basket as a gift!",
+        banner_btn: "Join now",
+        video_fallback: "Your browser does not support video playback.",
+        promo_showing: "Showing {n} products", promo_regular: "Regular price: ₪", promo_unit: "Unit deal price:",
+        promo_kg: "Price per kg:", promo_valid: "Valid until:", barcode_label: "Barcode:",
+        a11y_bar_label: "Accessibility toolbar", cat_all: "All categories"
+    }
+};
+
+// ── Current language ──
+let currentLang = 'he';
+
+function setLang(lang) {
+    currentLang = lang;
+    const t = TRANSLATIONS[lang];
+    const body = document.body;
+    body.setAttribute('data-lang', lang);
+    document.documentElement.setAttribute('lang', t.html_lang);
+    document.documentElement.setAttribute('dir', t.lang_dir);
+    document.title = t.doc_title;
+
+    // Update skip link
+    const skip = document.getElementById('skip-to-main');
+    if (skip) skip.textContent = t.skip_link;
+
+    // Update all data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) {
+            if (el.tagName === 'INPUT') {
+                // skip — handled by placeholder
+            } else {
+                el.innerHTML = t[key];
+            }
+        }
+    });
+
+    // Update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key] !== undefined) el.placeholder = t[key];
+    });
+
+    // Update lang buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        const btnLang = btn.getAttribute('onclick').replace("setLang('", '').replace("')", '');
+        btn.classList.toggle('active', btnLang === lang);
+        btn.setAttribute('aria-pressed', btnLang === lang ? 'true' : 'false');
+    });
+
+    // Update a11y bar label
+    const a11yBar = document.getElementById('a11y-bar');
+    if (a11yBar) a11yBar.setAttribute('aria-label', t.a11y_bar_label);
+
+    // Re-render dynamic content with translated labels
+    if (window.allOffers) renderOffers(window.allOffers);
+    if (allItems.length) render(allItems.filter(i => {
+        const field = window.catFieldName || 'Category';
+        const iCat = i[field];
+        return curCat === "הכל" || curCat === "جميع" || curCat === "All" || iCat === curCat;
+    }));
+
+    // Update promo count
+    if (window.allOffers) {
+        const countEl = document.getElementById('promo-count');
+        if (countEl) {
+            const n = window.allOffers.length;
+            countEl.textContent = t.promo_showing.replace('{n}', n);
+        }
+    }
+
+    // Update "all categories" label in dropdown
+    if (window.allCats) buildCatDropdown(window.allCats);
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MAIN SCRIPTS
+════════════════════════════════════════════════════════════════ -->
 <script>
     const CLOUD = "dj56w7nb9";
     const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
@@ -677,81 +849,106 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-        if(el) el.classList.add('active');
-        window.scrollTo(0,0);
+        if (el) el.classList.add('active');
+        window.scrollTo(0, 0);
+        // announce page change to screen readers
+        const main = document.getElementById('main-content');
+        if (main) { main.focus(); }
     }
 
-    function zoom(url, desc='', price='') {
+    // Keyboard nav for nav items
+    document.querySelectorAll('.nav-links li[tabindex="0"]').forEach(li => {
+        li.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') this.click();
+        });
+    });
+
+    function zoom(url, desc = '', price = '') {
         document.getElementById('lb-img').src = url;
+        document.getElementById('lb-img').alt = desc || 'תמונת מוצר';
         document.getElementById('lb-desc').textContent = desc;
         document.getElementById('lb-price').textContent = price ? '₪' + price : '';
-        document.getElementById('lightbox').style.display = 'flex';
+        const lb = document.getElementById('lightbox');
+        lb.style.display = 'flex';
+        lb.focus();
     }
+
+    // Close lightbox on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('lightbox').style.display = 'none';
+            document.getElementById('imageModal').style.display = 'none';
+        }
+    });
 
     function isFresh(pid) {
         const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
-        if(!m) return true;
+        if (!m) return true;
         const d = new Date(`${m[3]}-${m[2]}-${m[1]}`);
-        const today = new Date(); today.setHours(0,0,0,0);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
         return d >= today;
     }
 
-    async function loadCloud(tag, divId, type='grid', filter=false) {
+    async function loadCloud(tag, divId, type = 'grid', filter = false) {
         try {
             const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
             const d = await r.json();
             let files = d.resources;
-            if(filter) files = files.filter(f => isFresh(f.public_id));
+            if (filter) files = files.filter(f => isFresh(f.public_id));
             const html = files.map(f => {
                 const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-                return type === 'slider' ? `<img src="${url}" onclick="zoom('${url}')">` : `<div class="card" onclick="zoom('${url}')"><img src="${url}"></div>`;
+                return type === 'slider'
+                    ? `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`
+                    : `<div class="card" role="listitem" tabindex="0" onclick="zoom('${url}')" onkeypress="if(event.key==='Enter') zoom('${url}')"><img src="${url}" alt="מוצר"></div>`;
             }).join('');
             const target = document.getElementById(divId);
-            if(target) target.innerHTML = type === 'slider' ? (html + html) : html;
-        } catch(e) { console.error("Cloudinary error:", e); }
+            if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
+        } catch (e) { console.error("Cloudinary error:", e); }
     }
 
     function render(data) {
+        const t = TRANSLATIONS[currentLang];
         const container = document.getElementById('catalog-grid');
         const slice = data.slice(0, limit);
         container.innerHTML = slice.map(i => `
-            <div class="card">
-                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg" 
-                    onclick="zoom(this.src)" loading="lazy" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
-                <h3>${i.Name}</h3>
-                <div class="price">₪${i.Price}</div>
-                <div class="barcode">ברקוד: ${i.Barcode}</div>
+            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${(i.Name||'').replace(/'/g,"\\'")}', '${i.Price||''}')">
+                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
+                    onclick="zoom(this.src, '${(i.Name||'').replace(/'/g,"\\'")}', '${i.Price||''}')"
+                    loading="lazy"
+                    alt="${i.Name || 'מוצר'}"
+                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
+                <h3>${i.Name || ''}</h3>
+                <div class="price" aria-label="${t.promo_unit} ₪${i.Price}">₪${i.Price || ''}</div>
+                <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`).join('');
         const oldBtn = document.getElementById('loadMore');
-        if(oldBtn) oldBtn.remove();
+        if (oldBtn) oldBtn.remove();
         if (data.length > limit) {
-            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;">טען מוצרים נוספים...</button>`);
+            const btnLabel = currentLang === 'ar' ? 'تحميل المزيد...' : currentLang === 'en' ? 'Load more...' : 'טען מוצרים נוספים...';
+            container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;" aria-label="${btnLabel}">${btnLabel}</button>`);
         }
     }
 
-    // ── מבצעים: בונה כפתורי קטגוריות ומרנדר גריד ──
     function renderOffers(offers) {
+        const t = TRANSLATIONS[currentLang];
         window.allOffers = offers;
-        window.activePromoCat = "הכל";
+        if (!window.activePromoCat) window.activePromoCat = "הכל";
 
-        // שלוף קטגוריה לכל מבצע לפי ברקוד מהקטלוג
         const field = window.catFieldName || 'Category';
         const cats = ["הכל", ...new Set(
-            offers
-                .map(o => {
-                    const barcode = (o.Barcode || "").trim();
-                    const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
-                    return item ? item[field] : null;
-                })
-                .filter(Boolean)
+            offers.map(o => {
+                const barcode = (o.Barcode || "").trim();
+                const item = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
+                return item ? item[field] : null;
+            }).filter(Boolean)
         )].sort((a, b) => a === "הכל" ? -1 : a.localeCompare(b, 'he'));
 
-        // בנה כפתורי סינון — רק בטאב מבצעים
         function buildPromoFilters() {
             const bar = document.getElementById('promo-filter-bar');
             if (!bar) return;
+            const allLabel = t.cat_all || "כל הקטגוריות";
             bar.innerHTML = cats.map(c =>
-                `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active"' : ''}>${c}</button>`
+                `<button onclick="filterPromos('${c}')" ${c === window.activePromoCat ? 'class="active" aria-pressed="true"' : 'aria-pressed="false"'}>${c === "הכל" ? allLabel : c}</button>`
             ).join('');
         }
 
@@ -770,60 +967,60 @@
 
         buildPromoFilters();
 
-        // סליידר בדף הבית — ללא סינון, כל המבצעים
+        // Slider
         const sliderHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
             const desc = o.Description || o.Discreption || o.Name || "";
             const price = o.UnitPrice || o.Price || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
-            const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע: ₪${price}` : `מחיר ליח' במבצע: ₪${price}`;
+            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
-                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc}', '${price}')">
-                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
+                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
+                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
                     ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
-                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel}</div>` : ""}
-                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
+                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel} ₪${price}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">${t.promo_regular}${regularPrice}</div>` : ""}
                 </div>`;
         }).join('');
         const slider = document.getElementById('promo-slider');
-        if(slider) slider.innerHTML = sliderHtml + sliderHtml;
+        if (slider) slider.innerHTML = sliderHtml + sliderHtml;
 
-        // גריד מבצעים עם כל המוצרים בהתחלה
         renderPromoGrid(offers);
     }
 
     function renderPromoGrid(offers) {
+        const t = TRANSLATIONS[currentLang];
         const field = window.catFieldName || 'Category';
         const countEl = document.getElementById('promo-count');
-        if (countEl) countEl.textContent = `מציג ${offers.length} מוצרים`;
+        if (countEl) countEl.textContent = t.promo_showing.replace('{n}', offers.length);
 
         const gridHtml = offers.map(o => {
             const barcode = (o.Barcode || "").trim();
-            const desc = o.Description || o.Discreption || o.Name || "מוצר במבצע";
+            const desc = o.Description || o.Discreption || o.Name || (currentLang === 'ar' ? 'منتج في عرض' : currentLang === 'en' ? 'Promotional item' : 'מוצר במבצע');
             const price = o.UnitPrice || o.Price || "";
             const valid = o.Valid || "";
             const qty = parseFloat(o.Quantity || o.Quanity || "1");
-            const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע:` : `מחיר ליח' במבצע:`;
+            const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = allItems.find(x => x.Barcode && x.Barcode.trim() === barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const cat = catalogItem ? (catalogItem[field] || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
-                <div class="card">
-                    <img src="${url}" onclick="zoom('${url}', '${desc}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
+                <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
+                    <img src="${url}" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
                     <h3>${desc}</h3>
-                    ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;">${cat}</div>` : ""}
-                    ${price ? `<div class="price"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
-                    ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">מחיר רגיל: ₪${regularPrice}</div>` : ""}
-                    ${valid ? `<div class="barcode">בתוקף עד: ${valid}</div>` : ""}
+                    ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
+                    ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
+                    ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
+                    ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
                 </div>`;
         }).join('');
 
         const grid = document.getElementById('promo-full');
-        if(grid) grid.innerHTML = gridHtml;
+        if (grid) grid.innerHTML = gridHtml;
     }
 
     async function start() {
@@ -831,28 +1028,30 @@
         loadCloud('newproducts', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
 
-        Papa.parse(CSV, { download: true, header: true, complete: r => {
-            allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
-            if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
-            const firstItem = allItems[0];
-            const catField = firstItem.hasOwnProperty('Category') ? 'Category' : 
-                             firstItem.hasOwnProperty('category') ? 'category' : 
-                             firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
-            if (!catField) { alert('שגיאה: לא נמצאה עמודת קטגוריה בקובץ!'); return; }
-            const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
-            window.allCats = ["הכל", ...new Set(rawCats)].sort();
-            buildCatDropdown(window.allCats);
-            window.catFieldName = catField;
-            render(allItems);
+        Papa.parse(CSV, {
+            download: true, header: true, complete: r => {
+                allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
+                if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
+                const firstItem = allItems[0];
+                const catField = firstItem.hasOwnProperty('Category') ? 'Category' :
+                    firstItem.hasOwnProperty('category') ? 'category' :
+                    firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
+                if (!catField) { console.error('שגיאה: לא נמצאה עמודת קטגוריה!'); return; }
+                const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
+                window.allCats = ["הכל", ...new Set(rawCats)].sort();
+                buildCatDropdown(window.allCats);
+                window.catFieldName = catField;
+                render(allItems);
 
-            Papa.parse(CSV_OFFERS, {
-                download: true, header: true, skipEmptyLines: true,
-                complete: r2 => {
-                    const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
-                    renderOffers(offers);
-                }
-            });
-        }});
+                Papa.parse(CSV_OFFERS, {
+                    download: true, header: true, skipEmptyLines: true,
+                    complete: r2 => {
+                        const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                        renderOffers(offers);
+                    }
+                });
+            }
+        });
     }
 
     function runFilter() {
@@ -860,8 +1059,8 @@
         const field = window.catFieldName || 'Category';
         const filtered = allItems.filter(i => {
             const iCat = i[field];
-            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) && 
-                   (curCat === "הכל" || iCat === curCat);
+            return (i.Name.toLowerCase().includes(term) || i.Barcode.includes(term)) &&
+                (curCat === "הכל" || iCat === curCat);
         });
         render(filtered);
     }
@@ -878,15 +1077,18 @@
             const data = await response.json();
             if (data.resources.length > 0) {
                 const randomImg = data.resources[Math.floor(Math.random() * data.resources.length)];
-                document.getElementById('img1').src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
+                const img = document.getElementById('img1');
+                img.src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
+                img.alt = "מבצעי השבוע";
             }
         } catch (e) {}
     }
 
     function openImage(container) {
         const src = container.querySelector('img').src;
-        if(src) {
+        if (src) {
             document.getElementById('modalImg').src = src;
+            document.getElementById('modalImg').alt = container.querySelector('img').alt || 'תמונה';
             document.getElementById('imageModal').style.display = 'flex';
         }
     }
@@ -894,18 +1096,23 @@
     let allCats = [];
 
     function buildCatDropdown(cats) {
+        const t = TRANSLATIONS[currentLang];
         const dd = document.getElementById('cat-dropdown');
-        if(!dd) return;
+        if (!dd) return;
         dd.innerHTML = cats.map(c => `
             <div onclick="selectCat('${c}')" style="padding:10px 15px; cursor:pointer; font-weight:bold; color:var(--blue); border-bottom:1px solid #f0f0f0;"
+                 role="option" tabindex="0"
+                 onkeypress="if(event.key==='Enter') selectCat('${c}')"
                  onmouseover="this.style.background='#f4f7f9'" onmouseout="this.style.background='white'">
-                ${c === 'הכל' ? 'כל הקטגוריות' : c}
+                ${c === 'הכל' ? (t.cat_all || 'כל הקטגוריות') : c}
             </div>`).join('');
     }
 
     function showCatDropdown() {
         const dd = document.getElementById('cat-dropdown');
-        if(dd) dd.style.display = 'block';
+        const input = document.getElementById('cat-search');
+        if (dd) { dd.style.display = 'block'; }
+        if (input) input.setAttribute('aria-expanded', 'true');
     }
 
     function filterCats() {
@@ -918,18 +1125,19 @@
     function selectCat(cat) {
         const input = document.getElementById('cat-search');
         const reset = document.getElementById('cat-reset');
-        if(input) input.value = cat === 'הכל' ? '' : cat;
-        if(reset) reset.style.display = cat === 'הכל' ? 'none' : 'block';
         const dd = document.getElementById('cat-dropdown');
-        if(dd) dd.style.display = 'none';
+        const t = TRANSLATIONS[currentLang];
+        if (input) { input.value = cat === 'הכל' ? '' : cat; input.setAttribute('aria-expanded', 'false'); }
+        if (reset) reset.style.display = cat === 'הכל' ? 'none' : 'block';
+        if (dd) dd.style.display = 'none';
         setCategory(cat);
     }
 
     function resetCat() {
         const input = document.getElementById('cat-search');
         const reset = document.getElementById('cat-reset');
-        if(input) input.value = '';
-        if(reset) reset.style.display = 'none';
+        if (input) input.value = '';
+        if (reset) reset.style.display = 'none';
         buildCatDropdown(window.allCats);
         setCategory('הכל');
     }
@@ -937,34 +1145,118 @@
     document.addEventListener('click', function(e) {
         const wrapper = document.getElementById('cat-search');
         const dd = document.getElementById('cat-dropdown');
-        if(dd && wrapper && !wrapper.contains(e.target) && !dd.contains(e.target)) {
+        if (dd && wrapper && !wrapper.contains(e.target) && !dd.contains(e.target)) {
             dd.style.display = 'none';
+            if (wrapper) wrapper.setAttribute('aria-expanded', 'false');
         }
     });
 
     function closeBanner() {
         document.getElementById('club-banner').classList.add('hidden');
-        localStorage.setItem('club-banner-closed', '1');
+        try { localStorage.setItem('club-banner-closed', '1'); } catch(e) {}
     }
 
     function initBanner() {
-        if (localStorage.getItem('club-registered') === '1') {
-            document.getElementById('club-banner').classList.add('hidden');
-            return;
-        }
-        if (localStorage.getItem('club-banner-closed') === '1') {
-            document.getElementById('club-banner').classList.add('hidden');
-            return;
-        }
+        try {
+            if (localStorage.getItem('club-registered') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
+            if (localStorage.getItem('club-banner-closed') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
+        } catch(e) {}
         setTimeout(() => {
             document.getElementById('club-banner').style.display = 'flex';
         }, 3000);
+    }
+
+    // ══════════════════════════════════════════
+    //  ACCESSIBILITY LOGIC
+    // ══════════════════════════════════════════
+    let fontSize = 100;
+
+    function toggleA11y(mode) {
+        const body = document.body;
+        const btn = document.getElementById(`btn-${mode}`);
+        if (mode === 'contrast') {
+            body.classList.toggle('high-contrast');
+            const on = body.classList.contains('high-contrast');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        } else if (mode === 'motion') {
+            body.classList.toggle('reduce-motion');
+            const on = body.classList.contains('reduce-motion');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        } else if (mode === 'links') {
+            body.classList.toggle('highlight-links');
+            const on = body.classList.contains('highlight-links');
+            btn.classList.toggle('on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (on) {
+                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+                    el.style.outline = '2px solid #ffcc00';
+                    el.style.backgroundColor = 'rgba(255,204,0,0.1)';
+                });
+            } else {
+                document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+                    el.style.outline = '';
+                    el.style.backgroundColor = '';
+                });
+            }
+        }
+        try { saveA11yPrefs(); } catch(e) {}
+    }
+
+    function changeFont(dir) {
+        fontSize = Math.max(80, Math.min(150, fontSize + dir * 10));
+        document.body.style.fontSize = fontSize + '%';
+        try { localStorage.setItem('a11y-fontsize', fontSize); } catch(e) {}
+    }
+
+    function resetA11y() {
+        document.body.classList.remove('high-contrast', 'reduce-motion', 'highlight-links');
+        document.body.style.fontSize = '';
+        fontSize = 100;
+        document.querySelectorAll('.a11y-btn').forEach(btn => {
+            btn.classList.remove('on');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        document.querySelectorAll('a, button, [role="button"], [tabindex="0"]').forEach(el => {
+            el.style.outline = '';
+            el.style.backgroundColor = '';
+        });
+        try { localStorage.removeItem('a11y-prefs'); localStorage.removeItem('a11y-fontsize'); } catch(e) {}
+    }
+
+    function saveA11yPrefs() {
+        const prefs = {
+            contrast: document.body.classList.contains('high-contrast'),
+            motion: document.body.classList.contains('reduce-motion'),
+            links: document.body.classList.contains('highlight-links'),
+        };
+        localStorage.setItem('a11y-prefs', JSON.stringify(prefs));
+    }
+
+    function loadA11yPrefs() {
+        try {
+            const fs = localStorage.getItem('a11y-fontsize');
+            if (fs) { fontSize = parseInt(fs); document.body.style.fontSize = fontSize + '%'; }
+            const prefs = JSON.parse(localStorage.getItem('a11y-prefs') || '{}');
+            if (prefs.contrast) toggleA11y('contrast');
+            if (prefs.motion) toggleA11y('motion');
+            if (prefs.links) toggleA11y('links');
+        } catch(e) {}
+    }
+
+    // Detect OS prefers-reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.body.classList.add('reduce-motion');
+        const btn = document.getElementById('btn-motion');
+        if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
     }
 
     window.onload = () => {
         start();
         loadDynamicImage();
         initBanner();
+        loadA11yPrefs();
         setInterval(loadDynamicImage, 8000);
     };
 </script>
