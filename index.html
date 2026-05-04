@@ -140,17 +140,17 @@
 
         /* כפתורי ניווט סליידר */
         .slider-nav {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            width: 44px; height: 44px; border-radius: 50%;
-            background: white; border: 2px solid var(--blue); color: var(--blue);
-            font-size: 1.2rem; cursor: pointer; z-index: 10;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.2s;
+            position: absolute; top: 0; bottom: 0; width: 60px;
+            background: linear-gradient(to left, rgba(244,247,249,0.95), rgba(244,247,249,0));
+            border: none; color: var(--blue); font-size: 2rem;
+            cursor: pointer; z-index: 10; display: flex; align-items: center;
+            justify-content: center; transition: 0.2s; user-select: none;
         }
-        .slider-nav:hover { background: var(--blue); color: white; }
         .slider-nav:focus-visible { outline: 3px solid var(--yellow); }
-        .slider-nav.prev { right: 10px; }
-        .slider-nav.next { left: 10px; }
+        .slider-nav.prev { right: 0; background: linear-gradient(to left, rgba(244,247,249,0.95), rgba(244,247,249,0)); }
+        .slider-nav.next { left: 0; background: linear-gradient(to right, rgba(244,247,249,0.95), rgba(244,247,249,0)); }
+        .slider-nav:hover { color: var(--blue); }
+        .slider-nav i { pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
@@ -400,8 +400,18 @@
             </div>
             <h2 class="section-title" data-i18n="home_promos">🔥 מבצעים לזמן מוגבל</h2>
             <div class="slider-wrap" aria-label="מבצעים" role="region">
-                <button class="slider-nav prev" onclick="sliderScroll('prev')" aria-label="מבצע הקודם">&#8250;</button>
-                <button class="slider-nav next" onclick="sliderScroll('next')" aria-label="מבצע הבא">&#8249;</button>
+                <button class="slider-nav prev"
+                    onmousedown="startSlide('prev')" onmouseup="stopSlide()" onmouseleave="stopSlide()"
+                    ontouchstart="startSlide('prev')" ontouchend="stopSlide()"
+                    aria-label="גלול שמאלה">
+                    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button class="slider-nav next"
+                    onmousedown="startSlide('next')" onmouseup="stopSlide()" onmouseleave="stopSlide()"
+                    ontouchstart="startSlide('next')" ontouchend="stopSlide()"
+                    aria-label="גלול ימינה">
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </button>
                 <div class="slider-track" id="promo-slider"></div>
             </div>
             <h2 class="section-title" data-i18n="home_new">חדש על המדף</h2>
@@ -1113,19 +1123,21 @@
         if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
     }
 
-    function sliderScroll(dir) {
+    function startSlide(dir) {
         const wrap = document.querySelector('.slider-wrap');
         const track = document.getElementById('promo-slider');
-        if (!track) return;
-        // עצור אנימציה זמנית
+        if (!wrap || !track) return;
         track.style.animationPlayState = 'paused';
-        const amount = dir === 'prev' ? 300 : -300;
-        wrap.scrollLeft -= amount;
-        // המשך אנימציה אחרי 2 שניות
-        clearTimeout(window._sliderResumeTimer);
-        window._sliderResumeTimer = setTimeout(() => {
-            track.style.animationPlayState = 'running';
-        }, 2000);
+        const speed = 4; // px per frame
+        window._slideInterval = setInterval(() => {
+            wrap.scrollLeft += dir === 'prev' ? speed : -speed;
+        }, 16); // ~60fps
+    }
+
+    function stopSlide() {
+        clearInterval(window._slideInterval);
+        const track = document.getElementById('promo-slider');
+        if (track) track.style.animationPlayState = 'running';
     }
 
     function toggleA11yBar() {
