@@ -791,15 +791,15 @@
         container.innerHTML = slice.map(i => {
             const tName = i.Name || '';
             const safeDesc = tName.replace(/'/g, "\\'");
+            const imgUrl = `https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg`;
             return `
-            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||\'\'}')">
-                <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
-                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')" 
-                    loading="lazy"
-                    alt="${tName || 'מוצר'}"
-                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
+            <div class="card" role="listitem" tabindex="0"
+                onclick="zoom('${imgUrl}','${safeDesc}','${i.Price||''}')"
+                onkeypress="if(event.key==='Enter') this.click()">
+                <img src="${imgUrl}" loading="lazy" alt="${tName || 'מוצר'}"
+                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                 <h3>${tName || ''}</h3>
-                <div class="price" aria-label="${t.promo_unit} ₪${i.Price}">₪${i.Price || ''}</div>
+                <div class="price">&#8362;${i.Price || ''}</div>
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`;
         }).join('');
@@ -897,20 +897,23 @@
 
         const sliderHtml = sliderOffers.map(o => {
             const barcode = normalizeBarcode(o.Barcode);
-            const rawDesc2 = o.Description || o.Discreption || o.Name || "";
-            const desc = rawDesc2 ? rawDesc2 : "";
-            const price = o.UnitPrice || o.Price || "";
-            const qty = parseFloat(o.Quantity || o.Quanity || "1");
+            const desc = (o.Description || o.Discreption || o.Name || '').replace(/'/g, '');
+            const price = o.UnitPrice || o.Price || '';
+            const valid = o.Valid || o.ExpiryDate || '';
+            const qty = parseFloat(o.Quantity || o.Quanity || '1');
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = findItemByBarcode(o.Barcode);
-            const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
+            const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
-                <div style="text-align:center; cursor:pointer;" onclick="zoomPromo('${url}','${desc.replace(/'/g,"\\'")}','${price}','${o.Valid||o.ExpiryDate||\'\'}','')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoomPromo('${url}','${desc}','${price}','','')">
+                <div style="text-align:center;cursor:pointer;min-width:160px"
+                    onclick="zoomPromo('${url}','${desc}','${price}','${valid}','${regularPrice}')"
+                    tabindex="0" role="button" aria-label="${desc}"
+                    onkeypress="if(event.key==='Enter') this.click()">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
-                    ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
-                    ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel} ₪${price}</div>` : ""}
-                    ${regularPrice ? `<div style="color:#999; font-size:0.8rem;">${t.promo_regular}${regularPrice}</div>` : ""}
+                    ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333">${desc}</div>` : ''}
+                    ${price ? `<div style="color:#d32f2f;font-weight:bold">${priceLabel} &#8362;${price}</div>` : ''}
+                    ${regularPrice ? `<div style="color:#999;font-size:0.8rem">${t.promo_regular}${regularPrice}</div>` : ''}
                 </div>`;
         }).join('');
         const slider = document.getElementById('promo-slider');
