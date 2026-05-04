@@ -21,13 +21,26 @@
         .skip-link:focus { top: 0; }
 
         /* ─── Accessibility Toolbar ─────────────────────────── */
+        /* כפתור פתיחת נגישות */
+        #a11y-toggle {
+            position: fixed; bottom: 110px; right: 0; z-index: 3001;
+            width: 44px; height: 44px; background: #0076DA; color: white;
+            border: none; border-radius: 12px 0 0 12px; cursor: pointer;
+            font-size: 1.3rem; display: flex; align-items: center; justify-content: center;
+            box-shadow: -3px 0 12px rgba(0,0,0,0.2); transition: background 0.2s;
+        }
+        #a11y-toggle:hover { background: #005bb5; }
+        #a11y-toggle:focus-visible { outline: 3px solid #ffcc00; }
+
         #a11y-bar {
-            position: fixed; top: 50%; right: 0; transform: translateY(-50%);
+            position: fixed; bottom: 155px; right: 0; transform: translateX(110%);
             z-index: 3000; display: flex; flex-direction: column; gap: 4px;
             background: white; border-radius: 12px 0 0 12px;
             box-shadow: -4px 0 20px rgba(0,0,0,0.15); padding: 8px 6px;
             border: 2px solid #0076DA; border-right: none;
+            transition: transform 0.3s ease;
         }
+        #a11y-bar.open { transform: translateX(0); }
         .a11y-btn {
             width: 42px; height: 42px; border-radius: 8px; border: none;
             background: #f4f7f9; color: #333; cursor: pointer; font-size: 1.1rem;
@@ -270,6 +283,10 @@
 <!-- ══════════════════════════════════════════
      ACCESSIBILITY TOOLBAR
 ════════════════════════════════════════════ -->
+<button id="a11y-toggle" onclick="toggleA11yBar()" aria-label="פתח סרגל נגישות" aria-controls="a11y-bar" aria-expanded="false" title="נגישות">
+    <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
+</button>
+
 <div id="a11y-bar" role="complementary" aria-label="סרגל נגישות">
     <button class="a11y-btn" id="btn-contrast" title="ניגודיות גבוהה" aria-pressed="false" onclick="toggleA11y('contrast')" aria-label="ניגודיות גבוהה">
         <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i>
@@ -591,15 +608,17 @@
     // עדכן את המספרים כאן אחרי שיצרת את ה-tabs ar ו-en
 
     const SHEET_URLS = {
+        // קטלוג מוצרים — עברית בלבד עד שהסנכרון המלא יסתיים
         products: {
             he: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`,
-            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv&gid=GID_PRODUCTS_AR`,
-            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv&gid=GID_PRODUCTS_EN`,
+            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`,  // TODO: החלף ב-gid אחרי סנכרון
+            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`,  // TODO: החלף ב-gid אחרי סנכרון
         },
+        // מבצעים — כבר מתורגמים! עדכן את ה-GIDs מה-URL של כל tab בגיליון OFFERS
         offers: {
             he: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv`,
-            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_AR`,
-            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_EN`,
+            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_AR`,  // ← עדכן
+            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_EN`,  // ← עדכן
         }
     };
 
@@ -1055,6 +1074,14 @@
         document.body.classList.add('reduce-motion');
         const btn = document.getElementById('btn-motion');
         if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
+    }
+
+    function toggleA11yBar() {
+        const bar = document.getElementById('a11y-bar');
+        const btn = document.getElementById('a11y-toggle');
+        const isOpen = bar.classList.toggle('open');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        btn.setAttribute('aria-label', isOpen ? 'סגור סרגל נגישות' : 'פתח סרגל נגישות');
     }
 
     window.onload = () => {
