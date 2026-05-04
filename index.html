@@ -944,9 +944,12 @@
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            const safeDesc = desc.replace(/'/g, '');
             return `
-                <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
-                    <img src="${url}" onclick="zoomPromo('${url}','${desc.replace(/'/g,"\\'")}','${price}','${valid}','${regularPrice}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
+                <div class="card" role="listitem" tabindex="0"
+                    onclick="zoomPromo('${url}','${safeDesc}','${price}','${valid}','${regularPrice}')"
+                    onkeypress="if(event.key==='Enter') this.click()">
+                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
                     ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
