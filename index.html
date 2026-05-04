@@ -383,7 +383,7 @@
             <div class="image-roll-container" id="imageRoll" onclick="openImage(this)" tabindex="0" role="button" aria-label="לחץ להגדלת התמונה" onkeypress="if(event.key==='Enter') openImage(this)">
                 <div class="roll-item"><img src="" alt="מבצעי השבוע" id="img1"></div>
             </div>
-            <h2 class="section-title" data-i18n="home_promos">המבצעים החמים שלנו</h2>
+            <h2 class="section-title" data-i18n="home_promos">🔥 מבצעים לזמן מוגבל</h2>
             <div class="slider-wrap" aria-label="מבצעים" role="region">
                 <div class="slider-track" id="promo-slider"></div>
             </div>
@@ -784,8 +784,26 @@
 
         buildPromoFilters();
 
-        // Slider
-        const sliderHtml = offers.map(o => {
+        // Slider — רק מבצעים שפגים תוך שבוע מהיום
+        const today = new Date(); today.setHours(0,0,0,0);
+        const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+
+        function parseIsraeliDate(str) {
+            if (!str) return null;
+            const m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+            if (!m) return null;
+            return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+        }
+
+        const sliderOffers = offers.filter(o => {
+            const valid = o.Valid || o.ExpiryDate || o.ToDate || "";
+            if (!valid) return false;
+            const d = parseIsraeliDate(valid);
+            if (!d) return false;
+            return d >= today && d <= nextWeek;
+        });
+
+        const sliderHtml = sliderOffers.map(o => {
             const barcode = normalizeBarcode(o.Barcode);
             const rawDesc2 = o.Description || o.Discreption || o.Name || "";
             const desc = rawDesc2 ? rawDesc2 : "";
@@ -804,7 +822,7 @@
                 </div>`;
         }).join('');
         const slider = document.getElementById('promo-slider');
-        if (slider) slider.innerHTML = sliderHtml + sliderHtml;
+        if (slider) slider.innerHTML = sliderOffers.length ? sliderHtml + sliderHtml : '';
 
         renderPromoGrid(offers);
     }
@@ -1105,7 +1123,7 @@ const TRANSLATIONS = {
         nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
         nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות",
         ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
-        home_promos: "המבצעים החמים שלנו", home_new: "חדש על המדף",
+        home_promos: "🔥 מבצעים לזמן מוגבל", home_new: "חדש על המדף",
         catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
         catalog_cat_label: "בחר קטגוריה", catalog_cat_ph: "כל הקטגוריות...",
         promos_title: "מבצעים", new_title: "חדש על המדף",
@@ -1168,7 +1186,7 @@ const TRANSLATIONS = {
         nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
         nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء",
         ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
-        home_promos: "أفضل عروضنا", home_new: "جديد على الرف",
+        home_promos: "🔥 عروض لفترة محدودة", home_new: "جديد على الرف",
         catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
         catalog_cat_label: "اختر فئة", catalog_cat_ph: "جميع الفئات...",
         promos_title: "العروض", new_title: "جديد على الرف",
@@ -1231,7 +1249,7 @@ const TRANSLATIONS = {
         nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
         nav_contact: "Contact", nav_club: "⭐ Loyalty Club",
         ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
-        home_promos: "Our Best Deals", home_new: "New Arrivals",
+        home_promos: "🔥 Limited Time Deals", home_new: "New Arrivals",
         catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",
         catalog_cat_label: "Select category", catalog_cat_ph: "All categories...",
         promos_title: "Deals & Promotions", new_title: "New Arrivals",
