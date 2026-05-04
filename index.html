@@ -132,10 +132,25 @@
         .video-box { max-width: 720px; max-height: 350px; margin: 0 auto 50px; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
 
-        .slider-wrap { width: 100%; overflow: hidden; background: transparent; padding: 40px 0; margin-bottom: 40px; }
-        .slider-track { display: flex; width: max-content; animation: scroll 1200s linear infinite; gap: 30px; padding: 20px; }
+        .slider-wrap { width: 100%; overflow: hidden; background: transparent; padding: 40px 0; margin-bottom: 40px; position: relative; }
+        .slider-track { display: flex; width: max-content; animation: scroll 840s linear infinite; gap: 30px; padding: 20px; }
+        .slider-track:hover { animation-play-state: paused; }
         .slider-track img { height: 196px; border-radius: 15px; cursor: pointer; box-shadow: 0 15px 35px rgba(0,0,0,0.2); transition: all 0.5s ease; }
         .slider-track img:hover { transform: scale(1.1) translateY(-10px); box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+
+        /* כפתורי ניווט סליידר */
+        .slider-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 44px; height: 44px; border-radius: 50%;
+            background: white; border: 2px solid var(--blue); color: var(--blue);
+            font-size: 1.2rem; cursor: pointer; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.2s;
+        }
+        .slider-nav:hover { background: var(--blue); color: white; }
+        .slider-nav:focus-visible { outline: 3px solid var(--yellow); }
+        .slider-nav.prev { right: 10px; }
+        .slider-nav.next { left: 10px; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
@@ -385,6 +400,8 @@
             </div>
             <h2 class="section-title" data-i18n="home_promos">🔥 מבצעים לזמן מוגבל</h2>
             <div class="slider-wrap" aria-label="מבצעים" role="region">
+                <button class="slider-nav prev" onclick="sliderScroll('prev')" aria-label="מבצע הקודם">&#8250;</button>
+                <button class="slider-nav next" onclick="sliderScroll('next')" aria-label="מבצע הבא">&#8249;</button>
                 <div class="slider-track" id="promo-slider"></div>
             </div>
             <h2 class="section-title" data-i18n="home_new">חדש על המדף</h2>
@@ -1094,6 +1111,21 @@
         document.body.classList.add('reduce-motion');
         const btn = document.getElementById('btn-motion');
         if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
+    }
+
+    function sliderScroll(dir) {
+        const wrap = document.querySelector('.slider-wrap');
+        const track = document.getElementById('promo-slider');
+        if (!track) return;
+        // עצור אנימציה זמנית
+        track.style.animationPlayState = 'paused';
+        const amount = dir === 'prev' ? 300 : -300;
+        wrap.scrollLeft -= amount;
+        // המשך אנימציה אחרי 2 שניות
+        clearTimeout(window._sliderResumeTimer);
+        window._sliderResumeTimer = setTimeout(() => {
+            track.style.animationPlayState = 'running';
+        }, 2000);
     }
 
     function toggleA11yBar() {
