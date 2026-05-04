@@ -585,21 +585,26 @@
 
     const SHEET_ID_OFFERS = "2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5";
 
-    // מחזיר URL קטלוג לפי שפה
-    function getCsvUrl(lang) {
-        const base = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`;
-        if (lang === 'ar') return base + '&gid=ar';
-        if (lang === 'en') return base + '&gid=en';
-        return base;
-    }
+    // ─── URLs לפי שפה ───────────────────────────────────────────
+    // כדי לקבל את ה-gid של כל tab:
+    // פתח את הגיליון בגוגל → לחץ על tab → ה-URL יכיל gid=XXXXXXX
+    // עדכן את המספרים כאן אחרי שיצרת את ה-tabs ar ו-en
 
-    // מחזיר URL מבצעים לפי שפה
-    function getOffersUrl(lang) {
-        const base = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv`;
-        if (lang === 'ar') return base + '&gid=ar';
-        if (lang === 'en') return base + '&gid=en';
-        return base;
-    }
+    const SHEET_URLS = {
+        products: {
+            he: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv`,
+            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv&gid=GID_PRODUCTS_AR`,
+            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PRODUCTS}/pub?output=csv&gid=GID_PRODUCTS_EN`,
+        },
+        offers: {
+            he: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv`,
+            ar: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_AR`,
+            en: `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_OFFERS}/pub?output=csv&gid=GID_OFFERS_EN`,
+        }
+    };
+
+    function getCsvUrl(lang)    { return SHEET_URLS.products[lang] || SHEET_URLS.products.he; }
+    function getOffersUrl(lang) { return SHEET_URLS.offers[lang]   || SHEET_URLS.offers.he; }
 
     let allItems = [];
     let curCat = "הכל";
@@ -825,7 +830,7 @@
         loadCloud('newproducts', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
 
-        Papa.parse(CSV, {
+        Papa.parse(getCsvUrl('he'), {
             download: true, header: true, complete: r => {
                 allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
                 if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
