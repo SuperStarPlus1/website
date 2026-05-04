@@ -185,10 +185,10 @@
         .waze { background-color: #33CCFF; }
         .whatsapp { background-color: #25D366; }
 
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; flex-direction: column; }
-        #lb-img { max-width: 90%; max-height: 70vh; border: 3px solid #fff; border-radius: 10px; object-fit: contain; }
-        #lb-desc { color: white; font-size: 1.2rem; font-weight: bold; margin-top: 10px; }
-        #lb-price { color: #ffcc00; font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; align-items: center; justify-content: center; cursor: pointer; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        #lb-img { max-width: 90%; max-height: 60vh; border: 3px solid #fff; border-radius: 10px; object-fit: contain; }
+        #lb-desc { color: white; font-size: 1.1rem; font-weight: bold; }
+        #lb-price { color: #ffcc00; font-size: 1.6rem; font-weight: bold; }
         h2.section-title { border-right: 6px solid var(--yellow); padding-right: 15px; margin: 40px 0 20px; color: var(--blue); }
         body[data-lang="en"] h2.section-title { border-right: none; border-left: 6px solid var(--yellow); padding-right: 0; padding-left: 15px; }
 
@@ -334,8 +334,12 @@
 ════════════════════════════════════════════ -->
 <div id="lightbox" onclick="this.style.display='none'" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת">
     <img src="" id="lb-img" alt="">
-    <div id="lb-desc"></div>
-    <div id="lb-price"></div>
+    <div id="lb-details" style="text-align:center; margin-top:12px; max-width:500px;">
+        <div id="lb-desc" style="color:white; font-size:1.1rem; font-weight:bold; margin-bottom:6px;"></div>
+        <div id="lb-price" style="color:#ffcc00; font-size:1.6rem; font-weight:bold;"></div>
+        <div id="lb-cat"   style="color:rgba(255,255,255,0.7); font-size:0.9rem; margin-top:4px;"></div>
+        <div id="lb-extra" style="color:rgba(255,255,255,0.6); font-size:0.85rem; margin-top:4px;"></div>
+    </div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -676,14 +680,37 @@
         });
     });
 
-    function zoom(url, desc = '', price = '') {
+    function zoom(url, desc = '', price = '', cat = '', extra = '') {
         document.getElementById('lb-img').src = url;
         document.getElementById('lb-img').alt = desc || 'תמונת מוצר';
-        document.getElementById('lb-desc').textContent = desc;
+        document.getElementById('lb-desc').textContent  = desc;
         document.getElementById('lb-price').textContent = price ? '₪' + price : '';
+        document.getElementById('lb-cat').textContent   = cat;
+        document.getElementById('lb-extra').textContent = extra;
         const lb = document.getElementById('lightbox');
         lb.style.display = 'flex';
         lb.focus();
+    }
+
+    // פותח lightbox עם כל פרטי מוצר מהקטלוג
+    function zoomProduct(url, barcode) {
+        const product = findProductByBarcode(barcode);
+        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
+        const name  = product ? (product.Name  || '') : '';
+        const price = product ? (product.Price || '') : '';
+        const cat   = product ? (product[window.catFieldName||'Category'] || '') : '';
+        const extra = barcode ? `${t.barcode_label||'ברקוד:'} ${barcode}` : '';
+        zoom(url, name, price, cat, extra);
+    }
+
+    // פותח lightbox עם פרטי מבצע
+    function zoomPromo(url, desc, unitPrice, valid, regularPrice) {
+        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
+        const extra = [
+            valid        ? `${t.promo_valid||'בתוקף עד:'} ${valid}` : '',
+            regularPrice ? `${t.promo_regular||'מחיר רגיל: ₪'}${regularPrice}` : ''
+        ].filter(Boolean).join('  |  ');
+        zoom(url, desc, unitPrice, '', extra);
     }
 
     // Close lightbox on Escape
@@ -702,18 +729,56 @@
         return d >= today;
     }
 
+    // חולץ ברקוד מ-public_id של קלאודינרי (השם הוא הברקוד)
+    function extractBarcode(public_id) {
+        // public_id יכול להיות "products/7290000001234" או "7290000001234"
+        const parts = public_id.split('/');
+        const name = parts[parts.length - 1];
+        // הסר סיומת תאריך אם קיימת (למשל "7290000001234-01-01-2024")
+        return name.split('-')[0];
+    }
+
+    function findProductByBarcode(barcode) {
+        if (!allItems || !allItems.length) return null;
+        const nb = (b) => String(b||'').trim().replace(/\.0$/, '');
+        return allItems.find(x => nb(x.Barcode) === nb(barcode));
+    }
+
     async function loadCloud(tag, divId, type = 'grid', filter = false) {
         try {
             const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
             const d = await r.json();
             let files = d.resources;
             if (filter) files = files.filter(f => isFresh(f.public_id));
+            const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
+
             const html = files.map(f => {
                 const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
-                return type === 'slider'
-                    ? `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`
-                    : `<div class="card" role="listitem" tabindex="0" onclick="zoom('${url}')" onkeypress="if(event.key==='Enter') zoom('${url}')"><img src="${url}" alt="מוצר"></div>`;
+
+                if (type === 'slider') {
+                    return `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`;
+                }
+
+                // grid — חלץ ברקוד ומצא מוצר בקטלוג
+                const barcode = extractBarcode(f.public_id);
+                const product = findProductByBarcode(barcode);
+                const name  = product ? (product.Name  || '') : '';
+                const price = product ? (product.Price || '') : '';
+                const cat   = product ? (product[window.catFieldName||'Category'] || '') : '';
+                const safeN = name.replace(/'/g, "\'");
+
+                return `
+                <div class="card" role="listitem" tabindex="0"
+                    onclick="zoomProduct('${url}','${barcode}')"
+                    onkeypress="if(event.key==='Enter') zoomProduct('${url}','${barcode}')">
+                    <img src="${url}" alt="${name || 'מוצר'}" loading="lazy">
+                    ${name  ? `<h3>${name}</h3>` : ''}
+                    ${price ? `<div class="price">₪${price}</div>` : ''}
+                    ${cat   ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:4px;">${cat}</div>` : ''}
+                    ${barcode ? `<div class="barcode">${t.barcode_label||'ברקוד:'} ${barcode}</div>` : ''}
+                </div>`;
             }).join('');
+
             const target = document.getElementById(divId);
             if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
         } catch (e) { console.error("Cloudinary error:", e); }
@@ -727,9 +792,9 @@
             const tName = i.Name || '';
             const safeDesc = tName.replace(/'/g, "\\'");
             return `
-            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||''}')">
+            <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom(this.querySelector('img').src, '${safeDesc}', '${i.Price||\'\'}')">
                 <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg"
-                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')"
+                    onclick="zoom(this.src, '${safeDesc}', '${i.Price||''}')" 
                     loading="lazy"
                     alt="${tName || 'מוצר'}"
                     onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'; this.alt='תמונה לא זמינה'">
@@ -841,7 +906,7 @@
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
-                <div style="text-align:center; cursor:pointer;" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
+                <div style="text-align:center; cursor:pointer;" onclick="zoomPromo('${url}','${desc.replace(/'/g,"\\'")}','${price}','${o.Valid||o.ExpiryDate||\'\'}','')" tabindex="0" role="button" aria-label="${desc} ${priceLabel} ₪${price}" onkeypress="if(event.key==='Enter') zoomPromo('${url}','${desc}','${price}','','')">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
                     ${desc ? `<div style="font-weight:bold; margin-top:5px; color:#333;">${desc}</div>` : ""}
                     ${price ? `<div style="color:#d32f2f; font-weight:bold;">${priceLabel} ₪${price}</div>` : ""}
@@ -878,7 +943,7 @@
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             return `
                 <div class="card" role="listitem" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}','${desc.replace(/'/g,"\\'")}','${price}')">
-                    <img src="${url}" onclick="zoom('${url}', '${desc.replace(/'/g,"\\'")}', '${price}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
+                    <img src="${url}" onclick="zoomPromo('${url}','${desc.replace(/'/g,"\\'")}','${price}','${valid}','${regularPrice}')" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
                     ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
@@ -910,6 +975,10 @@
                 buildCatDropdown(window.allCats);
                 window.catFieldName = catField;
                 render(allItems);
+
+                // טען מחדש "חדש על המדף" עכשיו שהקטלוג טעון — כדי להציג שמות ומחירים
+                loadCloud('newproducts', 'new-home', 'grid', false);
+                loadCloud('newproducts', 'new-full', 'grid', false);
 
                 Papa.parse(getOffersUrl(currentLang), {
                     download: true, header: true, skipEmptyLines: true,
