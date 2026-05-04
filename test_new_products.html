@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>בדיקת ברקוד מתמונות</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<style>
+  body { font-family: monospace; padding: 20px; background: #f4f7f9; }
+  .box { background: white; border-radius: 10px; padding: 15px; margin: 10px 0; border-right: 5px solid #0076DA; }
+  .ok  { border-color: green; } .err { border-color: red; } .warn { border-color: orange; }
+  pre  { background: #f8f8f8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; white-space: pre-wrap; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 15px; }
+  .card { background: white; border-radius: 10px; padding: 10px; text-align: center; border: 1px solid #eee; font-size: 0.8rem; }
+  .card img { width: 100%; height: 120px; object-fit: contain; }
+  .found { border-color: green; border-width: 2px; }
+  .notfound { border-color: orange; border-width: 2px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold; margin:2px; }
+  .green { background:#e8f5e9; color:#2e7d32; }
+  .red   { background:#fdeaea; color:#c62828; }
+  .blue  { background:#e3f2fd; color:#0076DA; }
+  button { padding:10px 20px; background:#0076DA; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; margin:5px; }
+</style>
+</head>
+<body>
+<h2>🔍 בדיקת זיהוי ברקוד מתמונות Cloudinary</h2>
+
+<div class="box">
+  <button onclick="runTest()">הרץ בדיקה</button>
+  <span id="status" style="margin-right:15px; font-weight:bold;"></span>
+</div>
+
+<div id="out"></div>
+
+<script>
+const CLOUD = "dj56w7nb9";
+const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+
+function extractBarcode(public_id) {
+    const parts = public_id.split('/');
+    const name = parts[parts.length - 1];
+    return name.split('-')[0];
+}
+
+function nb(b) {
+    let s = String(b || '').trim();
+    if (s.endsWith('.0')) s = s.slice(0, -2);
+    return s;
+}
+
+async function runTest() {
+    const out = document.getElementById('out');
+    const status = document.getElementById('status');
+    out.innerHTML = '';
+    status.textContent = '⏳ טוען...';
+
+    // 1. Load cloudinary images
+    let images = [];
+    try {
+        const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/newproducts.json`);
+        const d = await r.json();
+        images = d.resources || [];
+        out.innerHTML += `<div class="box ok"><b>✅ קלאודינרי:</b> נמצאו ${images.length} תמונות בתגית "newproducts"<br>
+        <pre>${images.slice(0,5).map(f => `public_id: ${f.public_id}  →  barcode: ${extractBarcode(f.public_id)}`).join('\n')}${images.length > 5 ? '\n...' : ''}</pre></div>`;
+    } catch(e) {
+        out.innerHTML += `<div class="box err">❌ שגיאה בקלאודינרי: ${e.message}</div>`;
+        status.textContent = '❌ נכשל';
+        return;
+    }
+
+    // 2. Load catalog
+    status.textContent = '⏳ טוען קטלוג...';
+    let catalog = [];
+    await new Promise(resolve => {
+        Papa.parse(CSV, {
+            download: true, header: true,
+            complete: r => { catalog = r.data.filter(x => x.Barcode && x.Barcode.trim()); resolve(); }
+        });
+    });
+    out.innerHTML += `<div class="box ok"><b>✅ קטלוג:</b> ${catalog.length} מוצרים נטענו</div>`;
+
+    // 3. Match each image to catalog
+    let matched = 0, unmatched = 0;
+    const results = images.map(f => {
+        const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+        const barcode = extractBarcode(f.public_id);
+        const product = catalog.find(x => nb(x.Barcode) === nb(barcode));
+        if (product) matched++; else unmatched++;
+        return { url, barcode, product, public_id: f.public_id };
+    });
+
+    // 4. Summary
+    const pct = images.length ? Math.round(matched/images.length*100) : 0;
+    out.innerHTML += `<div class="box ${pct>70?'ok':pct>30?'warn':'err'}">
+        <b>תוצאות התאמה:</b><br>
+        <span class="badge green">✅ נמצאו: ${matched}</span>
+        <span class="badge red">❌ לא נמצאו: ${unmatched}</span>
+        <span class="badge blue">אחוז הצלחה: ${pct}%</span>
+        ${unmatched > 0 ? `<br><br><b>ברקודים שלא נמצאו בקטלוג:</b><br>
+        <pre>${results.filter(r=>!r.product).map(r=>`${r.public_id}  →  ברקוד: ${r.barcode}`).join('\n')}</pre>` : ''}
+    </div>`;
+
+    // 5. Visual grid
+    out.innerHTML += `<div class="box"><b>תצוגת כרטיסים (כמו שיראה באתר):</b>
+    <div class="grid">${results.map(r => `
+        <div class="card ${r.product ? 'found' : 'notfound'}">
+            <img src="${r.url}" onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'">
+            <div style="margin-top:6px">
+            ${r.product
+                ? `<div style="font-weight:bold;color:#333;font-size:0.8rem">${r.product.Name||''}</div>
+                   <div style="color:#d32f2f;font-weight:bold">₪${r.product.Price||''}</div>
+                   <div class="badge blue">${r.product.Category||''}</div>`
+                : `<div class="badge red">❌ לא נמצא בקטלוג</div>`}
+            <div style="color:#aaa;font-size:0.7rem;margin-top:3px">${r.barcode}</div>
+            </div>
+        </div>`).join('')}
+    </div></div>`;
+
+    status.textContent = `✅ הושלם — ${pct}% התאמה`;
+}
+</script>
+</body>
+</html>
+test_new_products
