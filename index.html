@@ -1123,21 +1123,47 @@
         if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
     }
 
+    // ── Slider manual control ──────────────────────────────────
+    // קורא את מיקום ה-translateX הנוכחי של האנימציה
+    function getCurrentTranslateX(el) {
+        const style = window.getComputedStyle(el);
+        const matrix = new DOMMatrix(style.transform);
+        return matrix.m41; // translateX
+    }
+
     function startSlide(dir) {
-        const wrap = document.querySelector('.slider-wrap');
         const track = document.getElementById('promo-slider');
-        if (!wrap || !track) return;
-        track.style.animationPlayState = 'paused';
-        const speed = 4; // px per frame
+        if (!track) return;
+
+        // קפא את האנימציה ושמור את המיקום הנוכחי
+        const currentX = getCurrentTranslateX(track);
+        track.style.animation = 'none';
+        track.style.transform = `translateX(${currentX}px)`;
+        window._slideX = currentX;
+
+        const speed = 5;
+        clearInterval(window._slideInterval);
         window._slideInterval = setInterval(() => {
-            wrap.scrollLeft += dir === 'prev' ? speed : -speed;
-        }, 16); // ~60fps
+            window._slideX += dir === 'next' ? speed : -speed;
+            track.style.transform = `translateX(${window._slideX}px)`;
+        }, 16);
     }
 
     function stopSlide() {
         clearInterval(window._slideInterval);
         const track = document.getElementById('promo-slider');
-        if (track) track.style.animationPlayState = 'running';
+        if (!track) return;
+        // חזור לאנימציה רציפה מהמיקום הנוכחי
+        const currentX = window._slideX || 0;
+        const trackWidth = track.scrollWidth / 2;
+        // נרמל את המיקום להיות בתוך טווח הלולאה
+        const normalizedX = ((currentX % trackWidth) - trackWidth) % trackWidth;
+        track.style.transform = '';
+        track.style.animation = '';
+        // הגדר animation-delay כדי להמשיך מאותו מקום
+        const pct = Math.abs(normalizedX) / trackWidth;
+        track.style.animation = `scroll 840s linear infinite`;
+        track.style.animationDelay = `-${pct * 840}s`;
     }
 
     function toggleA11yBar() {
