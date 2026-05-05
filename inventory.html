@@ -357,8 +357,7 @@
 <!-- Camera Modal -->
 <div id="camera-modal">
   <div style="position:relative; width:100%; max-width:400px; display:flex; justify-content:center;">
-    <video id="video" autoplay muted playsinline webkit-playsinline></video>
-    <div class="scan-line"></div>
+    <div id="video" style="width:100%;max-width:400px;border-radius:12px;overflow:hidden;border:2px solid var(--accent);"></div>
   </div>
   <div class="cam-btns">
     <button class="btn-close-cam" onclick="stopCamera()">✕ סגור</button>
@@ -635,92 +634,84 @@ function loadScript(src) {
 async function openCamera() {
     const modal = document.getElementById('camera-modal');
     modal.classList.add('open');
+
     try {
-        // iOS Safari: בקש הרשאת מצלמה ישירות תחילה
-        scanStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } }
-        });
-
-        const video = document.getElementById('video');
-        video.srcObject = scanStream;
-        await video.play();
-
-        // טען ZXing
-        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
-
-        const hints = new Map();
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-            ZXing.BarcodeFormat.EAN_13,
-            ZXing.BarcodeFormat.EAN_8,
-            ZXing.BarcodeFormat.CODE_128,
-            ZXing.BarcodeFormat.UPC_A,
-        ]);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-
-        zxingReader = new ZXing.BrowserMultiFormatReader(hints);
-
-        // סריקה רב-זוויתית — מנסה גם רוחב וגם אורך על אותה תמונה
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const codeReader = new ZXing.MultiFormatReader();
-        codeReader.setHints(hints);
-
-        function tryDecode(imageData, w, h) {
-            try {
-                const lum = new ZXing.RGBLuminanceSource(imageData.data, w, h);
-                const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-                return codeReader.decode(bmp);
-            } catch(e) { return null; }
-        }
-
-        scanInterval = setInterval(() => {
-            if (!video.videoWidth) return;
-            const w = video.videoWidth, h = video.videoHeight;
-
-            // ניסיון 1: תמונה ישירה כמו שהיא
-            canvas.width = w; canvas.height = h;
-            ctx.drawImage(video, 0, 0, w, h);
-            let result = tryDecode(ctx.getImageData(0, 0, w, h), w, h);
-
-            // ניסיון 2: מסובב 90° (ללא שינוי תצוגה — רק לניתוח)
-            if (!result) {
-                canvas.width = h; canvas.height = w;
-                ctx.save();
-                ctx.translate(h/2, w/2);
-                ctx.rotate(Math.PI / 2);
-                ctx.drawImage(video, -w/2, -h/2, w, h);
-                ctx.restore();
-                result = tryDecode(ctx.getImageData(0, 0, h, w), h, w);
-            }
-
-            if (result) {
-                clearInterval(scanInterval);
-                scanInterval = null;
-                const code = result.getText();
-                stopCamera();
-                document.getElementById('barcode-input').value = code;
-                lookupBarcode(code);
-            }
-        }, 250);
+        await loadScript('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js');
     } catch(e) {
-        console.error('Camera error:', e);
-        if (e.name === 'NotAllowedError') {
-            showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
-        } else if (e.name === 'NotFoundError') {
-            showToast('לא נמצאה מצלמה במכשיר', true);
-        } else {
-            showToast('שגיאת מצלמה — נסה ידנית', true);
-        }
+        showToast('שגיאה בטעינת סורק', true);
         modal.classList.remove('open');
-        if (zxingReader) { zxingReader.reset(); zxingReader = null; }
-        if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+        return;
     }
+
+    const video = document.getElementById('video');
+
+    Quagga.init({
+        inputStream: {
+            name: 'Live',
+            type: 'LiveStream',
+            target: video,
+            constraints: {
+                facingMode: 'environment',
+                width: { min: 640, ideal: 1280 },
+                height: { min: 480, ideal: 720 },
+            },
+        },
+        locator: {
+            patchSize: 'medium',
+            halfSample: true,
+        },
+        numOfWorkers: 2,
+        frequency: 10,
+        decoder: {
+            readers: [
+                'ean_reader',
+                'ean_8_reader',
+                'code_128_reader',
+                'upc_reader',
+            ],
+            multiple: false,
+        },
+        locate: true,
+    }, function(err) {
+        if (err) {
+            console.error('Quagga init error:', err);
+            if (err.name === 'NotAllowedError') {
+                showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
+            } else {
+                showToast('שגיאת מצלמה — נסה ידנית', true);
+            }
+            modal.classList.remove('open');
+            return;
+        }
+        Quagga.start();
+    });
+
+    // האזן לתוצאות סריקה
+    Quagga.onDetected(function(result) {
+        const code = result.codeResult.code;
+        if (!code) return;
+
+        // וודא אמינות — לפחות 2 פענוחים זהים
+        const counts = result.codeResult.decodedCodes
+            .filter(x => x.error !== undefined)
+            .map(x => x.error);
+        const avgError = counts.length
+            ? counts.reduce((a, b) => a + b, 0) / counts.length
+            : 1;
+
+        if (avgError < 0.15) {
+            stopCamera();
+            document.getElementById('barcode-input').value = code;
+            lookupBarcode(code);
+        }
+    });
 }
 
 function stopCamera() {
-    if (zxingReader) { zxingReader.reset(); zxingReader = null; }
-    clearInterval(scanInterval);
+    try { Quagga.stop(); } catch(e) {}
     if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    clearInterval(scanInterval); scanInterval = null;
+    if (zxingReader) { zxingReader.reset(); zxingReader = null; }
     document.getElementById('camera-modal').classList.remove('open');
 }
 
