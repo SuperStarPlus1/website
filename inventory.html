@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ספירת מלאי — סיגריות</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card: #22263a;
+    --accent: #f5a623;
+    --accent2: #e8453c;
+    --text: #f0f0f0;
+    --muted: #8a8fa8;
+    --border: #2e3350;
+    --green: #2ecc71;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1a1d27, #22263a);
+    border-bottom: 2px solid var(--accent);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.2rem; color: var(--accent); font-weight: 700; }
+  .shift-badge {
+    background: var(--accent);
+    color: #000;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85rem;
+  }
+
+  .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+  /* ── Info Bar ── */
+  .info-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .info-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .info-box label { font-size: 0.72rem; color: var(--muted); display: block; margin-bottom: 4px; }
+  .info-box .val { font-size: 1rem; font-weight: bold; color: var(--accent); }
+
+  /* ── Inputs ── */
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  /* ── Scanner Section ── */
+  .scan-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .scan-section h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; }
+
+  .scan-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .scan-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    font-family: inherit;
+  }
+  .scan-row input:focus { border-color: var(--accent); }
+
+  .btn-scan {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-scan:hover { opacity: 0.85; }
+
+  #product-preview {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: none;
+    border-right: 3px solid var(--accent);
+  }
+  #product-preview .prod-name { font-weight: bold; font-size: 1rem; color: var(--text); }
+  #product-preview .prod-sub  { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+  #product-preview.not-found  { border-color: var(--accent2); }
+  #product-preview.not-found .prod-name { color: var(--accent2); }
+
+  .qty-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-minus, .btn-plus {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-minus:hover { background: var(--accent2); }
+  .btn-plus:hover  { background: var(--accent); color: #000; }
+  #qty-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    color: var(--text);
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    outline: none;
+  }
+  .btn-add {
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-add:hover { opacity: 0.85; }
+
+  /* ── Camera Modal ── */
+  #camera-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #camera-modal.open { display: flex; }
+  #video { width: 100%; max-width: 400px; border-radius: 12px; border: 2px solid var(--accent); }
+  .scan-line {
+    position: absolute;
+    width: 80%;
+    max-width: 320px;
+    height: 2px;
+    background: var(--accent);
+    animation: scanline 2s linear infinite;
+    box-shadow: 0 0 8px var(--accent);
+  }
+  @keyframes scanline {
+    0%   { top: 30%; }
+    50%  { top: 70%; }
+    100% { top: 30%; }
+  }
+  .cam-btns { display: flex; gap: 12px; margin-top: 16px; }
+  .btn-close-cam {
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  /* ── Items Table ── */
+  .items-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .items-section h3 {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .items-section h3 span { color: var(--accent); font-size: 1rem; font-weight: bold; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th {
+    background: var(--surface);
+    padding: 10px 12px;
+    text-align: right;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .btn-del {
+    background: none;
+    border: none;
+    color: var(--accent2);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* ── Submit ── */
+  .submit-section {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-submit {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent), #e8943a);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-submit:hover { opacity: 0.9; }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-clear {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: #000;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    z-index: 9999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.err { background: var(--accent2); color: white; }
+
+  /* ── Loading ── */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,17,23,0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    gap: 16px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--muted); font-size: 0.9rem; }
+  #loading.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p id="loading-msg">טוען רשימת מוצרים...</p>
+</div>
+
+<!-- Camera Modal -->
+<div id="camera-modal">
+  <div style="position:relative; width:100%; max-width:400px; display:flex; justify-content:center;">
+    <video id="video" autoplay playsinline></video>
+    <div class="scan-line"></div>
+  </div>
+  <div class="cam-btns">
+    <button class="btn-close-cam" onclick="stopCamera()">✕ סגור</button>
+  </div>
+  <p style="color:var(--muted);font-size:0.8rem;margin-top:10px;">כוון את הברקוד למרכז המסך</p>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Header -->
+<header>
+  <h1>🚬 ספירת מלאי סיגריות</h1>
+  <div class="shift-badge" id="shift-badge">טוען...</div>
+</header>
+
+<div class="container">
+
+  <!-- Info Bar -->
+  <div class="info-bar">
+    <div class="info-box">
+      <label>תאריך</label>
+      <div class="val" id="disp-date">—</div>
+    </div>
+    <div class="info-box">
+      <label>שעה</label>
+      <div class="val" id="disp-time">—</div>
+    </div>
+  </div>
+
+  <!-- Worker Name -->
+  <div class="field">
+    <label>שם עובד</label>
+    <input type="text" id="worker-name" placeholder="הכנס שם מלא..." autocomplete="name">
+  </div>
+
+  <!-- Scanner -->
+  <div class="scan-section">
+    <h3>📦 סריקת מוצר</h3>
+    <div class="scan-row">
+      <input type="text" id="barcode-input" placeholder="סרוק או הכנס ברקוד..."
+        inputmode="numeric" onkeydown="if(event.key==='Enter') lookupBarcode()">
+      <button class="btn-scan" onclick="openCamera()" title="סרוק עם מצלמה">📷</button>
+      <button class="btn-scan" onclick="lookupBarcode()" style="background:#2e3350;color:var(--text);">חפש</button>
+    </div>
+
+    <div id="product-preview">
+      <div class="prod-name" id="prod-name">—</div>
+      <div class="prod-sub" id="prod-sub">—</div>
+    </div>
+
+    <div class="qty-row">
+      <button class="btn-minus" onclick="changeQty(-1)">−</button>
+      <input type="number" id="qty-input" value="1" min="1" max="9999">
+      <button class="btn-plus" onclick="changeQty(1)">+</button>
+      <button class="btn-add" onclick="addItem()">➕ הוסף</button>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <div class="items-section">
+    <h3>רשימת פריטים <span id="item-count">0</span></h3>
+    <div id="items-container">
+      <div class="empty-state"><div class="icon">📋</div>עוד לא סרקת פריטים</div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="submit-section">
+    <button class="btn-submit" id="btn-submit" onclick="submitCount()" disabled>
+      📤 שלח ספירה
+    </button>
+    <button class="btn-clear" onclick="clearAll()">🗑 נקה</button>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
+const MANAGER_EMAIL = "ashraf@khader.co.il";
+const DEPT_FILTER = "סיגריות";
+
+// Google Apps Script URL — צריך לפרסם (ראה הוראות למטה)
+const GAS_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+
+const SHIFTS = {
+    morning: { label: "בוקר ☀️",  start: 6,  end: 14 },
+    evening: { label: "ערב 🌆",   start: 14, end: 22 },
+    night:   { label: "לילה 🌙",  start: 22, end: 6  },
+};
+
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+let products = [];       // כל מוצרי הסיגריות מהשיטס
+let items = [];          // פריטים שנסרקו
+let currentProduct = null;
+let scanStream = null;
+let scanInterval = null;
+
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+window.onload = async () => {
+    updateClock();
+    setInterval(updateClock, 1000);
+    await loadProducts();
+};
+
+function updateClock() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+    document.getElementById('disp-date').textContent =
+        now.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    document.getElementById('disp-time').textContent =
+        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    // Shift detection
+    let shift;
+    if (h >= 6  && h < 14) shift = SHIFTS.morning;
+    else if (h >= 14 && h < 22) shift = SHIFTS.evening;
+    else shift = SHIFTS.night;
+    document.getElementById('shift-badge').textContent = shift.label;
+}
+
+async function loadProducts() {
+    try {
+        await new Promise((resolve, reject) => {
+            Papa.parse(SHEET_URL, {
+                download: true,
+                header: true,
+                complete: r => {
+                    const all = r.data.filter(x => x.Barcode && x.Barcode.trim());
+                    products = all.filter(x =>
+                        (x.Category || x.category || x['קטגוריה'] || '').trim() === DEPT_FILTER
+                    );
+                    console.log(`נטענו ${products.length} מוצרי סיגריות מתוך ${all.length}`);
+                    resolve();
+                },
+                error: reject
+            });
+        });
+        document.getElementById('loading').classList.add('hidden');
+    } catch(e) {
+        document.getElementById('loading-msg').textContent = 'שגיאה בטעינת מוצרים';
+        console.error(e);
+    }
+}
+
+// ════════════════════════════════════════════════════
+//  BARCODE LOOKUP
+// ════════════════════════════════════════════════════
+function nb(b) {
+    let s = String(b || '').trim();
+    if (s.endsWith('.0')) s = s.slice(0, -2);
+    return s;
+}
+
+function lookupBarcode(bc) {
+    const barcode = bc || document.getElementById('barcode-input').value.trim();
+    if (!barcode) return;
+
+    const product = products.find(p => nb(p.Barcode) === nb(barcode));
+    const preview = document.getElementById('product-preview');
+    preview.style.display = 'block';
+
+    if (product) {
+        currentProduct = product;
+        document.getElementById('prod-name').textContent = product.Name || product.Nm || 'מוצר';
+        document.getElementById('prod-sub').textContent =
+            `ברקוד: ${barcode}  |  מחיר: ₪${product.Price || '—'}`;
+        preview.className = '';
+        document.getElementById('qty-input').focus();
+        document.getElementById('qty-input').select();
+    } else {
+        currentProduct = null;
+        document.getElementById('prod-name').textContent = '⚠️ מוצר לא נמצא ברשימה';
+        document.getElementById('prod-sub').textContent = `ברקוד: ${barcode} — לא קיים בקטלוג הסיגריות`;
+        preview.className = 'not-found';
+    }
+}
+
+function changeQty(d) {
+    const inp = document.getElementById('qty-input');
+    inp.value = Math.max(1, (parseInt(inp.value) || 0) + d);
+}
+
+function addItem() {
+    const barcode = document.getElementById('barcode-input').value.trim();
+    const qty = parseInt(document.getElementById('qty-input').value) || 0;
+    if (!barcode || qty <= 0) { showToast('הכנס ברקוד וכמות', true); return; }
+
+    const existing = items.find(i => nb(i.barcode) === nb(barcode));
+    if (existing) {
+        existing.qty += qty;
+        showToast(`עודכן: ${existing.name} → ${existing.qty} יח'`);
+    } else {
+        const name = currentProduct
+            ? (currentProduct.Name || currentProduct.Nm || 'לא ידוע')
+            : '⚠️ לא נמצא';
+        items.push({ barcode, name, qty, price: currentProduct ? (currentProduct.Price || '') : '' });
+        showToast(`נוסף: ${name}`);
+    }
+
+    // Reset
+    document.getElementById('barcode-input').value = '';
+    document.getElementById('qty-input').value = '1';
+    document.getElementById('product-preview').style.display = 'none';
+    currentProduct = null;
+    document.getElementById('barcode-input').focus();
+
+    renderTable();
+    document.getElementById('btn-submit').disabled = items.length === 0;
+}
+
+// ════════════════════════════════════════════════════
+//  TABLE RENDER
+// ════════════════════════════════════════════════════
+function renderTable() {
+    const container = document.getElementById('items-container');
+    document.getElementById('item-count').textContent = items.length;
+
+    if (!items.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📋</div>עוד לא סרקת פריטים</div>';
+        return;
+    }
+
+    const total = items.reduce((s, i) => s + i.qty, 0);
+    container.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>מוצר</th><th>ברקוד</th><th>כמות</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${items.map((i, idx) => `
+        <tr>
+          <td>${i.name}</td>
+          <td style="font-size:0.75rem;color:var(--muted)">${i.barcode}</td>
+          <td><strong style="color:var(--accent)">${i.qty}</strong></td>
+          <td><button class="btn-del" onclick="deleteItem(${idx})">✕</button></td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="2" style="color:var(--muted);font-size:0.8rem">סה"כ פריטים</td>
+        <td><strong style="color:var(--green)">${total}</strong></td>
+        <td></td>
+      </tr></tfoot>
+    </table>`;
+}
+
+function deleteItem(idx) {
+    items.splice(idx, 1);
+    renderTable();
+    document.getElementById('btn-submit').disabled = items.length === 0;
+}
+
+// ════════════════════════════════════════════════════
+//  CAMERA SCANNER
+// ════════════════════════════════════════════════════
+async function openCamera() {
+    const modal = document.getElementById('camera-modal');
+    modal.classList.add('open');
+    try {
+        scanStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 } }
+        });
+        document.getElementById('video').srcObject = scanStream;
+
+        // Use BarcodeDetector if available
+        if ('BarcodeDetector' in window) {
+            const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a'] });
+            scanInterval = setInterval(async () => {
+                try {
+                    const video = document.getElementById('video');
+                    const barcodes = await detector.detect(video);
+                    if (barcodes.length > 0) {
+                        const code = barcodes[0].rawValue;
+                        stopCamera();
+                        document.getElementById('barcode-input').value = code;
+                        lookupBarcode(code);
+                    }
+                } catch(e) {}
+            }, 300);
+        } else {
+            // Fallback: manual entry from camera
+            showToast('כוון לברקוד ולחץ על המסך לסריקה', false, 4000);
+            document.getElementById('video').onclick = async () => {
+                // Try canvas capture
+                const canvas = document.createElement('canvas');
+                const video = document.getElementById('video');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                stopCamera();
+                showToast('לא נמצא ברקוד — נסה ידנית', true);
+            };
+        }
+    } catch(e) {
+        showToast('לא ניתן לגשת למצלמה', true);
+        modal.classList.remove('open');
+    }
+}
+
+function stopCamera() {
+    clearInterval(scanInterval);
+    if (scanStream) {
+        scanStream.getTracks().forEach(t => t.stop());
+        scanStream = null;
+    }
+    document.getElementById('camera-modal').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════
+//  SUBMIT
+// ════════════════════════════════════════════════════
+async function submitCount() {
+    const worker = document.getElementById('worker-name').value.trim();
+    if (!worker) { showToast('נא להזין שם עובד', true); return; }
+    if (!items.length) { showToast('אין פריטים לשליחה', true); return; }
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const timeStr = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+    const h = now.getHours();
+    const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
+    const total = items.reduce((s, i) => s + i.qty, 0);
+
+    document.getElementById('loading-msg').textContent = 'שולח ספירה...';
+    document.getElementById('loading').classList.remove('hidden');
+
+    try {
+        // ── Build Excel ──
+        const wb = XLSX.utils.book_new();
+        const wsData = [
+            ['ספירת מלאי — סיגריות'],
+            [],
+            ['תאריך:', dateStr, 'שעה:', timeStr, 'משמרת:', shift],
+            ['עובד:', worker],
+            ['סה"כ פריטים:', total],
+            [],
+            ['מוצר', 'ברקוד', 'כמות', 'מחיר'],
+            ...items.map(i => [i.name, i.barcode, i.qty, i.price]),
+            [],
+            ['סה"כ', '', total, '']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{wch:35},{wch:15},{wch:10},{wch:10}];
+        XLSX.utils.book_append_sheet(wb, ws, 'ספירה');
+        const excelBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+        // ── Send to Google Apps Script ──
+        const payload = {
+            worker, date: dateStr, time: timeStr, shift,
+            total, items,
+            managerEmail: MANAGER_EMAIL,
+        };
+
+        if (GAS_URL && GAS_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // ── Download Excel locally ──
+        const blob = new Blob([excelBlob], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ספירת_סיגריות_${dateStr.replace(/\//g,'-')}_${shift}.xlsx`;
+        a.click();
+
+        document.getElementById('loading').classList.add('hidden');
+        showToast('✅ הספירה נשלחה ונשמרה!');
+        setTimeout(() => { if(confirm('לנקות את הרשימה לספירה חדשה?')) clearAll(); }, 2000);
+
+    } catch(e) {
+        console.error(e);
+        document.getElementById('loading').classList.add('hidden');
+        showToast('שגיאה בשליחה — נסה שוב', true);
+    }
+}
+
+function clearAll() {
+    items = [];
+    currentProduct = null;
+    document.getElementById('barcode-input').value = '';
+    document.getElementById('qty-input').value = '1';
+    document.getElementById('product-preview').style.display = 'none';
+    document.getElementById('worker-name').value = '';
+    document.getElementById('btn-submit').disabled = true;
+    renderTable();
+}
+
+// ════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, isErr = false, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ''; }, duration);
+}
+</script>
+
+<!-- ════════════════════════════════════════════════
+     הוראות הגדרה — Google Apps Script
+     ════════════════════════════════════════════════
+     1. פתח: script.google.com
+     2. צור פרויקט חדש בשם "InventorySync"
+     3. הדבק את הקוד:
+
+     function doPost(e) {
+       const data = JSON.parse(e.postData.contents);
+       saveToSheets(data);
+       sendEmail(data);
+       return ContentService.createTextOutput('OK');
+     }
+
+     function saveToSheets(data) {
+       const ss = SpreadsheetApp.openById('SPREADSHEET_ID'); // ← ID של גיליון ענן
+       const monthName = new Date().toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+       let sheet = ss.getSheetByName(monthName);
+       if (!sheet) sheet = ss.insertSheet(monthName);
+
+       const today = data.date;
+       const shiftTab = today + '_' + data.shift;
+       let tab = ss.getSheetByName(shiftTab);
+       if (!tab) {
+         tab = ss.insertSheet(shiftTab);
+         tab.appendRow(['מוצר','ברקוד','כמות','מחיר','עובד','שעה','משמרת']);
+       }
+       data.items.forEach(item => {
+         tab.appendRow([item.name, item.barcode, item.qty, item.price, data.worker, data.time, data.shift]);
+       });
+     }
+
+     function sendEmail(data) {
+       const rows = data.items.map(i => `<tr><td>${i.name}</td><td>${i.barcode}</td><td>${i.qty}</td></tr>`).join('');
+       const html = `<div dir="rtl" style="font-family:Arial">
+         <h2>ספירת מלאי סיגריות</h2>
+         <p>עובד: ${data.worker} | תאריך: ${data.date} | שעה: ${data.time} | משמרת: ${data.shift}</p>
+         <table border="1" cellpadding="6"><tr><th>מוצר</th><th>ברקוד</th><th>כמות</th></tr>${rows}</table>
+         <p>סה"כ: ${data.total} פריטים</p></div>`;
+       GmailApp.sendEmail(data.managerEmail, 'ספירת מלאי סיגריות — ' + data.date, '', {htmlBody: html});
+     }
+
+     4. פרסם → Deploy as web app → Anyone
+     5. העתק את ה-URL ועדכן GAS_URL בקוד
+════════════════════════════════════════════════ -->
+</body>
+</html>
