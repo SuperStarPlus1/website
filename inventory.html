@@ -6,6 +6,8 @@
 <title>ספירת מלאי — סיגריות</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init("YdRghsPrGyNUZnY7T");</script>
 <style>
   :root {
     --bg: #0f1117;
@@ -443,8 +445,7 @@ const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3
 const MANAGER_EMAIL = "ashraf@khader.co.il";
 const DEPT_FILTER = "סיגריות";
 
-// Google Apps Script URL — צריך לפרסם (ראה הוראות למטה)
-const GAS_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+
 
 const SHIFTS = {
     morning: { label: "בוקר ☀️",  start: 6,  end: 14 },
@@ -747,21 +748,43 @@ async function submitCount() {
             managerEmail: MANAGER_EMAIL,
         };
 
-        if (GAS_URL && GAS_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+        // ── שלח מייל עם EmailJS ──
+        const tableRows = items.map(i =>
+            `<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">${i.name}</td>` +
+            `<td style="padding:6px 10px;border-bottom:1px solid #eee;direction:ltr">${i.barcode}</td>` +
+            `<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><strong>${i.qty}</strong></td></tr>`
+        ).join('');
 
-        // ── Download Excel locally ──
-        const blob = new Blob([excelBlob], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ספירת_סיגריות_${dateStr.replace(/\//g,'-')}_${shift}.xlsx`;
-        a.click();
+        const emailParams = {
+            to_email:   MANAGER_EMAIL,
+            subject:    `ספירת מלאי סיגריות — ${dateStr} משמרת ${shift}`,
+            worker:     worker,
+            date:       dateStr,
+            time:       timeStr,
+            shift:      shift,
+            total:      total,
+            items_html: `
+                <table dir="rtl" style="border-collapse:collapse;width:100%;font-family:Arial">
+                    <thead>
+                        <tr style="background:#0f1117;color:white">
+                            <th style="padding:8px 10px">מוצר</th>
+                            <th style="padding:8px 10px">ברקוד</th>
+                            <th style="padding:8px 10px">כמות</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                    <tfoot>
+                        <tr style="background:#f5a623">
+                            <td colspan="2" style="padding:8px 10px;font-weight:bold">סה"כ פריטים</td>
+                            <td style="padding:8px 10px;font-weight:bold;text-align:center">${total}</td>
+                        </tr>
+                    </tfoot>
+                </table>`,
+        };
+
+        await emailjs.send('service_o13n924', 'template_0wdkumm', emailParams);
+
+
 
         document.getElementById('loading').classList.add('hidden');
         showToast('✅ הספירה נשלחה ונשמרה!');
@@ -798,50 +821,6 @@ function showToast(msg, isErr = false, duration = 2500) {
 }
 </script>
 
-<!-- ════════════════════════════════════════════════
-     הוראות הגדרה — Google Apps Script
-     ════════════════════════════════════════════════
-     1. פתח: script.google.com
-     2. צור פרויקט חדש בשם "InventorySync"
-     3. הדבק את הקוד:
 
-     function doPost(e) {
-       const data = JSON.parse(e.postData.contents);
-       saveToSheets(data);
-       sendEmail(data);
-       return ContentService.createTextOutput('OK');
-     }
-
-     function saveToSheets(data) {
-       const ss = SpreadsheetApp.openById('SPREADSHEET_ID'); // ← ID של גיליון ענן
-       const monthName = new Date().toLocaleDateString('he-IL',{month:'long',year:'numeric'});
-       let sheet = ss.getSheetByName(monthName);
-       if (!sheet) sheet = ss.insertSheet(monthName);
-
-       const today = data.date;
-       const shiftTab = today + '_' + data.shift;
-       let tab = ss.getSheetByName(shiftTab);
-       if (!tab) {
-         tab = ss.insertSheet(shiftTab);
-         tab.appendRow(['מוצר','ברקוד','כמות','מחיר','עובד','שעה','משמרת']);
-       }
-       data.items.forEach(item => {
-         tab.appendRow([item.name, item.barcode, item.qty, item.price, data.worker, data.time, data.shift]);
-       });
-     }
-
-     function sendEmail(data) {
-       const rows = data.items.map(i => `<tr><td>${i.name}</td><td>${i.barcode}</td><td>${i.qty}</td></tr>`).join('');
-       const html = `<div dir="rtl" style="font-family:Arial">
-         <h2>ספירת מלאי סיגריות</h2>
-         <p>עובד: ${data.worker} | תאריך: ${data.date} | שעה: ${data.time} | משמרת: ${data.shift}</p>
-         <table border="1" cellpadding="6"><tr><th>מוצר</th><th>ברקוד</th><th>כמות</th></tr>${rows}</table>
-         <p>סה"כ: ${data.total} פריטים</p></div>`;
-       GmailApp.sendEmail(data.managerEmail, 'ספירת מלאי סיגריות — ' + data.date, '', {htmlBody: html});
-     }
-
-     4. פרסם → Deploy as web app → Anyone
-     5. העתק את ה-URL ועדכן GAS_URL בקוד
-════════════════════════════════════════════════ -->
 </body>
 </html>
