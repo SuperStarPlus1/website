@@ -357,7 +357,7 @@
 <!-- Camera Modal -->
 <div id="camera-modal">
   <div style="position:relative; width:100%; max-width:400px; display:flex; justify-content:center;">
-    <div id="video" style="width:100%;max-width:400px;border-radius:12px;overflow:hidden;border:2px solid var(--accent);"></div>
+    <video id="video" autoplay muted playsinline webkit-playsinline></video>
   </div>
   <div class="cam-btns">
     <button class="btn-close-cam" onclick="stopCamera()">✕ סגור</button>
@@ -634,84 +634,61 @@ function loadScript(src) {
 async function openCamera() {
     const modal = document.getElementById('camera-modal');
     modal.classList.add('open');
-
     try {
-        await loadScript('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js');
-    } catch(e) {
-        showToast('שגיאה בטעינת סורק', true);
-        modal.classList.remove('open');
-        return;
-    }
+        scanStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } }
+        });
 
-    const video = document.getElementById('video');
+        const video = document.getElementById('video');
+        video.srcObject = scanStream;
+        await video.play();
 
-    Quagga.init({
-        inputStream: {
-            name: 'Live',
-            type: 'LiveStream',
-            target: video,
-            constraints: {
-                facingMode: 'environment',
-                width: { min: 640, ideal: 1280 },
-                height: { min: 480, ideal: 720 },
-            },
-        },
-        locator: {
-            patchSize: 'medium',
-            halfSample: true,
-        },
-        numOfWorkers: 2,
-        frequency: 10,
-        decoder: {
-            readers: [
-                'ean_reader',
-                'ean_8_reader',
-                'code_128_reader',
-                'upc_reader',
-            ],
-            multiple: false,
-        },
-        locate: true,
-    }, function(err) {
-        if (err) {
-            console.error('Quagga init error:', err);
-            if (err.name === 'NotAllowedError') {
-                showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
-            } else {
-                showToast('שגיאת מצלמה — נסה ידנית', true);
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
+
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+            ZXing.BarcodeFormat.EAN_13,
+            ZXing.BarcodeFormat.EAN_8,
+            ZXing.BarcodeFormat.CODE_128,
+            ZXing.BarcodeFormat.UPC_A,
+        ]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+        zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+
+        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+        const backCam = devices.find(d => /back|rear|environment/i.test(d.label))
+            || devices[devices.length - 1];
+
+        await zxingReader.decodeFromVideoDevice(
+            backCam ? backCam.deviceId : undefined,
+            video,
+            (result, err) => {
+                if (result) {
+                    const code = result.getText();
+                    stopCamera();
+                    document.getElementById('barcode-input').value = code;
+                    lookupBarcode(code);
+                }
             }
-            modal.classList.remove('open');
-            return;
+        );
+    } catch(e) {
+        console.error('Camera error:', e);
+        if (e.name === 'NotAllowedError') {
+            showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
+        } else {
+            showToast('שגיאת מצלמה — נסה ידנית', true);
         }
-        Quagga.start();
-    });
-
-    // האזן לתוצאות סריקה
-    Quagga.onDetected(function(result) {
-        const code = result.codeResult.code;
-        if (!code) return;
-
-        // וודא אמינות — לפחות 2 פענוחים זהים
-        const counts = result.codeResult.decodedCodes
-            .filter(x => x.error !== undefined)
-            .map(x => x.error);
-        const avgError = counts.length
-            ? counts.reduce((a, b) => a + b, 0) / counts.length
-            : 1;
-
-        if (avgError < 0.15) {
-            stopCamera();
-            document.getElementById('barcode-input').value = code;
-            lookupBarcode(code);
-        }
-    });
+        modal.classList.remove('open');
+        if (zxingReader) { zxingReader.reset(); zxingReader = null; }
+        if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    }
 }
 
 function stopCamera() {
-    try { Quagga.stop(); } catch(e) {}
-    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
-    clearInterval(scanInterval); scanInterval = null;
     if (zxingReader) { zxingReader.reset(); zxingReader = null; }
+    clearInterval(scanInterval); scanInterval = null;
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
     document.getElementById('camera-modal').classList.remove('open');
 }
 
