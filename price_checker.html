@@ -43,7 +43,10 @@
   }
   header img {
     height: 44px;
-    filter: brightness(0) invert(1);
+    background: white;
+    border-radius: 8px;
+    padding: 4px 8px;
+    object-fit: contain;
   }
   header h1 {
     color: white;
@@ -441,12 +444,31 @@ function nb(b) {
     return s;
 }
 
+const CACHE_TTL = 60 * 60 * 1000; // שעה אחת
+
+function loadFromCache(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const { ts, data } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+        return data;
+    } catch(e) { return null; }
+}
+
+function saveToCache(key, data) {
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+
 async function loadProducts() {
+    const cached = loadFromCache('products_cache');
+    if (cached) { products = cached; console.log('products from cache:', products.length); return; }
     return new Promise(resolve => {
         Papa.parse(CSV_PRODUCTS, {
             download: true, header: true,
             complete: r => {
                 products = r.data.filter(x => x.Barcode && x.Barcode.trim());
+                saveToCache('products_cache', products);
                 resolve();
             }, error: resolve
         });
@@ -454,11 +476,14 @@ async function loadProducts() {
 }
 
 async function loadOffers() {
+    const cached = loadFromCache('offers_cache');
+    if (cached) { offers = cached; console.log('offers from cache:', offers.length); return; }
     return new Promise(resolve => {
         Papa.parse(CSV_OFFERS, {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
                 offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
+                saveToCache('offers_cache', offers);
                 resolve();
             }, error: resolve
         });
