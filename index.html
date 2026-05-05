@@ -435,8 +435,14 @@
                     <span id="cat-reset" onclick="resetCat()" style="display:none; position:absolute; left:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:1.2rem; line-height:1;" role="button" aria-label="נקה קטגוריה" tabindex="0">✕</span>
                     <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;" role="listbox" aria-label="רשימת קטגוריות"></div>
                 </div>
+                <!-- dropdown קבוצה — מופיע רק כשנבחרת מחלקה -->
+                <div id="grp-select-wrap" style="display:none; min-width:150px; flex:1;">
+                    <select id="grp-select" onchange="setGroup(this.value)"
+                        style="width:100%; padding:12px; border:1px solid #ef6c00; border-radius:10px; background:white; color:#ef6c00; font-weight:bold; font-size:1rem; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%23ef6c00%22 d=%22M8 10L3 5h10z%22/></svg>'); background-repeat:no-repeat; background-position:left 10px center; background-size:16px;"
+                        aria-label="סנן לפי קבוצה">
+                    </select>
+                </div>
             </div>
-            <div class="promo-filter-bar" id="cat-grp-filter-bar" role="group" aria-label="סנן לפי קבוצה" style="display:none; background:#f0f7ff; margin-bottom:15px;"></div>
             <div id="catalog-grid" class="grid" role="list" aria-label="רשימת מוצרים" aria-live="polite"></div>
         </div>
     </div>
@@ -446,7 +452,6 @@
         <div class="content-wrap">
             <h2 class="section-title" data-i18n="promos_title">מבצעים</h2>
             <div class="promo-filter-bar" id="promo-filter-bar" role="group" aria-label="סנן לפי קטגוריה"></div>
-            <div class="promo-filter-bar" id="grp-filter-bar" role="group" aria-label="סנן לפי קבוצה" style="display:none; background:#f0f7ff;"></div>
             <div class="promo-count" id="promo-count" aria-live="polite"></div>
             <div id="promo-full" class="grid" role="list" aria-label="מוצרים במבצע" aria-live="polite"></div>
         </div>
@@ -1040,22 +1045,26 @@
     function buildGrpFilter(cat) {
         const grpField = window.grpFieldName;
         const catField = window.catFieldName || 'Category';
-        const bar = document.getElementById('cat-grp-filter-bar');
-        if (!bar || !grpField) return;
+        const wrap = document.getElementById('grp-select-wrap');
+        const sel  = document.getElementById('grp-select');
+        if (!wrap || !sel || !grpField) return;
 
         // מצא קבוצות רלוונטיות לקטגוריה הנבחרת
         const items = cat === 'הכל' ? allItems : allItems.filter(i => i[catField] === cat);
         const grps = [...new Set(items.map(i => i[grpField]).filter(g => g && g.trim()))].sort();
 
-        if (!grps.length) { bar.style.display = 'none'; return; }
+        if (!grps.length || cat === 'הכל') {
+            wrap.style.display = 'none';
+            curGrp = 'הכל';
+            return;
+        }
 
         const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
         const allLabel = t.cat_all || 'הכל';
-        bar.style.display = 'flex';
-        bar.innerHTML = ['הכל', ...grps].map(g => {
-            const label = g === 'הכל' ? allLabel : g;
-            return `<button onclick="setGroup('${g}')" ${g === curGrp ? 'class="active"' : ''}>${label}</button>`;
-        }).join('');
+        wrap.style.display = 'flex';
+        sel.innerHTML = `<option value="הכל">${allLabel}</option>` +
+            grps.map(g => `<option value="${g}" ${g === curGrp ? 'selected' : ''}>${g}</option>`).join('');
+        sel.value = curGrp;
     }
 
     async function loadDynamicImage() {
