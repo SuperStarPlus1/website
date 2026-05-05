@@ -357,7 +357,7 @@
 <!-- Camera Modal -->
 <div id="camera-modal">
   <div style="position:relative; width:100%; max-width:400px; display:flex; justify-content:center;">
-    <video id="video" autoplay playsinline></video>
+    <video id="video" autoplay muted playsinline webkit-playsinline></video>
     <div class="scan-line"></div>
   </div>
   <div class="cam-btns">
@@ -636,6 +636,16 @@ async function openCamera() {
     const modal = document.getElementById('camera-modal');
     modal.classList.add('open');
     try {
+        // iOS Safari: בקש הרשאת מצלמה ישירות תחילה
+        scanStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } }
+        });
+
+        const video = document.getElementById('video');
+        video.srcObject = scanStream;
+        await video.play();
+
+        // טען ZXing
         await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
 
         const hints = new Map();
@@ -649,15 +659,9 @@ async function openCamera() {
 
         zxingReader = new ZXing.BrowserMultiFormatReader(hints);
 
-        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-        // העדף מצלמה אחורית
-        const backCam = devices.find(d =>
-            /back|rear|environment/i.test(d.label)
-        ) || devices[devices.length - 1];
-
-        const video = document.getElementById('video');
-        await zxingReader.decodeFromVideoDevice(
-            backCam ? backCam.deviceId : undefined,
+        // העבר את ה-stream הקיים ל-ZXing
+        await zxingReader.decodeFromStream(
+            scanStream,
             video,
             (result, err) => {
                 if (result) {
@@ -669,10 +673,17 @@ async function openCamera() {
             }
         );
     } catch(e) {
-        console.error(e);
-        showToast('לא ניתן לגשת למצלמה', true);
+        console.error('Camera error:', e);
+        if (e.name === 'NotAllowedError') {
+            showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
+        } else if (e.name === 'NotFoundError') {
+            showToast('לא נמצאה מצלמה במכשיר', true);
+        } else {
+            showToast('שגיאת מצלמה — נסה ידנית', true);
+        }
         modal.classList.remove('open');
         if (zxingReader) { zxingReader.reset(); zxingReader = null; }
+        if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
     }
 }
 
