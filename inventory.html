@@ -443,6 +443,7 @@
 // ════════════════════════════════════════════════════
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
 const MANAGER_EMAIL = "ashraf@khader.co.il";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwHj-_H626bQprpAwrD6So4YXhHQC_-3Qq-jyAWhdWS3OUWpAq0mNUPJCPvWK4go9cfFQ/exec";
 const DEPT_FILTER = "סיגריות";
 
 
@@ -782,7 +783,20 @@ async function submitCount() {
                 </table>`,
         };
 
-        await emailjs.send('service_o13n924', 'template_0wdkumm', emailParams);
+        // ── שלח לGoogle Apps Script (שמירה לשיטס + מייל עם קישור) ──
+        try {
+            const gasRes = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain' }
+            });
+            const gasData = await gasRes.json();
+            if (gasData.status !== 'ok') console.warn('GAS warning:', gasData.message);
+        } catch(e) {
+            console.error('GAS error:', e);
+            // fallback — שלח מייל דרך EmailJS
+            await emailjs.send('service_o13n924', 'template_0wdkumm', emailParams);
+        }
 
 
 
