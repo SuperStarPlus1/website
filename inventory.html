@@ -650,18 +650,24 @@ async function openCamera() {
 
         const video = document.getElementById('video');
 
-        // iOS: בקש הרשאה קודם — רק אז listVideoInputDevices מחזיר תוצאות
+        // בקש הרשאת מצלמה קודם (נדרש ב-iOS לקבלת רשימת מכשירים)
         try {
             const tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             tempStream.getTracks().forEach(t => t.stop());
         } catch(e) { /* ממשיך גם בלי זה */ }
 
-        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-        const backCam = devices.find(d => /back|rear|environment/i.test(d.label))
-            || devices[devices.length - 1];
+        // קבל רשימת מצלמות דרך mediaDevices הסטנדרטי
+        let backCamId = undefined;
+        try {
+            const allDevices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = allDevices.filter(d => d.kind === 'videoinput');
+            const backCam = videoDevices.find(d => /back|rear|environment/i.test(d.label))
+                || videoDevices[videoDevices.length - 1];
+            if (backCam) backCamId = backCam.deviceId;
+        } catch(e) { /* משתמש במצלמה ברירת מחדל */ }
 
         await zxingReader.decodeFromVideoDevice(
-            backCam ? backCam.deviceId : undefined,
+            backCamId,
             video,
             (result, err) => {
                 if (result) {
