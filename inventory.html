@@ -648,12 +648,17 @@ async function openCamera() {
 
         zxingReader = new ZXing.BrowserMultiFormatReader(hints);
 
-        // ZXing מנהל את המצלמה בעצמו — עובד על iOS ו-Android
+        const video = document.getElementById('video');
+
+        // iOS: בקש הרשאה קודם — רק אז listVideoInputDevices מחזיר תוצאות
+        try {
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            tempStream.getTracks().forEach(t => t.stop());
+        } catch(e) { /* ממשיך גם בלי זה */ }
+
         const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
         const backCam = devices.find(d => /back|rear|environment/i.test(d.label))
             || devices[devices.length - 1];
-
-        const video = document.getElementById('video');
 
         await zxingReader.decodeFromVideoDevice(
             backCam ? backCam.deviceId : undefined,
@@ -665,11 +670,9 @@ async function openCamera() {
                     document.getElementById('barcode-input').value = code;
                     lookupBarcode(code);
                 }
-                // התעלם משגיאות סריקה רגילות (לא מצא ברקוד בפריים)
             }
         );
 
-        // שמור reference לstream של ZXing
         scanStream = video.srcObject;
 
     } catch(e) {
