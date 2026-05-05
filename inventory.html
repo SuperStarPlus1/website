@@ -635,14 +635,6 @@ async function openCamera() {
     const modal = document.getElementById('camera-modal');
     modal.classList.add('open');
     try {
-        scanStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } }
-        });
-
-        const video = document.getElementById('video');
-        video.srcObject = scanStream;
-        await video.play();
-
         await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
 
         const hints = new Map();
@@ -656,9 +648,12 @@ async function openCamera() {
 
         zxingReader = new ZXing.BrowserMultiFormatReader(hints);
 
+        // ZXing מנהל את המצלמה בעצמו — עובד על iOS ו-Android
         const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
         const backCam = devices.find(d => /back|rear|environment/i.test(d.label))
             || devices[devices.length - 1];
+
+        const video = document.getElementById('video');
 
         await zxingReader.decodeFromVideoDevice(
             backCam ? backCam.deviceId : undefined,
@@ -670,18 +665,24 @@ async function openCamera() {
                     document.getElementById('barcode-input').value = code;
                     lookupBarcode(code);
                 }
+                // התעלם משגיאות סריקה רגילות (לא מצא ברקוד בפריים)
             }
         );
+
+        // שמור reference לstream של ZXing
+        scanStream = video.srcObject;
+
     } catch(e) {
         console.error('Camera error:', e);
-        if (e.name === 'NotAllowedError') {
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
             showToast('אנא אפשר גישה למצלמה בהגדרות', true, 4000);
+        } else if (e.name === 'NotFoundError') {
+            showToast('לא נמצאה מצלמה במכשיר', true);
         } else {
-            showToast('שגיאת מצלמה — נסה ידנית', true);
+            showToast('שגיאת מצלמה: ' + e.message, true, 4000);
         }
         modal.classList.remove('open');
         if (zxingReader) { zxingReader.reset(); zxingReader = null; }
-        if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
     }
 }
 
