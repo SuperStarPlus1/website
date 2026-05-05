@@ -659,19 +659,49 @@ async function openCamera() {
 
         zxingReader = new ZXing.BrowserMultiFormatReader(hints);
 
-        // העבר את ה-stream הקיים ל-ZXing
-        await zxingReader.decodeFromStream(
-            scanStream,
-            video,
-            (result, err) => {
-                if (result) {
-                    const code = result.getText();
-                    stopCamera();
-                    document.getElementById('barcode-input').value = code;
-                    lookupBarcode(code);
-                }
+        // סריקה רב-זוויתית — מנסה גם רוחב וגם אורך על אותה תמונה
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const codeReader = new ZXing.MultiFormatReader();
+        codeReader.setHints(hints);
+
+        function tryDecode(imageData, w, h) {
+            try {
+                const lum = new ZXing.RGBLuminanceSource(imageData.data, w, h);
+                const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+                return codeReader.decode(bmp);
+            } catch(e) { return null; }
+        }
+
+        scanInterval = setInterval(() => {
+            if (!video.videoWidth) return;
+            const w = video.videoWidth, h = video.videoHeight;
+
+            // ניסיון 1: תמונה ישירה כמו שהיא
+            canvas.width = w; canvas.height = h;
+            ctx.drawImage(video, 0, 0, w, h);
+            let result = tryDecode(ctx.getImageData(0, 0, w, h), w, h);
+
+            // ניסיון 2: מסובב 90° (ללא שינוי תצוגה — רק לניתוח)
+            if (!result) {
+                canvas.width = h; canvas.height = w;
+                ctx.save();
+                ctx.translate(h/2, w/2);
+                ctx.rotate(Math.PI / 2);
+                ctx.drawImage(video, -w/2, -h/2, w, h);
+                ctx.restore();
+                result = tryDecode(ctx.getImageData(0, 0, h, w), h, w);
             }
-        );
+
+            if (result) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+                const code = result.getText();
+                stopCamera();
+                document.getElementById('barcode-input').value = code;
+                lookupBarcode(code);
+            }
+        }, 250);
     } catch(e) {
         console.error('Camera error:', e);
         if (e.name === 'NotAllowedError') {
