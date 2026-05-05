@@ -619,58 +619,67 @@ function deleteItem(idx) {
 }
 
 // ════════════════════════════════════════════════════
-//  CAMERA SCANNER
+//  CAMERA SCANNER — ZXing (עובד על כל דפדפן כולל iOS)
 // ════════════════════════════════════════════════════
+let zxingReader = null;
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
 async function openCamera() {
     const modal = document.getElementById('camera-modal');
     modal.classList.add('open');
     try {
-        scanStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 } }
-        });
-        document.getElementById('video').srcObject = scanStream;
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
 
-        // Use BarcodeDetector if available
-        if ('BarcodeDetector' in window) {
-            const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a'] });
-            scanInterval = setInterval(async () => {
-                try {
-                    const video = document.getElementById('video');
-                    const barcodes = await detector.detect(video);
-                    if (barcodes.length > 0) {
-                        const code = barcodes[0].rawValue;
-                        stopCamera();
-                        document.getElementById('barcode-input').value = code;
-                        lookupBarcode(code);
-                    }
-                } catch(e) {}
-            }, 300);
-        } else {
-            // Fallback: manual entry from camera
-            showToast('כוון לברקוד ולחץ על המסך לסריקה', false, 4000);
-            document.getElementById('video').onclick = async () => {
-                // Try canvas capture
-                const canvas = document.createElement('canvas');
-                const video = document.getElementById('video');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                stopCamera();
-                showToast('לא נמצא ברקוד — נסה ידנית', true);
-            };
-        }
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+            ZXing.BarcodeFormat.EAN_13,
+            ZXing.BarcodeFormat.EAN_8,
+            ZXing.BarcodeFormat.CODE_128,
+            ZXing.BarcodeFormat.UPC_A,
+        ]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+        zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+
+        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+        // העדף מצלמה אחורית
+        const backCam = devices.find(d =>
+            /back|rear|environment/i.test(d.label)
+        ) || devices[devices.length - 1];
+
+        const video = document.getElementById('video');
+        await zxingReader.decodeFromVideoDevice(
+            backCam ? backCam.deviceId : undefined,
+            video,
+            (result, err) => {
+                if (result) {
+                    const code = result.getText();
+                    stopCamera();
+                    document.getElementById('barcode-input').value = code;
+                    lookupBarcode(code);
+                }
+            }
+        );
     } catch(e) {
+        console.error(e);
         showToast('לא ניתן לגשת למצלמה', true);
         modal.classList.remove('open');
+        if (zxingReader) { zxingReader.reset(); zxingReader = null; }
     }
 }
 
 function stopCamera() {
+    if (zxingReader) { zxingReader.reset(); zxingReader = null; }
     clearInterval(scanInterval);
-    if (scanStream) {
-        scanStream.getTracks().forEach(t => t.stop());
-        scanStream = null;
-    }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
     document.getElementById('camera-modal').classList.remove('open');
 }
 
