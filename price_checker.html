@@ -320,6 +320,33 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Multi Results ── */
+  .multi-item {
+    display: flex;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    align-items: center;
+  }
+  .multi-item:last-child { border-bottom: none; }
+  .multi-item:hover { background: #f0f7ff; }
+  .multi-item img {
+    width: 60px; height: 60px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 4px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .multi-item-info { flex: 1; }
+  .multi-item-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+  .multi-item-bc { font-size: 0.72rem; color: var(--muted); font-family: monospace; margin-bottom: 4px; direction: ltr; text-align: right; }
+  .multi-item-price { font-weight: 700; color: var(--blue); font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+  .mini-promo { background: var(--red); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+
   /* ── Toast ── */
   #toast {
     position: fixed;
@@ -375,6 +402,7 @@
         placeholder="סרוק או הכנס ברקוד..."
         inputmode="numeric"
         onkeydown="if(event.key==='Enter') lookup()">
+      <button class="btn-cam" onclick="lookup()" aria-label="חפש" style="background:#27ae60;" title="חפש">🔍</button>
       <button class="btn-cam" onclick="openCamera()" aria-label="סרוק עם מצלמה">📷</button>
     </div>
   </div>
@@ -411,6 +439,12 @@
     <div class="icon">🔎</div>
     <strong id="not-found-bc"></strong>
     <p>הברקוד לא נמצא בקטלוג</p>
+  </div>
+
+  <!-- Multi Results -->
+  <div id="multi-results" style="display:none;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;animation:slideUp 0.3s ease;">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;color:var(--blue);" id="multi-count"></div>
+    <div class="multi-list"></div>
   </div>
 
 </div>
@@ -494,26 +528,44 @@ async function loadOffers() {
 //  LOOKUP
 // ════════════════════════════════════════════
 function lookup(bc) {
-    const barcode = nb(bc || document.getElementById('barcode-input').value);
-    if (!barcode) return;
+    const input = nb(bc || document.getElementById('barcode-input').value);
+    if (!input) return;
 
-    const product = products.find(p => nb(p.Barcode) === barcode);
-    const offer   = offers.find(o => nb(o.Barcode) === barcode);
+    document.getElementById('result-card').style.display  = 'none';
+    document.getElementById('not-found').style.display    = 'none';
+    document.getElementById('multi-results').style.display = 'none';
 
-    document.getElementById('result-card').style.display = 'none';
-    document.getElementById('not-found').style.display   = 'none';
+    // חיפוש מדויק קודם
+    const exactProduct = products.find(p => nb(p.Barcode) === input);
+    const exactOffer   = offers.find(o => nb(o.Barcode) === input);
 
-    if (!product && !offer) {
-        document.getElementById('not-found-bc').textContent = barcode;
-        document.getElementById('not-found').style.display = 'block';
+    if (exactProduct || exactOffer) {
+        showSingleResult(input, exactProduct, exactOffer);
         return;
     }
 
-    // ── תמונה ──
+    // חיפוש חלקי — 6 ספרות אחרונות או יותר
+    if (input.length >= 4) {
+        const matches = products.filter(p => nb(p.Barcode).endsWith(input));
+        if (matches.length === 1) {
+            const bc = nb(matches[0].Barcode);
+            const off = offers.find(o => nb(o.Barcode) === bc);
+            showSingleResult(bc, matches[0], off);
+            return;
+        } else if (matches.length > 1) {
+            showMultiResults(matches, input);
+            return;
+        }
+    }
+
+    document.getElementById('not-found-bc').textContent = input;
+    document.getElementById('not-found').style.display = 'block';
+}
+
+function showSingleResult(barcode, product, offer) {
     const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
     document.getElementById('prod-img').src = imgUrl;
 
-    // ── שם ומחיר ──
     const name  = product ? (product.Name || '') : (offer ? (offer.Name || offer.Discreption || offer.Description || '') : '');
     const price = product ? (product.Price || '') : '';
 
@@ -521,7 +573,6 @@ function lookup(bc) {
     document.getElementById('prod-barcode').textContent = barcode;
     document.getElementById('prod-price').textContent   = price || '—';
 
-    // ── מבצע ──
     const badge        = document.getElementById('promo-badge');
     const promoDetails = document.getElementById('promo-details');
     const priceRegWrap = document.getElementById('price-regular-wrap');
@@ -533,7 +584,6 @@ function lookup(bc) {
         const qty        = parseFloat(offer.Quantity || offer.Quanity || '1');
         const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע` : `מחיר ליחידה במבצע`;
 
-        // הצג מחיר מבצע
         if (unitPrice) {
             document.getElementById('prod-price').textContent = unitPrice;
             if (price && price !== unitPrice) {
@@ -556,6 +606,39 @@ function lookup(bc) {
     }
 
     document.getElementById('result-card').style.display = 'block';
+}
+
+function showMultiResults(matches, searchTerm) {
+    const container = document.getElementById('multi-results');
+    container.style.display = 'block';
+    document.getElementById('multi-count').textContent = `נמצאו ${matches.length} מוצרים עבור "...${searchTerm}"`;
+
+    container.querySelector('.multi-list').innerHTML = matches.map(p => {
+        const bc     = nb(p.Barcode);
+        const offer  = offers.find(o => nb(o.Barcode) === bc);
+        const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
+        const hasPromo = !!offer;
+        return `
+        <div class="multi-item" onclick="selectProduct('${bc}')">
+            <img src="${imgUrl}" onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'" alt="${p.Name}">
+            <div class="multi-item-info">
+                <div class="multi-item-name">${p.Name || ''}</div>
+                <div class="multi-item-bc">${bc}</div>
+                <div class="multi-item-price">
+                    ₪${hasPromo ? (offer.UnitPrice || offer.Price || p.Price) : p.Price || '—'}
+                    ${hasPromo ? '<span class="mini-promo">🔥 מבצע</span>' : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectProduct(barcode) {
+    document.getElementById('barcode-input').value = barcode;
+    document.getElementById('multi-results').style.display = 'none';
+    const product = products.find(p => nb(p.Barcode) === barcode);
+    const offer   = offers.find(o => nb(o.Barcode) === barcode);
+    showSingleResult(barcode, product, offer);
 }
 
 // ════════════════════════════════════════════
@@ -582,10 +665,17 @@ async function openCamera() {
         ]);
         hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-        zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+        // בקש רזולוציה גבוהה למצלמה חדה
+        const videoConstraints = {
+            facingMode: { ideal: 'environment' },
+            width:  { min: 1280, ideal: 1920 },
+            height: { min: 720,  ideal: 1080 },
+            focusMode: 'continuous',
+            advanced: [{ focusMode: 'continuous' }]
+        };
 
         try {
-            const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            const tmp = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
             tmp.getTracks().forEach(t => t.stop());
         } catch(e) {}
 
@@ -597,15 +687,37 @@ async function openCamera() {
             if (back) backCamId = back.deviceId;
         } catch(e) {}
 
-        const video = document.getElementById('video');
-        await zxingReader.decodeFromVideoDevice(backCamId, video, (result) => {
-            if (result) {
-                const code = result.getText();
-                stopCamera();
-                document.getElementById('barcode-input').value = code;
-                lookup(code);
-            }
+        zxingReader = new ZXing.BrowserMultiFormatReader(hints, {
+            delayBetweenScanAttempts: 100,
+            delayBetweenScanSuccess: 500,
         });
+
+        const video = document.getElementById('video');
+
+        // הפעל עם constraints מפורשים
+        if (backCamId) {
+            await zxingReader.decodeFromConstraints(
+                { video: { deviceId: { exact: backCamId }, ...videoConstraints } },
+                video,
+                (result) => {
+                    if (result) {
+                        const code = result.getText();
+                        stopCamera();
+                        document.getElementById('barcode-input').value = code;
+                        lookup(code);
+                    }
+                }
+            );
+        } else {
+            await zxingReader.decodeFromVideoDevice(undefined, video, (result) => {
+                if (result) {
+                    const code = result.getText();
+                    stopCamera();
+                    document.getElementById('barcode-input').value = code;
+                    lookup(code);
+                }
+            });
+        }
         scanStream = video.srcObject;
 
     } catch(e) {
