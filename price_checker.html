@@ -515,22 +515,21 @@ async function loadProducts() {
 }
 
 async function loadOffers() {
-    const cached = loadFromCache('offers_cache_v2'); // v2 = עם AllBarcodes
-    // בדוק שה-cache מכיל עמודת AllBarcodes (גרסה חדשה)
-    if (cached && cached.length && cached[0].AllBarcodes !== undefined) {
+    const cached = loadFromCache('offers_cache_v3');
+    if (cached && cached.length && cached[0].AllBarcodes !== undefined && cached[0].AllBarcodes !== '["777000"]') {
         offers = cached;
-        console.log('offers from cache:', offers.length);
+        console.log('offers from cache:', offers.length, '| AllBarcodes:', cached[0].AllBarcodes?.slice(0,40));
         return;
     }
-    // cache ישן ללא AllBarcodes — טען מחדש
-    if (cached) localStorage.removeItem('offers_cache_v2');
+    if (cached) { localStorage.removeItem('offers_cache_v3'); }
     return new Promise(resolve => {
         Papa.parse(CSV_OFFERS, {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
                 offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('offers_cache_v2', offers);
-                console.log('[OFFERS] טעון מחדש:', offers.length, '| AllBarcodes:', offers.filter(o=>o.AllBarcodes).length);
+                saveToCache('offers_cache_v3', offers);
+                const withAll = offers.filter(o=>o.AllBarcodes && o.AllBarcodes.length > 4);
+                console.log('[OFFERS] טעון:', offers.length, '| עם AllBarcodes:', withAll.length, '| דוגמה:', withAll[0]?.AllBarcodes?.slice(0,60));
                 resolve();
             }, error: resolve
         });
@@ -543,6 +542,7 @@ async function loadOffers() {
 function lookup(bc) {
     const input = (bc || document.getElementById('barcode-input').value).trim();
     if (!input) return;
+    if (!products.length) { showToast('עדיין טוען נתונים...', false); return; }
 
     document.getElementById('result-card').style.display   = 'none';
     document.getElementById('not-found').style.display     = 'none';
