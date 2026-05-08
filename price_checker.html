@@ -454,8 +454,8 @@
 //  CONFIG
 // ════════════════════════════════════════════
 const CLOUD = "dj56w7nb9";
-const CSV_PRODUCTS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv&gid=1527287591"; // טאב he
-const CSV_OFFERS   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv";
+const CSV_PRODUCTS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv&gid=1527287591";
+const CSV_OFFERS   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv&gid=361402565";
 
 let products = [];
 let offers   = [];
@@ -510,7 +510,7 @@ async function loadProducts() {
 }
 
 async function loadOffers() {
-    const cached = loadFromCache('offers_cache');
+    const cached = loadFromCache('offers_cache_v2'); // v2 = עם AllBarcodes
     // בדוק שה-cache מכיל עמודת AllBarcodes (גרסה חדשה)
     if (cached && cached.length && cached[0].AllBarcodes !== undefined) {
         offers = cached;
@@ -518,13 +518,13 @@ async function loadOffers() {
         return;
     }
     // cache ישן ללא AllBarcodes — טען מחדש
-    if (cached) localStorage.removeItem('offers_cache');
+    if (cached) localStorage.removeItem('offers_cache_v2');
     return new Promise(resolve => {
         Papa.parse(CSV_OFFERS, {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
                 offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('offers_cache', offers);
+                saveToCache('offers_cache_v2', offers);
                 console.log('[OFFERS] טעון מחדש:', offers.length, '| AllBarcodes:', offers.filter(o=>o.AllBarcodes).length);
                 resolve();
             }, error: resolve
@@ -554,10 +554,18 @@ function lookup(bc) {
     if (!exactOffer) {
         exactOffer = offers.find(o => {
             try {
-                const bcs = JSON.parse(o.AllBarcodes || '[]');
-                return bcs.some(bc => nb(bc) === nbInput);
-            } catch(e) { return false; }
+                const raw = o.AllBarcodes || '';
+                if (!raw.trim()) return false;
+                const bcs = JSON.parse(raw);
+                const found = bcs.some(bc => nb(bc) === nbInput);
+                return found;
+            } catch(e) {
+                console.warn('AllBarcodes parse error:', o.AllBarcodes, e.message);
+                return false;
+            }
         });
+        if (exactOffer) console.log('[FOUND in AllBarcodes]', nbInput, '->', exactOffer.Discreption);
+        else console.log('[NOT FOUND in AllBarcodes]', nbInput, '| offers checked:', offers.length, '| sample AllBarcodes:', offers[0]?.AllBarcodes?.slice(0,60));
     }
 
     if (exactProduct || exactOffer) {
