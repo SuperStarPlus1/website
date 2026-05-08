@@ -706,7 +706,6 @@
 
     // פותח lightbox עם פרטי מבצע
     function zoomPromo(url, desc, unitPrice, valid, regularPrice, promoNote) {
-        console.log('[zoomPromo]', {url, desc, unitPrice, valid, promoNote});
         const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
         const extra = [
             valid        ? `${t.promo_valid||'בתוקף עד:'} ${valid}` : '',
@@ -714,6 +713,12 @@
             promoNote    ? promoNote : ''
         ].filter(Boolean).join('  |  ');
         zoom(url, desc, unitPrice, '', extra);
+    }
+
+    function zoomPromoByIdx(idx) {
+        const d = window._promoData && window._promoData[idx];
+        if (!d) return;
+        zoomPromo(d.url, d.desc, d.price, d.valid, d.regularPrice, d.promoNote);
     }
 
     // Close lightbox on Escape
@@ -932,6 +937,7 @@
         if (countEl) countEl.textContent = t.promo_showing.replace('{n}', offers.length);
 
         function nb(b) { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; }
+        window._promoData = []; // reset לכל רינדור
         const gridHtml = offers.map(o => {
             const barcode = nb(o.Barcode);
             const rawDesc = o.Description || o.Discreption || o.Name || '';
@@ -947,13 +953,15 @@
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            const safeDesc = desc.replace(/'/g, '');
-            const promoNote = (o.PromoNote || '').replace(/'/g, '');
             if (promoNote) console.log('[DEBUG] promoNote:', promoNote);
+            // שמור נתונים ב-data attributes להימנע מבעיות עם גרשיים
+            const idx = window._promoData ? window._promoData.length : 0;
+            if (!window._promoData) window._promoData = [];
+            window._promoData[idx] = {url, desc, price, valid, regularPrice, promoNote};
             return `
                 <div class="card" role="listitem" tabindex="0"
-                    onclick="zoomPromo('${url}','${safeDesc}','${price}','${valid}','${regularPrice}','${promoNote}')"
-                    onkeypress="if(event.key==='Enter') this.click()">
+                    onclick="zoomPromoByIdx(${idx})"
+                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${idx})">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
