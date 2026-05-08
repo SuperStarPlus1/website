@@ -435,13 +435,7 @@
                     <span id="cat-reset" onclick="resetCat()" style="display:none; position:absolute; left:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:1.2rem; line-height:1;" role="button" aria-label="נקה קטגוריה" tabindex="0">✕</span>
                     <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;" role="listbox" aria-label="רשימת קטגוריות"></div>
                 </div>
-                <!-- dropdown קבוצה — מופיע רק כשנבחרת מחלקה -->
-                <div id="grp-select-wrap" style="display:none; min-width:150px; flex:1;">
-                    <select id="grp-select" onchange="setGroup(this.value)"
-                        style="width:100%; padding:12px; border:1px solid #ef6c00; border-radius:10px; background:white; color:#ef6c00; font-weight:bold; font-size:1rem; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%23ef6c00%22 d=%22M8 10L3 5h10z%22/></svg>'); background-repeat:no-repeat; background-position:left 10px center; background-size:16px;"
-                        aria-label="סנן לפי קבוצה">
-                    </select>
-                </div>
+
             </div>
             <div id="catalog-grid" class="grid" role="list" aria-label="רשימת מוצרים" aria-live="polite"></div>
         </div>
@@ -711,11 +705,12 @@
     }
 
     // פותח lightbox עם פרטי מבצע
-    function zoomPromo(url, desc, unitPrice, valid, regularPrice) {
+    function zoomPromo(url, desc, unitPrice, valid, regularPrice, promoNote) {
         const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
         const extra = [
             valid        ? `${t.promo_valid||'בתוקף עד:'} ${valid}` : '',
-            regularPrice ? `${t.promo_regular||'מחיר רגיל: ₪'}${regularPrice}` : ''
+            regularPrice ? `${t.promo_regular||'מחיר רגיל: ₪'}${regularPrice}` : '',
+            promoNote    ? promoNote : ''
         ].filter(Boolean).join('  |  ');
         zoom(url, desc, unitPrice, '', extra);
     }
@@ -807,7 +802,6 @@
                     onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                 <h3>${tName || ''}</h3>
                 <div class="price">&#8362;${i.Price || ''}</div>
-                ${i[window.grpFieldName] ? `<div style="display:inline-block;background:#fff3e0;color:#ef6c00;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">${i[window.grpFieldName]}</div>` : ''}
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`;
         }).join('');
@@ -817,8 +811,6 @@
             const btnLabel = currentLang === 'ar' ? 'تحميل المزيد...' : currentLang === 'en' ? 'Load more...' : 'טען מוצרים נוספים...';
             container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;" aria-label="${btnLabel}">${btnLabel}</button>`);
         }
-        // בנה סינון קבוצה לקטלוג
-        buildGrpFilter(curCat);
     }
 
     function renderOffers(offers) {
@@ -955,9 +947,10 @@
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             const safeDesc = desc.replace(/'/g, '');
+            const promoNote = (o.PromoNote || '').replace(/'/g, '');
             return `
                 <div class="card" role="listitem" tabindex="0"
-                    onclick="zoomPromo('${url}','${safeDesc}','${price}','${valid}','${regularPrice}')"
+                    onclick="zoomPromo('${url}','${safeDesc}','${price}','${valid}','${regularPrice}','${promoNote}')"
                     onkeypress="if(event.key==='Enter') this.click()">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
@@ -965,6 +958,7 @@
                     ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
                     ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
+                    ${promoNote ? `<div style="font-size:0.72rem;color:#ef6c00;font-weight:bold;margin-top:3px;padding:2px 6px;background:#fff3e0;border-radius:6px;">${promoNote}</div>` : ""}
                 </div>`;
         }).join('');
 
@@ -986,9 +980,7 @@
                     firstItem.hasOwnProperty('category') ? 'category' :
                     firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
                 if (!catField) { console.error('שגיאה: לא נמצאה עמודת קטגוריה!'); return; }
-                const grpField = firstItem.hasOwnProperty('Group') ? 'Group' :
-                    firstItem.hasOwnProperty('group') ? 'group' : null;
-                window.grpFieldName = grpField;
+
                 const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
                 window.allCats = ["הכל", ...new Set(rawCats)].sort();
                 buildCatDropdown(window.allCats);
@@ -1003,8 +995,11 @@
                     download: true, header: true, skipEmptyLines: true,
                     complete: r2 => {
                         const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
+                        console.log('[OFFERS] headers:', Object.keys(offers[0] || {}));
+                        const withNote = offers.filter(o => o.PromoNote && o.PromoNote.trim());
+                        console.log('[OFFERS] total:', offers.length, '| PromoNote:', withNote.length);
+                        if (withNote.length) console.log('[OFFERS] sample:', withNote[0].Barcode, '->', withNote[0].PromoNote);
                         renderOffers(offers);
-
                     }
                 });
             }
@@ -1014,57 +1009,19 @@
     function runFilter() {
         const term = document.getElementById('search').value.toLowerCase();
         const field = window.catFieldName || 'Category';
-        const grpField = window.grpFieldName;
         const filtered = allItems.filter(i => {
             const iCat = i[field];
-            const iGrp = grpField ? i[grpField] : '';
             const matchText = i.Name.toLowerCase().includes(term) || i.Barcode.includes(term);
             const matchCat  = curCat === "הכל" || iCat === curCat;
-            const matchGrp  = curGrp === "הכל" || iGrp === curGrp;
-            return matchText && matchCat && matchGrp;
+            return matchText && matchCat;
         });
         render(filtered);
     }
 
-    let curGrp = "הכל";
-
     function setCategory(cat) {
         curCat = cat;
-        curGrp = "הכל";
-        limit = 20;
-        buildGrpFilter(cat);
-        runFilter();
-    }
-
-    function setGroup(grp) {
-        curGrp = grp;
         limit = 20;
         runFilter();
-    }
-
-    function buildGrpFilter(cat) {
-        const grpField = window.grpFieldName;
-        const catField = window.catFieldName || 'Category';
-        const wrap = document.getElementById('grp-select-wrap');
-        const sel  = document.getElementById('grp-select');
-        if (!wrap || !sel || !grpField) return;
-
-        // מצא קבוצות רלוונטיות לקטגוריה הנבחרת
-        const items = cat === 'הכל' ? allItems : allItems.filter(i => i[catField] === cat);
-        const grps = [...new Set(items.map(i => i[grpField]).filter(g => g && g.trim()))].sort();
-
-        if (!grps.length || cat === 'הכל') {
-            wrap.style.display = 'none';
-            curGrp = 'הכל';
-            return;
-        }
-
-        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
-        const allLabel = t.cat_all || 'הכל';
-        wrap.style.display = 'flex';
-        sel.innerHTML = `<option value="הכל">${allLabel}</option>` +
-            grps.map(g => `<option value="${g}" ${g === curGrp ? 'selected' : ''}>${g}</option>`).join('');
-        sel.value = curGrp;
     }
 
     async function loadDynamicImage() {
