@@ -575,6 +575,7 @@ function lookup(bc) {
     }
 
     if (exactProduct || exactOffer) {
+        console.log('[LOOKUP] exact:', nb(input), '| hasOffer:', !!exactOffer);
         showSingleResult(nb(input), exactProduct, exactOffer);
         return;
     }
@@ -593,7 +594,15 @@ function lookup(bc) {
     }
     if (matches.length === 1) {
         const bc  = nb(matches[0].Barcode);
-        showSingleResult(bc, matches[0], offers.find(o => nb(o.Barcode) === bc));
+        let off = offers.find(o => nb(o.Barcode) === bc);
+        if (!off) {
+            off = offers.find(o => {
+                try {
+                    return JSON.parse(o.AllBarcodes||'[]').some(b => nb(b) === bc);
+                } catch(e) { return false; }
+            });
+        }
+        showSingleResult(bc, matches[0], off);
         return;
     }
     showMultiResults(matches, input);
