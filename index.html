@@ -957,6 +957,7 @@
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             const promoNote = (o.PromoNote || '');
+            const safeDesc = desc.replace(/'/g, '');
             if (!window._promoData) window._promoData = [];
             const pIdx = window._promoData.length;
             window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
