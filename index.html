@@ -465,7 +465,8 @@
         <div class="content-wrap">
             <div style="background:white; padding:20px; border-radius:15px; margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 10px;" role="search" aria-label="חיפוש קטלוג">
                 <label for="search" class="sr-only" data-i18n="catalog_search_label">חפש מוצר</label>
-                <input type="text" id="search" data-i18n-placeholder="catalog_search_ph" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" aria-label="חיפוש לפי שם מוצר או ברקוד" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
+                <input type="text" id="search" data-i18n-placeholder="catalog_search_ph" placeholder="חפש שם מוצר או ברקוד..." oninput="runFilter()" onkeydown="if(event.key==='Enter') runFilter()" aria-label="חיפוש לפי שם מוצר או ברקוד" style="flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem;">
+                <button onclick="openCatalogCamera()" style="padding:12px 16px;background:var(--blue);color:white;border:none;border-radius:10px;cursor:pointer;font-size:1.2rem;flex-shrink:0;" aria-label="סרוק ברקוד">📷</button>
                 <div style="flex:1; min-width:150px; position:relative;">
                     <label for="cat-search" class="sr-only" data-i18n="catalog_cat_label">בחר קטגוריה</label>
                     <input type="text" id="cat-search" data-i18n-placeholder="catalog_cat_ph" placeholder="כל הקטגוריות..." oninput="filterCats()" onfocus="showCatDropdown()" aria-label="חיפוש קטגוריה" aria-expanded="false" aria-controls="cat-dropdown" role="combobox" style="width:100%; padding:12px 36px 12px 12px; border:1px solid var(--blue); border-radius:10px; background:white; color:var(--blue); font-weight:bold; box-sizing:border-box; font-size:1rem;">
@@ -473,6 +474,13 @@
                     <div id="cat-dropdown" style="display:none; position:absolute; top:100%; right:0; left:0; background:white; border:1px solid var(--blue); border-radius:10px; max-height:250px; overflow-y:auto; z-index:500; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-top:4px;" role="listbox" aria-label="רשימת קטגוריות"></div>
                 </div>
 
+            </div>
+            <!-- סינון קבוצה — מופיע כ-dropdown ליד סינון מחלקה -->
+            <div id="grp-select-wrap" style="display:none; margin-bottom:15px;">
+                <select id="grp-select" onchange="setGroup(this.value)"
+                    style="width:100%; padding:12px; border:2px solid #ef6c00; border-radius:10px; background:white; color:#ef6c00; font-weight:bold; font-size:1rem; cursor:pointer;"
+                    aria-label="סנן לפי קבוצה">
+                </select>
             </div>
             <div id="catalog-grid" class="grid" role="list" aria-label="רשימת מוצרים" aria-live="polite"></div>
         </div>
@@ -885,9 +893,19 @@
                 onclick="zoom('${imgUrl}','${safeDesc}','${i.Price||''}')"
                 onkeypress="if(event.key==='Enter') this.click()">
                 <img src="${imgUrl}" loading="lazy" alt="${tName || 'מוצר'}"
+                    onclick="zoom('${imgUrl}','${safeDesc}','${i.Price||""}')"
+                    style="cursor:pointer"
                     onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                 <h3>${tName || ''}</h3>
                 <div class="price">&#8362;${i.Price || ''}</div>
+                ${(function() {
+                    const bc = (function nb(b){let s=String(b||'').trim();if(s.endsWith('.0'))s=s.slice(0,-2);return s;})(i.Barcode);
+                    const off = window.allOffers && window.allOffers.find(o => {
+                        const ob = (function nb(b){let s=String(b||'').trim();if(s.endsWith('.0'))s=s.slice(0,-2);return s;})(o.Barcode);
+                        return ob === bc;
+                    });
+                    return off ? '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">🔥 מבצע &#8362;'+( off.UnitPrice||off.Price||'')+' </div>' : '';
+                })()}
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`;
         }).join('');
@@ -998,9 +1016,10 @@
             window._promoData.push({url, desc, price, valid, regularPrice, promoNote: o.PromoNote || ''});
             return `
                 <div style="text-align:center;cursor:pointer;min-width:160px"
-                    onclick="zoomPromoByIdx(${sIdx})"
+                    data-pidx="${sIdx}"
+                    onclick="zoomPromoByIdx(parseInt(this.dataset.pidx))"
                     tabindex="0" role="button" aria-label="${desc}"
-                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${sIdx})">
+                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(parseInt(this.dataset.pidx))">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
                     ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333">${desc}</div>` : ''}
                     ${price ? `<div style="color:#d32f2f;font-weight:bold">${priceLabel} &#8362;${price}</div>` : ''}
@@ -1009,6 +1028,16 @@
         }).join('');
         const slider = document.getElementById('promo-slider');
         if (slider) slider.innerHTML = sliderOffers.length ? sliderHtml + sliderHtml : '';
+        // תקן indices בעותק השני — כך לחיצה על עותק שני תחזיר את אותו מבצע
+        const totalItems = sliderOffers.length;
+        if (slider && totalItems > 0) {
+            slider.querySelectorAll('[data-pidx]').forEach(el => {
+                const orig = parseInt(el.dataset.pidx);
+                if (orig >= totalItems) {
+                    el.dataset.pidx = orig % totalItems;
+                }
+            });
+        }
 
         renderPromoGrid(offers);
     }
@@ -1046,8 +1075,9 @@
             window._promoData.push({url, desc, price, valid, regularPrice, promoNote, allBcs});
             return `
                 <div class="card" role="listitem" tabindex="0"
-                    onclick="zoomPromoByIdx(${pIdx})"
-                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${pIdx})">
+                    data-pidx="${pIdx}"
+                    onclick="zoomPromoByIdx(parseInt(this.dataset.pidx))"
+                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(parseInt(this.dataset.pidx))">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
@@ -1341,6 +1371,49 @@
         const pct = Math.abs(normalizedX) / trackWidth;
         track.style.animation = `scroll 840s linear infinite`;
         track.style.animationDelay = `-${pct * 840}s`;
+    }
+
+    // ── מצלמת קטלוג ──────────────────────────────────────
+    let catZxingReader = null, catScanStream = null;
+
+    async function openCatalogCamera() {
+        const modal = document.getElementById('camera-modal');
+        modal.classList.add('open');
+        try {
+            await new Promise((res, rej) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+                s.onload = res; s.onerror = rej;
+                if (!document.querySelector('script[src*="zxing"]')) document.head.appendChild(s);
+                else res();
+            });
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.UPC_A]);
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            catZxingReader = new ZXing.BrowserMultiFormatReader(hints);
+            try { const t = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); t.getTracks().forEach(tr=>tr.stop()); } catch(e){}
+            let camId;
+            try { const devs = await navigator.mediaDevices.enumerateDevices(); const vids = devs.filter(d=>d.kind==='videoinput'); const back = vids.find(d=>/back|rear|environment/i.test(d.label))||vids[vids.length-1]; if(back) camId=back.deviceId; } catch(e){}
+            const video = document.getElementById('video');
+            await catZxingReader.decodeFromVideoDevice(camId, video, (result) => {
+                if (result) {
+                    const code = result.getText();
+                    closeCatalogCamera();
+                    document.getElementById('search').value = code;
+                    runFilter();
+                }
+            });
+            catScanStream = video.srcObject;
+        } catch(e) {
+            closeCatalogCamera();
+            if (e.name==='NotAllowedError') alert('אנא אפשר גישה למצלמה');
+        }
+    }
+
+    function closeCatalogCamera() {
+        if (catZxingReader) { catZxingReader.reset(); catZxingReader = null; }
+        if (catScanStream) { catScanStream.getTracks().forEach(t=>t.stop()); catScanStream = null; }
+        document.getElementById('camera-modal').classList.remove('open');
     }
 
     function toggleA11yBar() {

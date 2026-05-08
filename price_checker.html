@@ -677,9 +677,8 @@ function showMultiResults(matches, searchTerm) {
                 } catch(e) { return false; }
             });
         }
-        // השתמש בברקוד המלא מהמוצר לתמונה
-        const imgBc    = p ? nb(p.Barcode) : bc;
-        const imgUrl   = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${imgBc}.jpg`;
+        const imgBc  = nb(p.Barcode); // תמיד ברקוד מלא מהמוצר
+        const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${imgBc}.jpg`;
         const hasPromo = !!offer;
         const price    = hasPromo
             ? (offer.UnitPrice || offer.Price || p.Price || '—')
