@@ -956,7 +956,7 @@
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            if (promoNote) console.log('[DEBUG] promoNote:', promoNote);
+            const promoNote = (o.PromoNote || '');
             if (!window._promoData) window._promoData = [];
             const pIdx = window._promoData.length;
             window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
@@ -1007,10 +1007,6 @@
                     download: true, header: true, skipEmptyLines: true,
                     complete: r2 => {
                         const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
-                        console.log('[OFFERS] headers:', Object.keys(offers[0] || {}));
-                        const withNote = offers.filter(o => o.PromoNote && o.PromoNote.trim());
-                        console.log('[OFFERS] total:', offers.length, '| PromoNote:', withNote.length);
-                        if (withNote.length) console.log('[OFFERS] sample:', withNote[0].Barcode, '->', withNote[0].PromoNote);
                         renderOffers(offers);
                     }
                 });
