@@ -913,11 +913,14 @@
             const catalogItem = findItemByBarcode(o.Barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            if (!window._promoData) window._promoData = [];
+            const sIdx = window._promoData.length;
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote: o.PromoNote || ''});
             return `
                 <div style="text-align:center;cursor:pointer;min-width:160px"
-                    onclick="zoomPromo('${url}','${desc}','${price}','${valid}','${regularPrice}')"
+                    onclick="zoomPromoByIdx(${sIdx})"
                     tabindex="0" role="button" aria-label="${desc}"
-                    onkeypress="if(event.key==='Enter') this.click()">
+                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${sIdx})">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
                     ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333">${desc}</div>` : ''}
                     ${price ? `<div style="color:#d32f2f;font-weight:bold">${priceLabel} &#8362;${price}</div>` : ''}
@@ -954,14 +957,13 @@
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             if (promoNote) console.log('[DEBUG] promoNote:', promoNote);
-            // שמור נתונים ב-data attributes להימנע מבעיות עם גרשיים
-            const idx = window._promoData ? window._promoData.length : 0;
             if (!window._promoData) window._promoData = [];
-            window._promoData[idx] = {url, desc, price, valid, regularPrice, promoNote};
+            const pIdx = window._promoData.length;
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
             return `
                 <div class="card" role="listitem" tabindex="0"
-                    onclick="zoomPromoByIdx(${idx})"
-                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${idx})">
+                    onclick="zoomPromoByIdx(${pIdx})"
+                    onkeypress="if(event.key==='Enter') zoomPromoByIdx(${pIdx})">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
