@@ -399,7 +399,7 @@
   <div class="scan-card">
     <div class="scan-row">
       <input type="text" id="barcode-input"
-        placeholder="סרוק או הכנס ברקוד..."
+        placeholder="ברקוד, חלק מברקוד, או שם מוצר..."
         inputmode="numeric"
         onkeydown="if(event.key==='Enter') lookup()">
       <button class="btn-cam" onclick="lookup()" aria-label="חפש" style="background:#27ae60;" title="חפש">🔍</button>
@@ -528,39 +528,43 @@ async function loadOffers() {
 //  LOOKUP
 // ════════════════════════════════════════════
 function lookup(bc) {
-    const input = nb(bc || document.getElementById('barcode-input').value);
+    const input = (bc || document.getElementById('barcode-input').value).trim();
     if (!input) return;
 
-    document.getElementById('result-card').style.display  = 'none';
-    document.getElementById('not-found').style.display    = 'none';
+    document.getElementById('result-card').style.display   = 'none';
+    document.getElementById('not-found').style.display     = 'none';
     document.getElementById('multi-results').style.display = 'none';
 
-    // חיפוש מדויק קודם
-    const exactProduct = products.find(p => nb(p.Barcode) === input);
-    const exactOffer   = offers.find(o => nb(o.Barcode) === input);
+    const term = input.toLowerCase();
 
+    // חיפוש מדויק על ברקוד
+    const exactProduct = products.find(p => nb(p.Barcode) === nb(input));
+    const exactOffer   = offers.find(o => nb(o.Barcode) === nb(input));
     if (exactProduct || exactOffer) {
-        showSingleResult(input, exactProduct, exactOffer);
+        showSingleResult(nb(input), exactProduct, exactOffer);
         return;
     }
 
-    // חיפוש חלקי — 6 ספרות אחרונות או יותר
-    if (input.length >= 4) {
-        const matches = products.filter(p => nb(p.Barcode).endsWith(input));
-        if (matches.length === 1) {
-            const bc = nb(matches[0].Barcode);
-            const off = offers.find(o => nb(o.Barcode) === bc);
-            showSingleResult(bc, matches[0], off);
-            return;
-        } else if (matches.length > 1) {
-            showMultiResults(matches, input);
-            return;
-        }
-    }
+    // חיפוש חלקי — ברקוד מכיל OR שם מכיל
+    const matches = products.filter(p => {
+        const barcode = nb(p.Barcode).toLowerCase();
+        const name    = (p.Name || '').toLowerCase();
+        return barcode.includes(term) || name.includes(term);
+    });
 
-    document.getElementById('not-found-bc').textContent = input;
-    document.getElementById('not-found').style.display = 'block';
+    if (matches.length === 0) {
+        document.getElementById('not-found-bc').textContent = input;
+        document.getElementById('not-found').style.display = 'block';
+        return;
+    }
+    if (matches.length === 1) {
+        const bc  = nb(matches[0].Barcode);
+        showSingleResult(bc, matches[0], offers.find(o => nb(o.Barcode) === bc));
+        return;
+    }
+    showMultiResults(matches, input);
 }
+
 
 function showSingleResult(barcode, product, offer) {
     const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
@@ -611,27 +615,37 @@ function showSingleResult(barcode, product, offer) {
 function showMultiResults(matches, searchTerm) {
     const container = document.getElementById('multi-results');
     container.style.display = 'block';
-    document.getElementById('multi-count').textContent = `נמצאו ${matches.length} מוצרים עבור "...${searchTerm}"`;
+    const limited  = matches.slice(0, 50);
+    const extra    = matches.length > 50 ? ` — מציג 50 מתוך ${matches.length}` : '';
+    document.getElementById('multi-count').textContent =
+        `נמצאו ${matches.length} תוצאות עבור "${searchTerm}"${extra}`;
 
-    container.querySelector('.multi-list').innerHTML = matches.map(p => {
-        const bc     = nb(p.Barcode);
-        const offer  = offers.find(o => nb(o.Barcode) === bc);
-        const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
+    container.querySelector('.multi-list').innerHTML = limited.map(p => {
+        const bc       = nb(p.Barcode);
+        const offer    = offers.find(o => nb(o.Barcode) === bc);
+        const imgUrl   = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
         const hasPromo = !!offer;
+        const price    = hasPromo
+            ? (offer.UnitPrice || offer.Price || p.Price || '—')
+            : (p.Price || '—');
+        const safeName = (p.Name || '').replace(/"/g, '&quot;');
         return `
         <div class="multi-item" onclick="selectProduct('${bc}')">
-            <img src="${imgUrl}" onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'" alt="${p.Name}">
+            <img src="${imgUrl}"
+                onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'"
+                alt="${safeName}">
             <div class="multi-item-info">
                 <div class="multi-item-name">${p.Name || ''}</div>
                 <div class="multi-item-bc">${bc}</div>
                 <div class="multi-item-price">
-                    ₪${hasPromo ? (offer.UnitPrice || offer.Price || p.Price) : p.Price || '—'}
-                    ${hasPromo ? '<span class="mini-promo">🔥 מבצע</span>' : ''}
+                    &#8362;${price}
+                    ${hasPromo ? '<span class="mini-promo">&#128293; מבצע</span>' : ''}
                 </div>
             </div>
         </div>`;
     }).join('');
 }
+
 
 function selectProduct(barcode) {
     document.getElementById('barcode-input').value = barcode;
