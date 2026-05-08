@@ -495,14 +495,19 @@ function saveToCache(key, data) {
 }
 
 async function loadProducts() {
-    const cached = loadFromCache('products_cache');
-    if (cached) { products = cached; console.log('products from cache:', products.length); return; }
+    const cached = loadFromCache('products_cache_v2');
+    if (cached && cached.length) {
+        products = cached;
+        console.log('products from cache:', products.length);
+        return;
+    }
     return new Promise(resolve => {
         Papa.parse(CSV_PRODUCTS, {
             download: true, header: true,
             complete: r => {
                 products = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('products_cache', products);
+                saveToCache('products_cache_v2', products);
+                console.log('products loaded:', products.length);
                 resolve();
             }, error: resolve
         });
