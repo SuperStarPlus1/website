@@ -575,8 +575,11 @@ function lookup(bc) {
     }
 
     if (exactProduct || exactOffer) {
-        console.log('[LOOKUP] exact:', nb(input), '| hasOffer:', !!exactOffer);
-        showSingleResult(nb(input), exactProduct, exactOffer);
+        // השתמש בברקוד המלא מהמוצר/מבצע, לא מהחיפוש
+        const fullBc = exactProduct ? nb(exactProduct.Barcode)
+                     : exactOffer  ? nb(exactOffer.Barcode)
+                     : nb(input);
+        showSingleResult(fullBc, exactProduct, exactOffer);
         return;
     }
 
@@ -674,7 +677,9 @@ function showMultiResults(matches, searchTerm) {
                 } catch(e) { return false; }
             });
         }
-        const imgUrl   = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
+        // השתמש בברקוד המלא מהמוצר לתמונה
+        const imgBc    = p ? nb(p.Barcode) : bc;
+        const imgUrl   = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${imgBc}.jpg`;
         const hasPromo = !!offer;
         const price    = hasPromo
             ? (offer.UnitPrice || offer.Price || p.Price || '—')
@@ -702,8 +707,16 @@ function selectProduct(barcode) {
     document.getElementById('barcode-input').value = barcode;
     document.getElementById('multi-results').style.display = 'none';
     const product = products.find(p => nb(p.Barcode) === barcode);
-    const offer   = offers.find(o => nb(o.Barcode) === barcode);
-    showSingleResult(barcode, product, offer);
+    let offer = offers.find(o => nb(o.Barcode) === barcode);
+    if (!offer) {
+        offer = offers.find(o => {
+            try { return JSON.parse(o.AllBarcodes||'[]').some(b => nb(b) === barcode); }
+            catch(e) { return false; }
+        });
+    }
+    // אם יש מבצע וברקוד שלו שונה, השתמש בברקוד של המוצר לתמונה
+    const imgBc = product ? nb(product.Barcode) : barcode;
+    showSingleResult(imgBc, product, offer);
 }
 
 // ════════════════════════════════════════════
