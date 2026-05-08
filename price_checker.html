@@ -511,13 +511,21 @@ async function loadProducts() {
 
 async function loadOffers() {
     const cached = loadFromCache('offers_cache');
-    if (cached) { offers = cached; console.log('offers from cache:', offers.length); return; }
+    // בדוק שה-cache מכיל עמודת AllBarcodes (גרסה חדשה)
+    if (cached && cached.length && cached[0].AllBarcodes !== undefined) {
+        offers = cached;
+        console.log('offers from cache:', offers.length);
+        return;
+    }
+    // cache ישן ללא AllBarcodes — טען מחדש
+    if (cached) localStorage.removeItem('offers_cache');
     return new Promise(resolve => {
         Papa.parse(CSV_OFFERS, {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
                 offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
                 saveToCache('offers_cache', offers);
+                console.log('[OFFERS] טעון מחדש:', offers.length, '| AllBarcodes:', offers.filter(o=>o.AllBarcodes).length);
                 resolve();
             }, error: resolve
         });
