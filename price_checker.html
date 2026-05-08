@@ -539,7 +539,19 @@ function lookup(bc) {
 
     // חיפוש מדויק על ברקוד
     const exactProduct = products.find(p => nb(p.Barcode) === nb(input));
-    const exactOffer   = offers.find(o => nb(o.Barcode) === nb(input));
+
+    // חפש מבצע — לפי ברקוד ראשי או בתוך AllBarcodes
+    const nbInput = nb(input);
+    let exactOffer = offers.find(o => nb(o.Barcode) === nbInput);
+    if (!exactOffer) {
+        exactOffer = offers.find(o => {
+            try {
+                const bcs = JSON.parse(o.AllBarcodes || '[]');
+                return bcs.some(bc => nb(bc) === nbInput);
+            } catch(e) { return false; }
+        });
+    }
+
     if (exactProduct || exactOffer) {
         showSingleResult(nb(input), exactProduct, exactOffer);
         return;

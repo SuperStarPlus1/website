@@ -279,6 +279,43 @@
         .carwash-cta { background: var(--blue); color: white; padding: 10px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 0.9rem; }
         .form-iframe { width: 100%; border: none; border-radius: 15px; min-height: 800px; }
 
+        /* ── מבצע — כל הפריטים ── */
+        .promo-more-btn {
+            background: none; border: 1px solid var(--blue);
+            color: var(--blue); border-radius: 10px; padding: 4px 10px;
+            font-size: 0.72rem; cursor: pointer; margin-top: 5px;
+            font-family: inherit; font-weight: bold; transition: 0.2s;
+        }
+        .promo-more-btn:hover { background: var(--blue); color: white; }
+
+        .promo-items-popup {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); z-index: 8000;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .promo-items-popup.open { display: flex; }
+        .promo-items-inner {
+            background: white; border-radius: 16px; width: 100%;
+            max-width: 500px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .promo-items-header {
+            padding: 16px 20px; border-bottom: 1px solid #eee;
+            font-weight: bold; color: var(--blue); font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; background: white; z-index: 1;
+        }
+        .promo-item-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 16px; border-bottom: 1px solid #f5f5f5;
+        }
+        .promo-item-row img {
+            width: 48px; height: 48px; object-fit: contain;
+            border-radius: 8px; background: #f8f8f8; padding: 2px;
+        }
+        .promo-item-row .item-name { font-size: 0.85rem; color: #333; }
+        .promo-item-row .item-bc { font-size: 0.72rem; color: #999; font-family: monospace; }
+
         @media (max-width: 768px) {
             header { height: auto; padding: 10px 0; }
             .nav-container { flex-direction: column; height: auto; }
@@ -598,6 +635,17 @@
 
 </main>
 
+<!-- ── Promo Items Popup ── -->
+<div class="promo-items-popup" id="promo-items-popup" onclick="if(event.target===this) closePromoItems()">
+    <div class="promo-items-inner">
+        <div class="promo-items-header">
+            <span id="promo-items-title">פריטים במבצע</span>
+            <button onclick="closePromoItems()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#999;">✕</button>
+        </div>
+        <div id="promo-items-list"></div>
+    </div>
+</div>
+
 <!-- ── Modal ── -->
 <div class="modal-overlay" id="imageModal" onclick="this.style.display='none'" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת">
     <img src="" id="modalImg" alt="תמונה מוגדלת">
@@ -719,6 +767,38 @@
         const d = window._promoData && window._promoData[idx];
         if (!d) return;
         zoomPromo(d.url, d.desc, d.price, d.valid, d.regularPrice, d.promoNote);
+    }
+
+    function showPromoItems(idx) {
+        const d = window._promoData && window._promoData[idx];
+        if (!d || !d.allBcs) return;
+        const popup = document.getElementById('promo-items-popup');
+        const list  = document.getElementById('promo-items-list');
+        const title = document.getElementById('promo-items-title');
+        title.textContent = d.desc + ' — ' + d.allBcs.length + ' פריטים';
+        list.innerHTML = d.allBcs.map(bc => {
+            const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
+            const prod   = allItems.find(x => {
+                let s = String(x.Barcode||'').trim();
+                if(s.endsWith('.0')) s=s.slice(0,-2);
+                return s === bc;
+            });
+            const name = prod ? (prod.Name || bc) : bc;
+            return `<div class="promo-item-row">
+                <img src="${imgUrl}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${name}">
+                <div>
+                    <div class="item-name">${name}</div>
+                    <div class="item-bc">${bc}</div>
+                </div>
+            </div>`;
+        }).join('');
+        popup.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePromoItems() {
+        document.getElementById('promo-items-popup').classList.remove('open');
+        document.body.style.overflow = '';
     }
 
     // Close lightbox on Escape
@@ -958,9 +1038,12 @@
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             const promoNote = (o.PromoNote || '');
             const safeDesc = desc.replace(/'/g, '');
+            let allBcs = [];
+            try { allBcs = JSON.parse(o.AllBarcodes || '[]'); } catch(e) { allBcs = [o.Barcode || barcode]; }
+            if (!allBcs.length) allBcs = [barcode];
             if (!window._promoData) window._promoData = [];
             const pIdx = window._promoData.length;
-            window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote, allBcs});
             return `
                 <div class="card" role="listitem" tabindex="0"
                     onclick="zoomPromoByIdx(${pIdx})"
@@ -972,6 +1055,7 @@
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
                     ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
                     ${promoNote ? `<div style="font-size:0.72rem;color:#ef6c00;font-weight:bold;margin-top:3px;padding:2px 6px;background:#fff3e0;border-radius:6px;">${promoNote}</div>` : ""}
+                    ${allBcs.length > 1 ? `<button class="promo-more-btn" onclick="event.stopPropagation(); showPromoItems(${pIdx})">+ ${allBcs.length - 1} פריטים נוספים</button>` : ""}
                 </div>`;
         }).join('');
 
