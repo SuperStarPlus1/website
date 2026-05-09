@@ -337,6 +337,17 @@
 <!-- ══════════════════════════════════════════
      ACCESSIBILITY TOOLBAR
 ════════════════════════════════════════════ -->
+
+<!-- catalog camera modal -->
+<div id="catalog-camera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <div style="position:relative;width:100%;max-width:400px;display:flex;justify-content:center;">
+        <video id="catalog-video" autoplay muted playsinline webkit-playsinline style="width:100%;max-width:400px;border-radius:12px;border:2px solid #ffcc00;"></video>
+        <div style="position:absolute;width:260px;height:160px;border:3px solid #ffcc00;border-radius:12px;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+    </div>
+    <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;">כוון את הברקוד למסגרת</p>
+    <button onclick="closeCatalogCamera()" style="background:rgba(255,255,255,0.15);color:white;border:2px solid rgba(255,255,255,0.3);border-radius:25px;padding:12px 28px;font-size:1rem;cursor:pointer;font-family:inherit;">&#x2715; סגור</button>
+</div>
+
 <button id="a11y-toggle" onclick="toggleA11yBar()" aria-label="פתח סרגל נגישות" aria-controls="a11y-bar" aria-expanded="false" title="נגישות">
     <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
 </button>
@@ -1425,8 +1436,8 @@
     let catZxingReader = null, catScanStream = null;
 
     async function openCatalogCamera() {
-        const modal = document.getElementById('camera-modal');
-        modal.classList.add('open');
+        const modal = document.getElementById('catalog-camera-modal');
+        modal.style.display = 'flex';
         try {
             await new Promise((res, rej) => {
                 const s = document.createElement('script');
@@ -1442,7 +1453,7 @@
             try { const t = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); t.getTracks().forEach(tr=>tr.stop()); } catch(e){}
             let camId;
             try { const devs = await navigator.mediaDevices.enumerateDevices(); const vids = devs.filter(d=>d.kind==='videoinput'); const back = vids.find(d=>/back|rear|environment/i.test(d.label))||vids[vids.length-1]; if(back) camId=back.deviceId; } catch(e){}
-            const video = document.getElementById('video');
+            const video = document.getElementById('catalog-video');
             await catZxingReader.decodeFromVideoDevice(camId, video, (result) => {
                 if (result) {
                     const code = result.getText();
@@ -1461,7 +1472,7 @@
     function closeCatalogCamera() {
         if (catZxingReader) { catZxingReader.reset(); catZxingReader = null; }
         if (catScanStream) { catScanStream.getTracks().forEach(t=>t.stop()); catScanStream = null; }
-        document.getElementById('camera-modal').classList.remove('open');
+        document.getElementById('catalog-camera-modal').style.display = 'none';
     }
 
     function toggleA11yBar() {
