@@ -898,18 +898,7 @@
                     onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
                 <h3>${tName || ''}</h3>
                 <div class="price">&#8362;${i.Price || ''}</div>
-                ${(function() {
-                    const nbb = b => { let s=String(b||'').trim(); if(s.endsWith('.0'))s=s.slice(0,-2); return s; };
-                    const bc = nbb(i.Barcode);
-                    const off = window.allOffers && window.allOffers.find(o => {
-                        if (nbb(o.Barcode) === bc) return true;
-                        try { return JSON.parse(o.AllBarcodes||'[]').some(b => nbb(b) === bc); } catch(e) { return false; }
-                    });
-                    if (!off) return '';
-                    const isKg = parseFloat(off.Quanity||off.Quantity||1) === 0.01;
-                    const pr = off.UnitPrice || off.Price || '';
-                    return '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">&#128293; מבצע &#8362;'+pr+(isKg ? ' לק"ג' : ' ליח\'')+'</div>';
-                })()}
+                ${window._catPromoMap && window._catPromoMap[String(i.Barcode||'').trim().replace(/\.0$/,'')] || ''}
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`;
         }).join('');
@@ -925,6 +914,17 @@
     function renderOffers(offers) {
         const t = TRANSLATIONS[currentLang];
         window.allOffers = offers;
+        // בנה מפת ברקוד → תג מבצע לשימוש בקטלוג
+        const nbbMap = b => { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; };
+        window._catPromoMap = {};
+        offers.forEach(o => {
+            const isKg = parseFloat(o.Quanity||o.Quantity||1) === 0.01;
+            const pr = o.UnitPrice || o.Price || '';
+            const unit = isKg ? ' לק"ג' : " ליח'";
+            const tag = '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">&#128293; מבצע &#8362;' + pr + unit + '</div>';
+            window._catPromoMap[nbbMap(o.Barcode)] = tag;
+            try { JSON.parse(o.AllBarcodes||'[]').forEach(b => { window._catPromoMap[nbbMap(b)] = tag; }); } catch(e) {}
+        });
         if (!window.activePromoCat) window.activePromoCat = "הכל";
 
         const field = window.catFieldName || 'Category';
