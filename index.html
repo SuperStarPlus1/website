@@ -133,7 +133,7 @@
         video { width: 100%; height: 100%; max-height: 350px; display: block; object-fit: contain; }
 
         .slider-wrap { width: 100%; overflow: hidden; background: transparent; padding: 40px 0; margin-bottom: 40px; position: relative; }
-        .slider-track { display: flex; width: max-content; animation: scroll 840s linear infinite; gap: 30px; padding: 20px; }
+        .slider-track { display: flex; width: max-content; animation: scroll 420s linear infinite; gap: 30px; padding: 20px; }
         .slider-track:hover { animation-play-state: paused; }
         .slider-track img { height: 196px; border-radius: 15px; cursor: pointer; box-shadow: 0 15px 35px rgba(0,0,0,0.2); transition: all 0.5s ease; }
         .slider-track img:hover { transform: scale(1.1) translateY(-10px); box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
@@ -899,18 +899,23 @@
                 <h3>${tName || ''}</h3>
                 <div class="price">&#8362;${i.Price || ''}</div>
                 ${(function() {
-                    const bc = (function nb(b){let s=String(b||'').trim();if(s.endsWith('.0'))s=s.slice(0,-2);return s;})(i.Barcode);
+                    const nbb = b => { let s=String(b||'').trim(); if(s.endsWith('.0'))s=s.slice(0,-2); return s; };
+                    const bc = nbb(i.Barcode);
                     const off = window.allOffers && window.allOffers.find(o => {
-                        const ob = (function nb(b){let s=String(b||'').trim();if(s.endsWith('.0'))s=s.slice(0,-2);return s;})(o.Barcode);
-                        return ob === bc;
+                        if (nbb(o.Barcode) === bc) return true;
+                        try { return JSON.parse(o.AllBarcodes||'[]').some(b => nbb(b) === bc); } catch(e) { return false; }
                     });
-                    return off ? '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">🔥 מבצע &#8362;'+( off.UnitPrice||off.Price||'')+' </div>' : '';
+                    if (!off) return '';
+                    const isKg = parseFloat(off.Quanity||off.Quantity||1) === 0.01;
+                    const pr = off.UnitPrice || off.Price || '';
+                    return '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">&#128293; מבצע &#8362;'+pr+(isKg ? ' לק"ג' : ' ליח\'')+'</div>';
                 })()}
                 <div class="barcode">${t.barcode_label} ${i.Barcode || ''}</div>
             </div>`;
         }).join('');
         const oldBtn = document.getElementById('loadMore');
         if (oldBtn) oldBtn.remove();
+        if (typeof buildGrpFilter === 'function') buildGrpFilter(curCat);
         if (data.length > limit) {
             const btnLabel = currentLang === 'ar' ? 'تحميل المزيد...' : currentLang === 'en' ? 'Load more...' : 'טען מוצרים נוספים...';
             container.insertAdjacentHTML('afterend', `<button id="loadMore" onclick="limit += 20; runFilter()" style="display:block; margin:20px auto; padding:10px 25px; border-radius:20px; border:none; background:var(--blue); color:white; cursor:pointer;" aria-label="${btnLabel}">${btnLabel}</button>`);
@@ -1012,18 +1017,22 @@
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             if (!window._promoData) window._promoData = [];
+            const promoNote = o.PromoNote || '';
+            // פריטים שנמכרים בקג — הצג בקג לא יחידות
+            const isWeight = qty === 0.01;
             const sIdx = window._promoData.length;
-            window._promoData.push({url, desc, price, valid, regularPrice, promoNote: o.PromoNote || ''});
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
             return `
-                <div style="text-align:center;cursor:pointer;min-width:160px"
+                <div style="text-align:center;cursor:pointer;min-width:160px;padding:0 5px"
                     data-pidx="${sIdx}"
                     onclick="zoomPromoByIdx(parseInt(this.dataset.pidx))"
                     tabindex="0" role="button" aria-label="${desc}"
                     onkeypress="if(event.key==='Enter') zoomPromoByIdx(parseInt(this.dataset.pidx))">
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
-                    ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333">${desc}</div>` : ''}
-                    ${price ? `<div style="color:#d32f2f;font-weight:bold">${priceLabel} &#8362;${price}</div>` : ''}
-                    ${regularPrice ? `<div style="color:#999;font-size:0.8rem">${t.promo_regular}${regularPrice}</div>` : ''}
+                    ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333;font-size:0.85rem">${desc}</div>` : ''}
+                    ${price ? `<div style="color:#d32f2f;font-weight:bold">&#8362;${price} ${isWeight ? 'לק"ג' : 'ליח''}</div>` : ''}
+                    ${promoNote ? `<div style="font-size:0.7rem;color:#ef6c00;background:#fff3e0;border-radius:6px;padding:2px 5px;margin-top:2px">${promoNote}</div>` : ''}
+                    ${regularPrice ? `<div style="color:#999;font-size:0.75rem;text-decoration:line-through">&#8362;${regularPrice}</div>` : ''}
                 </div>`;
         }).join('');
         const slider = document.getElementById('promo-slider');
@@ -1081,7 +1090,9 @@
                     <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
-                    ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}"><span style="font-size:0.75rem; color:#888;">${priceLabel}</span><br>₪${price}</div>` : ""}
+                    ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}">
+                        <span style="font-size:0.75rem; color:#888;">${qty === 0.01 ? t.promo_kg : t.promo_unit}</span><br>₪${price}
+                    </div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
                     ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
                     ${promoNote ? `<div style="font-size:0.72rem;color:#ef6c00;font-weight:bold;margin-top:3px;padding:2px 6px;background:#fff3e0;border-radius:6px;">${promoNote}</div>` : ""}
@@ -1107,11 +1118,12 @@
                     firstItem.hasOwnProperty('category') ? 'category' :
                     firstItem.hasOwnProperty('קטגוריה') ? 'קטגוריה' : null;
                 if (!catField) { console.error('שגיאה: לא נמצאה עמודת קטגוריה!'); return; }
-
+                window.catFieldName = catField;
+                window.grpFieldName = firstItem.hasOwnProperty('Group') ? 'Group' :
+                    firstItem.hasOwnProperty('group') ? 'group' : null;
                 const rawCats = allItems.map(x => x[catField]).filter(c => c && c.trim() !== '');
                 window.allCats = ["הכל", ...new Set(rawCats)].sort();
                 buildCatDropdown(window.allCats);
-                window.catFieldName = catField;
                 render(allItems);
 
                 // טען מחדש "חדש על המדף" עכשיו שהקטלוג טעון — כדי להציג שמות ומחירים
@@ -1132,19 +1144,55 @@
     function runFilter() {
         const term = document.getElementById('search').value.toLowerCase();
         const field = window.catFieldName || 'Category';
+        const grpField = window.grpFieldName;
         const filtered = allItems.filter(i => {
             const iCat = i[field];
+            const iGrp = grpField ? i[grpField] : '';
             const matchText = i.Name.toLowerCase().includes(term) || i.Barcode.includes(term);
-            const matchCat  = curCat === "הכל" || iCat === curCat;
-            return matchText && matchCat;
+            const matchCat  = curCat === 'הכל' || iCat === curCat;
+            const matchGrp  = curGrp === 'הכל' || iGrp === curGrp;
+            return matchText && matchCat && matchGrp;
         });
         render(filtered);
     }
 
+    let curGrp = 'הכל';
+
     function setCategory(cat) {
         curCat = cat;
+        curGrp = 'הכל';
+        limit = 20;
+        buildGrpFilter(cat);
+        runFilter();
+    }
+
+    function setGroup(grp) {
+        curGrp = grp;
         limit = 20;
         runFilter();
+    }
+
+    function buildGrpFilter(cat) {
+        const grpField = window.grpFieldName;
+        const catField = window.catFieldName || 'Category';
+        const wrap = document.getElementById('grp-select-wrap');
+        const sel  = document.getElementById('grp-select');
+        if (!wrap || !sel || !grpField) return;
+
+        const items = cat === 'הכל' ? allItems : allItems.filter(i => i[catField] === cat);
+        const grps = [...new Set(items.map(i => i[grpField]).filter(g => g && g.trim()))].sort();
+
+        if (!grps.length || cat === 'הכל') {
+            wrap.style.display = 'none';
+            curGrp = 'הכל';
+            return;
+        }
+
+        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
+        wrap.style.display = 'block';
+        sel.innerHTML = `<option value="הכל">${t.cat_all || 'כל הקבוצות'}</option>` +
+            grps.map(g => `<option value="${g}" ${g === curGrp ? 'selected' : ''}>${g}</option>`).join('');
+        sel.value = curGrp;
     }
 
     async function loadDynamicImage() {
