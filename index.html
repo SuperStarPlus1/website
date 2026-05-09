@@ -929,10 +929,10 @@
         const nbbMap = b => { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; };
         window._catPromoMap = {};
         offers.forEach(o => {
-            const isKg = parseFloat(o.Quanity||o.Quantity||1) === 0.01;
-            const pr = o.UnitPrice || o.Price || '';
-            const unit = isKg ? ' לק"ג' : " ליח'";
-            const tag = '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">&#128293; מבצע &#8362;' + pr + unit + '</div>';
+            // הצג תיאור המבצע (למשל '3 ב 10.90') ולא מחיר יחידה
+            const desc = o.Discreption || o.Description || o.Name || '';
+            const label = desc ? desc : ('&#128293; מבצע');
+            const tag = '<div style="display:inline-block;background:#fde8e8;color:#d32f2f;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:3px;">&#128293; ' + label + '</div>';
             window._catPromoMap[nbbMap(o.Barcode)] = tag;
             try { JSON.parse(o.AllBarcodes||'[]').forEach(b => { window._catPromoMap[nbbMap(b)] = tag; }); } catch(e) {}
         });
