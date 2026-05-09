@@ -24,13 +24,15 @@
         /* כפתור פתיחת נגישות */
         #a11y-toggle {
             position: fixed; bottom: 110px; right: 0; z-index: 3001;
-            width: 44px; height: 44px; background: #0076DA; color: white;
+            width: 44px; height: 44px; background: #0076DA; color: white !important;
             border: none; border-radius: 12px 0 0 12px; cursor: pointer;
             font-size: 1.3rem; display: flex; align-items: center; justify-content: center;
             box-shadow: -3px 0 12px rgba(0,0,0,0.2); transition: background 0.2s;
         }
         #a11y-toggle:hover { background: #005bb5; }
         #a11y-toggle:focus-visible { outline: 3px solid #ffcc00; }
+        /* שמור על הכפתור גלוי במצב ניגודיות גבוהה */
+        body.high-contrast #a11y-toggle { background: #ffcc00 !important; color: #000 !important; }
 
         #a11y-bar {
             position: fixed; bottom: 155px; right: 0; transform: translateX(110%);
@@ -368,8 +370,10 @@
     <button class="a11y-btn" id="btn-links" title="הדגש קישורים" aria-pressed="false" onclick="toggleA11y('links')" aria-label="הדגש קישורים">
         <i class="fa-solid fa-link" aria-hidden="true"></i>
     </button>
-    <button class="a11y-btn" id="btn-reset" title="איפוס נגישות" onclick="resetA11y()" aria-label="איפוס נגישות">
+    <button class="a11y-btn" id="btn-reset" title="חזור למצב רגיל" onclick="resetA11y()" aria-label="איפוס נגישות"
+        style="background:#fde8e8;color:#d32f2f;border:1px solid #f9a8a8;font-size:0.65rem;flex-direction:column;gap:2px;">
         <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        <span style="font-size:0.55rem;">איפוס</span>
     </button>
     <!-- accessibility statement link -->
     <a href="#accessibility-statement" class="a11y-btn" title="הצהרת נגישות" aria-label="הצהרת נגישות" style="text-decoration:none; font-size:0.85rem; font-weight:bold;">
@@ -1360,6 +1364,11 @@
             el.style.backgroundColor = '';
         });
         try { localStorage.removeItem('a11y-prefs'); localStorage.removeItem('a11y-fontsize'); } catch(e) {}
+        // סגור את הסרגל אחרי איפוס
+        const bar = document.getElementById('a11y-bar');
+        const btn = document.getElementById('a11y-toggle');
+        if (bar) bar.classList.remove('open');
+        if (btn) { btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-label','פתח סרגל נגישות'); }
     }
 
     function saveA11yPrefs() {
