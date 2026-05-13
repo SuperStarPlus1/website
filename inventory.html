@@ -442,7 +442,12 @@
 //  CONFIG
 // ════════════════════════════════════════════════════
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv";
-const MANAGER_EMAIL = "ashraf@khader.co.il";
+const MANAGER_EMAILS = [
+    "ashraf@superstar-plus.co.il",
+    "criem@plusgold.co.il",
+    "khalid@plusgold.co.il",
+    "hatem@maxmarket.co.il"
+];
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxNl-KTZCErJMdv6vgdLoez7--9bEogKNYU1i1OBKjhpS5TeyarrXTDjGnQyygslxs-0Q/exec";
 const DEPT_FILTER = "סיגריות";
 
@@ -555,10 +560,27 @@ function addItem() {
     const qty = parseInt(document.getElementById('qty-input').value) || 0;
     if (!barcode || qty <= 0) { showToast('הכנס ברקוד וכמות', true); return; }
 
-    const existing = items.find(i => nb(i.barcode) === nb(barcode));
-    if (existing) {
-        existing.qty += qty;
-        showToast(`עודכן: ${existing.name} → ${existing.qty} יח'`);
+    const existingIdx = items.findIndex(i => nb(i.barcode) === nb(barcode));
+    if (existingIdx >= 0) {
+        // ברקוד קיים — הצג התראה עם אפשרויות
+        const ex = items[existingIdx];
+        const choice = window.confirm(
+            `⚠️ הברקוד ${barcode} כבר קיים!\n` +
+            `מוצר: ${ex.name}\n` +
+            `כמות קיימת: ${ex.qty}\n\n` +
+            `לחץ אישור להוסיף ${qty} לכמות הקיימת (${ex.qty + qty} סה"כ)\n` +
+            `לחץ ביטול לתיקון הכמות`
+        );
+        if (choice) {
+            ex.qty += qty;
+            showToast(`עודכן: ${ex.name} → ${ex.qty} יח'`);
+        } else {
+            // החזר את הברקוד לשדה לתיקון
+            document.getElementById('qty-input').value = ex.qty;
+            document.getElementById('qty-input').focus();
+            document.getElementById('qty-input').select();
+            return;
+        }
     } else {
         const name = currentProduct
             ? (currentProduct.Name || currentProduct.Nm || 'לא ידוע')
@@ -726,19 +748,19 @@ async function submitCount() {
         // ── Build Excel ──
         const wb = XLSX.utils.book_new();
         const wsData = [
-            ['ספירת מלאי — סיגריות'],
+            ['ספירת מלאי סיגריות'],
+            [`תאריך: ${dateStr}`, `שעה: ${timeStr}`, `משמרת: ${shift}`, `עובד: ${worker}`],
             [],
-            ['תאריך:', dateStr, 'שעה:', timeStr, 'משמרת:', shift],
-            ['עובד:', worker],
-            ['סה"כ פריטים:', total],
+            ['ברקוד', 'שם מוצר', 'כמות'],
+            ...items.map(i => [i.barcode, i.name, i.qty]),
             [],
-            ['מוצר', 'ברקוד', 'כמות', 'מחיר'],
-            ...items.map(i => [i.name, i.barcode, i.qty, i.price]),
-            [],
-            ['סה"כ', '', total, '']
+            ['סה"כ יחידות:', '', total]
         ];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
-        ws['!cols'] = [{wch:35},{wch:15},{wch:10},{wch:10}];
+        ws['!cols'] = [{wch:18},{wch:35},{wch:10}];
+        // עיצוב כותרת
+        if (ws['A1']) ws['A1'].s = {font:{bold:true,sz:14}};
+        if (ws['A4']) ws['A4'].s = {font:{bold:true},fill:{fgColor:{rgb:"0076DA"}},font:{color:{rgb:"FFFFFF"}}};
         XLSX.utils.book_append_sheet(wb, ws, 'ספירה');
         const excelBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
@@ -746,7 +768,8 @@ async function submitCount() {
         const payload = {
             worker, date: dateStr, time: timeStr, shift,
             total, items,
-            managerEmail: MANAGER_EMAIL,
+            emails: MANAGER_EMAILS,
+            subject: `ספירת מלאי סיגריות ${dateStr} ${timeStr} משמרת ${shift} - ${worker}`,
         };
 
         // ── שלח מייל עם EmailJS ──
@@ -757,8 +780,8 @@ async function submitCount() {
         ).join('');
 
         const emailParams = {
-            to_email:   MANAGER_EMAIL,
-            subject:    `ספירת מלאי סיגריות — ${dateStr} משמרת ${shift}`,
+            to_email:   MANAGER_EMAILS.join(","),
+            subject:    `ספירת מלאי סיגריות ${dateStr} ${timeStr} משמרת ${shift} - ${worker}`,
             worker:     worker,
             date:       dateStr,
             time:       timeStr,
