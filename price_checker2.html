@@ -466,6 +466,14 @@ let scanStream  = null;
 //  INIT
 // ════════════════════════════════════════════
 window.onload = async () => {
+    // נקה כל cache ישן בכל פתיחה
+    // נקה cache ישן — רק פעם אחת
+    if (!localStorage.getItem('cache_cleaned_v4')) {
+        ['products_cache', 'products_cache_v2', 'offers_cache', 'offers_cache_v2', 'offers_cache_v3', 'offers_cache_v4'].forEach(k => {
+            try { localStorage.removeItem(k); } catch(e) {}
+        });
+        localStorage.setItem('cache_cleaned_v4', '1');
+    }
     // נקה cache ישן
     ['offers_cache', 'offers_cache_v2', 'offers_cache_v3', 'products_cache'].forEach(k => {
         try { localStorage.removeItem(k); } catch(e) {}
@@ -499,7 +507,7 @@ function saveToCache(key, data) {
 }
 
 async function loadProducts() {
-    const cached = loadFromCache('products_cache_v2');
+    const cached = loadFromCache('products_1527287591');
     if (cached && cached.length) {
         products = cached;
         console.log('products from cache:', products.length);
@@ -510,7 +518,7 @@ async function loadProducts() {
             download: true, header: true,
             complete: r => {
                 products = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('products_cache_v2', products);
+                saveToCache('products_1527287591', products);
                 console.log('products loaded:', products.length);
                 resolve();
             }, error: resolve
@@ -519,7 +527,7 @@ async function loadProducts() {
 }
 
 async function loadOffers() {
-    const cached = loadFromCache('offers_cache_v4');
+    const cached = loadFromCache('offers_361402565');
     if (cached && cached.length && cached[0].hasOwnProperty('AllBarcodes')) {
         offers = cached;
         console.log('offers from cache v4:', offers.length);
@@ -530,7 +538,7 @@ async function loadOffers() {
             download: true, header: true, skipEmptyLines: true,
             complete: r => {
                 offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('offers_cache_v4', offers);
+                saveToCache('offers_361402565', offers);
                 const withAll = offers.filter(o=>o.AllBarcodes && o.AllBarcodes.length > 4);
                 console.log('[OFFERS] טעון:', offers.length, '| עם AllBarcodes:', withAll.length, '| דוגמה:', withAll[0]?.AllBarcodes?.slice(0,60));
                 resolve();
