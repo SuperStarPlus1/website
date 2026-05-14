@@ -619,6 +619,8 @@ function showSingleResult(barcode, product, offer) {
     const name  = product ? (product.Name || '') : (offer ? (offer.Name || offer.Discreption || offer.Description || '') : '');
     const price = product ? (product.Price || '') : '';
 
+    console.log('[showSingleResult]', {barcode, hasProduct: !!product, price, hasOffer: !!offer});
+
     document.getElementById('prod-name').textContent    = name;
     document.getElementById('prod-barcode').textContent = barcode;
     document.getElementById('prod-price').textContent   = price || '—';
