@@ -400,8 +400,8 @@
   <div class="scan-section">
     <h3>📦 סריקת מוצר</h3>
     <div class="scan-row">
-      <input type="text" id="barcode-input" placeholder="סרוק או הכנס ברקוד..."
-        inputmode="numeric" onkeydown="if(event.key==='Enter') lookupBarcode()">
+      <input type="text" id="barcode-input" placeholder="ברקוד, חלק מברקוד, או שם מוצר..."
+        inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" onkeydown="if(event.key==='Enter') lookupBarcode()">
       <button class="btn-scan" onclick="openCamera()" title="סרוק עם מצלמה">📷</button>
       <button class="btn-scan" onclick="lookupBarcode()" style="background:#2e3350;color:var(--text);">חפש</button>
     </div>
@@ -410,6 +410,9 @@
       <div class="prod-name" id="prod-name">—</div>
       <div class="prod-sub" id="prod-sub">—</div>
     </div>
+
+    <!-- תוצאות חיפוש מרובות -->
+    <div id="search-results" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;margin-bottom:10px;"></div>
 
     <div class="qty-row">
       <button class="btn-minus" onclick="changeQty(-1)">−</button>
@@ -471,6 +474,14 @@ let scanInterval = null;
 // ════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════
+document.addEventListener('click', e => {
+    const results = document.getElementById('search-results');
+    const input   = document.getElementById('barcode-input');
+    if (results && !results.contains(e.target) && e.target !== input) {
+        results.style.display = 'none';
+    }
+});
+
 window.onload = async () => {
     updateClock();
     setInterval(updateClock, 1000);
@@ -527,27 +538,73 @@ function nb(b) {
 }
 
 function lookupBarcode(bc) {
-    const barcode = bc || document.getElementById('barcode-input').value.trim();
-    if (!barcode) return;
+    const input = (bc || document.getElementById('barcode-input').value).trim();
+    if (!input) return;
 
-    const product = products.find(p => nb(p.Barcode) === nb(barcode));
+    const term = input.toLowerCase();
+
+    // חיפוש מדויק קודם
+    const exact = products.find(p => nb(p.Barcode) === nb(input));
+    if (exact) {
+        selectProduct(exact);
+        return;
+    }
+
+    // חיפוש חלקי — ברקוד מכיל OR שם מכיל
+    const matches = products.filter(p => {
+        const bc = nb(p.Barcode).toLowerCase();
+        const nm = (p.Name || '').toLowerCase();
+        return bc.includes(term) || nm.includes(term);
+    });
+
+    if (matches.length === 0) {
+        currentProduct = null;
+        const preview = document.getElementById('product-preview');
+        preview.style.display = 'block';
+        preview.className = 'not-found';
+        document.getElementById('prod-name').textContent = '⚠️ מוצר לא נמצא';
+        document.getElementById('prod-sub').textContent = `"${input}" — לא נמצא בקטלוג`;
+        document.getElementById('search-results').style.display = 'none';
+        return;
+    }
+
+    if (matches.length === 1) {
+        selectProduct(matches[0]);
+        return;
+    }
+
+    // תוצאות מרובות — הצג רשימה
+    showSearchResults(matches, input);
+}
+
+function selectProduct(product) {
+    currentProduct = product;
+    document.getElementById('barcode-input').value = nb(product.Barcode);
     const preview = document.getElementById('product-preview');
     preview.style.display = 'block';
+    preview.className = '';
+    document.getElementById('prod-name').textContent = product.Name || 'מוצר';
+    document.getElementById('prod-sub').textContent =
+        `ברקוד: ${nb(product.Barcode)}  |  מחיר: ₪${product.Price || '—'}`;
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('qty-input').focus();
+    document.getElementById('qty-input').select();
+}
 
-    if (product) {
-        currentProduct = product;
-        document.getElementById('prod-name').textContent = product.Name || product.Nm || 'מוצר';
-        document.getElementById('prod-sub').textContent =
-            `ברקוד: ${barcode}  |  מחיר: ₪${product.Price || '—'}`;
-        preview.className = '';
-        document.getElementById('qty-input').focus();
-        document.getElementById('qty-input').select();
-    } else {
-        currentProduct = null;
-        document.getElementById('prod-name').textContent = '⚠️ מוצר לא נמצא ברשימה';
-        document.getElementById('prod-sub').textContent = `ברקוד: ${barcode} — לא קיים בקטלוג הסיגריות`;
-        preview.className = 'not-found';
-    }
+function showSearchResults(matches, term) {
+    const container = document.getElementById('search-results');
+    container.style.display = 'block';
+    container.innerHTML =
+        `<div style="padding:10px 14px;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--border);">` +
+        `נמצאו ${matches.length} תוצאות עבור "${term}"</div>` +
+        matches.slice(0, 20).map(p => `
+        <div onclick="selectProduct(${JSON.stringify(p).replace(/"/g,'&quot;')})"
+            style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;"
+            onmouseenter="this.style.background='rgba(255,255,255,0.05)'"
+            onmouseleave="this.style.background=''">
+            <div style="font-weight:bold;font-size:0.9rem;">${p.Name || ''}</div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">${nb(p.Barcode)}</div>
+        </div>`).join('');
 }
 
 function changeQty(d) {
