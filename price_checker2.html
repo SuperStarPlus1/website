@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>בדיקת מחיר — סופרסטאר</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg:      #f0f2f5;
+    --blue:    #0076DA;
+    --yellow:  #ffcc00;
+    --red:     #e8453c;
+    --green:   #27ae60;
+    --card:    #ffffff;
+    --text:    #1a1a2e;
+    --muted:   #7f8c9a;
+    --border:  #e2e8f0;
+    --radius:  18px;
+    --shadow:  0 8px 32px rgba(0,118,218,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--blue);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  header img {
+    height: 44px;
+    background: white;
+    border-radius: 8px;
+    padding: 4px 8px;
+    object-fit: contain;
+  }
+  header h1 {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  /* ── Scanner ── */
+  .scan-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+
+  .scan-row {
+    display: flex;
+    gap: 10px;
+  }
+  .scan-row input {
+    flex: 1;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    background: #f8fafc;
+  }
+  .scan-row input:focus { border-color: var(--blue); background: white; }
+
+  .btn-cam {
+    width: 52px; height: 52px;
+    background: var(--blue);
+    border: none; border-radius: 12px;
+    color: white; font-size: 1.4rem;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: opacity 0.2s; flex-shrink: 0;
+  }
+  .btn-cam:hover { opacity: 0.85; }
+
+  /* ── Result Card ── */
+  #result-card {
+    display: none;
+    background: var(--card);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .product-image-wrap {
+    width: 100%;
+    height: 220px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .product-image-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    padding: 16px;
+  }
+
+  /* מבצע badge על התמונה */
+  .promo-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: var(--red);
+    color: white;
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(232,69,60,0.4);
+    animation: pulse 1.5s ease-in-out infinite;
+    display: none;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.05); }
+  }
+
+  .product-info {
+    padding: 20px;
+  }
+
+  .product-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .product-barcode {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    font-family: monospace;
+    direction: ltr;
+    text-align: right;
+  }
+
+  /* מחירים */
+  .price-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .price-main {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--blue);
+    line-height: 1;
+  }
+  .price-main .currency {
+    font-size: 1.4rem;
+    font-weight: 600;
+    vertical-align: top;
+    margin-top: 6px;
+    display: inline-block;
+  }
+  .price-regular {
+    font-size: 1rem;
+    color: var(--muted);
+    text-decoration: line-through;
+    margin-bottom: 4px;
+  }
+
+  /* פרטי מבצע */
+  #promo-details {
+    display: none;
+    background: linear-gradient(135deg, #fff5f5, #fff);
+    border: 2px solid #ffcdd2;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 0;
+  }
+  #promo-details .promo-title {
+    font-weight: 700;
+    color: var(--red);
+    font-size: 1rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #promo-details .promo-desc {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  #promo-details .promo-valid {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* לא נמצא */
+  #not-found {
+    display: none;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  #not-found .icon { font-size: 3rem; margin-bottom: 12px; }
+  #not-found p { color: var(--muted); font-size: 0.95rem; }
+  #not-found strong { color: var(--text); display: block; font-size: 1.05rem; margin-bottom: 6px; }
+
+  /* ── Camera Modal ── */
+  #camera-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  #camera-modal.open { display: flex; }
+  #video {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 14px;
+    border: 2px solid var(--yellow);
+  }
+  .scan-frame {
+    position: absolute;
+    width: 260px;
+    height: 160px;
+    border: 3px solid var(--yellow);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .scan-frame::before, .scan-frame::after {
+    content: '';
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--yellow);
+    border-style: solid;
+  }
+  .scan-frame::before { top: -3px; right: -3px; border-width: 4px 4px 0 0; border-radius: 0 6px 0 0; }
+  .scan-frame::after  { bottom: -3px; left: -3px; border-width: 0 0 4px 4px; border-radius: 0 0 0 6px; }
+  .scan-line-anim {
+    position: absolute;
+    width: 254px;
+    height: 2px;
+    background: var(--yellow);
+    box-shadow: 0 0 8px var(--yellow);
+    animation: scan 2s linear infinite;
+  }
+  @keyframes scan {
+    0%   { top: 0; }
+    50%  { top: 154px; }
+    100% { top: 0; }
+  }
+
+  .btn-close-cam {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 25px;
+    padding: 12px 28px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* ── Loading ── */
+  #loading {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(240,242,245,0.85);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  #loading.show { display: flex; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Multi Results ── */
+  .multi-item {
+    display: flex;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    align-items: center;
+  }
+  .multi-item:last-child { border-bottom: none; }
+  .multi-item:hover { background: #f0f7ff; }
+  .multi-item img {
+    width: 60px; height: 60px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 4px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .multi-item-info { flex: 1; }
+  .multi-item-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+  .multi-item-bc { font-size: 0.72rem; color: var(--muted); font-family: monospace; margin-bottom: 4px; direction: ltr; text-align: right; }
+  .multi-item-price { font-weight: 700; color: var(--blue); font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+  .mini-promo { background: var(--red); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 9999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.err  { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- Camera Modal -->
+<div id="camera-modal">
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:400px;">
+    <video id="video" autoplay muted playsinline webkit-playsinline></video>
+    <div class="scan-frame">
+      <div class="scan-line-anim"></div>
+    </div>
+  </div>
+  <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;">כוון את הברקוד לתוך המסגרת</p>
+  <button class="btn-close-cam" onclick="stopCamera()">✕ סגור</button>
+</div>
+
+<!-- Loading -->
+<div id="loading"><div class="spinner"></div></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<header>
+  <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו">
+  <h1>🔍 בדיקת מחיר</h1>
+</header>
+
+<div class="container">
+
+  <!-- Scanner Input -->
+  <div class="scan-card">
+    <div class="scan-row">
+      <input type="text" id="barcode-input"
+        placeholder="ברקוד, חלק מברקוד, או שם מוצר..."
+        inputmode="text" autocomplete="off" autocorrect="off"
+        onkeydown="if(event.key==='Enter') lookup()">
+      <button class="btn-cam" onclick="lookup()" aria-label="חפש" style="background:#27ae60;" title="חפש">🔍</button>
+      <button class="btn-cam" onclick="openCamera()" aria-label="סרוק עם מצלמה">📷</button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result-card">
+    <div class="product-image-wrap">
+      <img id="prod-img" src="" alt="תמונת מוצר"
+        onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
+      <div class="promo-badge" id="promo-badge">🔥 במבצע!</div>
+    </div>
+    <div class="product-info">
+      <div class="product-name" id="prod-name"></div>
+      <div class="product-barcode" id="prod-barcode"></div>
+      <div class="price-row">
+        <div class="price-main">
+          <span class="currency">₪</span><span id="prod-price">—</span>
+        </div>
+        <div id="price-regular-wrap" style="display:none">
+          <div class="price-regular" id="prod-price-regular"></div>
+          <div style="font-size:0.78rem;color:var(--red);font-weight:700;">מחיר מבצע</div>
+        </div>
+      </div>
+      <div id="promo-details">
+        <div class="promo-title">🏷️ <span id="promo-name"></span></div>
+        <div class="promo-desc" id="promo-desc"></div>
+        <div class="promo-valid" id="promo-valid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Not Found -->
+  <div id="not-found">
+    <div class="icon">🔎</div>
+    <strong id="not-found-bc"></strong>
+    <p>הברקוד לא נמצא בקטלוג</p>
+  </div>
+
+  <!-- Multi Results -->
+  <div id="multi-results" style="display:none;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;animation:slideUp 0.3s ease;">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;color:var(--blue);" id="multi-count"></div>
+    <div class="multi-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════
+const CLOUD = "dj56w7nb9";
+const CSV_PRODUCTS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv&gid=1527287591";
+const CSV_OFFERS   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv&gid=361402565";
+
+let products = [];
+let offers   = [];
+let zxingReader = null;
+let scanStream  = null;
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+window.onload = async () => {
+    // נקה cache ישן
+    ['offers_cache', 'offers_cache_v2', 'offers_cache_v3', 'products_cache'].forEach(k => {
+        try { localStorage.removeItem(k); } catch(e) {}
+    });
+    document.getElementById('loading').classList.add('show');
+    await Promise.all([loadProducts(), loadOffers()]);
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('barcode-input').focus();
+};
+
+function nb(b) {
+    let s = String(b || '').trim();
+    if (s.endsWith('.0')) s = s.slice(0, -2);
+    return s;
+}
+
+const CACHE_TTL = 60 * 60 * 1000; // שעה אחת
+
+function loadFromCache(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const { ts, data } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+        return data;
+    } catch(e) { return null; }
+}
+
+function saveToCache(key, data) {
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+
+async function loadProducts() {
+    const cached = loadFromCache('products_cache_v2');
+    if (cached && cached.length) {
+        products = cached;
+        console.log('products from cache:', products.length);
+        return;
+    }
+    return new Promise(resolve => {
+        Papa.parse(CSV_PRODUCTS, {
+            download: true, header: true,
+            complete: r => {
+                products = r.data.filter(x => x.Barcode && x.Barcode.trim());
+                saveToCache('products_cache_v2', products);
+                console.log('products loaded:', products.length);
+                resolve();
+            }, error: resolve
+        });
+    });
+}
+
+async function loadOffers() {
+    const cached = loadFromCache('offers_cache_v4');
+    if (cached && cached.length && cached[0].hasOwnProperty('AllBarcodes')) {
+        offers = cached;
+        console.log('offers from cache v4:', offers.length);
+        return;
+    }
+    return new Promise(resolve => {
+        Papa.parse(CSV_OFFERS, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: r => {
+                offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
+                saveToCache('offers_cache_v4', offers);
+                const withAll = offers.filter(o=>o.AllBarcodes && o.AllBarcodes.length > 4);
+                console.log('[OFFERS] טעון:', offers.length, '| עם AllBarcodes:', withAll.length, '| דוגמה:', withAll[0]?.AllBarcodes?.slice(0,60));
+                resolve();
+            }, error: resolve
+        });
+    });
+}
+
+// ════════════════════════════════════════════
+//  LOOKUP
+// ════════════════════════════════════════════
+function lookup(bc) {
+    const input = (bc || document.getElementById('barcode-input').value).trim();
+    if (!input) return;
+    if (!products.length) { showToast('עדיין טוען נתונים...', false); return; }
+
+    document.getElementById('result-card').style.display   = 'none';
+    document.getElementById('not-found').style.display     = 'none';
+    document.getElementById('multi-results').style.display = 'none';
+
+    const term = input.toLowerCase();
+
+    // חיפוש מדויק על ברקוד
+    const exactProduct = products.find(p => nb(p.Barcode) === nb(input));
+
+    // חפש מבצע — לפי ברקוד ראשי או בתוך AllBarcodes
+    const nbInput = nb(input);
+    let exactOffer = offers.find(o => nb(o.Barcode) === nbInput);
+    if (!exactOffer) {
+        exactOffer = offers.find(o => {
+            try {
+                const raw = o.AllBarcodes || '';
+                if (!raw.trim()) return false;
+                const bcs = JSON.parse(raw);
+                // חיפוש מדויק OR חיפוש חלקי (nbInput מוכל בברקוד)
+                return bcs.some(bc => {
+                    const nbc = nb(bc);
+                    return nbc === nbInput || nbc.includes(nbInput) || nbInput.includes(nbc);
+                });
+            } catch(e) { return false; }
+        });
+    }
+
+    if (exactProduct || exactOffer) {
+        // השתמש בברקוד המלא מהמוצר/מבצע, לא מהחיפוש
+        const fullBc = exactProduct ? nb(exactProduct.Barcode)
+                     : exactOffer  ? nb(exactOffer.Barcode)
+                     : nb(input);
+        showSingleResult(fullBc, exactProduct, exactOffer);
+        return;
+    }
+
+    // חיפוש חלקי — ברקוד מכיל OR שם מכיל
+    const matches = products.filter(p => {
+        const barcode = nb(p.Barcode).toLowerCase();
+        const name    = (p.Name || '').toLowerCase();
+        return barcode.includes(term) || name.includes(term);
+    });
+
+    if (matches.length === 0) {
+        document.getElementById('not-found-bc').textContent = input;
+        document.getElementById('not-found').style.display = 'block';
+        return;
+    }
+    if (matches.length === 1) {
+        const bc  = nb(matches[0].Barcode);
+        let off = offers.find(o => nb(o.Barcode) === bc);
+        if (!off) {
+            off = offers.find(o => {
+                try {
+                    return JSON.parse(o.AllBarcodes||'[]').some(b => nb(b) === bc);
+                } catch(e) { return false; }
+            });
+        }
+        showSingleResult(bc, matches[0], off);
+        return;
+    }
+    showMultiResults(matches, input);
+}
+
+
+function showSingleResult(barcode, product, offer) {
+    const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+    document.getElementById('prod-img').src = imgUrl;
+
+    const name  = product ? (product.Name || '') : (offer ? (offer.Name || offer.Discreption || offer.Description || '') : '');
+    const price = product ? (product.Price || '') : '';
+
+    document.getElementById('prod-name').textContent    = name;
+    document.getElementById('prod-barcode').textContent = barcode;
+    document.getElementById('prod-price').textContent   = price || '—';
+
+    const badge        = document.getElementById('promo-badge');
+    const promoDetails = document.getElementById('promo-details');
+    const priceRegWrap = document.getElementById('price-regular-wrap');
+
+    if (offer) {
+        const unitPrice  = offer.UnitPrice || offer.Price || '';
+        const desc       = offer.Discreption || offer.Description || offer.Name || '';
+        const valid      = offer.Valid || offer.ExpiryDate || '';
+        const qty        = parseFloat(offer.Quantity || offer.Quanity || '1');
+        const priceLabel = qty === 0.01 ? `מחיר ק"ג במבצע` : `מחיר ליחידה במבצע`;
+
+        if (unitPrice) {
+            document.getElementById('prod-price').textContent = unitPrice;
+            // תמיד הצג מחיר קטלוגי עם קרוס אם קיים (גם אם שווה למחיר מבצע)
+            if (price) {
+                document.getElementById('prod-price-regular').textContent = `₪${price}`;
+                priceRegWrap.style.display = 'block';
+            } else {
+                priceRegWrap.style.display = 'none';
+            }
+        }
+
+        badge.style.display        = 'block';
+        promoDetails.style.display = 'block';
+        document.getElementById('promo-name').textContent  = desc || 'מבצע';
+        document.getElementById('promo-desc').textContent  = unitPrice ? `${priceLabel}: ₪${unitPrice}` : '';
+        document.getElementById('promo-valid').textContent = valid ? `בתוקף עד: ${valid}` : '';
+    } else {
+        badge.style.display        = 'none';
+        promoDetails.style.display = 'none';
+        priceRegWrap.style.display = 'none';
+    }
+
+    document.getElementById('result-card').style.display = 'block';
+}
+
+function showMultiResults(matches, searchTerm) {
+    const container = document.getElementById('multi-results');
+    container.style.display = 'block';
+    const limited  = matches.slice(0, 50);
+    const extra    = matches.length > 50 ? ` — מציג 50 מתוך ${matches.length}` : '';
+    document.getElementById('multi-count').textContent =
+        `נמצאו ${matches.length} תוצאות עבור "${searchTerm}"${extra}`;
+
+    container.querySelector('.multi-list').innerHTML = limited.map(p => {
+        const bc       = nb(p.Barcode);
+        let offer = offers.find(o => nb(o.Barcode) === bc);
+        if (!offer) {
+            offer = offers.find(o => {
+                try {
+                    const bcs = JSON.parse(o.AllBarcodes || '[]');
+                    return bcs.some(b => nb(b) === bc);
+                } catch(e) { return false; }
+            });
+        }
+        const imgBc  = nb(p.Barcode); // תמיד ברקוד מלא מהמוצר
+        const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${imgBc}.jpg`;
+        const hasPromo = !!offer;
+        const price    = hasPromo
+            ? (offer.UnitPrice || offer.Price || p.Price || '—')
+            : (p.Price || '—');
+        const safeName = (p.Name || '').replace(/"/g, '&quot;');
+        return `
+        <div class="multi-item" onclick="selectProduct('${bc}')">
+            <img src="${imgUrl}"
+                onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'"
+                alt="${safeName}">
+            <div class="multi-item-info">
+                <div class="multi-item-name">${p.Name || ''}</div>
+                <div class="multi-item-bc">${bc}</div>
+                <div class="multi-item-price">
+                    &#8362;${price}
+                    ${hasPromo ? '<span class="mini-promo">&#128293; מבצע</span>' : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+
+function selectProduct(barcode) {
+    document.getElementById('barcode-input').value = barcode;
+    document.getElementById('multi-results').style.display = 'none';
+    const product = products.find(p => nb(p.Barcode) === barcode);
+    let offer = offers.find(o => nb(o.Barcode) === barcode);
+    if (!offer) {
+        offer = offers.find(o => {
+            try { return JSON.parse(o.AllBarcodes||'[]').some(b => nb(b) === barcode); }
+            catch(e) { return false; }
+        });
+    }
+    // אם יש מבצע וברקוד שלו שונה, השתמש בברקוד של המוצר לתמונה
+    const imgBc = product ? nb(product.Barcode) : barcode;
+    showSingleResult(imgBc, product, offer);
+}
+
+// ════════════════════════════════════════════
+//  CAMERA
+// ════════════════════════════════════════════
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
+async function openCamera() {
+    document.getElementById('camera-modal').classList.add('open');
+    try {
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
+
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+            ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+            ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.UPC_A,
+        ]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+        // בקש רזולוציה גבוהה למצלמה חדה
+        const videoConstraints = {
+            facingMode: { ideal: 'environment' },
+            width:  { min: 1280, ideal: 1920 },
+            height: { min: 720,  ideal: 1080 },
+            focusMode: 'continuous',
+            advanced: [{ focusMode: 'continuous' }]
+        };
+
+        try {
+            const tmp = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+            tmp.getTracks().forEach(t => t.stop());
+        } catch(e) {}
+
+        let backCamId;
+        try {
+            const devs = await navigator.mediaDevices.enumerateDevices();
+            const vids = devs.filter(d => d.kind === 'videoinput');
+            const back = vids.find(d => /back|rear|environment/i.test(d.label)) || vids[vids.length - 1];
+            if (back) backCamId = back.deviceId;
+        } catch(e) {}
+
+        zxingReader = new ZXing.BrowserMultiFormatReader(hints, {
+            delayBetweenScanAttempts: 100,
+            delayBetweenScanSuccess: 500,
+        });
+
+        const video = document.getElementById('video');
+
+        // הפעל עם constraints מפורשים
+        if (backCamId) {
+            await zxingReader.decodeFromConstraints(
+                { video: { deviceId: { exact: backCamId }, ...videoConstraints } },
+                video,
+                (result) => {
+                    if (result) {
+                        const code = result.getText();
+                        stopCamera();
+                        document.getElementById('barcode-input').value = code;
+                        lookup(code);
+                    }
+                }
+            );
+        } else {
+            await zxingReader.decodeFromVideoDevice(undefined, video, (result) => {
+                if (result) {
+                    const code = result.getText();
+                    stopCamera();
+                    document.getElementById('barcode-input').value = code;
+                    lookup(code);
+                }
+            });
+        }
+        scanStream = video.srcObject;
+
+    } catch(e) {
+        console.error(e);
+        stopCamera();
+        if (e.name === 'NotAllowedError') {
+            showToast('אנא אפשר גישה למצלמה', true);
+        } else {
+            showToast('שגיאת מצלמה — הכנס ברקוד ידנית', true);
+        }
+    }
+}
+
+function stopCamera() {
+    if (zxingReader) { zxingReader.reset(); zxingReader = null; }
+    if (scanStream)  { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    document.getElementById('camera-modal').classList.remove('open');
+}
+
+// ════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, isErr = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+}
+</script>
+</body>
+</html>
