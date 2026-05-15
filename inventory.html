@@ -993,7 +993,8 @@ async function loadComparison() {
         // קבע תאריך קודם
         const { date, h } = getCurrentDateTime();
         const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
-        const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g,'-');
+        const _d = date.getDate(), _m = date.getMonth()+1, _y = date.getFullYear();
+        const dateStr = `${String(_d).padStart(2,'0')}-${String(_m).padStart(2,'0')}-${_y}`;
 
         // קבע משמרת קודמת
         const shiftOrder = ['בוקר', 'ערב', 'לילה'];
