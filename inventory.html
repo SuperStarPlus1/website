@@ -528,7 +528,7 @@ function getCurrentDateTime() {
 function updateClock() {
     const { date, h, m } = getCurrentDateTime();
     const s = new Date().getSeconds();
-    const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const dateStr = `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
     document.getElementById('disp-date').textContent = dateStr;
     document.getElementById('disp-time').textContent =
         `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
@@ -878,7 +878,7 @@ async function submitCount() {
     if (!items.length) { showToast('אין פריטים לשליחה', true); return; }
 
     const { date, h, m } = getCurrentDateTime();
-    const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const dateStr = `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
     const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
     const total = items.reduce((s, i) => s + i.qty, 0);
