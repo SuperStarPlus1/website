@@ -915,53 +915,16 @@ async function submitCount() {
             subject: `ספירת מלאי סיגריות ${dateStr} ${timeStr} משמרת ${shift} - ${worker}`,
         };
 
-        // ── שלח מייל עם EmailJS ──
-        const tableRows = items.map(i =>
-            `<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">${i.name}</td>` +
-            `<td style="padding:6px 10px;border-bottom:1px solid #eee;direction:ltr">${i.barcode}</td>` +
-            `<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><strong>${i.qty}</strong></td></tr>`
-        ).join('');
-
-        const emailParams = {
-            to_email:   MANAGER_EMAILS.join(","),
-            subject:    `ספירת מלאי סיגריות ${dateStr} ${timeStr} משמרת ${shift} - ${worker}`,
-            worker:     worker,
-            date:       dateStr,
-            time:       timeStr,
-            shift:      shift,
-            total:      total,
-            items_html: `
-                <table dir="rtl" style="border-collapse:collapse;width:100%;font-family:Arial">
-                    <thead>
-                        <tr style="background:#0f1117;color:white">
-                            <th style="padding:8px 10px">מוצר</th>
-                            <th style="padding:8px 10px">ברקוד</th>
-                            <th style="padding:8px 10px">כמות</th>
-                        </tr>
-                    </thead>
-                    <tbody>${tableRows}</tbody>
-                    <tfoot>
-                        <tr style="background:#f5a623">
-                            <td colspan="2" style="padding:8px 10px;font-weight:bold">סה"כ פריטים</td>
-                            <td style="padding:8px 10px;font-weight:bold;text-align:center">${total}</td>
-                        </tr>
-                    </tfoot>
-                </table>`,
-        };
-
-        // ── שלח לGoogle Apps Script (שמירה לשיטס + מייל עם קישור) ──
-        try {
-            const gasRes = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain' }
-            });
-            const gasData = await gasRes.json();
-            if (gasData.status !== 'ok') console.warn('GAS warning:', gasData.message);
-        } catch(e) {
-            console.error('GAS error:', e);
-            // fallback — שלח מייל דרך EmailJS
-            await emailjs.send('service_o13n924', 'template_0wdkumm', emailParams);
+        // ── שלח לGoogle Apps Script (שמירה לשיטס + מייל) ──
+        const gasRes = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'text/plain' }
+        });
+        const gasData = await gasRes.json();
+        if (gasData.status !== 'ok') {
+            console.warn('GAS warning:', gasData.message);
+            showToast('אזהרה: בעיה בשמירה — ' + (gasData.message || ''), true);
         }
 
 
