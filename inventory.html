@@ -528,7 +528,7 @@ function getCurrentDateTime() {
 function updateClock() {
     const { date, h, m } = getCurrentDateTime();
     const s = new Date().getSeconds();
-    const dateStr = `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+    const dateStr = `${String(date.getDate()).padStart(2,'0')}.${String(date.getMonth()+1).padStart(2,'0')}.${date.getFullYear()}`;
     document.getElementById('disp-date').textContent = dateStr;
     document.getElementById('disp-time').textContent =
         `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
@@ -878,7 +878,7 @@ async function submitCount() {
     if (!items.length) { showToast('אין פריטים לשליחה', true); return; }
 
     const { date, h, m } = getCurrentDateTime();
-    const dateStr = `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+    const dateStr = `${String(date.getDate()).padStart(2,'0')}.${String(date.getMonth()+1).padStart(2,'0')}.${date.getFullYear()}`;
     const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
     const total = items.reduce((s, i) => s + i.qty, 0);
@@ -994,7 +994,7 @@ async function loadComparison() {
         const { date, h } = getCurrentDateTime();
         const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
         const _d = date.getDate(), _m = date.getMonth()+1, _y = date.getFullYear();
-        const dateStr = `${String(_d).padStart(2,'0')}-${String(_m).padStart(2,'0')}-${_y}`;
+        const dateStr = `${String(_d).padStart(2,'0')}.${String(_m).padStart(2,'0')}.${_y}`;
 
         // קבע משמרת קודמת
         const shiftOrder = ['בוקר', 'ערב', 'לילה'];
@@ -1006,7 +1006,7 @@ async function loadComparison() {
             const ydd = String(yesterday.getDate()).padStart(2,'0');
             const ymm = String(yesterday.getMonth()+1).padStart(2,'0');
             const yyyyy = yesterday.getFullYear();
-            prevDateStr = `${ydd}-${ymm}-${yyyyy}`;
+            prevDateStr = `${ydd}.${ymm}.${yyyyy}`;
             prevShift = 'לילה';
         } else {
             prevDateStr = dateStr;
@@ -1050,11 +1050,14 @@ async function loadComparison() {
             const name    = cur ? cur.name : (prevMap[bc] ? `(${bc})` : bc);
             const diffColor = diff > 0 ? '#2ecc71' : diff < 0 ? '#e8453c' : '#8a8fa8';
             const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+            // אם קוד לא נספר — מציג 0 לא —
+            const prevDisp = prevQty > 0 ? prevQty : (Object.keys(prevMap).includes(bc) ? prevQty : '0');
+            const curDisp  = curQty  > 0 ? curQty  : '0';
             rows += `<tr>
                 <td style="padding:8px;font-size:0.82rem;">${name}</td>
-                <td style="padding:8px;text-align:center;color:#8a8fa8;">${prevQty || '—'}</td>
-                <td style="padding:8px;text-align:center;color:var(--accent);font-weight:bold;">${curQty || '—'}</td>
-                <td style="padding:8px;text-align:center;color:${diffColor};font-weight:bold;">${curQty && prevQty ? diffStr : '—'}</td>
+                <td style="padding:8px;text-align:center;color:#8a8fa8;">${prevDisp}</td>
+                <td style="padding:8px;text-align:center;color:var(--accent);font-weight:bold;">${curDisp}</td>
+                <td style="padding:8px;text-align:center;color:${diffColor};font-weight:bold;">${diffStr}</td>
             </tr>`;
         });
 
