@@ -380,14 +380,20 @@
 
   <!-- Info Bar -->
   <div class="info-bar">
-    <div class="info-box">
-      <label>תאריך</label>
+    <div class="info-box" style="position:relative">
+      <label>תאריך <button onclick="toggleDateEdit()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.7rem;padding:0 4px;" title="ערוך לסימולציה">✏️</button></label>
       <div class="val" id="disp-date">—</div>
+      <input type="date" id="edit-date" style="display:none;width:100%;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:6px;color:var(--text);font-size:0.9rem;" onchange="applyDateEdit()">
     </div>
-    <div class="info-box">
-      <label>שעה</label>
+    <div class="info-box" style="position:relative">
+      <label>שעה <button onclick="toggleTimeEdit()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.7rem;padding:0 4px;" title="ערוך לסימולציה">✏️</button></label>
       <div class="val" id="disp-time">—</div>
+      <input type="time" id="edit-time" style="display:none;width:100%;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:6px;color:var(--text);font-size:0.9rem;" onchange="applyTimeEdit()">
     </div>
+  </div>
+  <div id="sim-badge" style="display:none;background:#3a1a2e;border:1px solid #e8453c;color:#e8453c;border-radius:8px;padding:6px 12px;font-size:0.78rem;text-align:center;margin-bottom:12px;">
+    ⚠️ מצב סימולציה — תאריך/שעה ידניים
+    <button onclick="resetDateTime()" style="background:none;border:none;color:#e8453c;cursor:pointer;font-weight:bold;margin-right:8px;">איפוס</button>
   </div>
 
   <!-- Worker Name -->
@@ -436,6 +442,24 @@
       📤 שלח ספירה
     </button>
     <button class="btn-clear" onclick="clearAll()">🗑 נקה</button>
+  </div>
+
+  <!-- כפתור השוואה -->
+  <div style="margin-top:12px;">
+    <button onclick="loadComparison()" style="width:100%;background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:var(--radius);padding:14px;font-size:0.9rem;cursor:pointer;transition:0.2s;"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      📊 השוואה לספירה קודמת
+    </button>
+  </div>
+
+  <!-- דוח השוואה -->
+  <div id="comparison-section" style="display:none;margin-top:16px;background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-weight:bold;color:var(--accent);display:flex;justify-content:space-between;align-items:center;">
+      <span id="comparison-title">השוואה לספירה קודמת</span>
+      <button onclick="document.getElementById('comparison-section').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;">✕</button>
+    </div>
+    <div id="comparison-content" style="padding:10px;"></div>
   </div>
 
 </div>
@@ -488,20 +512,80 @@ window.onload = async () => {
     await loadProducts();
 };
 
+// ── Date/Time override for simulation ──
+let simDate = null; // override date (Date object)
+let simTime = null; // override time string "HH:MM"
+
+function getCurrentDateTime() {
+    const base = simDate || new Date();
+    const h = simTime ? parseInt(simTime.split(':')[0]) : base.getHours();
+    const m = simTime ? parseInt(simTime.split(':')[1]) : base.getMinutes();
+    return { date: base, h, m };
+}
+
 function updateClock() {
-    const now = new Date();
-    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
-    document.getElementById('disp-date').textContent =
-        now.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const { date, h, m } = getCurrentDateTime();
+    const s = new Date().getSeconds();
+    const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    document.getElementById('disp-date').textContent = dateStr;
     document.getElementById('disp-time').textContent =
         `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-    // Shift detection
     let shift;
     if (h >= 6  && h < 14) shift = SHIFTS.morning;
     else if (h >= 14 && h < 22) shift = SHIFTS.evening;
     else shift = SHIFTS.night;
     document.getElementById('shift-badge').textContent = shift.label;
+}
+
+function toggleDateEdit() {
+    const input = document.getElementById('edit-date');
+    const disp  = document.getElementById('disp-date');
+    input.style.display = input.style.display === 'none' ? 'block' : 'none';
+    if (input.style.display === 'block' && !input.value) {
+        const d = simDate || new Date();
+        input.value = d.toISOString().split('T')[0];
+    }
+    disp.style.display = input.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyDateEdit() {
+    const val = document.getElementById('edit-date').value;
+    if (!val) return;
+    simDate = new Date(val);
+    document.getElementById('edit-date').style.display = 'none';
+    document.getElementById('disp-date').style.display = 'block';
+    document.getElementById('sim-badge').style.display = 'block';
+    updateClock();
+}
+
+function toggleTimeEdit() {
+    const input = document.getElementById('edit-time');
+    const disp  = document.getElementById('disp-time');
+    input.style.display = input.style.display === 'none' ? 'block' : 'none';
+    if (input.style.display === 'block' && !input.value) {
+        const now = new Date();
+        input.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+    disp.style.display = input.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyTimeEdit() {
+    const val = document.getElementById('edit-time').value;
+    if (!val) return;
+    simTime = val;
+    document.getElementById('edit-time').style.display = 'none';
+    document.getElementById('disp-time').style.display = 'block';
+    document.getElementById('sim-badge').style.display = 'block';
+    updateClock();
+}
+
+function resetDateTime() {
+    simDate = null; simTime = null;
+    document.getElementById('sim-badge').style.display = 'none';
+    document.getElementById('edit-date').value = '';
+    document.getElementById('edit-time').value = '';
+    updateClock();
 }
 
 async function loadProducts() {
@@ -791,10 +875,9 @@ async function submitCount() {
     if (!worker) { showToast('נא להזין שם עובד', true); return; }
     if (!items.length) { showToast('אין פריטים לשליחה', true); return; }
 
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
-    const timeStr = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
-    const h = now.getHours();
+    const { date, h, m } = getCurrentDateTime();
+    const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
     const total = items.reduce((s, i) => s + i.qty, 0);
 
@@ -888,6 +971,100 @@ async function submitCount() {
         console.error(e);
         document.getElementById('loading').classList.add('hidden');
         showToast('שגיאה בשליחה — נסה שוב', true);
+    }
+}
+
+// ════════════════════════════════════════════════════
+//  COMPARISON — השוואה לספירה קודמת
+// ════════════════════════════════════════════════════
+async function loadComparison() {
+    if (!items.length) { showToast('אין פריטים לספירה הנוכחית', true); return; }
+
+    const section = document.getElementById('comparison-section');
+    const content = document.getElementById('comparison-content');
+    const title   = document.getElementById('comparison-title');
+    section.style.display = 'block';
+    content.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">טוען נתונים...</div>';
+    section.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        // קבע תאריך קודם
+        const { date, h } = getCurrentDateTime();
+        const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
+        const dateStr = date.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g,'-');
+
+        // קבע משמרת קודמת
+        const shiftOrder = ['בוקר', 'ערב', 'לילה'];
+        const curIdx = shiftOrder.indexOf(shift);
+        let prevShift, prevDateStr;
+        if (curIdx === 0) {
+            // בוקר → לילה של אתמול
+            const yesterday = new Date(date); yesterday.setDate(yesterday.getDate() - 1);
+            prevDateStr = yesterday.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g,'-');
+            prevShift = 'לילה';
+        } else {
+            prevDateStr = dateStr;
+            prevShift = shiftOrder[curIdx - 1];
+        }
+
+        const prevTab = `${prevDateStr}_${prevShift}`;
+        title.textContent = `השוואה: ${shift} (נוכחי) vs ${prevShift} ${prevDateStr}`;
+
+        // שלוף נתוני ספירה קודמת מ-GAS
+        const resp = await fetch(`${GAS_URL}?action=getSheet&tab=${encodeURIComponent(prevTab)}`);
+        const data = await resp.json();
+
+        if (!data || data.status === 'error' || !data.rows || !data.rows.length) {
+            content.innerHTML = `<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצאה ספירת ${prevShift} מ-${prevDateStr}</div>`;
+            return;
+        }
+
+        // בנה מפה: ברקוד → כמות קודמת
+        const prevMap = {};
+        data.rows.forEach(r => {
+            const bc = String(r[1]||'').trim();
+            const qty = parseInt(r[6]||0) || 0;
+            if (bc) prevMap[bc] = (prevMap[bc] || 0) + qty;
+        });
+
+        // בנה טבלת השוואה
+        const allBarcodes = new Set([
+            ...items.map(i => i.barcode),
+            ...Object.keys(prevMap)
+        ]);
+
+        let rows = '';
+        allBarcodes.forEach(bc => {
+            const cur  = items.find(i => i.barcode === bc);
+            const curQty  = cur ? cur.qty : 0;
+            const prevQty = prevMap[bc] || 0;
+            const diff    = curQty - prevQty;
+            const name    = cur ? cur.name : (prevMap[bc] ? `(${bc})` : bc);
+            const diffColor = diff > 0 ? '#2ecc71' : diff < 0 ? '#e8453c' : '#8a8fa8';
+            const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+            rows += `<tr>
+                <td style="padding:8px;font-size:0.82rem;">${name}</td>
+                <td style="padding:8px;text-align:center;color:#8a8fa8;">${prevQty || '—'}</td>
+                <td style="padding:8px;text-align:center;color:var(--accent);font-weight:bold;">${curQty || '—'}</td>
+                <td style="padding:8px;text-align:center;color:${diffColor};font-weight:bold;">${curQty && prevQty ? diffStr : '—'}</td>
+            </tr>`;
+        });
+
+        content.innerHTML = `
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+            <thead><tr style="background:var(--surface);">
+                <th style="padding:10px;text-align:right;">מוצר</th>
+                <th style="padding:10px;text-align:center;color:#8a8fa8;">${prevShift}<br><small>${prevDateStr}</small></th>
+                <th style="padding:10px;text-align:center;color:var(--accent);">${shift}<br><small>נוכחי</small></th>
+                <th style="padding:10px;text-align:center;">הפרש</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>`;
+
+    } catch(e) {
+        console.error(e);
+        content.innerHTML = '<div style="padding:16px;color:var(--accent2);">שגיאה בטעינת נתונים</div>';
     }
 }
 
