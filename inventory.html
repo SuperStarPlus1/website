@@ -1062,7 +1062,7 @@ async function loadComparison() {
             </tr>`;
         });
 
-        content.innerHTML = `
+        compContent.innerHTML = `
         <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
             <thead><tr style="background:var(--surface);">
@@ -1076,7 +1076,7 @@ async function loadComparison() {
 
     } catch(e) {
         console.error(e);
-        content.innerHTML = '<div style="padding:16px;color:var(--accent2);">שגיאה בטעינת נתונים</div>';
+        compContent.innerHTML = '<div style="padding:16px;color:var(--accent2);">שגיאה בטעינת נתונים</div>';
     }
 }
 
