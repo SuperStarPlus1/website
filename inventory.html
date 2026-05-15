@@ -1017,14 +1017,17 @@ async function loadComparison() {
         title.textContent = `השוואה: ${shift} ${dateStr} (נוכחי) vs ${prevShift} ${prevDateStr}`;
 
         // שלוף נתוני ספירה קודמת דרך POST ל-GAS
+        console.log('[COMPARE] looking for tab:', prevTab, 'shift:', prevShift);
         const resp = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({ action: 'getSheet', tab: prevTab, shift: prevShift }),
             headers: { 'Content-Type': 'text/plain' }
         });
         const data = await resp.json();
+        console.log('[COMPARE] response:', JSON.stringify(data).slice(0, 200));
 
         if (!data || data.status === 'error' || !data.items || !data.items.length) {
+            console.log('[COMPARE] no data found, status:', data?.status, 'items:', data?.items?.length);
             content.innerHTML = `<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצאה ספירת ${prevShift} מ-${prevDateStr}</div>`;
             return;
         }
