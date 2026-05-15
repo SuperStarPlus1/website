@@ -478,6 +478,7 @@ const MANAGER_EMAILS = [
     "hatem@maxmarket.co.il"
 ];
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzKNuX71-eWtFcTCWgOVoorvwlQPcgtNAm40sO1JgEboMRDSr_GVSjWyoNF5PLce5s8/exec";
+const INVENTORY_SHEET_ID = '1Q6JOcAEekcWoLTwNdf-l30njIejKfxhbYO2ZB18xiMY';
 const DEPT_FILTER = "סיגריות";
 
 
@@ -979,64 +980,62 @@ async function submitCount() {
 // ════════════════════════════════════════════════════
 //  COMPARISON — השוואה לספירה קודמת
 // ════════════════════════════════════════════════════
+const INVENTORY_SHEET_ID = '1Q6JOcAEekcWoLTwNdf-l30njIejKfxhbYO2ZB18xiMY';
+
 async function loadComparison() {
     if (!items.length) { showToast('אין פריטים לספירה הנוכחית', true); return; }
 
-    const section = document.getElementById('comparison-section');
-    const content = document.getElementById('comparison-content');
-    const title   = document.getElementById('comparison-title');
+    const section    = document.getElementById('comparison-section');
+    const compContent = document.getElementById('comparison-content');
+    const title      = document.getElementById('comparison-title');
     section.style.display = 'block';
-    content.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">טוען נתונים...</div>';
+    compContent.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">טוען נתונים...</div>';
     section.scrollIntoView({ behavior: 'smooth' });
 
     try {
-        // קבע תאריך קודם
         const { date, h } = getCurrentDateTime();
         const shift = h >= 6 && h < 14 ? 'בוקר' : h >= 14 && h < 22 ? 'ערב' : 'לילה';
         const _d = date.getDate(), _m = date.getMonth()+1, _y = date.getFullYear();
-        const dateStr = `${String(_d).padStart(2,'0')}.${String(_m).padStart(2,'0')}.${_y}`;
+        const dateStr = String(_d).padStart(2,'0') + '.' + String(_m).padStart(2,'0') + '.' + _y;
 
-        // קבע משמרת קודמת
         const shiftOrder = ['בוקר', 'ערב', 'לילה'];
         const curIdx = shiftOrder.indexOf(shift);
         let prevShift, prevDateStr;
         if (curIdx === 0) {
-            // בוקר → לילה של אתמול
             const yesterday = new Date(date); yesterday.setDate(yesterday.getDate() - 1);
-            const ydd = String(yesterday.getDate()).padStart(2,'0');
-            const ymm = String(yesterday.getMonth()+1).padStart(2,'0');
-            const yyyyy = yesterday.getFullYear();
-            prevDateStr = `${ydd}.${ymm}.${yyyyy}`;
+            prevDateStr = String(yesterday.getDate()).padStart(2,'0') + '.' + String(yesterday.getMonth()+1).padStart(2,'0') + '.' + yesterday.getFullYear();
             prevShift = 'לילה';
         } else {
             prevDateStr = dateStr;
             prevShift = shiftOrder[curIdx - 1];
         }
 
-        const prevTab = prevDateStr; // שם הטאב = תאריך בלבד
-        title.textContent = `השוואה: ${shift} ${dateStr} (נוכחי) vs ${prevShift} ${prevDateStr}`;
+        title.textContent = 'השוואה: ' + shift + ' ' + dateStr + ' (נוכחי) vs ' + prevShift + ' ' + prevDateStr;
 
-        // שלוף נתוני ספירה קודמת דרך POST ל-GAS
-        console.log('[COMPARE] looking for tab:', prevTab, 'shift:', prevShift);
+        // עמודת המשמרת: C=בוקר(idx 2), D=ערב(idx 3), E=לילה(idx 4)
+        const shiftColIdx = { 'בוקר': 2, 'ערב': 3, 'לילה': 4 };
+        const colIdx = shiftColIdx[prevShift];
+
+        // קרא את הגיליון כ-JSON דרך GAS
         const resp = await fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'getSheet', tab: prevTab, shift: prevShift }),
+            body: JSON.stringify({ action: 'getSheet', tab: prevDateStr, shift: prevShift }),
             headers: { 'Content-Type': 'text/plain' }
         });
         const data = await resp.json();
-        console.log('[COMPARE] response:', JSON.stringify(data).slice(0, 200));
 
-        if (!data || data.status === 'error' || !data.items || !data.items.length) {
-            console.log('[COMPARE] no data found, status:', data?.status, 'items:', data?.items?.length);
-            content.innerHTML = `<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצאה ספירת ${prevShift} מ-${prevDateStr}</div>`;
+        if (!data || data.status === 'error' || !data.rows) {
+            compContent.innerHTML = '<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצא טאב ' + prevDateStr + '</div>';
             return;
         }
 
-        // בנה מפה: ברקוד → כמות קודמת
+        // בנה מפה: ברקוד → כמות של המשמרת הקודמת
         const prevMap = {};
-        data.items.forEach(i => {
-            prevMap[i.barcode] = (prevMap[i.barcode] || 0) + i.qty;
-        });
+        for (let i = 3; i < data.rows.length; i++) {
+            const bc  = String(data.rows[i][0] || '').trim();
+            const qty = Number(data.rows[i][colIdx]) || 0;
+            if (bc) prevMap[bc] = qty;
+        }
 
         // בנה טבלת השוואה
         const allBarcodes = new Set([
