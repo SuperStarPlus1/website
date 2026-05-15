@@ -1012,9 +1012,20 @@ async function loadComparison() {
         const prevTab = `${prevDateStr}_${prevShift}`;
         title.textContent = `השוואה: ${shift} (נוכחי) vs ${prevShift} ${prevDateStr}`;
 
-        // שלוף נתוני ספירה קודמת מ-GAS
-        const resp = await fetch(`${GAS_URL}?action=getSheet&tab=${encodeURIComponent(prevTab)}`);
-        const data = await resp.json();
+        // שלוף נתוני ספירה קודמת מ-GAS דרך JSONP (עוקף CORS)
+        const data = await new Promise((resolve, reject) => {
+            const cbName = 'gasCallback_' + Date.now();
+            const script = document.createElement('script');
+            window[cbName] = (d) => {
+                delete window[cbName];
+                document.head.removeChild(script);
+                resolve(d);
+            };
+            script.onerror = () => reject(new Error('Failed to load GAS'));
+            script.src = `${GAS_URL}?action=getSheet&tab=${encodeURIComponent(prevTab)}&callback=${cbName}`;
+            document.head.appendChild(script);
+            setTimeout(() => reject(new Error('Timeout')), 10000);
+        });
 
         if (!data || data.status === 'error' || !data.rows || !data.rows.length) {
             content.innerHTML = `<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצאה ספירת ${prevShift} מ-${prevDateStr}</div>`;
