@@ -1002,35 +1002,36 @@ async function loadComparison() {
         if (curIdx === 0) {
             // בוקר → לילה של אתמול
             const yesterday = new Date(date); yesterday.setDate(yesterday.getDate() - 1);
-            prevDateStr = yesterday.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g,'-');
+            const ydd = String(yesterday.getDate()).padStart(2,'0');
+            const ymm = String(yesterday.getMonth()+1).padStart(2,'0');
+            const yyyyy = yesterday.getFullYear();
+            prevDateStr = `${ydd}-${ymm}-${yyyyy}`;
             prevShift = 'לילה';
         } else {
             prevDateStr = dateStr;
             prevShift = shiftOrder[curIdx - 1];
         }
 
-        const prevTab = `${prevDateStr}_${prevShift}`;
-        title.textContent = `השוואה: ${shift} (נוכחי) vs ${prevShift} ${prevDateStr}`;
+        const prevTab = prevDateStr; // שם הטאב = תאריך בלבד
+        title.textContent = `השוואה: ${shift} ${dateStr} (נוכחי) vs ${prevShift} ${prevDateStr}`;
 
         // שלוף נתוני ספירה קודמת דרך POST ל-GAS
         const resp = await fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'getSheet', tab: prevTab }),
+            body: JSON.stringify({ action: 'getSheet', tab: prevTab, shift: prevShift }),
             headers: { 'Content-Type': 'text/plain' }
         });
         const data = await resp.json();
 
-        if (!data || data.status === 'error' || !data.rows || !data.rows.length) {
+        if (!data || data.status === 'error' || !data.items || !data.items.length) {
             content.innerHTML = `<div style="padding:16px;color:var(--muted);text-align:center;">לא נמצאה ספירת ${prevShift} מ-${prevDateStr}</div>`;
             return;
         }
 
         // בנה מפה: ברקוד → כמות קודמת
         const prevMap = {};
-        data.rows.forEach(r => {
-            const bc = String(r[1]||'').trim();
-            const qty = parseInt(r[6]||0) || 0;
-            if (bc) prevMap[bc] = (prevMap[bc] || 0) + qty;
+        data.items.forEach(i => {
+            prevMap[i.barcode] = (prevMap[i.barcode] || 0) + i.qty;
         });
 
         // בנה טבלת השוואה
