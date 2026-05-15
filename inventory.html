@@ -407,7 +407,9 @@
     <h3>📦 סריקת מוצר</h3>
     <div class="scan-row">
       <input type="text" id="barcode-input" placeholder="ברקוד, חלק מברקוד, או שם מוצר..."
-        inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" onkeydown="if(event.key==='Enter') lookupBarcode()">
+        inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off"
+        oninput="if(this.value.length >= 2) lookupBarcode()"
+        onkeydown="if(event.key==='Enter') lookupBarcode()">
       <button class="btn-scan" onclick="openCamera()" title="סרוק עם מצלמה">📷</button>
       <button class="btn-scan" onclick="lookupBarcode()" style="background:#2e3350;color:var(--text);">חפש</button>
     </div>
