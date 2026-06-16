@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הגרלת לקוחות – סופרסטאר פלוס</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
+
+:root {
+  --blue:#0076DA; --blue2:#005bab; --blue-light:#e6f3fc;
+  --yellow:#ffcc00; --yellow2:#e6b800;
+  --bg:#f4f7f9; --white:#fff; --text:#1a2a3a; --muted:#6b7c93; --border:#d8e3ec;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Heebo',Arial,sans-serif;direction:rtl;background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+
+/* HEADER */
+header{width:100%;background:var(--blue);box-shadow:0 3px 16px rgba(0,0,0,.15);}
+.hinner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;}
+.header-logo{height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1);}
+.hbadge{background:var(--yellow);color:var(--text);font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;}
+
+.ystrip{width:100%;background:var(--yellow);text-align:center;padding:7px 16px;font-size:13px;font-weight:700;color:var(--text);}
+
+/* MAIN */
+.main{width:100%;max-width:600px;padding:20px 14px 40px;}
+.card{background:var(--white);border-radius:16px;box-shadow:0 4px 24px rgba(0,118,218,.10);border:1px solid var(--border);overflow:hidden;}
+.card-head{background:var(--blue-light);border-bottom:2px solid var(--blue);padding:14px 20px;display:flex;align-items:center;gap:10px;}
+.card-head i{color:var(--blue);font-size:18px;}
+.card-head h2{font-size:15px;font-weight:700;color:var(--text);}
+.card-head .hcount{font-size:12px;color:var(--muted);margin-right:auto;}
+.cbody{padding:18px 20px;}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--blue);border-radius:12px;padding:2rem 1.5rem;text-align:center;cursor:pointer;background:var(--blue-light);display:block;margin-bottom:14px;transition:.2s;}
+.upload-zone:hover{background:#d0e8f8;}
+.upload-zone input{display:none;}
+.upload-zone .uico{font-size:32px;color:var(--blue);margin-bottom:8px;display:block;}
+.upload-zone p{color:var(--muted);font-size:13px;}
+.upload-zone p strong{color:var(--blue);font-size:15px;font-weight:700;display:block;margin-bottom:3px;}
+.file-ok{background:#eaf6ee;border-radius:10px;padding:11px 16px;display:none;align-items:center;justify-content:space-between;margin-bottom:14px;border:1px solid #b2dfc0;}
+.file-ok .fi{display:flex;align-items:center;gap:10px;}
+.file-ok .fi i{font-size:20px;color:#28a745;}
+.file-ok strong{font-size:14px;color:var(--text);display:block;}
+.file-ok small{font-size:12px;color:var(--muted);}
+.file-ok button{font-size:12px;font-family:'Heebo',Arial,sans-serif;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:5px 14px;cursor:pointer;color:var(--muted);}
+
+/* DIVIDER */
+.divider{height:3px;background:linear-gradient(to left,var(--yellow),var(--blue));border-radius:2px;margin:4px 0 18px;}
+
+/* MACHINE STAGE */
+.machine-stage{position:relative;display:flex;justify-content:center;align-items:flex-end;min-height:400px;margin-bottom:10px;overflow:hidden;}
+.machine-wrap{position:relative;width:340px;flex-shrink:0;}
+.machine-img{width:100%;display:block;user-select:none;pointer-events:none;}
+
+/* NAMES WINDOW overlay */
+.names-win{
+  position:absolute;
+  top:14%; left:12%; width:35%; height:28%;
+  overflow:hidden;
+  pointer-events:none;
+  border-radius:6px;
+}
+.names-inner{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:4px;}
+.sname{font-size:10px;font-weight:700;color:var(--blue);background:rgba(230,243,252,0.92);border-radius:8px;padding:2px 8px;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;}
+
+/* HANDLE click area */
+.handle-btn{
+  position:absolute;
+  top:22%; right:2%;
+  width:14%; height:30%;
+  cursor:pointer;
+  border-radius:50%;
+  background:transparent;
+  border:none;
+  z-index:10;
+  transition:transform .15s;
+}
+.handle-btn:hover{transform:scale(1.08);}
+.handle-btn:active{transform:translateY(6px);}
+.handle-pulse{
+  position:absolute;
+  top:22%; right:2%;
+  width:14%; height:30%;
+  border-radius:50%;
+  background:rgba(0,118,218,0.15);
+  animation:pulse 1.4s infinite;
+  pointer-events:none;
+  z-index:9;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7;}50%{transform:scale(1.18);opacity:.3;}}
+
+/* CLICK HINT */
+.click-hint{
+  position:absolute;
+  top:18%; right:-2%;
+  font-size:11px;font-weight:700;color:var(--blue);
+  background:var(--yellow);padding:4px 8px;border-radius:8px;
+  pointer-events:none;animation:bounce 1s infinite alternate;
+  white-space:nowrap;
+}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-5px);}}
+
+/* CONE / ICE CREAM */
+.cone-area{
+  position:absolute;
+  bottom:2%; left:5%;
+  width:28%;
+  display:flex;flex-direction:column;align-items:center;
+}
+.cone-img{width:100%;display:block;}
+
+/* NAME DRIP — flows from nozzle */
+.drip-container{
+  position:absolute;
+  top:52%; left:22%;
+  width:12%;
+  display:flex;flex-direction:column;align-items:center;
+  pointer-events:none;
+  overflow:hidden;
+}
+.drip-bar{
+  width:6px;background:var(--yellow);border-radius:0 0 4px 4px;
+  height:0;transition:height .8s ease-in;
+}
+.winner-tag{
+  background:var(--yellow);color:var(--text);
+  font-size:10px;font-weight:900;border-radius:8px;
+  padding:4px 8px;text-align:center;
+  opacity:0;transition:opacity .5s;margin-top:3px;
+  white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* WINNER PANEL */
+.winner-panel{
+  display:none;background:var(--white);border:3px solid var(--yellow);
+  border-radius:16px;padding:20px;text-align:center;margin-bottom:14px;
+  box-shadow:0 4px 20px rgba(0,118,218,.12);
+}
+.wp-badge{display:inline-block;background:var(--yellow);color:var(--text);font-size:12px;font-weight:700;border-radius:20px;padding:5px 18px;margin-bottom:12px;}
+.wp-name{font-size:36px;font-weight:900;color:var(--blue);line-height:1.1;margin-bottom:16px;}
+.wp-details{display:flex;flex-direction:column;gap:8px;max-width:300px;margin:0 auto;}
+.wp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);font-size:14px;}
+.wp-row .lbl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px;}
+.wp-row .lbl i{color:var(--blue);font-size:13px;}
+.wp-row .val{font-weight:700;color:var(--blue);}
+
+/* BUTTONS */
+.btn-run{width:100%;padding:14px;font-size:17px;font-weight:900;font-family:'Heebo',Arial,sans-serif;background:var(--blue);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(0,118,218,.3);display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-run:hover:not(:disabled){background:var(--blue2);}
+.btn-run:active:not(:disabled){transform:scale(.98);}
+.btn-run:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;}
+.btn-reset{width:100%;margin-top:10px;padding:10px;font-size:14px;font-family:'Heebo',Arial,sans-serif;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:12px;cursor:pointer;display:none;align-items:center;justify-content:center;gap:6px;}
+.btn-reset:hover{background:var(--bg);}
+
+footer{margin-top:auto;padding:16px;text-align:center;font-size:11px;color:var(--muted);}
+footer span{color:var(--blue);font-weight:700;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hinner">
+    <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופרסטאר פלוס" class="header-logo">
+    <div class="hbadge">🎰 הגרלת לקוחות</div>
+  </div>
+</header>
+<div class="ystrip">הגרלה שקופה ואקראית לחלוטין — בהצלחה לכולם!</div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-head">
+      <i class="fa-solid fa-file-excel"></i>
+      <h2>העלאת רשימת משתתפים</h2>
+      <span class="hcount" id="hcount"></span>
+    </div>
+    <div class="cbody">
+
+      <label class="upload-zone" id="drop-zone">
+        <input type="file" id="file-inp" accept=".xlsx,.xls,.csv">
+        <i class="fa-solid fa-cloud-arrow-up uico"></i>
+        <p><strong>בחר קובץ Excel</strong></p>
+        <p>גרור לכאן · .xlsx / .xls / .csv</p>
+      </label>
+
+      <div class="file-ok" id="file-ok">
+        <div class="fi">
+          <i class="fa-solid fa-circle-check"></i>
+          <div><strong id="fname"></strong><small id="fcount"></small></div>
+        </div>
+        <button onclick="clearFile()"><i class="fa-solid fa-rotate-left"></i> החלף</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- MACHINE -->
+      <div class="machine-stage" id="machine-stage">
+
+        <!-- Names window overlay -->
+        <div class="machine-wrap" id="machine-wrap">
+          <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/nc701_ninja" alt="מכונת גלידה Ninja NC701" class="machine-img" id="machine-img">
+
+          <!-- scrolling names in the machine window -->
+          <div class="names-win" id="names-win">
+            <div class="names-inner" id="names-inner"></div>
+          </div>
+
+          <!-- handle clickable area + pulse ring -->
+          <div class="handle-pulse" id="handle-pulse" style="display:none"></div>
+          <button class="handle-btn" id="handle-btn" onclick="handleClick()" aria-label="לחץ להגרלה" title="לחץ על הידית להגרלה" disabled></button>
+          <div class="click-hint" id="click-hint" style="display:none">לחץ לחץ!<br>↓</div>
+
+          <!-- drip animation -->
+          <div class="drip-container" id="drip-container" style="display:none">
+            <div class="drip-bar" id="drip-bar"></div>
+            <div class="winner-tag" id="winner-tag"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- WINNER PANEL -->
+      <div class="winner-panel" id="winner-panel">
+        <div class="wp-badge">🏆 הזוכה שלנו בהגרלה הוא/היא</div>
+        <div class="wp-name" id="wp-name"></div>
+        <div class="wp-details">
+          <div class="wp-row">
+            <span class="lbl"><i class="fa-solid fa-calendar-days"></i> קניה מתאריך</span>
+            <span class="val" id="wp-date"></span>
+          </div>
+          <div class="wp-row">
+            <span class="lbl"><i class="fa-solid fa-receipt"></i> חשבונית מספר</span>
+            <span class="val" id="wp-inv"></span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-run" id="btn-run" disabled>
+        <i class="fa-solid fa-shuffle"></i> הגרל!
+      </button>
+      <button class="btn-reset" id="btn-reset" onclick="resetAll()">
+        <i class="fa-solid fa-rotate-right"></i> הגרלה חדשה
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer>מערכת הגרלות <span>סופרסטאר פלוס</span> · כל הזכויות שמורות</footer>
+
+<script>
+const CLOUDINARY = 'https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/';
+
+let rows=[], colN=-1, colD=-1, colI=-1;
+let spinning=false, spinTimer=null, spinOffset=0, spinSpeed=0, animId=null;
+let namesArr=[];
+
+function guessCol(h,pats){for(let p of pats){const i=h.findIndex(x=>p.test(String(x)));if(i>=0)return i;}return -1;}
+
+function fmtDate(v){
+  if(!v)return'';
+  if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y;}
+  return String(v);
+}
+
+document.getElementById('file-inp').addEventListener('change',function(){if(this.files[0])loadFile(this.files[0]);});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.background='#c5dff5';});
+dz.addEventListener('dragleave',()=>{dz.style.background='';});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.style.background='';if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+
+function loadFile(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const hdrs=json[0]||[];
+      rows=json.slice(1).filter(r=>r.some(c=>c!==''));
+      colN=guessCol(hdrs,[/שם לקוח/i,/שם/i,/לקוח/i,/name/i,/customer/i]);
+      colD=guessCol(hdrs,[/תאריך/i,/date/i]);
+      colI=guessCol(hdrs,[/חשבונית/i,/invoice/i,/מספר/i,/number/i]);
+      if(colN<0)colN=0; if(colD<0)colD=1; if(colI<0)colI=2;
+      namesArr=rows.map(r=>String(r[colN]||'')).filter(Boolean);
+      document.getElementById('drop-zone').style.display='none';
+      const fo=document.getElementById('file-ok');fo.style.display='flex';
+      document.getElementById('fname').textContent=file.name;
+      document.getElementById('fcount').textContent=namesArr.length+' רשומות נטענו';
+      document.getElementById('hcount').textContent=namesArr.length+' משתתפים';
+      document.getElementById('handle-pulse').style.display='';
+      document.getElementById('handle-btn').disabled=false;
+      document.getElementById('click-hint').style.display='';
+      document.getElementById('btn-run').disabled=false;
+      document.getElementById('btn-run').onclick=startLottery;
+    }catch(e){alert('שגיאה בקריאת הקובץ');}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function clearFile(){
+  rows=[];namesArr=[];
+  document.getElementById('drop-zone').style.display='';
+  document.getElementById('file-ok').style.display='none';
+  document.getElementById('file-inp').value='';
+  document.getElementById('hcount').textContent='';
+  document.getElementById('handle-pulse').style.display='none';
+  document.getElementById('handle-btn').disabled=true;
+  document.getElementById('click-hint').style.display='none';
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('winner-panel').style.display='none';
+  document.getElementById('btn-reset').style.display='none';
+  document.getElementById('drip-container').style.display='none';
+  stopSpin();
+  clearNamesWindow();
+}
+
+function clearNamesWindow(){
+  document.getElementById('names-inner').innerHTML='';
+}
+
+function handleClick(){
+  if(spinning||namesArr.length===0)return;
+  startLottery();
+}
+
+function startLottery(){
+  if(spinning||namesArr.length===0)return;
+  spinning=true;
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> מגריל...';
+  document.getElementById('handle-pulse').style.display='none';
+  document.getElementById('click-hint').style.display='none';
+  document.getElementById('winner-panel').style.display='none';
+  document.getElementById('btn-reset').style.display='none';
+  document.getElementById('drip-container').style.display='none';
+  // animate handle press
+  const hb=document.getElementById('handle-btn');
+  hb.style.transform='translateY(8px)';
+  setTimeout(()=>{hb.style.transform='';},300);
+  spinOffset=0; spinSpeed=0;
+  spinLoop();
+  spinTimer=setTimeout(revealWinner, 4200);
+}
+
+function spinLoop(){
+  spinSpeed=Math.min(spinSpeed+1.8,24);
+  spinOffset+=spinSpeed;
+  renderNamesWindow();
+  if(spinning) animId=requestAnimationFrame(spinLoop);
+}
+
+function stopSpin(){
+  spinning=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  if(spinTimer){clearTimeout(spinTimer);spinTimer=null;}
+}
+
+function renderNamesWindow(){
+  if(!namesArr.length)return;
+  const container=document.getElementById('names-inner');
+  const wh=document.getElementById('names-win').offsetHeight||110;
+  const itemH=22;
+  const visible=Math.ceil(wh/itemH)+2;
+  const total=namesArr.length;
+  const offset=Math.floor(spinOffset/itemH);
+  let html='';
+  for(let i=0;i<visible;i++){
+    const ni=(offset+i)%total;
+    html+=`<div class="sname">${namesArr[ni]}</div>`;
+  }
+  container.innerHTML=html;
+  const rem=spinOffset%itemH;
+  container.style.transform=`translateY(-${rem}px)`;
+}
+
+function revealWinner(){
+  stopSpin();
+  const valid=rows.filter(r=>r[colN]);
+  const chosen=valid[Math.floor(Math.random()*valid.length)];
+  const wname=chosen[colN]||'';
+  const wdate=fmtDate(chosen[colD])||'—';
+  const winv=chosen[colI]||'—';
+
+  // show name in window frozen
+  const container=document.getElementById('names-inner');
+  container.innerHTML=`<div class="sname" style="background:var(--yellow);color:var(--text);font-size:11px;font-weight:900;">${wname}</div>`;
+  container.style.transform='';
+
+  // drip animation
+  const dc=document.getElementById('drip-container');
+  dc.style.display='flex';
+  const db=document.getElementById('drip-bar');
+  const wt=document.getElementById('winner-tag');
+  wt.textContent=wname;
+  requestAnimationFrame(()=>{
+    db.style.height='70px';
+    setTimeout(()=>{
+      wt.style.opacity='1';
+    },700);
+  });
+
+  // show winner panel after drip
+  setTimeout(()=>{
+    document.getElementById('wp-name').textContent=wname;
+    document.getElementById('wp-date').textContent=wdate;
+    document.getElementById('wp-inv').textContent=winv;
+    document.getElementById('winner-panel').style.display='';
+    document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-shuffle"></i> הגרל!';
+    document.getElementById('btn-reset').style.display='flex';
+    spinning=false;
+  }, 1400);
+}
+
+function resetAll(){
+  stopSpin();
+  clearNamesWindow();
+  document.getElementById('drip-bar').style.height='0';
+  document.getElementById('winner-tag').style.opacity='0';
+  document.getElementById('drip-container').style.display='none';
+  document.getElementById('winner-panel').style.display='none';
+  document.getElementById('btn-reset').style.display='none';
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-shuffle"></i> הגרל!';
+  document.getElementById('btn-run').onclick=startLottery;
+  document.getElementById('handle-pulse').style.display='';
+  document.getElementById('click-hint').style.display='';
+}
+</script>
+</body>
+</html>
