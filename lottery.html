@@ -231,7 +231,6 @@ const ctx=canvas.getContext('2d');
 */
 const REL={
   bowl:{cx:0.619, cy:0.560, rx:0.108, ry:0.118},
-  nozzle:{x:0.269, y:0.329}
 };
 
 const COLORS=['#0076DA','#ffcc00','#e84c3d','#28a745','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#ff5722'];
@@ -301,11 +300,9 @@ function loop(){
     drawBowlGlow(b,0.04);
     drawBalls(b);
     dripP+=2.0;
-    drawDrip();
     if(dripP>=120){ phase='done'; spawnConfetti(); setTimeout(openModal,500); }
   } else if(phase==='done'){
     drawBalls(b);
-    drawFinalStream();
     if(confetti.length>0) drawConfetti();
   }
 
@@ -371,62 +368,6 @@ function drawBalls(b){
   ctx.restore();
 }
 
-/* ── drip stream from nozzle downward ── */
-function drawDrip(){
-  const n=getNozzle();
-  const p=dripP;
-  ctx.save();
-
-  /* thin cream stream */
-  const streamLen=Math.min(p*0.4, cH*0.065);
-  if(streamLen>2){
-    ctx.fillStyle='#FFFDE7';
-    ctx.beginPath();
-    ctx.roundRect(n.x-4, n.y, 8, streamLen, [0,0,4,4]);
-    ctx.fill();
-  }
-
-  /* growing scoop — NO cone, the cone already exists in the photo */
-  if(p>18){
-    const scoopCY = n.y + Math.min(p*0.4, cH*0.065);
-    const maxR = cW*0.065;
-    const r = Math.min((p-18)/70*maxR, maxR);
-    ctx.fillStyle='#FFFDE7';
-    ctx.beginPath();
-    ctx.arc(n.x, scoopCY, r, Math.PI, 0, false);
-    ctx.fill();
-    /* swirl */
-    ctx.strokeStyle='#EDE08A'; ctx.lineWidth=1.2;
-    for(let s=0;s<3;s++){
-      ctx.beginPath();
-      ctx.arc(n.x, scoopCY, r*(0.3+s*0.24), Math.PI*0.12, Math.PI*0.88);
-      ctx.stroke();
-    }
-    /* winner name on scoop */
-    if(r>maxR*0.6){
-      ctx.fillStyle='#1a2a3a';
-      const fs=Math.max(Math.round(r*0.36),8);
-      ctx.font=`bold ${fs}px Heebo,Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      const s=winnerName.length>7?winnerName.slice(0,7)+'…':winnerName;
-      ctx.fillText(s, n.x, scoopCY-r*0.1);
-    }
-  }
-  ctx.restore();
-}
-
-function drawFinalStream(){
-  const n=getNozzle();
-  const maxR=cW*0.065;
-  const scoopCY=n.y+cH*0.065;
-  ctx.save();
-  /* stream */
-  ctx.fillStyle='#FFFDE7';
-  ctx.beginPath(); ctx.roundRect(n.x-4,n.y,8,cH*0.065,[0,0,4,4]); ctx.fill();
-  /* scoop */
-  ctx.beginPath(); ctx.arc(n.x,scoopCY,maxR,Math.PI,0,false); ctx.fill();
-  ctx.strokeStyle='#EDE08A'; ctx.lineWidth=1.2;
-  for(let s=0;s<3;s++){ ctx.beginPath(); ctx.arc(n.x,scoopCY,maxR*(0.3+s*0.24),Math.PI*0.12,Math.PI*0.88); ctx.stroke(); }
   ctx.fillStyle='#1a2a3a';
   const fs=Math.max(Math.round(maxR*0.36),8);
   ctx.font=`bold ${fs}px Heebo,Arial`;
@@ -438,11 +379,11 @@ function drawFinalStream(){
 
 /* ── confetti ── */
 function spawnConfetti(){
-  const n=getNozzle();
+  const b=getBowl();
   confetti=[];
   for(let i=0;i<55;i++){
     confetti.push({
-      x:n.x+(Math.random()-0.5)*18, y:n.y+cH*0.065,
+      x:b.cx+(Math.random()-0.5)*b.rx*1.2, y:b.cy-(Math.random()*b.ry*0.5),
       vx:(Math.random()-0.5)*4.5, vy:-(Math.random()*5+2),
       w:5+Math.random()*6, h:3+Math.random()*4,
       color:COLORS[Math.floor(Math.random()*COLORS.length)],
