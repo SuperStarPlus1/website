@@ -312,29 +312,42 @@ function drawBowlGlow(b,alpha){
   ctx.globalAlpha=alpha;
   ctx.fillStyle='#64b5f6';
   ctx.beginPath();
-  ctx.ellipse(b.cx,b.cy,b.rx,b.ry,0,0,Math.PI*2);
+  ctx.roundRect(b.cx-b.rx*0.88,b.cy-b.ry*0.82,b.rx*1.76,b.ry*1.64,8);
   ctx.fill();
   ctx.restore();
 }
 
-/* ── physics: swirl inside bowl ── */
+/* ── physics: chaotic horizontal bounce inside rectangle ── */
 function updateBalls(b){
+  const left=b.cx-b.rx*0.88, right=b.cx+b.rx*0.88;
+  const top=b.cy-b.ry*0.82, bottom=b.cy+b.ry*0.82;
   balls.forEach(ball=>{
-    const dx=ball.x-b.cx, dy=ball.y-b.cy;
-    const perpX=-dy*(b.ry/b.rx)*mixSpeed*2.5;
-    const perpY= dx*(b.rx/b.ry)*mixSpeed*2.5;
-    ball.vx+=(perpX+(Math.random()-0.5)*0.4)*0.12;
-    ball.vy+=(perpY+(Math.random()-0.5)*0.4)*0.12;
-    ball.vx*=0.88; ball.vy*=0.88;
+    const turb=mixSpeed*18;
+    ball.vx+=(Math.random()-0.5)*turb;
+    ball.vy+=(Math.random()-0.5)*turb*0.6;
+    const spd=Math.hypot(ball.vx,ball.vy);
+    const maxSpd=3+mixSpeed*22;
+    if(spd>maxSpd){ball.vx=ball.vx/spd*maxSpd;ball.vy=ball.vy/spd*maxSpd;}
+    ball.vx*=0.92; ball.vy*=0.92;
     ball.x+=ball.vx; ball.y+=ball.vy;
-    ball.angle+=ball.spin;
-    const nx=(ball.x-b.cx)/b.rx, ny=(ball.y-b.cy)/b.ry;
-    if(nx*nx+ny*ny>0.80){
-      const ang=Math.atan2(ny,nx);
-      ball.x=b.cx+Math.cos(ang)*b.rx*0.76;
-      ball.y=b.cy+Math.sin(ang)*b.ry*0.76;
-      ball.vx*=-0.4; ball.vy*=-0.4;
-    }
+    ball.angle+=ball.spin*(0.5+mixSpeed*8);
+    if(ball.x-ball.r<left){ball.x=left+ball.r;ball.vx=Math.abs(ball.vx)*0.7;}
+    if(ball.x+ball.r>right){ball.x=right-ball.r;ball.vx=-Math.abs(ball.vx)*0.7;}
+    if(ball.y-ball.r<top){ball.y=top+ball.r;ball.vy=Math.abs(ball.vy)*0.7;}
+    if(ball.y+ball.r>bottom){ball.y=bottom-ball.r;ball.vy=-Math.abs(ball.vy)*0.7;}
+    balls.forEach(other=>{
+      if(other===ball)return;
+      const ddx=ball.x-other.x,ddy=ball.y-other.y;
+      const dist=Math.hypot(ddx,ddy);
+      const minD=ball.r+other.r;
+      if(dist<minD&&dist>0){
+        const nx=ddx/dist,ny=ddy/dist;
+        const ov=(minD-dist)*0.5;
+        ball.x+=nx*ov;ball.y+=ny*ov;other.x-=nx*ov;other.y-=ny*ov;
+        const rv=(ball.vx-other.vx)*nx+(ball.vy-other.vy)*ny;
+        if(rv<0){ball.vx-=rv*nx*0.6;ball.vy-=rv*ny*0.6;other.vx+=rv*nx*0.6;other.vy+=rv*ny*0.6;}
+      }
+    });
   });
 }
 
@@ -342,7 +355,7 @@ function updateBalls(b){
 function drawBalls(b){
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(b.cx,b.cy,b.rx*1.0,b.ry*1.0,0,0,Math.PI*2);
+  ctx.roundRect(b.cx-b.rx*0.88,b.cy-b.ry*0.82,b.rx*1.76,b.ry*1.64,8);
   ctx.clip();
   balls.forEach((ball,i)=>{
     ctx.save();
