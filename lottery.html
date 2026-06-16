@@ -37,30 +37,58 @@ header{width:100%;background:var(--blue);box-shadow:0 3px 16px rgba(0,0,0,.15);}
 .file-ok button{font-size:12px;font-family:'Heebo',Arial,sans-serif;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:5px 14px;cursor:pointer;color:var(--muted);}
 .divider{height:3px;background:linear-gradient(to left,var(--yellow),var(--blue));border-radius:2px;margin:4px 0 18px;}
 
-/* ANIMATION STAGE */
-.anim-stage{position:relative;width:100%;display:flex;flex-direction:column;align-items:center;margin-bottom:14px;}
-#scene-canvas{display:block;border-radius:16px;max-width:100%;}
-.machine-photo{width:100%;max-width:380px;display:block;margin:0 auto;position:relative;}
-.machine-photo img{width:100%;display:block;}
-.machine-photo canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+/* MACHINE WRAPPER */
+.machine-wrap{position:relative;width:100%;max-width:460px;margin:0 auto 14px;}
+.machine-wrap img{width:100%;display:block;user-select:none;-webkit-user-drag:none;}
+#anim-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
 
-.handle-hint{position:absolute;font-size:11px;font-weight:700;color:var(--text);background:var(--yellow);padding:4px 10px;border-radius:8px;pointer-events:none;animation:bounce 0.9s infinite alternate;white-space:nowrap;z-index:20;}
-@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-6px);}}
-.handle-overlay{position:absolute;cursor:pointer;border:none;background:transparent;z-index:30;border-radius:50%;}
-.handle-overlay:hover{background:rgba(0,118,218,0.12);}
-.handle-overlay:active{transform:translateY(5px);}
-.pulse-ring{position:absolute;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:ring 1.6s infinite;pointer-events:none;z-index:19;}
-@keyframes ring{0%{transform:scale(0.85);opacity:0.7;}100%{transform:scale(1.4);opacity:0;}}
+/* HANDLE BUTTON — positioned over the right-side handle of the machine */
+#handle-btn{
+  position:absolute;
+  top:18%; right:1%;
+  width:11%; height:26%;
+  background:transparent;border:none;cursor:pointer;z-index:10;border-radius:8px;
+  transition:transform .15s;
+}
+#handle-btn:not([disabled]):hover{background:rgba(0,118,218,0.10);}
+#handle-btn:active:not([disabled]){transform:translateY(7px);}
+#handle-pulse{
+  position:absolute;top:18%;right:1%;width:11%;height:26%;
+  border:2.5px solid var(--blue);border-radius:8px;
+  animation:ring 1.5s ease-out infinite;pointer-events:none;z-index:9;display:none;
+}
+@keyframes ring{0%{opacity:.8;transform:scale(1);}100%{opacity:0;transform:scale(1.4);}}
+#handle-hint{
+  position:absolute;top:14%;right:13%;
+  background:var(--yellow);color:var(--text);font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;
+  z-index:11;display:none;animation:blink .8s infinite alternate;
+}
+@keyframes blink{from{opacity:1;}to{opacity:.5;}}
 
-/* WINNER PANEL */
-.winner-panel{display:none;background:var(--white);border:3px solid var(--yellow);border-radius:16px;padding:20px;text-align:center;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,118,218,.12);}
-.wp-badge{display:inline-block;background:var(--yellow);color:var(--text);font-size:12px;font-weight:700;border-radius:20px;padding:5px 18px;margin-bottom:12px;}
-.wp-name{font-size:36px;font-weight:900;color:var(--blue);line-height:1.1;margin-bottom:16px;}
-.wp-details{display:flex;flex-direction:column;gap:8px;max-width:300px;margin:0 auto;}
-.wp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);font-size:14px;}
-.wp-row .lbl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px;}
-.wp-row .lbl i{color:var(--blue);font-size:13px;}
-.wp-row .val{font-weight:700;color:var(--blue);}
+/* WINNER MODAL */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  z-index:1000;align-items:center;justify-content:center;padding:20px;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  background:var(--white);border-radius:20px;padding:32px 28px;
+  max-width:380px;width:100%;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-trophy{font-size:52px;margin-bottom:8px;display:block;}
+.modal-badge{display:inline-block;background:var(--yellow);color:var(--text);font-size:12px;font-weight:700;border-radius:20px;padding:5px 18px;margin-bottom:14px;}
+.modal-name{font-size:38px;font-weight:900;color:var(--blue);line-height:1.1;margin-bottom:20px;}
+.modal-details{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.modal-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);font-size:14px;}
+.modal-row .lbl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px;}
+.modal-row .lbl i{color:var(--blue);font-size:13px;}
+.modal-row .val{font-weight:700;color:var(--blue);}
+.modal-close{width:100%;padding:13px;font-size:15px;font-weight:700;font-family:'Heebo',Arial,sans-serif;background:var(--blue);color:#fff;border:none;border-radius:12px;cursor:pointer;}
+.modal-close:hover{background:var(--blue2);}
 
 .btn-run{width:100%;padding:14px;font-size:17px;font-weight:900;font-family:'Heebo',Arial,sans-serif;background:var(--blue);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(0,118,218,.3);display:flex;align-items:center;justify-content:center;gap:10px;}
 .btn-run:hover:not(:disabled){background:var(--blue2);}
@@ -108,31 +136,13 @@ footer span{color:var(--blue);font-weight:700;}
 
       <div class="divider"></div>
 
-      <!-- ANIMATION STAGE -->
-      <div class="anim-stage">
-        <div class="machine-photo" id="machine-photo">
-          <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/nc701_ninja" alt="Ninja NC701" id="machine-img">
-          <canvas id="overlay-canvas"></canvas>
-          <div class="handle-hint" id="handle-hint" style="display:none">משוך להגרלה ↓</div>
-          <div class="pulse-ring" id="pulse-ring" style="display:none"></div>
-          <button class="handle-overlay" id="handle-overlay" onclick="startLottery()" disabled aria-label="לחץ על הידית להגרלה"></button>
-        </div>
-      </div>
-
-      <!-- WINNER PANEL -->
-      <div class="winner-panel" id="winner-panel">
-        <div class="wp-badge">🏆 הזוכה שלנו בהגרלה הוא/היא</div>
-        <div class="wp-name" id="wp-name"></div>
-        <div class="wp-details">
-          <div class="wp-row">
-            <span class="lbl"><i class="fa-solid fa-calendar-days"></i> קניה מתאריך</span>
-            <span class="val" id="wp-date"></span>
-          </div>
-          <div class="wp-row">
-            <span class="lbl"><i class="fa-solid fa-receipt"></i> חשבונית מספר</span>
-            <span class="val" id="wp-inv"></span>
-          </div>
-        </div>
+      <!-- MACHINE -->
+      <div class="machine-wrap" id="machine-wrap">
+        <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/nc701_ninja" alt="Ninja NC701" id="machine-img">
+        <canvas id="anim-canvas"></canvas>
+        <button id="handle-btn" disabled onclick="startLottery()" aria-label="לחץ על הידית להגרלה"></button>
+        <div id="handle-pulse"></div>
+        <div id="handle-hint">לחץ על הידית ▶</div>
       </div>
 
       <button class="btn-run" id="btn-run" disabled onclick="startLottery()">
@@ -146,9 +156,29 @@ footer span{color:var(--blue);font-weight:700;}
 </div>
 <footer>מערכת הגרלות <span>סופרסטאר פלוס</span> · כל הזכויות שמורות</footer>
 
+<!-- WINNER MODAL -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <span class="modal-trophy">🍦</span>
+    <div class="modal-badge">🏆 הזוכה שלנו בהגרלה הוא/היא</div>
+    <div class="modal-name" id="modal-name"></div>
+    <div class="modal-details">
+      <div class="modal-row">
+        <span class="lbl"><i class="fa-solid fa-calendar-days"></i> קניה מתאריך</span>
+        <span class="val" id="modal-date"></span>
+      </div>
+      <div class="modal-row">
+        <span class="lbl"><i class="fa-solid fa-receipt"></i> חשבונית מספר</span>
+        <span class="val" id="modal-inv"></span>
+      </div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">סגור</button>
+  </div>
+</div>
+
 <script>
-/* ── DATA ───────────────────────────────────────── */
-let rows=[], colN=0, colD=1, colI=2, namesArr=[], winnerRow=null;
+/* ─── DATA ─────────────────────────────────────────── */
+let rows=[], colN=0, colD=1, colI=2, namesArr=[], winnerRow=null, running=false;
 
 function guessCol(h,pats){for(let p of pats){const i=h.findIndex(x=>p.test(String(x)));if(i>=0)return i;}return -1;}
 function fmtDate(v){if(!v)return'';if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y;}return String(v);}
@@ -168,9 +198,9 @@ function loadFile(file){
       const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       const hdrs=json[0]||[];
       rows=json.slice(1).filter(r=>r.some(c=>c!==''));
-      colN=guessCol(hdrs,[/שם לקוח/i,/שם/i,/לקוח/i,/name/i,/customer/i]); if(colN<0)colN=0;
-      colD=guessCol(hdrs,[/תאריך/i,/date/i]); if(colD<0)colD=1;
-      colI=guessCol(hdrs,[/חשבונית/i,/invoice/i,/מספר/i,/number/i]); if(colI<0)colI=2;
+      colN=guessCol(hdrs,[/שם לקוח/i,/שם/i,/לקוח/i,/name/i,/customer/i]);if(colN<0)colN=0;
+      colD=guessCol(hdrs,[/תאריך/i,/date/i]);if(colD<0)colD=1;
+      colI=guessCol(hdrs,[/חשבונית/i,/invoice/i,/מספר/i,/number/i]);if(colI<0)colI=2;
       namesArr=rows.map(r=>String(r[colN]||'')).filter(Boolean);
       document.getElementById('drop-zone').style.display='none';
       document.getElementById('file-ok').style.display='flex';
@@ -178,8 +208,9 @@ function loadFile(file){
       document.getElementById('fcount').textContent=namesArr.length+' רשומות';
       document.getElementById('hcount').textContent=namesArr.length+' משתתפים';
       document.getElementById('btn-run').disabled=false;
-      document.getElementById('handle-overlay').disabled=false;
-      showHandleHint();
+      document.getElementById('handle-btn').disabled=false;
+      document.getElementById('handle-hint').style.display='';
+      document.getElementById('handle-pulse').style.display='';
       initBalls();
     }catch(err){alert('שגיאה בקריאת הקובץ');}
   };
@@ -187,349 +218,335 @@ function loadFile(file){
 }
 
 function clearFile(){
-  rows=[];namesArr=[];
+  rows=[];namesArr=[];running=false;
   document.getElementById('drop-zone').style.display='';
   document.getElementById('file-ok').style.display='none';
   document.getElementById('file-inp').value='';
   document.getElementById('hcount').textContent='';
   document.getElementById('btn-run').disabled=true;
-  document.getElementById('handle-overlay').disabled=true;
-  document.getElementById('winner-panel').style.display='none';
+  document.getElementById('handle-btn').disabled=true;
+  document.getElementById('handle-hint').style.display='none';
+  document.getElementById('handle-pulse').style.display='none';
   document.getElementById('btn-reset').style.display='none';
-  hideHandleHint();
-  stopAnim();
-  clearCanvas();
+  stopAnim(); clearCanvas();
 }
 
-/* ── CANVAS OVERLAY ─────────────────────────────── */
-const img = document.getElementById('machine-img');
-const canvas = document.getElementById('overlay-canvas');
+/* ─── CANVAS ─────────────────────────────────────── */
+const machineImg = document.getElementById('machine-img');
+const canvas = document.getElementById('anim-canvas');
 const ctx = canvas.getContext('2d');
 
-const BALL_COLORS = ['#0076DA','#ffcc00','#28a745','#e84c3d','#9b59b6','#e67e22','#1abc9c','#e91e9e'];
+/* Image is 554×554.
+   Pink bowl:  center (435,370) r≈95×90  → relative: cx=0.785 cy=0.668 rx=0.171 ry=0.162
+   Disc nozzle output: (170,240)          → relative: x=0.307 y=0.433
+*/
+const REL = {
+  bowl:  {cx:0.785, cy:0.668, rx:0.165, ry:0.155},
+  nozzle:{x:0.307, y:0.443},
+};
 
-/* bowl region (relative 0-1 within image) — the blender bowl area */
-const BOWL = { cx:0.28, cy:0.38, rx:0.22, ry:0.19 };
-/* nozzle tip */
-const NOZZLE = { x:0.22, y:0.62 };
+const COLORS=['#0076DA','#ffcc00','#e84c3d','#28a745','#9b59b6','#e67e22','#1abc9c','#e91e63','#3498db','#f39c12'];
+let balls=[], animId=null, phase='idle';
+let mixAngle=0, mixSpeed=0, dripProgress=0, winnerName='';
+let confetti=[], cW=0, cH=0;
 
-let cW=0, cH=0;
-let balls=[], animId=null, phase='idle'; // idle | mixing | slowdown | drip | done
-let dripY=0, dripAlpha=0, winnerName='', mixAngle=0, mixSpeed=0;
-let confetti=[];
-
-function resizeCanvas(){
-  const rect = img.getBoundingClientRect();
-  cW = rect.width; cH = rect.height;
-  canvas.width = cW; canvas.height = cH;
-  positionHandleUI();
+function syncCanvas(){
+  const rect=machineImg.getBoundingClientRect();
+  cW=rect.width; cH=rect.height;
+  canvas.width=cW; canvas.height=cH;
 }
+machineImg.addEventListener('load',()=>{syncCanvas();});
+if(machineImg.complete && machineImg.naturalWidth>0) syncCanvas();
+window.addEventListener('resize',syncCanvas);
 
-function positionHandleUI(){
-  /* handle is on the right side of the machine ~top 20-55% */
-  const hint = document.getElementById('handle-hint');
-  const overlay = document.getElementById('handle-overlay');
-  const ring = document.getElementById('pulse-ring');
-  const bw = cW*0.13, bh = cH*0.28;
-  const bx = cW*0.86, by = cH*0.20;
-  [hint,overlay,ring].forEach(el=>{
-    el.style.right = (cW - bx - bw)+'px';
-    el.style.top   = (by - 28)+'px';
-    el.style.width = bw+'px';
-    el.style.height= bh+'px';
-  });
-  hint.style.top = (by - 36)+'px';
-  hint.style.right= (cW - bx - bw - 10)+'px';
-  hint.style.width='auto'; hint.style.height='auto';
+function bowl(){
+  return {
+    cx:cW*REL.bowl.cx, cy:cH*REL.bowl.cy,
+    rx:cW*REL.bowl.rx, ry:cH*REL.bowl.ry
+  };
 }
+function nozzle(){return {x:cW*REL.nozzle.x, y:cH*REL.nozzle.y};}
 
-img.addEventListener('load', ()=>{ resizeCanvas(); });
-if(img.complete) resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-/* ── BALLS ──────────────────────────────────────── */
 function initBalls(){
-  if(!namesArr.length) return;
-  const count = Math.min(namesArr.length, 14);
-  const bx = cW * BOWL.cx, by = cH * BOWL.cy;
-  const rx = cW * BOWL.rx, ry = cH * BOWL.ry;
-  balls = [];
+  if(!namesArr.length)return;
+  const {cx,cy,rx,ry}=bowl();
+  const count=Math.min(namesArr.length,12);
+  balls=[];
   for(let i=0;i<count;i++){
-    const angle = (i/count)*Math.PI*2;
-    const r = Math.random()*rx*0.5;
+    const a=(i/count)*Math.PI*2;
+    const dist=0.35+Math.random()*0.3;
     balls.push({
-      x: bx + Math.cos(angle)*r,
-      y: by + Math.sin(angle)*r*0.7,
-      vx: (Math.random()-0.5)*2,
-      vy: (Math.random()-0.5)*2,
-      r: Math.min(cW,cH)*0.038,
-      color: BALL_COLORS[i%BALL_COLORS.length],
-      name: namesArr[i%namesArr.length],
-      angle: Math.random()*Math.PI*2,
-      spin: (Math.random()-0.5)*0.12
+      x:cx+Math.cos(a)*rx*dist,
+      y:cy+Math.sin(a)*ry*dist,
+      vx:(Math.random()-0.5)*1.5,
+      vy:(Math.random()-0.5)*1.5,
+      r:Math.min(cW,cH)*0.040,
+      color:COLORS[i%COLORS.length],
+      label:namesArr[i%namesArr.length],
+      angle:0, spin:(Math.random()-0.5)*0.1
     });
   }
-  phase = 'idle';
-  mixAngle=0; mixSpeed=0;
-  if(animId) cancelAnimationFrame(animId);
-  animId = requestAnimationFrame(drawFrame);
+  phase='idle'; dripProgress=0; mixAngle=0; mixSpeed=0; confetti=[];
+  if(animId)cancelAnimationFrame(animId);
+  animId=requestAnimationFrame(loop);
 }
 
-function drawFrame(){
+function loop(){
   ctx.clearRect(0,0,cW,cH);
+  const b=bowl();
 
   if(phase==='idle'){
-    drawBowlGlow(0.12);
-    drawBalls(0);
+    drawBowlOverlay(b,0.08);
+    drawBalls(b,0);
   } else if(phase==='mixing'){
-    mixSpeed = Math.min(mixSpeed+0.012, 0.22);
-    mixAngle += mixSpeed;
-    drawBowlGlow(0.22);
-    updateBalls();
-    drawBalls(mixAngle);
+    mixSpeed=Math.min(mixSpeed+0.009,0.20);
+    mixAngle+=mixSpeed;
+    drawBowlOverlay(b,0.15+Math.sin(Date.now()/200)*0.04);
+    updateBalls(b);
+    drawBalls(b,mixAngle);
   } else if(phase==='slowdown'){
-    mixSpeed = Math.max(mixSpeed-0.004, 0);
-    mixAngle += mixSpeed;
-    drawBowlGlow(0.10);
-    updateBalls();
-    drawBalls(mixAngle);
-    if(mixSpeed <= 0){ phase='drip'; dripY=0; dripAlpha=0; }
+    mixSpeed=Math.max(mixSpeed-0.003,0);
+    mixAngle+=mixSpeed;
+    drawBowlOverlay(b,0.08);
+    updateBalls(b);
+    drawBalls(b,mixAngle);
+    if(mixSpeed<=0.001){phase='drip';dripProgress=0;}
   } else if(phase==='drip'){
-    drawBowlGlow(0.06);
-    drawBalls(mixAngle);
+    drawBowlOverlay(b,0.05);
+    drawBalls(b,mixAngle);
+    dripProgress+=1.8;
     drawDrip();
+    if(dripProgress>=140){phase='done';spawnConfetti();setTimeout(openModal,500);}
   } else if(phase==='done'){
-    drawBalls(mixAngle);
-    drawIceCream();
-    drawConfetti();
+    drawBalls(b,mixAngle);
+    drawFinalCream();
+    if(confetti.length>0)drawConfetti();
   }
 
-  if(phase!=='done'||confetti.length>0) animId = requestAnimationFrame(drawFrame);
+  if(phase!=='done'||confetti.length>0)
+    animId=requestAnimationFrame(loop);
+  else
+    animId=null;
 }
 
-function updateBalls(){
-  const bx=cW*BOWL.cx, by=cH*BOWL.cy, rx=cW*BOWL.rx, ry=cH*BOWL.ry;
-  balls.forEach(b=>{
-    /* swirl force */
-    const dx=b.x-bx, dy=b.y-by;
-    const perpX = -dy/ry*ry*mixSpeed*1.8;
-    const perpY =  dx/rx*rx*mixSpeed*1.8;
-    b.vx += perpX*0.08 + (Math.random()-0.5)*0.4;
-    b.vy += perpY*0.08 + (Math.random()-0.5)*0.4;
-    b.vx *= 0.88; b.vy *= 0.88;
-    b.x += b.vx; b.y += b.vy;
-    b.angle += b.spin;
-    /* keep in bowl ellipse */
-    const nx=(b.x-bx)/rx, ny=(b.y-by)/ry;
-    if(nx*nx+ny*ny > 0.82){
-      const ang=Math.atan2(ny,nx);
-      b.x = bx + Math.cos(ang)*rx*0.78;
-      b.y = by + Math.sin(ang)*ry*0.78;
-      b.vx *= -0.5; b.vy *= -0.5;
-    }
-  });
-}
-
-function drawBowlGlow(alpha){
-  const bx=cW*BOWL.cx, by=cH*BOWL.cy, rx=cW*BOWL.rx, ry=cH*BOWL.ry;
+/* ── Bowl glow ── */
+function drawBowlOverlay(b,alpha){
   ctx.save();
   ctx.globalAlpha=alpha;
-  ctx.fillStyle='#0076DA';
+  ctx.fillStyle='#90caf9';
   ctx.beginPath();
-  ctx.ellipse(bx,by,rx,ry,0,0,Math.PI*2);
+  ctx.ellipse(b.cx,b.cy,b.rx,b.ry,0,0,Math.PI*2);
   ctx.fill();
   ctx.restore();
 }
 
-function drawBalls(spin){
-  balls.forEach((b,i)=>{
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(b.angle + spin*0.5*((i%2===0)?1:-1));
-    /* ball */
-    ctx.beginPath();
-    ctx.arc(0,0,b.r,0,Math.PI*2);
-    ctx.fillStyle=b.color;
-    ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.4)';
-    ctx.lineWidth=1.5;
-    ctx.stroke();
-    /* name */
-    ctx.fillStyle='#fff';
-    ctx.font=`bold ${Math.round(b.r*0.72)}px Heebo,Arial`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    const short = b.name.length>5 ? b.name.slice(0,5)+'…' : b.name;
-    ctx.fillText(short,0,0);
-    ctx.restore();
+/* ── Balls physics ── */
+function updateBalls(b){
+  balls.forEach(ball=>{
+    const dx=ball.x-b.cx, dy=ball.y-b.cy;
+    /* swirl */
+    const perpX=-dy*(b.ry/b.rx)*mixSpeed*2.2;
+    const perpY= dx*(b.rx/b.ry)*mixSpeed*2.2;
+    ball.vx+=(perpX+(Math.random()-0.5)*0.5)*0.1;
+    ball.vy+=(perpY+(Math.random()-0.5)*0.5)*0.1;
+    ball.vx*=0.90; ball.vy*=0.90;
+    ball.x+=ball.vx; ball.y+=ball.vy;
+    ball.angle+=ball.spin;
+    /* ellipse boundary */
+    const nx=(ball.x-b.cx)/b.rx, ny=(ball.y-b.cy)/b.ry;
+    if(nx*nx+ny*ny>0.80){
+      const ang=Math.atan2(ny,nx);
+      ball.x=b.cx+Math.cos(ang)*b.rx*0.76;
+      ball.y=b.cy+Math.sin(ang)*b.ry*0.76;
+      ball.vx*=-0.4; ball.vy*=-0.4;
+    }
   });
 }
 
-/* ── DRIP ───────────────────────────────────────── */
-function drawDrip(){
-  const nx=cW*NOZZLE.x, ny=cH*NOZZLE.y;
-  dripY += 3.5;
-  dripAlpha = Math.min(dripAlpha+0.04, 1);
-
-  /* stream */
+/* ── Draw balls ── */
+function drawBalls(b,spin){
+  /* clip to bowl ellipse */
   ctx.save();
-  ctx.globalAlpha = dripAlpha;
-  const streamH = Math.min(dripY, cH*0.12);
-  ctx.fillStyle='#FFF8DC';
   ctx.beginPath();
-  ctx.roundRect(nx-5, ny, 10, streamH, [0,0,6,6]);
-  ctx.fill();
+  ctx.ellipse(b.cx,b.cy,b.rx*1.02,b.ry*1.02,0,0,Math.PI*2);
+  ctx.clip();
+  balls.forEach((ball,i)=>{
+    ctx.save();
+    ctx.translate(ball.x,ball.y);
+    ctx.rotate(ball.angle+spin*0.4*((i%2)?1:-1));
+    ctx.beginPath();
+    ctx.arc(0,0,ball.r,0,Math.PI*2);
+    ctx.fillStyle=ball.color;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.5)';
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+    ctx.fillStyle='#fff';
+    const fs=Math.round(ball.r*0.68);
+    ctx.font=`bold ${fs}px Heebo,Arial`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    const lbl=ball.label.length>5?ball.label.slice(0,5)+'…':ball.label;
+    ctx.fillText(lbl,0,0);
+    ctx.restore();
+  });
+  ctx.restore();
+}
 
-  /* growing swirl scoop */
-  if(dripY > 30){
-    const scoopY = ny + Math.min(dripY, cH*0.12);
-    const maxR = cW*0.07;
-    const r = Math.min((dripY-30)/60 * maxR, maxR);
-    /* scoop */
+/* ── Drip from nozzle ── */
+function drawDrip(){
+  const n=nozzle();
+  const p=dripProgress;
+  ctx.save();
+
+  /* drip stream */
+  const streamLen=Math.min(p*0.55, 38);
+  if(streamLen>0){
     ctx.fillStyle='#FFFDE7';
     ctx.beginPath();
-    ctx.arc(nx, scoopY, r, Math.PI, 0);
+    ctx.roundRect(n.x-5,n.y,10,streamLen,[0,0,5,5]);
     ctx.fill();
-    /* swirls */
-    ctx.strokeStyle='#F0E070'; ctx.lineWidth=1.5;
-    for(let s=0;s<3;s++){
-      ctx.beginPath();
-      ctx.arc(nx, scoopY, r*(0.4+s*0.2), Math.PI*0.1, Math.PI*0.9);
-      ctx.stroke();
-    }
-    /* winner name on scoop */
-    if(r > maxR*0.7){
+  }
+
+  /* growing scoop */
+  if(p>20){
+    const scoopCY=n.y+Math.min(p*0.55,38);
+    const maxR=cW*0.072;
+    const r=Math.min((p-20)/80*maxR,maxR);
+    /* scoop body */
+    ctx.fillStyle='#FFFDE7';
+    ctx.beginPath();
+    ctx.arc(n.x,scoopCY,r,Math.PI,0,false);
+    ctx.fill();
+    /* swirl lines */
+    ctx.strokeStyle='#EDE08A';ctx.lineWidth=1.2;
+    for(let s=0;s<3;s++){ctx.beginPath();ctx.arc(n.x,scoopCY,r*(0.35+s*0.22),Math.PI*0.15,Math.PI*0.85);ctx.stroke();}
+    /* winner text on scoop */
+    if(r>maxR*0.65){
       ctx.fillStyle='#1a2a3a';
-      ctx.font=`bold ${Math.round(r*0.42)}px Heebo,Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      const n = winnerName.length>8 ? winnerName.slice(0,8)+'…' : winnerName;
-      ctx.fillText(n, nx, scoopY-r*0.1);
+      const fs=Math.max(Math.round(r*0.38),9);
+      ctx.font=`bold ${fs}px Heebo,Arial`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      const s=winnerName.length>7?winnerName.slice(0,7)+'…':winnerName;
+      ctx.fillText(s,n.x,scoopCY-r*0.08);
     }
     /* cone */
-    if(dripY > 70){
-      const coneH = Math.min((dripY-70)/40 * cH*0.10, cH*0.10);
+    if(p>65){
+      const coneH=Math.min((p-65)/50*cH*0.10,cH*0.10);
+      const coneBase=scoopCY+r;
       ctx.fillStyle='#D4A84B';
       ctx.beginPath();
-      ctx.moveTo(nx, scoopY+r+coneH);
-      ctx.lineTo(nx-r*0.95, scoopY+r);
-      ctx.lineTo(nx+r*0.95, scoopY+r);
-      ctx.closePath();
-      ctx.fill();
-      /* cone lines */
-      ctx.strokeStyle='#B8843A'; ctx.lineWidth=1;
+      ctx.moveTo(n.x,coneBase+coneH);
+      ctx.lineTo(n.x-r*0.92,coneBase);
+      ctx.lineTo(n.x+r*0.92,coneBase);
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#B8843A';ctx.lineWidth=1;
       for(let l=1;l<4;l++){
-        const ly = scoopY+r+coneH*(l/4);
-        const lw = r*0.95*(1-l/4);
-        ctx.beginPath(); ctx.moveTo(nx-lw, ly); ctx.lineTo(nx+lw, ly); ctx.stroke();
+        const ly=coneBase+coneH*(l/4);
+        const lw=r*0.92*(1-l/4);
+        ctx.beginPath();ctx.moveTo(n.x-lw,ly);ctx.lineTo(n.x+lw,ly);ctx.stroke();
       }
     }
   }
   ctx.restore();
-
-  if(dripY > cH*0.22){
-    phase='done';
-    spawnConfetti();
-    setTimeout(showWinnerPanel, 600);
-  }
 }
 
-function drawIceCream(){
-  const nx=cW*NOZZLE.x, ny=cH*NOZZLE.y;
-  const maxR=cW*0.07, scoopY=ny+cH*0.12, coneH=cH*0.10;
+function drawFinalCream(){
+  const n=nozzle();
+  const maxR=cW*0.072;
+  const scoopCY=n.y+38;
   ctx.save();
   ctx.fillStyle='#FFFDE7';
-  ctx.beginPath(); ctx.arc(nx,scoopY,maxR,Math.PI,0); ctx.fill();
-  ctx.strokeStyle='#F0E070'; ctx.lineWidth=1.5;
-  for(let s=0;s<3;s++){ ctx.beginPath(); ctx.arc(nx,scoopY,maxR*(0.4+s*0.2),Math.PI*0.1,Math.PI*0.9); ctx.stroke(); }
+  ctx.beginPath();ctx.arc(n.x,scoopCY,maxR,Math.PI,0,false);ctx.fill();
+  ctx.strokeStyle='#EDE08A';ctx.lineWidth=1.2;
+  for(let s=0;s<3;s++){ctx.beginPath();ctx.arc(n.x,scoopCY,maxR*(0.35+s*0.22),Math.PI*0.15,Math.PI*0.85);ctx.stroke();}
   ctx.fillStyle='#1a2a3a';
-  ctx.font=`bold ${Math.round(maxR*0.42)}px Heebo,Arial`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  const n=winnerName.length>8?winnerName.slice(0,8)+'…':winnerName;
-  ctx.fillText(n,nx,scoopY-maxR*0.1);
+  const fs=Math.max(Math.round(maxR*0.38),9);
+  ctx.font=`bold ${fs}px Heebo,Arial`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const s=winnerName.length>7?winnerName.slice(0,7)+'…':winnerName;
+  ctx.fillText(s,n.x,scoopCY-maxR*0.08);
   ctx.fillStyle='#D4A84B';
-  ctx.beginPath(); ctx.moveTo(nx,scoopY+maxR+coneH); ctx.lineTo(nx-maxR*0.95,scoopY+maxR); ctx.lineTo(nx+maxR*0.95,scoopY+maxR); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='#B8843A'; ctx.lineWidth=1;
-  for(let l=1;l<4;l++){ const ly=scoopY+maxR+coneH*(l/4),lw=maxR*0.95*(1-l/4); ctx.beginPath(); ctx.moveTo(nx-lw,ly); ctx.lineTo(nx+lw,ly); ctx.stroke(); }
+  const coneBase=scoopCY+maxR;
+  ctx.beginPath();
+  ctx.moveTo(n.x,coneBase+cH*0.10);
+  ctx.lineTo(n.x-maxR*0.92,coneBase);
+  ctx.lineTo(n.x+maxR*0.92,coneBase);
+  ctx.closePath();ctx.fill();
   ctx.restore();
 }
 
-/* ── CONFETTI ───────────────────────────────────── */
+/* ── Confetti ── */
 function spawnConfetti(){
-  const nx=cW*NOZZLE.x, ny=cH*(NOZZLE.y+0.12);
+  const n=nozzle();
   confetti=[];
-  for(let i=0;i<55;i++){
+  for(let i=0;i<60;i++){
     confetti.push({
-      x:nx+(Math.random()-0.5)*30, y:ny,
-      vx:(Math.random()-0.5)*5, vy:-(Math.random()*6+2),
-      w:6+Math.random()*7, h:3+Math.random()*5,
-      color:BALL_COLORS[Math.floor(Math.random()*BALL_COLORS.length)],
-      angle:Math.random()*Math.PI*2, spin:(Math.random()-0.5)*0.2,
-      gravity:0.18, life:1
+      x:n.x+(Math.random()-0.5)*20,y:n.y+30,
+      vx:(Math.random()-0.5)*5,vy:-(Math.random()*6+3),
+      w:5+Math.random()*7,h:3+Math.random()*5,
+      color:COLORS[Math.floor(Math.random()*COLORS.length)],
+      angle:Math.random()*Math.PI*2,spin:(Math.random()-0.5)*0.18,
+      gravity:0.16,life:1
     });
   }
 }
 function drawConfetti(){
-  confetti.forEach((c,i)=>{
-    c.x+=c.vx; c.y+=c.vy; c.vy+=c.gravity; c.angle+=c.spin; c.life-=0.012;
-    ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.angle);
-    ctx.globalAlpha=Math.max(0,c.life); ctx.fillStyle=c.color;
-    ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h); ctx.restore();
+  confetti.forEach(c=>{
+    c.x+=c.vx;c.y+=c.vy;c.vy+=c.gravity;c.angle+=c.spin;c.life-=0.011;
+    ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.angle);
+    ctx.globalAlpha=Math.max(0,c.life);ctx.fillStyle=c.color;
+    ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);ctx.restore();
   });
   confetti=confetti.filter(c=>c.life>0);
 }
 
-/* ── HANDLE UI ──────────────────────────────────── */
-function showHandleHint(){
-  document.getElementById('handle-hint').style.display='';
-  document.getElementById('pulse-ring').style.display='';
-}
-function hideHandleHint(){
-  document.getElementById('handle-hint').style.display='none';
-  document.getElementById('pulse-ring').style.display='none';
-}
-
-/* ── LOTTERY FLOW ───────────────────────────────── */
-let running=false;
+/* ─── LOTTERY FLOW ──────────────────────────────── */
 function startLottery(){
-  if(running||!namesArr.length) return;
+  if(running||!namesArr.length)return;
   running=true;
-  hideHandleHint();
+  document.getElementById('handle-hint').style.display='none';
+  document.getElementById('handle-pulse').style.display='none';
   document.getElementById('btn-run').disabled=true;
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> מגריל...';
-  document.getElementById('winner-panel').style.display='none';
   document.getElementById('btn-reset').style.display='none';
   /* pick winner */
   const valid=rows.filter(r=>r[colN]);
   winnerRow=valid[Math.floor(Math.random()*valid.length)];
   winnerName=String(winnerRow[colN]||'');
-  /* mix for 4s then slow */
+  /* animate */
   phase='mixing'; mixSpeed=0;
-  setTimeout(()=>{ phase='slowdown'; }, 4000);
+  if(!animId) animId=requestAnimationFrame(loop);
+  setTimeout(()=>{if(phase==='mixing')phase='slowdown';},4500);
 }
 
-function showWinnerPanel(){
-  document.getElementById('wp-name').textContent=winnerName;
-  document.getElementById('wp-date').textContent=fmtDate(winnerRow[colD])||'—';
-  document.getElementById('wp-inv').textContent=winnerRow[colI]||'—';
-  document.getElementById('winner-panel').style.display='';
+function openModal(){
+  document.getElementById('modal-name').textContent=winnerName;
+  document.getElementById('modal-date').textContent=fmtDate(winnerRow[colD])||'—';
+  document.getElementById('modal-inv').textContent=winnerRow[colI]||'—';
+  document.getElementById('modal').classList.add('show');
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-shuffle"></i> הגרל!';
   document.getElementById('btn-reset').style.display='flex';
   running=false;
 }
 
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+}
+
 function resetAll(){
-  running=false; phase='idle'; mixAngle=0; mixSpeed=0; dripY=0;
-  document.getElementById('winner-panel').style.display='none';
+  running=false;phase='idle';mixAngle=0;mixSpeed=0;dripProgress=0;confetti=[];
+  document.getElementById('modal').classList.remove('show');
   document.getElementById('btn-reset').style.display='none';
   document.getElementById('btn-run').disabled=false;
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-shuffle"></i> הגרל!';
-  showHandleHint();
-  confetti=[];
+  document.getElementById('handle-hint').style.display='';
+  document.getElementById('handle-pulse').style.display='';
   initBalls();
 }
 
-function stopAnim(){ if(animId){cancelAnimationFrame(animId);animId=null;} }
-function clearCanvas(){ ctx.clearRect(0,0,cW,cH); balls=[]; confetti=[]; phase='idle'; }
+function stopAnim(){if(animId){cancelAnimationFrame(animId);animId=null;}}
+function clearCanvas(){ctx.clearRect(0,0,cW,cH);balls=[];confetti=[];phase='idle';}
 </script>
 </body>
 </html>
