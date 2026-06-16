@@ -230,12 +230,12 @@ const ctx=canvas.getContext('2d');
  Nozzle output (bottom of white disc): x=25.5% y=41.5%
 */
 const REL={
-  bowl:{cx:0.619, cy:0.560, rx:0.108, ry:0.118},
+  bowl:{cx:0.640, cy:0.580, rx:0.128, ry:0.120}
 };
 
 const COLORS=['#0076DA','#ffcc00','#e84c3d','#28a745','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#ff5722'];
 let balls=[], animId=null, phase='idle';
-let mixAngle=0, mixSpeed=0, dripP=0, winnerName='';
+let mixAngle=0, mixSpeed=0, winnerName='';
 let confetti=[], cW=0, cH=0;
 
 function syncCanvas(){
@@ -248,7 +248,6 @@ if(machineImg.complete&&machineImg.naturalWidth>0) setTimeout(syncCanvas,50);
 window.addEventListener('resize',()=>{ syncCanvas(); });
 
 function getBowl(){ return {cx:cW*REL.bowl.cx, cy:cH*REL.bowl.cy, rx:cW*REL.bowl.rx, ry:cH*REL.bowl.ry}; }
-function getNozzle(){ return {x:cW*REL.nozzle.x, y:cH*REL.nozzle.y}; }
 
 /* ─── BALLS ─────────────────────────────── */
 function initBalls(){
@@ -264,14 +263,14 @@ function initBalls(){
       y:cy+Math.sin(a)*ry*dist,
       vx:(Math.random()-0.5)*1.2,
       vy:(Math.random()-0.5)*1.2,
-      r:Math.min(cW,cH)*0.038,
+      r:Math.min(cW,cH)*0.026,
       color:COLORS[i%COLORS.length],
       label:namesArr[i%namesArr.length],
       angle:Math.random()*Math.PI*2,
       spin:(Math.random()-0.5)*0.08
     });
   }
-  phase='idle'; dripP=0; mixAngle=0; mixSpeed=0; confetti=[];
+  phase='idle';; mixAngle=0; mixSpeed=0; confetti=[];
   stopAnim();
   animId=requestAnimationFrame(loop);
 }
@@ -295,12 +294,7 @@ function loop(){
     drawBowlGlow(b,0.07);
     updateBalls(b);
     drawBalls(b);
-    if(mixSpeed<0.001){ phase='drip'; dripP=0; }
-  } else if(phase==='drip'){
-    drawBowlGlow(b,0.04);
-    drawBalls(b);
-    dripP+=2.0;
-    if(dripP>=120){ phase='done'; spawnConfetti(); setTimeout(openModal,500); }
+    if(mixSpeed<0.001){ phase='done'; spawnConfetti(); setTimeout(openModal,800); }
   } else if(phase==='done'){
     drawBalls(b);
     if(confetti.length>0) drawConfetti();
@@ -368,15 +362,6 @@ function drawBalls(b){
   ctx.restore();
 }
 
-  ctx.fillStyle='#1a2a3a';
-  const fs=Math.max(Math.round(maxR*0.36),8);
-  ctx.font=`bold ${fs}px Heebo,Arial`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  const s=winnerName.length>7?winnerName.slice(0,7)+'…':winnerName;
-  ctx.fillText(s,n.x,scoopCY-maxR*0.1);
-  ctx.restore();
-}
-
 /* ── confetti ── */
 function spawnConfetti(){
   const b=getBowl();
@@ -433,7 +418,7 @@ function openModal(){
 function closeModal(){ document.getElementById('modal').classList.remove('show'); }
 
 function resetAll(){
-  running=false; phase='idle'; mixAngle=0; mixSpeed=0; dripP=0; confetti=[];
+  running=false; phase='idle'; mixAngle=0; mixSpeed=0;; confetti=[];
   closeModal();
   document.getElementById('btn-reset').style.display='none';
   document.getElementById('btn-run').disabled=false;
