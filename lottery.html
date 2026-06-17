@@ -37,15 +37,25 @@ header{width:100%;background:var(--blue);box-shadow:0 3px 16px rgba(0,0,0,.15);}
 .file-ok button{font-size:12px;font-family:'Heebo',Arial,sans-serif;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:5px 14px;cursor:pointer;color:var(--muted);}
 .divider{height:3px;background:linear-gradient(to left,var(--yellow),var(--blue));border-radius:2px;margin:4px 0 18px;}
 
-/* WHEEL STAGE */
-.wheel-stage{position:relative;display:flex;flex-direction:column;align-items:center;margin-bottom:14px;}
-#wheel-canvas{display:block;cursor:pointer;}
+/* STAGE — wheel on top, machine below */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:14px;}
+
+/* Wheel canvas */
+#wheel-canvas{display:block;border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,0.13);}
+
+/* Machine image area */
+.machine-row{position:relative;width:100%;max-width:420px;margin-top:-12px;}
+.machine-row img{width:100%;display:block;}
+/* cream drip canvas overlaid on machine */
+#cream-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+/* Suspense banner */
 .suspense-box{
   min-height:44px;display:flex;align-items:center;justify-content:center;
   background:var(--text);color:#fff;border-radius:12px;
   font-size:16px;font-weight:700;padding:10px 20px;margin-top:10px;
   width:100%;text-align:center;letter-spacing:0.3px;
-  opacity:0;transition:opacity .3s;
+  opacity:0;transition:opacity .3s;pointer-events:none;
 }
 .suspense-box.show{opacity:1;}
 
@@ -111,8 +121,18 @@ footer span{color:var(--blue);font-weight:700;}
 
       <div class="divider"></div>
 
-      <div class="wheel-stage">
+      <div class="stage" id="stage">
+        <!-- Wheel of fortune -->
         <canvas id="wheel-canvas"></canvas>
+
+        <!-- Machine image with cream overlay -->
+        <div class="machine-row" id="machine-row">
+          <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/nc701_ninja"
+               alt="Ninja NC701" id="machine-img">
+          <canvas id="cream-canvas"></canvas>
+        </div>
+
+        <!-- Suspense banner -->
         <div class="suspense-box" id="suspense-box"></div>
       </div>
 
@@ -192,190 +212,145 @@ function clearFile(){
   document.getElementById('hcount').textContent='';
   document.getElementById('btn-run').disabled=true;
   document.getElementById('btn-reset').style.display='none';
-  hideSuspense();
-  stopAnim();
+  hideSuspense(); stopAnim(); clearCream();
   drawIdleWheel();
 }
 
 /* ─── WHEEL ─── */
-const canvas = document.getElementById('wheel-canvas');
-const ctx = canvas.getContext('2d');
+const wCanvas = document.getElementById('wheel-canvas');
+const wCtx = wCanvas.getContext('2d');
+const COLORS=['#0076DA','#ffcc00','#e84c3d','#28a745','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#ff5722','#3f51b5','#8bc34a'];
 
-const COLORS = [
-  '#0076DA','#ffcc00','#e84c3d','#28a745','#9b59b6',
-  '#e67e22','#1abc9c','#e91e63','#00bcd4','#ff5722',
-  '#3f51b5','#8bc34a'
-];
+let wW=0, wR=0, wCx=0, wCy=0;
+let wheelAngle=0, wheelSpeed=0, animId=null, phase='idle';
+let winnerIdx=-1, confetti=[];
 
-let wheelAngle = 0, wheelSpeed = 0, animId = null, phase = 'idle';
-let winnerIdx = -1, confetti = [];
-let W = 0, R = 0, cx = 0, cy = 0;
-
-function setupCanvas(){
-  const wrap = document.querySelector('.wheel-stage');
-  W = Math.min(wrap.offsetWidth, 560);
-  canvas.width = W; canvas.height = W;
-  R = W * 0.42;
-  cx = W / 2; cy = W / 2;
+function setupWheel(){
+  const wrap=document.querySelector('.cbody');
+  wW=Math.min(wrap.offsetWidth-36, 520);
+  wCanvas.width=wW; wCanvas.height=wW;
+  wR=wW*0.42; wCx=wW/2; wCy=wW/2;
 }
 
 function initWheel(){
-  setupCanvas();
-  phase = 'idle'; wheelAngle = 0; wheelSpeed = 0; confetti = []; winnerIdx = -1;
-  stopAnim();
+  setupWheel();
+  phase='idle'; wheelAngle=0; wheelSpeed=0; confetti=[]; winnerIdx=-1;
+  stopAnim(); clearCream();
   drawWheel(wheelAngle);
 }
 
 function drawIdleWheel(){
-  setupCanvas();
-  ctx.clearRect(0,0,W,W);
-  drawEmptyWheel();
-}
-
-function drawEmptyWheel(){
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
-  ctx.fillStyle='#e8eef2'; ctx.fill();
-  ctx.strokeStyle='var(--border)'; ctx.lineWidth=3; ctx.stroke();
-  ctx.fillStyle='var(--muted)'; ctx.font=`bold ${W*0.04}px Heebo,Arial`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('העלה קובץ כדי להתחיל',cx,cy);
-  ctx.restore();
+  setupWheel();
+  wCtx.clearRect(0,0,wW,wW);
+  wCtx.save();
+  wCtx.beginPath(); wCtx.arc(wCx,wCy,wR,0,Math.PI*2);
+  wCtx.fillStyle='#e8eef2'; wCtx.fill();
+  wCtx.strokeStyle='#d0d8e0'; wCtx.lineWidth=3; wCtx.stroke();
+  wCtx.fillStyle='var(--muted)';
+  wCtx.font=`bold ${wW*0.038}px Heebo,Arial`;
+  wCtx.textAlign='center'; wCtx.textBaseline='middle';
+  wCtx.fillText('העלה קובץ להתחלה',wCx,wCy);
+  wCtx.restore();
   drawPointer();
 }
 
 function drawWheel(angle){
-  ctx.clearRect(0,0,W,W);
-  if(!namesArr.length){ drawEmptyWheel(); return; }
+  wCtx.clearRect(0,0,wW,wW);
+  if(!namesArr.length){drawIdleWheel();return;}
+  const n=namesArr.length, sa=(Math.PI*2)/n;
 
-  const n = namesArr.length;
-  const sliceAngle = (Math.PI*2)/n;
+  /* glow */
+  const grd=wCtx.createRadialGradient(wCx,wCy,wR*0.9,wCx,wCy,wR*1.05);
+  grd.addColorStop(0,'rgba(0,118,218,0)'); grd.addColorStop(1,'rgba(0,118,218,0.15)');
+  wCtx.beginPath(); wCtx.arc(wCx,wCy,wR*1.05,0,Math.PI*2);
+  wCtx.fillStyle=grd; wCtx.fill();
 
-  /* outer glow ring */
-  ctx.save();
-  const grd = ctx.createRadialGradient(cx,cy,R*0.88,cx,cy,R*1.02);
-  grd.addColorStop(0,'rgba(0,118,218,0)');
-  grd.addColorStop(1,'rgba(0,118,218,0.18)');
-  ctx.beginPath(); ctx.arc(cx,cy,R*1.02,0,Math.PI*2);
-  ctx.fillStyle=grd; ctx.fill();
-  ctx.restore();
-
-  /* slices */
   for(let i=0;i<n;i++){
-    const start = angle + i*sliceAngle;
-    const end   = start + sliceAngle;
-    const isWinner = (phase==='done'||phase==='slowdown') && i===winnerIdx;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,R,start,end);
-    ctx.closePath();
-    ctx.fillStyle = isWinner ? '#ffcc00' : COLORS[i%COLORS.length];
-    ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.6)';
-    ctx.lineWidth=2; ctx.stroke();
-    ctx.restore();
-
-    /* text */
-    ctx.save();
-    const midAngle = start + sliceAngle/2;
-    const textR = R * 0.67;
-    const tx = cx + Math.cos(midAngle)*textR;
-    const ty = cy + Math.sin(midAngle)*textR;
-    ctx.translate(tx,ty);
-    ctx.rotate(midAngle + Math.PI/2);
-    ctx.fillStyle = isWinner ? '#1a2a3a' : '#fff';
-    const fs = Math.max(Math.round(W*0.028 - n*0.4), 9);
-    ctx.font=`bold ${fs}px Heebo,Arial`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    const lbl = namesArr[i].length>10 ? namesArr[i].slice(0,9)+'…' : namesArr[i];
-    ctx.fillText(lbl,0,0);
-    ctx.restore();
+    const s=angle+i*sa, e=s+sa;
+    const isW=(phase==='done'||phase==='braking')&&i===winnerIdx;
+    wCtx.save();
+    wCtx.beginPath(); wCtx.moveTo(wCx,wCy); wCtx.arc(wCx,wCy,wR,s,e); wCtx.closePath();
+    wCtx.fillStyle=isW?'#ffcc00':COLORS[i%COLORS.length]; wCtx.fill();
+    wCtx.strokeStyle='rgba(255,255,255,0.55)'; wCtx.lineWidth=2; wCtx.stroke();
+    wCtx.restore();
+    /* label */
+    wCtx.save();
+    const mid=s+sa/2, tr=wR*0.67;
+    wCtx.translate(wCx+Math.cos(mid)*tr, wCy+Math.sin(mid)*tr);
+    wCtx.rotate(mid+Math.PI/2);
+    wCtx.fillStyle=isW?'#1a2a3a':'#fff';
+    const fs=Math.max(Math.round(wW*0.028-n*0.35),9);
+    wCtx.font=`bold ${fs}px Heebo,Arial`;
+    wCtx.textAlign='center'; wCtx.textBaseline='middle';
+    const lbl=namesArr[i].length>10?namesArr[i].slice(0,9)+'…':namesArr[i];
+    wCtx.fillText(lbl,0,0);
+    wCtx.restore();
   }
-
-  /* center hub */
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx,cy,R*0.13,0,Math.PI*2);
-  const hubGrd = ctx.createRadialGradient(cx-R*0.04,cy-R*0.04,0,cx,cy,R*0.13);
-  hubGrd.addColorStop(0,'#ffffff'); hubGrd.addColorStop(1,'#d0dce8');
-  ctx.fillStyle=hubGrd; ctx.fill();
-  ctx.strokeStyle='#a0b4c0'; ctx.lineWidth=2; ctx.stroke();
-  ctx.fillStyle='#0076DA'; ctx.font=`bold ${Math.round(R*0.09)}px Arial`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('★',cx,cy);
-  ctx.restore();
+  /* hub */
+  wCtx.save();
+  wCtx.beginPath(); wCtx.arc(wCx,wCy,wR*0.13,0,Math.PI*2);
+  const hg=wCtx.createRadialGradient(wCx-wR*0.04,wCy-wR*0.04,0,wCx,wCy,wR*0.13);
+  hg.addColorStop(0,'#fff'); hg.addColorStop(1,'#ccd8e0');
+  wCtx.fillStyle=hg; wCtx.fill();
+  wCtx.strokeStyle='#a0b4c0'; wCtx.lineWidth=2; wCtx.stroke();
+  wCtx.fillStyle='#0076DA'; wCtx.font=`bold ${Math.round(wR*0.09)}px Arial`;
+  wCtx.textAlign='center'; wCtx.textBaseline='middle';
+  wCtx.fillText('★',wCx,wCy);
+  wCtx.restore();
 
   drawPointer();
   if(confetti.length>0) drawConfetti();
 }
 
 function drawPointer(){
-  /* triangle pointer at top center pointing down into wheel */
-  const pw = R*0.07, ph = R*0.14;
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cx, cy-R+ph);
-  ctx.lineTo(cx-pw, cy-R-4);
-  ctx.lineTo(cx+pw, cy-R-4);
-  ctx.closePath();
-  ctx.fillStyle='#e84c3d';
-  ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
-  ctx.restore();
+  const pw=wR*0.07, ph=wR*0.14;
+  wCtx.save();
+  wCtx.beginPath();
+  wCtx.moveTo(wCx,wCy-wR+ph); wCtx.lineTo(wCx-pw,wCy-wR-5); wCtx.lineTo(wCx+pw,wCy-wR-5);
+  wCtx.closePath();
+  wCtx.fillStyle='#e84c3d'; wCtx.fill();
+  wCtx.strokeStyle='#fff'; wCtx.lineWidth=2; wCtx.stroke();
+  wCtx.restore();
 }
 
-/* ─── ANIMATION LOOP ─── */
+/* ─── WHEEL LOOP ─── */
 function loop(){
   if(phase==='spinning'){
-    wheelAngle += wheelSpeed;
+    wheelAngle+=wheelSpeed;
     drawWheel(wheelAngle);
   } else if(phase==='braking'){
-    wheelSpeed *= 0.985;
-    wheelAngle += wheelSpeed;
+    wheelSpeed*=0.985;
+    wheelAngle+=wheelSpeed;
     drawWheel(wheelAngle);
-    if(wheelSpeed < 0.003){
-      /* snap to winner */
-      snapToWinner();
-      return;
-    }
+    if(wheelSpeed<0.003){ snapToWinner(); return; }
   } else if(phase==='done'){
     drawWheel(wheelAngle);
     if(confetti.length>0) drawConfetti();
-    if(confetti.length===0){ animId=null; return; }
+    if(confetti.length===0){animId=null;return;}
   }
-  animId = requestAnimationFrame(loop);
+  animId=requestAnimationFrame(loop);
 }
 
 function snapToWinner(){
-  /* rotate so winnerIdx slice faces the pointer (top = -PI/2) */
-  const n = namesArr.length;
-  const sliceAngle = (Math.PI*2)/n;
-  const targetAngle = -Math.PI/2 - (winnerIdx+0.5)*sliceAngle;
-  /* normalize */
-  let cur = wheelAngle % (Math.PI*2);
-  let target = ((targetAngle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-  cur = ((cur % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-  let diff = target - cur;
-  if(diff < 0) diff += Math.PI*2;
-  const snapDuration = 600;
-  const startAngle = wheelAngle;
-  const endAngle = wheelAngle + diff;
-  const start = performance.now();
-  function snapFrame(now){
-    const t = Math.min((now-start)/snapDuration,1);
-    const ease = 1-Math.pow(1-t,3);
-    wheelAngle = startAngle + diff*ease;
-    drawWheel(wheelAngle);
-    if(t<1){ requestAnimationFrame(snapFrame); }
+  const n=namesArr.length, sa=(Math.PI*2)/n;
+  const target=-Math.PI/2-(winnerIdx+0.5)*sa;
+  let cur=((wheelAngle%(Math.PI*2))+(Math.PI*2))%(Math.PI*2);
+  let tgt=((target%(Math.PI*2))+(Math.PI*2))%(Math.PI*2);
+  let diff=tgt-cur; if(diff<0)diff+=Math.PI*2;
+  const start0=wheelAngle, dur=700, t0=performance.now();
+  function sf(now){
+    const t=Math.min((now-t0)/dur,1), e=1-Math.pow(1-t,3);
+    wheelAngle=start0+diff*e; drawWheel(wheelAngle);
+    if(t<1){requestAnimationFrame(sf);}
     else{
-      phase='done';
-      spawnConfetti();
-      setTimeout(openModal,1000);
+      phase='done'; spawnConfetti();
       animId=requestAnimationFrame(loop);
+      /* trigger cream animation on machine */
+      startCream();
+      setTimeout(openModal,2200);
     }
   }
-  requestAnimationFrame(snapFrame);
+  requestAnimationFrame(sf);
 }
 
 /* ─── CONFETTI ─── */
@@ -383,27 +358,101 @@ function spawnConfetti(){
   confetti=[];
   for(let i=0;i<70;i++){
     confetti.push({
-      x:cx+(Math.random()-0.5)*R, y:cy+(Math.random()-0.5)*R,
-      vx:(Math.random()-0.5)*6, vy:-(Math.random()*7+2),
-      w:6+Math.random()*8, h:3+Math.random()*5,
+      x:wCx+(Math.random()-0.5)*wR,y:wCy+(Math.random()-0.5)*wR,
+      vx:(Math.random()-0.5)*6,vy:-(Math.random()*7+2),
+      w:6+Math.random()*8,h:3+Math.random()*5,
       color:COLORS[Math.floor(Math.random()*COLORS.length)],
-      angle:Math.random()*Math.PI*2, spin:(Math.random()-0.5)*0.2,
-      gravity:0.18, life:1
+      angle:Math.random()*Math.PI*2,spin:(Math.random()-0.5)*0.2,
+      gravity:0.18,life:1
     });
   }
 }
 function drawConfetti(){
   confetti.forEach(c=>{
-    c.x+=c.vx; c.y+=c.vy; c.vy+=c.gravity; c.angle+=c.spin; c.life-=0.011;
-    ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.angle);
-    ctx.globalAlpha=Math.max(0,c.life); ctx.fillStyle=c.color;
-    ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h); ctx.restore();
+    c.x+=c.vx;c.y+=c.vy;c.vy+=c.gravity;c.angle+=c.spin;c.life-=0.011;
+    wCtx.save();wCtx.translate(c.x,c.y);wCtx.rotate(c.angle);
+    wCtx.globalAlpha=Math.max(0,c.life);wCtx.fillStyle=c.color;
+    wCtx.fillRect(-c.w/2,-c.h/2,c.w,c.h);wCtx.restore();
   });
   confetti=confetti.filter(c=>c.life>0);
 }
 
+/* ─── CREAM ANIMATION ON MACHINE ─── */
+const machineImg=document.getElementById('machine-img');
+const cCanvas=document.getElementById('cream-canvas');
+const cCtx=cCanvas.getContext('2d');
+let cW=0,cH=0,creamP=0,creamAnim=null;
+
+/* Nozzle output position (relative to machine image): x=25.5%, y=41% */
+const NOZZLE={x:0.258,y:0.412};
+
+function syncCreamCanvas(){
+  const r=machineImg.getBoundingClientRect();
+  cW=r.width; cH=r.height;
+  cCanvas.width=cW; cCanvas.height=cH;
+}
+machineImg.addEventListener('load',syncCreamCanvas);
+if(machineImg.complete&&machineImg.naturalWidth>0) setTimeout(syncCreamCanvas,100);
+
+function clearCream(){
+  if(creamAnim){cancelAnimationFrame(creamAnim);creamAnim=null;}
+  cCtx.clearRect(0,0,cW,cH);
+  creamP=0;
+}
+
+function startCream(){
+  syncCreamCanvas();
+  creamP=0;
+  if(creamAnim)cancelAnimationFrame(creamAnim);
+  function frame(){
+    creamP+=1.6;
+    drawCream();
+    if(creamP<110) creamAnim=requestAnimationFrame(frame);
+  }
+  creamAnim=requestAnimationFrame(frame);
+}
+
+function drawCream(){
+  cCtx.clearRect(0,0,cW,cH);
+  const nx=cW*NOZZLE.x, ny=cH*NOZZLE.y;
+  const p=creamP;
+  cCtx.save();
+
+  /* stream */
+  const streamH=Math.min(p*0.38,cH*0.07);
+  if(streamH>1){
+    cCtx.fillStyle='#FFFDE7';
+    cCtx.beginPath();
+    cCtx.roundRect(nx-5,ny,10,streamH,[0,0,5,5]);
+    cCtx.fill();
+  }
+
+  /* growing swirl scoop */
+  if(p>16){
+    const scy=ny+Math.min(p*0.38,cH*0.07);
+    const maxR=cW*0.072;
+    const r=Math.min((p-16)/65*maxR,maxR);
+    /* scoop */
+    cCtx.fillStyle='#FFFDE7';
+    cCtx.beginPath(); cCtx.arc(nx,scy,r,Math.PI,0,false); cCtx.fill();
+    /* swirls */
+    cCtx.strokeStyle='#EDE080'; cCtx.lineWidth=1.4;
+    for(let s=0;s<3;s++){cCtx.beginPath();cCtx.arc(nx,scy,r*(0.3+s*0.24),Math.PI*0.12,Math.PI*0.88);cCtx.stroke();}
+    /* winner name */
+    if(r>maxR*0.55){
+      const wname=namesArr[winnerIdx]||'';
+      cCtx.fillStyle='#1a2a3a';
+      const fs=Math.max(Math.round(r*0.35),8);
+      cCtx.font=`bold ${fs}px Heebo,Arial`;
+      cCtx.textAlign='center'; cCtx.textBaseline='middle';
+      cCtx.fillText(wname.length>7?wname.slice(0,7)+'…':wname, nx, scy-r*0.08);
+    }
+  }
+  cCtx.restore();
+}
+
 /* ─── SUSPENSE ─── */
-const SUSPENSE = [
+const SUSPENSE=[
   {delay:3500,  msg:'🌀 מי יהיה הזוכה הפעם?'},
   {delay:6500,  msg:'😮 זה יכול להיות כל אחד!'},
   {delay:10000, msg:'🔥 המתח עולה... עוד רגע!'},
@@ -411,18 +460,15 @@ const SUSPENSE = [
   {delay:16500, msg:'🏆 והזוכה שלנו הוא...!'},
 ];
 let suspenseTimers=[];
-
 function showSuspense(msg){
   const el=document.getElementById('suspense-box');
-  el.textContent=msg;
-  el.classList.add('show');
-  /* flash the wheel border */
-  canvas.style.outline='3px solid #ffcc00';
-  setTimeout(()=>{ canvas.style.outline=''; },400);
+  el.textContent=msg; el.classList.add('show');
+  wCanvas.style.boxShadow='0 0 0 4px #ffcc00';
+  setTimeout(()=>{wCanvas.style.boxShadow='';},500);
 }
 function hideSuspense(){
-  document.getElementById('suspense-box').classList.remove('show');
-  document.getElementById('suspense-box').textContent='';
+  const el=document.getElementById('suspense-box');
+  el.classList.remove('show'); el.textContent='';
 }
 
 /* ─── LOTTERY FLOW ─── */
@@ -432,30 +478,20 @@ function startLottery(){
   document.getElementById('btn-run').disabled=true;
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> מגריל...';
   document.getElementById('btn-reset').style.display='none';
-  hideSuspense();
+  hideSuspense(); clearCream();
 
   const valid=rows.filter(r=>r[colN]);
   winnerRow=valid[Math.floor(Math.random()*valid.length)];
   winnerIdx=namesArr.indexOf(String(winnerRow[colN]||''));
   if(winnerIdx<0)winnerIdx=0;
 
-  /* spin fast */
-  phase='spinning';
-  wheelSpeed=0.28;
+  phase='spinning'; wheelSpeed=0.28;
   stopAnim();
   animId=requestAnimationFrame(loop);
 
-  /* schedule suspense messages */
   suspenseTimers=[];
-  SUSPENSE.forEach(s=>{
-    suspenseTimers.push(setTimeout(()=>showSuspense(s.msg), s.delay));
-  });
-
-  /* after ~18s start braking */
-  suspenseTimers.push(setTimeout(()=>{
-    phase='braking';
-    hideSuspense();
-  }, 18000));
+  SUSPENSE.forEach(s=>{ suspenseTimers.push(setTimeout(()=>showSuspense(s.msg),s.delay)); });
+  suspenseTimers.push(setTimeout(()=>{ phase='braking'; hideSuspense(); },18000));
 }
 
 function openModal(){
@@ -467,24 +503,22 @@ function openModal(){
   document.getElementById('btn-reset').style.display='flex';
   running=false;
 }
-function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function closeModal(){document.getElementById('modal').classList.remove('show');}
 
 function resetAll(){
   running=false; phase='idle'; wheelSpeed=0; confetti=[];
   suspenseTimers.forEach(t=>clearTimeout(t)); suspenseTimers=[];
-  hideSuspense();
-  closeModal();
+  hideSuspense(); closeModal(); clearCream();
   document.getElementById('btn-reset').style.display='none';
   document.getElementById('btn-run').disabled=namesArr.length===0;
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-shuffle"></i> הגרל!';
   initWheel();
 }
 
-function stopAnim(){ if(animId){cancelAnimationFrame(animId);animId=null;} }
+function stopAnim(){if(animId){cancelAnimationFrame(animId);animId=null;}}
 
-/* init on load */
-window.addEventListener('load',()=>{ setupCanvas(); drawIdleWheel(); });
-window.addEventListener('resize',()=>{ if(namesArr.length)initWheel(); else drawIdleWheel(); });
+window.addEventListener('load',()=>{setupWheel();drawIdleWheel();});
+window.addEventListener('resize',()=>{if(namesArr.length)initWheel();else drawIdleWheel();});
 </script>
 </body>
 </html>
