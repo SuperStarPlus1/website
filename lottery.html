@@ -13,7 +13,7 @@
 body{font-family:'Heebo',Arial,sans-serif;direction:rtl;background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center;}
 header{width:100%;background:var(--blue);box-shadow:0 3px 16px rgba(0,0,0,.15);}
 .hinner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;}
-.header-logo{height:70px;width:auto;object-fit:contain;}
+.header-logo{height:140px;width:auto;object-fit:contain;}
 .hbadge{background:var(--yellow);color:var(--text);font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;}
 .ystrip{width:100%;background:var(--yellow);text-align:center;padding:7px 16px;font-size:13px;font-weight:700;color:var(--text);}
 .main{width:100%;max-width:600px;padding:20px 14px 40px;}
@@ -131,6 +131,7 @@ footer span{color:var(--blue);font-weight:700;}
         <button id="handle-btn" disabled onclick="startLottery()" aria-label="לחץ על הידית להגרלה"></button>
         <div id="handle-pulse"></div>
         <div id="handle-hint">לחץ על הידית ▶</div>
+        <div id="suspense-overlay" style="display:none;position:absolute;bottom:2%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:#fff;font-family:Heebo,Arial,sans-serif;font-size:13px;font-weight:700;padding:7px 18px;border-radius:20px;white-space:nowrap;z-index:20;text-align:center;letter-spacing:0.3px;"></div>
       </div>
 
       <button class="btn-run" id="btn-run" disabled onclick="startLottery()">
@@ -282,6 +283,11 @@ function loop(){
   if(phase==='idle'){
     drawBowlGlow(b,0.07);
     drawBalls(b);
+  } else if(phase==='pause'){
+    mixSpeed=Math.max(mixSpeed-0.006,0.02);
+    updateBalls(b);
+    drawBowlGlow(b,0.10);
+    drawBalls(b);
   } else if(phase==='mixing'){
     mixSpeed=Math.min(mixSpeed+0.008,0.18);
     mixAngle+=mixSpeed;
@@ -401,6 +407,50 @@ function drawConfetti(){
 }
 
 /* ─── LOTTERY FLOW ─────────────────────── */
+const SUSPENSE_MSGS = [
+  '🎰 מתחיל לערבב...',
+  '🌀 מי יהיה הזוכה?',
+  '⏳ עוד רגע...',
+  '😮 זה יכול להיות כל אחד!',
+  '🔥 המתח עולה...',
+  '💫 כמעט שם...',
+  '🎯 הגלידה בוחרת...',
+  '😱 ו... ו...',
+  '🏆 הזוכה הוא...',
+];
+
+let suspenseTimer=null;
+
+function showSuspense(msg, duration, callback){
+  const el=document.getElementById('suspense-overlay');
+  el.textContent=msg;
+  el.style.display='';
+  /* pause balls */
+  phase='pause';
+  setTimeout(()=>{
+    el.style.display='none';
+    if(callback) callback();
+  }, duration);
+}
+
+function runDramaticSequence(){
+  /* 4 rounds of mix+pause, total ~20s */
+  const steps=[
+    {mix:3000, msg:'🌀 מי יהיה הזוכה הפעם?', pause:1800},
+    {mix:3000, msg:'😮 זה יכול להיות כל אחד!', pause:1800},
+    {mix:3200, msg:'🔥 המתח עולה... עוד רגע!', pause:2000},
+    {mix:2500, msg:'🏆 הגלידה בחרה... הזוכה הוא...', pause:2200},
+  ];
+  let idx=0;
+  function nextStep(){
+    if(idx>=steps.length){ phase='slowdown'; return; }
+    const s=steps[idx++];
+    phase='mixing';
+    setTimeout(()=>{ showSuspense(s.msg, s.pause, nextStep); }, s.mix);
+  }
+  nextStep();
+}
+
 function startLottery(){
   if(running||!namesArr.length)return;
   if(!cW){ syncCanvas(); }
@@ -410,12 +460,14 @@ function startLottery(){
   document.getElementById('btn-run').disabled=true;
   document.getElementById('btn-run').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> מגריל...';
   document.getElementById('btn-reset').style.display='none';
+  document.getElementById('suspense-overlay').style.display='none';
   const valid=rows.filter(r=>r[colN]);
   winnerRow=valid[Math.floor(Math.random()*valid.length)];
   winnerName=String(winnerRow[colN]||'');
   phase='mixing'; mixSpeed=0;
   if(!animId) animId=requestAnimationFrame(loop);
-  setTimeout(()=>{ if(phase==='mixing') phase='slowdown'; }, 4500);
+  /* short initial spin then dramatic sequence */
+  setTimeout(runDramaticSequence, 1200);
 }
 
 function openModal(){
@@ -431,7 +483,9 @@ function openModal(){
 function closeModal(){ document.getElementById('modal').classList.remove('show'); }
 
 function resetAll(){
-  running=false; phase='idle'; mixAngle=0; mixSpeed=0;; confetti=[];
+  running=false; phase='idle'; mixAngle=0; mixSpeed=0; confetti=[];
+  document.getElementById('suspense-overlay').style.display='none';
+  if(suspenseTimer){clearTimeout(suspenseTimer);suspenseTimer=null;}
   closeModal();
   document.getElementById('btn-reset').style.display='none';
   document.getElementById('btn-run').disabled=false;
