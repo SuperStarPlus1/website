@@ -171,7 +171,7 @@ tr.hot td{background:#FDF3F4}
       <table id="tblGroups" style="display:table">
         <thead><tr>
           <th>קבוצה</th><th>מלאי פתיחה</th><th>רכש ק"ג</th><th>מכר ק"ג</th><th>מלאי מחושב</th><th>מלאי בפועל</th>
-          <th>הפרש ק"ג</th><th>% פחת</th><th>שווי הפרש ₪</th><th>מכירות ₪</th><th>רווח גולמי ₪</th><th>% רווח</th>
+          <th>הפרש ק"ג</th><th>% פחת</th><th>שווי מלאי ₪</th><th>מכירות ₪</th><th>רווח גולמי ₪</th><th>% רווח</th>
         </tr></thead>
         <tbody id="tbodyGroups"></tbody>
       </table>
@@ -197,7 +197,6 @@ tr.hot td{background:#FDF3F4}
           <th onclick="sortBy('calc')">מלאי מחושב</th>
           <th onclick="sortBy('actual')">מלאי בפועל</th>
           <th onclick="sortBy('diff')">הפרש</th>
-          <th onclick="sortBy('diffVal')">שווי הפרש ₪</th>
           <th onclick="sortBy('stockVal')">שווי מלאי ₪</th>
           <th onclick="sortBy('buyAmt')">קניות ₪</th>
           <th onclick="sortBy('salesAmt')">מכירות ₪</th>
@@ -442,10 +441,10 @@ function buildGstrip(){
   for(const g of state.groups){
     const t=state.groupStats[g];
     if(!t||(Math.abs(t.opening)<0.01&&Math.abs(t.buyQty)<0.01&&Math.abs(t.salesQty)<0.01))continue;
-    html+=`<div class="gcard ${t.alert?'bad':(state.hasCount&&t.diffVal<=0?'ok':'')}">
+    html+=`<div class="gcard ${t.alert?'bad':(state.hasCount?'ok':'')}">
       <span class="g">${g} ${t.alert?'⚠':''}</span>
-      <span class="d">${state.hasCount?money(t.diffVal)+' · '+fmt(t.diff,1)+' ק"ג':'ללא ספירה'}</span>
-      <span class="m">${state.hasCount&&t.pct!=null?'פחת '+fmt(t.pct,1)+'% · ':''}נכנס ${fmt(t.opening+t.buyQty,0)} ק"ג · נמכר ${fmt(t.salesQty,0)} ק"ג</span>
+      <span class="d">שווי מלאי ${money(t.stockVal)}</span>
+      <span class="m">${state.hasCount?'פחת '+fmt(t.diff,1)+' ק"ג'+(t.pct!=null?' ('+fmt(t.pct,1)+'%)':'')+' · ':'ללא ספירה · '}נכנס ${fmt(t.opening+t.buyQty,0)} · נמכר ${fmt(t.salesQty,0)} ק"ג</span>
     </div>`;
   }
   $('gstrip').innerHTML=html;
@@ -461,7 +460,7 @@ function renderGroups(){
       <td class="num">${fmt(t.calc,1)}</td><td class="num">${fmt(t.actual,1)}</td>
       <td class="num ${t.diff>0?'neg':'pos'}">${fmt(t.diff,1)}</td>
       <td class="num ${t.alert?'neg':''}">${state.hasCount&&t.pct!=null?fmt(t.pct,1)+'%':'—'}</td>
-      <td class="num ${t.diffVal>0?'neg':'pos'}">${state.hasCount?money(t.diffVal):'—'}</td>
+      <td class="num">${money(t.stockVal)}</td>
       <td class="num">${money(t.salesAmt)}</td>
       <td class="num ${t.profit<0?'neg':''}">${money(t.profit)}</td>
       <td class="num">${t.profitPct!=null?fmt(t.profitPct,1)+'%':''}</td></tr>`;
@@ -471,7 +470,7 @@ function renderGroups(){
     <td class="num">${fmt(T.opening,1)}</td><td class="num">${fmt(T.buyQty,1)}</td><td class="num">${fmt(T.salesQty,1)}</td>
     <td class="num">${fmt(T.calc,1)}</td><td class="num">${fmt(T.actual,1)}</td>
     <td class="num">${fmt(T.diff,1)}</td><td class="num">${state.hasCount&&T.pct!=null?fmt(T.pct,1)+'%':'—'}</td>
-    <td class="num">${state.hasCount?money(T.diffVal):'—'}</td><td class="num">${money(T.salesAmt)}</td>
+    <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.salesAmt)}</td>
     <td class="num">${money(T.profit)}</td><td class="num">${T.profitPct!=null?fmt(T.profitPct,1)+'%':''}</td></tr>`;
   $('tbodyGroups').innerHTML=html;
 }
@@ -502,7 +501,7 @@ function render(){
       return cmp(a,b);
     });
     if(!gr.length)continue;
-    html+=`<tr class="grouphdr"><td colspan="14">🥩 ${g} (${gr.length} פריטים)</td></tr>`;
+    html+=`<tr class="grouphdr"><td colspan="13">🥩 ${g} (${gr.length} פריטים)</td></tr>`;
     for(const r of gr){
       const flags=r.flags.map(f=>`<span class="flag ${f.c}">${f.t}</span>`).join('');
       const pTag=r.purchased?'<span class="flag g">נרכש</span>':'';
@@ -517,7 +516,6 @@ function render(){
         <td class="num">${fmt(r.calc,2)}</td>
         <td class="num">${fmt(r.actual,2)}</td>
         <td class="num ${r.diff>0.01?'neg':r.diff<-0.01?'pos':''}">${state.hasCount?fmt(r.diff,2):''}</td>
-        <td class="num ${r.diffVal>0.01?'neg':r.diffVal<-0.01?'pos':''}">${state.hasCount?money(r.diffVal):''}</td>
         <td class="num">${money(r.stockVal)}</td>
         <td class="num">${money(r.buyAmt)}</td>
         <td class="num">${money(r.salesAmt)}</td>
@@ -528,16 +526,15 @@ function render(){
       <td class="num">${fmt(t.opening,1)}</td><td class="num">${fmt(t.buyQty,1)}</td><td class="num">${fmt(t.salesQty,1)}</td>
       <td class="num">${fmt(t.calc,1)}</td><td class="num">${fmt(t.actual,1)}</td>
       <td class="num ${t.diff>0?'neg':'pos'}">${state.hasCount?fmt(t.diff,1):''}</td>
-      <td class="num ${t.diffVal>0?'neg':'pos'}">${state.hasCount?money(t.diffVal):''}</td>
       <td class="num">${money(t.stockVal)}</td><td class="num">${money(t.buyAmt)}</td><td class="num">${money(t.salesAmt)}</td><td class="num">${money(t.profit)}</td></tr>`;
   }
   const T=totals(rows);
   html+=`<tr class="grand"><td colspan="3">סה"כ כללי${state.hasCount&&T.pct!=null?' · פחת '+fmt(T.pct,1)+'%':''}</td>
     <td class="num">${fmt(T.opening,1)}</td><td class="num">${fmt(T.buyQty,1)}</td><td class="num">${fmt(T.salesQty,1)}</td>
     <td class="num">${fmt(T.calc,1)}</td><td class="num">${fmt(T.actual,1)}</td>
-    <td class="num">${state.hasCount?fmt(T.diff,1):''}</td><td class="num">${state.hasCount?money(T.diffVal):''}</td>
+    <td class="num">${state.hasCount?fmt(T.diff,1):''}</td>
     <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.buyAmt)}</td><td class="num">${money(T.salesAmt)}</td><td class="num">${money(T.profit)}</td></tr>`;
-  $('tbody').innerHTML=html||'<tr><td colspan="14" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
+  $('tbody').innerHTML=html||'<tr><td colspan="13" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
 }
 
 /* ================= history ================= */
@@ -615,7 +612,7 @@ function exportXlsx(){
     ['','','ספירה אחרונה',dPrev,'','תחילת מכר',dPrev],
     ['','','ספירה נוכחית',dCur,'','סוף מכר',dSellEnd],
     [],
-    ['קבוצה','שם קבוצה','פריט','שם פריט','מחיר מכירה קטלוגי','מחיר קניה אחרון','מלאי פתיחה','רכש','מכר','מלאי מחושב','מלאי בפועל','הפרש','% פחת','שווי מלאי','שווי פתיחה','רכש','מכר','שווי מלאי בפועל','רווח גולמי','% רווח גולמי','שווי הפרש']];
+    ['קבוצה','שם קבוצה','פריט','שם פריט','מחיר מכירה קטלוגי','מחיר קניה אחרון','מלאי פתיחה','רכש','מכר','מלאי מחושב','מלאי בפועל','הפרש','% פחת','שווי מלאי','שווי פתיחה','רכש','מכר','שווי מלאי בפועל','רווח גולמי','% רווח גולמי']];
   let R=aoa.length+1;
   const groupTotalRows=[],itemRowIdx=[],exportRows=[],groupMeta=[];
   for(const g of state.groups){
@@ -634,8 +631,7 @@ function exportXlsx(){
         r.buyAmt||0,r.salesAmt||0,
         {f:`K${R}*F${R}*${V}`},
         {f:`Q${R}-(O${R}+P${R}-R${R})`},
-        {f:`IF(Q${R}>0,S${R}/Q${R},"")`},
-        {f:`L${R}*F${R}`}]);
+        {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
       exportRows.push({row:R,item:r});
       itemRowIdx.push(R);R++;
     }
@@ -644,8 +640,7 @@ function exportXlsx(){
       {f:`IF(G${R}+H${R}>0.001,L${R}/(G${R}+H${R}),"")`},
       S('N'),S('O'),S('P'),S('Q'),S('R'),
       {f:`Q${R}-(O${R}+P${R}-R${R})`},
-      {f:`IF(Q${R}>0,S${R}/Q${R},"")`},
-      S('U')]);
+      {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
     groupMeta.push({name:g,totalRow:R});
     groupTotalRows.push(R);R++;
   }
@@ -655,21 +650,20 @@ function exportXlsx(){
     aoa.push(['','סכום כולל','','','','',S('G'),S('H'),S('I'),S('J'),S('K'),S('L'),
       {f:`IF(G${R}+H${R}>0.001,L${R}/(G${R}+H${R}),"")`},
       S('N'),S('O'),S('P'),S('Q'),S('R'),S('S'),
-      {f:`IF(Q${R}>0,S${R}/Q${R},"")`},
-      S('U')]);
+      {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
     grandRow=R;R++;
     aoa.push(['','','','','','','','','','','','','','שווי מלאי כולל מע"מ',{f:`N${R-1}*${V}`}]);
   }
   const ws1=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
-  ws1['!cols']=[{wch:7},{wch:12},{wch:9},{wch:24},{wch:9},{wch:10},{wch:10},{wch:9},{wch:9},{wch:11},{wch:10},{wch:9},{wch:8},{wch:12},{wch:11},{wch:11},{wch:11},{wch:13},{wch:11},{wch:9},{wch:11}];
+  ws1['!cols']=[{wch:7},{wch:12},{wch:9},{wch:24},{wch:9},{wch:10},{wch:10},{wch:9},{wch:9},{wch:11},{wch:10},{wch:9},{wch:8},{wch:12},{wch:11},{wch:11},{wch:11},{wch:13},{wch:11},{wch:9}];
   for(let i=5;i<=R;i++){
     for(const c of ['M','T']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='0.0%';}
     const nCell=ws1['N'+i];if(nCell&&nCell.t!=='s')nCell.z='"₪" #,##0.00';
-    for(const c of ['O','P','Q','R','S','U']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='#,##0';}
+    for(const c of ['O','P','Q','R','S']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='#,##0';}
     for(const c of ['G','H','I','J','K','L']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='#,##0.00';}
   }
   try{
-    const COLS='ABCDEFGHIJKLMNOPQRSTU'.split('');
+    const COLS='ABCDEFGHIJKLMNOPQRST'.split('');
     for(const a of ['C1','F1','C2','F2'])styleCell(ws1,a,ST.dateLbl);
     for(const a of ['D1','G1','D2','G2'])styleCell(ws1,a,ST.dateVal,true);
     COLS.forEach(c=>styleCell(ws1,c+'4',ST.hdr));
@@ -702,7 +696,7 @@ function exportXlsx(){
       r.purchased?'כן':'לא',r.priceSrc,
       {f:`השוואה!F${row}`},{f:`השוואה!G${row}`},{f:`השוואה!H${row}`},{f:`השוואה!I${row}`},
       {f:`השוואה!J${row}`},{f:`השוואה!K${row}`},{f:`השוואה!L${row}`},{f:`השוואה!M${row}`},
-      {f:`השוואה!U${row}`},{f:`השוואה!N${row}`},
+      {f:`השוואה!L${row}*השוואה!F${row}`},{f:`השוואה!N${row}`},
       {f:`השוואה!P${row}`},{f:`השוואה!Q${row}`},{f:`השוואה!S${row}`},
       state.hasCount?'כן':'לא']);
   }
@@ -747,7 +741,7 @@ function exportXlsx(){
     {f:`IF(SUM(${NR('S')})>0,SUM(${NR('T')})/SUM(${NR('S')}),"")`},'','']);
   sm.push([]);
   sm.push(['דוח קבוצות — פחת עצמות, שאריות וחיתוך']);
-  sm.push(['קבוצה','מלאי פתיחה','רכש ק"ג','מכר ק"ג','מלאי מחושב','מלאי בפועל','הפרש ק"ג','% פחת','שווי הפרש ₪','מכירות ₪','רווח גולמי ₪','% רווח']);
+  sm.push(['קבוצה','מלאי פתיחה','רכש ק"ג','מכר ק"ג','מלאי מחושב','מלאי בפועל','הפרש ק"ג','% פחת','שווי מלאי ₪','מכירות ₪','רווח גולמי ₪','% רווח']);
   const gStart=sm.length+1;
   const GC='\'נתונים\'!$C$'+first+':$C$'+last;
   const SIF=(col,row)=>({f:`SUMIF(${GC},$A${row},'נתונים'!${col}$${first}:${col}$${last})`});
@@ -755,7 +749,7 @@ function exportXlsx(){
     const row=sm.length+1;
     sm.push([gm.name,SIF('I',row),SIF('J',row),SIF('K',row),SIF('L',row),SIF('M',row),SIF('N',row),
       {f:`IF(B${row}+C${row}>0.001,G${row}/(B${row}+C${row}),"")`},
-      SIF('P',row),SIF('S',row),SIF('T',row),
+      SIF('Q',row),SIF('S',row),SIF('T',row),
       {f:`IF(J${row}>0,K${row}/J${row},"")`}]);
   }
   const gEnd=sm.length,totRow=sm.length+1;
