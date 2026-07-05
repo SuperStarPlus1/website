@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>השוואת מלאי — מחלקת בשר | סופרסטאר פלוס</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"
+  onerror="var f=document.createElement('script');f.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';document.head.appendChild(f);"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --burgundy:#6E1423; --burgundy-dark:#4A0D18; --burgundy-light:#8C2B3D;
+  --bone:#FAF7F2; --card:#FFFFFF; --ink:#221B18; --muted:#8A7F78;
+  --line:#E9E2D8; --ok:#1E7A46; --warn:#B3721A; --bad:#B01E2E;
+  --ok-bg:#EAF5EE; --warn-bg:#FBF3E3; --bad-bg:#FBEAEC;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Heebo',sans-serif;background:var(--bone);color:var(--ink);min-height:100vh;font-size:15px}
+.wrap{max-width:1320px;margin:0 auto;padding:20px 16px 80px}
+
+header{background:linear-gradient(135deg,var(--burgundy-dark),var(--burgundy));color:#fff;padding:22px 16px;border-bottom:4px solid #C89B5A}
+header .wrap{padding:0 16px}
+.brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:clamp(22px,4vw,32px);letter-spacing:.5px}
+.brand .tag{font-size:13px;opacity:.85;font-weight:400;background:rgba(255,255,255,.12);padding:4px 12px;border-radius:99px}
+.brand img{height:44px;border-radius:8px;background:#fff;padding:4px}
+
+.uploads{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px 0}
+.upcard{background:var(--card);border:2px dashed var(--line);border-radius:var(--radius);padding:18px;cursor:pointer;transition:.2s;position:relative}
+.upcard:hover{border-color:var(--burgundy-light)}
+.upcard.loaded{border-style:solid;border-color:var(--ok);background:var(--ok-bg)}
+.upcard.err{border-color:var(--bad);background:var(--bad-bg)}
+.upcard .step{position:absolute;top:-11px;right:16px;background:var(--burgundy);color:#fff;font-weight:700;font-size:12px;padding:2px 12px;border-radius:99px}
+.upcard.optional .step{background:var(--muted)}
+.upcard h3{font-size:15.5px;font-weight:700;margin-bottom:4px}
+.upcard p{font-size:12px;color:var(--muted);line-height:1.5}
+.upcard .status{margin-top:10px;font-size:12.5px;font-weight:600}
+.upcard.loaded .status{color:var(--ok)}
+.upcard.err .status{color:var(--bad)}
+.upcard input{display:none}
+
+.controls{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:22px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;background:#fff}
+.btn{border:none;border-radius:10px;padding:11px 26px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-main{background:var(--burgundy);color:#fff}
+.btn-main:hover{background:var(--burgundy-light)}
+.btn-main:disabled{background:#C9BEB6;cursor:not-allowed}
+.btn-ghost{background:#fff;color:var(--burgundy);border:1.5px solid var(--burgundy)}
+.btn-ghost:hover{background:var(--bad-bg)}
+
+.banner{border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:600;margin-bottom:16px;display:none}
+.banner.warn{display:block;background:var(--warn-bg);color:var(--warn);border:1px solid #E8D3A8}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;border-top:4px solid var(--burgundy)}
+.kpi .lbl{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.kpi .val{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:26px;direction:ltr;text-align:right}
+.kpi .sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+.kpi.bad{border-top-color:var(--bad)} .kpi.bad .val{color:var(--bad)}
+.kpi.ok{border-top-color:var(--ok)} .kpi.ok .val{color:var(--ok)}
+.kpi.warn{border-top-color:var(--warn)} .kpi.warn .val{color:var(--warn)}
+
+.gstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:20px}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.gcard .g{font-weight:800;font-size:13.5px;color:var(--burgundy-dark)}
+.gcard .d{font-size:13px;direction:ltr;text-align:right;font-weight:800}
+.gcard .m{font-size:11px;color:var(--muted)}
+.gcard.bad .d{color:var(--bad)} .gcard.ok .d{color:var(--ok)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.bar input[type=search]{flex:1;min-width:180px;border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-family:inherit;font-size:14px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)}
+.chip.on{background:var(--burgundy);border-color:var(--burgundy);color:#fff}
+.viewtoggle{display:flex;gap:0;border:1.5px solid var(--burgundy);border-radius:10px;overflow:hidden}
+.viewtoggle button{border:none;background:#fff;color:var(--burgundy);font-family:inherit;font-size:13px;font-weight:700;padding:8px 18px;cursor:pointer}
+.viewtoggle button.on{background:var(--burgundy);color:#fff}
+
+.tblwrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:auto;max-height:70vh;margin-bottom:20px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+#tbl{min-width:1150px}
+thead th{position:sticky;top:0;background:var(--burgundy-dark);color:#fff;font-weight:600;font-size:12px;padding:10px 8px;text-align:right;white-space:nowrap;z-index:2;cursor:pointer;user-select:none}
+thead th:hover{background:var(--burgundy)}
+tbody td{padding:6px 8px;border-bottom:1px solid #F2EDE5;white-space:nowrap}
+td.num{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+td input.ovr{width:74px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:inherit;font-size:13px;direction:ltr;text-align:center;background:#FFFDF8}
+td input.ovr.set{border-color:var(--warn);background:var(--warn-bg);font-weight:700}
+tr.grouphdr td{background:#F4EEE4;font-weight:800;font-size:13px;color:var(--burgundy-dark);border-top:2px solid var(--line)}
+tr.subtotal td{background:#FBF8F2;font-weight:700;border-bottom:2px solid var(--line)}
+tr.grand td{background:var(--burgundy-dark);color:#fff;font-weight:800;font-size:14px;position:sticky;bottom:0}
+.neg{color:var(--bad);font-weight:600}
+.pos{color:var(--ok)}
+.flag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;margin-inline-start:6px;vertical-align:1px}
+.flag.b{background:var(--bad-bg);color:var(--bad)}
+.flag.w{background:var(--warn-bg);color:var(--warn)}
+.flag.g{background:#EEF0F8;color:#3D4C8C}
+tr.hot td{background:#FDF3F4}
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+.hint{font-size:12.5px;color:var(--muted);margin:0 0 24px;line-height:1.7}
+.sect{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:20px;color:var(--burgundy-dark);margin:6px 0 12px}
+#report,#histSect{display:none}
+#tblGroups{min-width:900px;display:none}
+@media(max-width:640px){ .kpi .val{font-size:21px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/logo.png" alt="סופרסטאר פלוס" onerror="this.style.display='none'">
+      <h1>השוואת מלאי · מחלקת בשר</h1>
+      <span class="tag">מכר ורכש · ספירה · פחת עצמות ושאריות</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="uploads">
+    <div class="upcard" id="cardRM" onclick="document.getElementById('fileRM').click()">
+      <span class="step">שלב 1 · חובה</span>
+      <h3>📦 קובץ רכש ומכר</h3>
+      <p>דוח קומקס שבועי. עמודות: פריט, כמות מכירות, כמות קניות. פריט עם "מחיר קניה" = נתח שנרכש ישירות (מחיר ללא מע"מ).</p>
+      <div class="status" id="stRM">לחץ לבחירת קובץ…</div>
+      <input type="file" id="fileRM" accept=".xlsx,.xls,.csv">
+    </div>
+    <div class="upcard optional" id="cardCNT" onclick="document.getElementById('fileCNT').click()">
+      <span class="step">שלב 2 · אם נערכה ספירה</span>
+      <h3>🧮 ספירת מלאי</h3>
+      <p>דוח ספירה מקומקס. ללא קובץ — המערכת תגרור את המלאי המחושב מהספירה הקודמת (שבוע ללא ספירה).</p>
+      <div class="status" id="stCNT">ללא ספירה השבוע</div>
+      <input type="file" id="fileCNT" accept=".xlsx,.xls,.csv">
+    </div>
+    <div class="upcard optional" id="cardPREV" onclick="document.getElementById('filePREV').click()">
+      <span class="step">שלב 3 · מומלץ</span>
+      <h3>📋 השוואה משבוע שעבר</h3>
+      <p>הקובץ מההרצה הקודמת (או הקובץ הידני). ממנו: מלאי פתיחה, קבוצות, מחירים והיסטוריית פחת.</p>
+      <div class="status" id="stPREV">ללא קובץ — מלאי פתיחה 0</div>
+      <input type="file" id="filePREV" accept=".xlsx,.xls,.csv">
+    </div>
+    <div class="upcard optional" id="cardCAT" onclick="document.getElementById('fileCAT').click()">
+      <span class="step">שלב 4 · קטלוג</span>
+      <h3>🏷️ קטלוג מחירי קניה</h3>
+      <p>קובץ עם ברקוד + מחיר קניה לכל פריט (ללא מע"מ). המחיר מהקטלוג גובר על כל מקור אחר מלבד עריכה ידנית.</p>
+      <div class="status" id="stCAT">אופציונלי</div>
+      <input type="file" id="fileCAT" accept=".xlsx,.xls,.csv">
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field"><label>תאריך ספירה קודמת</label><input type="date" id="datePrev"></div>
+    <div class="field"><label>תאריך ספירה נוכחית</label><input type="date" id="dateCur"></div>
+    <div class="field"><label>סף התראת פחת קבוצתי (%)</label><input type="number" id="threshPct" value="8" style="width:90px"></div>
+    <div class="field"><label>מע"מ (%)</label><input type="number" id="vat" value="18" style="width:70px"></div>
+    <button class="btn btn-main" id="btnCalc" disabled onclick="firstCalc()">חשב השוואה</button>
+    <button class="btn btn-ghost" id="btnExport" style="display:none" onclick="exportXlsx()">⬇ ייצוא לאקסל</button>
+  </div>
+
+  <div class="banner warn" id="noCountBanner">⏭️ <b>שבוע ללא ספירה:</b> המלאי בפועל נקבע לפי החישוב (פתיחה + רכש − מכר) ויימדד בספירה הבאה. הפחת השבוע לא נמדד.</div>
+
+  <div id="report">
+    <div class="cards" id="cards"></div>
+
+    <div class="sect">📊 דוח קבוצות — פחת עצמות, שאריות וחיתוך</div>
+    <div class="gstrip" id="gstrip"></div>
+    <div class="tblwrap">
+      <table id="tblGroups" style="display:table">
+        <thead><tr>
+          <th>קבוצה</th><th>מלאי פתיחה</th><th>רכש ק"ג</th><th>מכר ק"ג</th><th>מלאי מחושב</th><th>מלאי בפועל</th>
+          <th>הפרש ק"ג</th><th>% פחת</th><th>שווי מלאי ₪</th><th>מכירות ₪</th><th>רווח גולמי ₪</th><th>% רווח</th>
+        </tr></thead>
+        <tbody id="tbodyGroups"></tbody>
+      </table>
+    </div>
+
+    <div class="sect">🧾 פירוט פריטים</div>
+    <div class="bar">
+      <input type="search" id="q" placeholder="🔍 חיפוש לפי ברקוד או שם פריט…" oninput="render()">
+      <button class="chip on" data-f="all" onclick="setFilter(this)">הכל</button>
+      <button class="chip" data-f="hot" onclick="setFilter(this)">⚠ חריגים</button>
+      <button class="chip" data-f="purchased" onclick="setFilter(this)">נתחים שנרכשו</button>
+      <button class="chip" data-f="nz" onclick="setFilter(this)">הסתר שורות אפס</button>
+    </div>
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead><tr>
+          <th onclick="sortBy('barcode')">ברקוד</th>
+          <th onclick="sortBy('name')">שם פריט</th>
+          <th>מחיר קניה<br>לק"ג (ללא מע"מ)</th>
+          <th onclick="sortBy('opening')">מלאי פתיחה</th>
+          <th onclick="sortBy('buyQty')">רכש</th>
+          <th onclick="sortBy('salesQty')">מכר</th>
+          <th onclick="sortBy('calc')">מלאי מחושב</th>
+          <th onclick="sortBy('actual')">מלאי בפועל</th>
+          <th onclick="sortBy('diff')">הפרש</th>
+          <th onclick="sortBy('stockVal')">שווי מלאי ₪</th>
+          <th onclick="sortBy('buyAmt')">קניות ₪</th>
+          <th onclick="sortBy('salesAmt')">מכירות ₪</th>
+          <th onclick="sortBy('profit')">רווח גולמי ₪</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="hint">💡 <b>המספר הקובע הוא שורת הסה"כ של כל קבוצה</b> — ההפרש הקבוצתי הוא פחת העצמות, השאריות והחיתוך: כל הק"ג שנכנסו פחות הק"ג שנמכרו, מול הספירה. ברמת פריט בודד הפרש שלילי טבעי לחלקים שנחתכים מנתח שלם. פריט המסומן <span class="flag g">נרכש</span> נקנה ישירות ומחירו נלקח מקובץ הרכש. סדר עדיפות מחיר: ידני ← קטלוג ← קובץ רכש ← שבוע קודם ← קובץ ספירה. רווח גולמי בשיטת תנועת מלאי: מכירות − (שווי פתיחה + רכש − שווי סגירה), כמו בקובץ הידני. קובץ הייצוא כולל גיליון "השוואה" בפורמט המוכר, גיליון "נתונים" שטוח לניתוח, וגיליון "היסטוריה" שנצבר משבוע לשבוע.</p>
+
+    <div id="histSect">
+      <div class="sect">📈 היסטוריית פחת שבועית לפי קבוצה</div>
+      <div class="tblwrap" style="max-height:40vh">
+        <table id="tblHist" style="min-width:600px">
+          <thead id="histHead"></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= helpers ================= */
+const $=id=>document.getElementById(id);
+const state={rm:null,cnt:null,prev:null,cat:null,rows:[],groups:[],overrides:{},sortKey:null,sortDir:-1,filter:'all',history:[],groupStats:{}};
+const fmt=(n,d=2)=>n==null||isNaN(n)?'':Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:d});
+const money=n=>n==null||isNaN(n)?'':'₪'+fmt(n,0);
+const num=v=>{const n=Number(v);return isNaN(n)?0:n};
+const vatF=()=>1+(num($('vat')?.value)||18)/100;
+const isBarcode=v=>v!=null&&v!==''&&!isNaN(Number(v));
+
+function readWorkbook(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>{ try{ res(XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true})); }catch(err){rej(err)} };
+    r.onerror=rej; r.readAsArrayBuffer(file);
+  });
+}
+const sheetRows=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+function findHeaderRow(rows,must){
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const r=(rows[i]||[]).map(c=>String(c??'').trim());
+    if(must.every(m=>r.includes(m))) return i;
+  } return -1;
+}
+const colIdx=(h,name)=>h.findIndex(c=>String(c??'').trim()===name);
+const colIdxAny=(h,names)=>{for(const n of names){const i=colIdx(h,n);if(i>=0)return i;}return -1;};
+const toDate=v=>v instanceof Date?v:(typeof v==='string'&&/\d{4}-\d{2}-\d{2}/.test(v)?new Date(v):null);
+
+/* ================= parsers ================= */
+function parseRM(wb){
+  const rows=sheetRows(wb.Sheets[wb.SheetNames[0]]);
+  const hi=findHeaderRow(rows,['פריט','שם פריט','כמות מכירות','כמות קניות']);
+  if(hi<0) throw 'לא נמצאו עמודות "פריט / כמות מכירות / כמות קניות" — ודא שזה דוח רכש ומכר מקומקס';
+  const h=rows[hi].map(c=>String(c??'').trim()); const out={};
+  const C={bc:colIdx(h,'פריט'),nm:colIdx(h,'שם פריט'),sq:colIdx(h,'כמות מכירות'),bq:colIdx(h,'כמות קניות'),sa:colIdx(h,'סכום מכירות'),ba:colIdx(h,'סכום קניות'),bp:colIdx(h,'מחיר קניה'),sp:colIdx(h,'מחיר מכירה')};
+  for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[C.bc];if(!isBarcode(bc))continue;
+    out[String(bc)]={name:r[C.nm],salesQty:num(r[C.sq]),buyQty:num(r[C.bq]),salesAmt:num(r[C.sa]),buyAmt:num(r[C.ba]),
+      buyPrice:num(r[C.bp]),sellPrice:num(r[C.sp]),purchased:num(r[C.bp])>0||num(r[C.bq])>0};}
+  return out;
+}
+function parseCNT(wb){
+  const rows=sheetRows(wb.Sheets[wb.SheetNames[0]]);
+  const hi=findHeaderRow(rows,['פריט','שם פריט','כמות שנספרה']);
+  if(hi<0) throw 'לא נמצאו עמודות "פריט / כמות שנספרה" — ודא שזה דוח ספירת מלאי מקומקס';
+  const h=rows[hi].map(c=>String(c??'').trim()); const out={};
+  const C={bc:colIdx(h,'פריט'),nm:colIdx(h,'שם פריט'),pr:colIdx(h,'מחיר'),cq:colIdx(h,'כמות שנספרה')};
+  for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[C.bc];if(!isBarcode(bc))continue;
+    out[String(bc)]={name:r[C.nm],price:num(r[C.pr]),counted:num(r[C.cq])};}
+  return out;
+}
+function parsePREV(wb){
+  // main comparison sheet: prefer sheet named השוואה, else first sheet that has the columns
+  let items=null,dates=null;
+  const tryNames=['השוואה',...wb.SheetNames];
+  for(const sn of tryNames){
+    const ws=wb.Sheets[sn]; if(!ws)continue;
+    const rows=sheetRows(ws);
+    const hi=findHeaderRow(rows,['פריט','שם פריט','מלאי בפועל']);
+    if(hi<0)continue;
+    const h=rows[hi].map(c=>String(c??'').trim()); items={};
+    const C={g:colIdx(h,'קבוצה'),gn:colIdx(h,'שם קבוצה'),bc:colIdx(h,'פריט'),nm:colIdx(h,'שם פריט'),ac:colIdx(h,'מלאי בפועל'),cp:colIdx(h,'מחיר מכירה קטלוגי'),bp:colIdx(h,'מחיר קניה אחרון')};
+    for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[C.bc];if(!isBarcode(bc))continue;
+      items[String(bc)]={grp:r[C.g],grpName:r[C.gn]??'',name:r[C.nm],actual:num(r[C.ac]),catPrice:num(r[C.cp]),lastBuy:num(r[C.bp])};}
+    for(let i=0;i<Math.min(rows.length,4);i++){const r=rows[i]||[];
+      for(let j=0;j<r.length;j++){const s=String(r[j]??'');
+        if(s.includes('ספירה נוכחית')){const d=toDate(r[j+1]);if(d){dates=dates||{};dates.cur=d;}}}}
+    break;
+  }
+  if(!items) throw 'לא נמצאו עמודות "פריט / מלאי בפועל" — יש להעלות קובץ השוואה (פלט המערכת או הקובץ הידני)';
+  // history sheet
+  const history=[];
+  const hws=wb.Sheets['היסטוריה'];
+  if(hws){
+    const rows=sheetRows(hws);
+    const hi=findHeaderRow(rows,['תאריך','קבוצה','הפרש']);
+    if(hi>=0){const h=rows[hi].map(c=>String(c??'').trim());
+      const C={dt:colIdx(h,'תאריך'),g:colIdx(h,'קבוצה'),op:colIdx(h,'מלאי פתיחה'),bq:colIdx(h,'רכש'),sq:colIdx(h,'מכר'),ac:colIdx(h,'מלאי בפועל'),df:colIdx(h,'הפרש'),pc:colIdx(h,'% פחת'),dv:colIdx(h,'שווי הפרש'),sa:colIdx(h,'מכירות'),pf:colIdx(h,'רווח גולמי'),cn:colIdx(h,'ספירה')};
+      for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];if(!r[C.g])continue;
+        history.push({date:toDate(r[C.dt])||r[C.dt],grpName:String(r[C.g]),opening:num(r[C.op]),buyQty:num(r[C.bq]),salesQty:num(r[C.sq]),actual:num(r[C.ac]),diff:num(r[C.df]),pct:r[C.pc]==null?null:num(r[C.pc])*100,diffVal:num(r[C.dv]),salesAmt:num(r[C.sa]),profit:num(r[C.pf]),counted:String(r[C.cn]??'')!=='לא'});}
+    }
+  }
+  return {items,dates,history};
+}
+function parseCAT(wb){
+  const rows=sheetRows(wb.Sheets[wb.SheetNames[0]]);
+  const bcNames=['ברקוד','פריט','קוד פריט','מק"ט','barcode','Barcode','BARCODE'];
+  const prNames=['מחיר קניה אחרון','מחיר קניה','מחיר עלות','עלות','cost','Cost','מחיר'];
+  let hi=-1,h=null,bcI=-1,prI=-1;
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const r=(rows[i]||[]).map(c=>String(c??'').trim());
+    const b=colIdxAny(r,bcNames),p=colIdxAny(r,prNames);
+    if(b>=0&&p>=0){hi=i;h=r;bcI=b;prI=p;break;}
+  }
+  if(hi<0) throw 'לא נמצאו עמודות ברקוד + מחיר קניה בקטלוג';
+  const nmI=colIdxAny(h,['שם פריט','שם','תיאור','name','Name']);
+  const out={};let n=0;
+  for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[bcI];if(!isBarcode(bc))continue;
+    const p=num(r[prI]);if(p>0){out[String(bc)]={price:p,name:nmI>=0?r[nmI]:null};n++;}}
+  if(!n) throw 'לא נמצאו מחירים תקינים בקטלוג';
+  return out;
+}
+
+/* ================= upload wiring ================= */
+function wire(inputId,cardId,stId,parser,key){
+  $(inputId).addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const card=$(cardId),st=$(stId);
+    try{
+      const wb=await readWorkbook(f);
+      const parsed=parser(wb);
+      state[key]=parsed;
+      card.classList.remove('err');card.classList.add('loaded');
+      const n=key==='prev'?Object.keys(parsed.items).length:Object.keys(parsed).length;
+      st.textContent='✓ '+f.name+' — '+n+' פריטים'+(key==='prev'&&parsed.history.length?` · ${new Set(parsed.history.map(x=>String(x.date))).size} שבועות היסטוריה`:'');
+      if(key==='prev'&&parsed.dates&&parsed.dates.cur){
+        $('datePrev').value=parsed.dates.cur.toISOString().slice(0,10);
+        const d=new Date(parsed.dates.cur);d.setDate(d.getDate()+7);
+        $('dateCur').value=d.toISOString().slice(0,10);
+      }
+    }catch(err){
+      state[key]=null;card.classList.remove('loaded');card.classList.add('err');
+      st.textContent='✗ '+(typeof err==='string'?err:'שגיאה בקריאת הקובץ');
+      console.error(err);
+    }
+    $('btnCalc').disabled=!state.rm;
+  });
+}
+wire('fileRM','cardRM','stRM',parseRM,'rm');
+wire('fileCNT','cardCNT','stCNT',parseCNT,'cnt');
+wire('filePREV','cardPREV','stPREV',parsePREV,'prev');
+wire('fileCAT','cardCAT','stCAT',parseCAT,'cat');
+
+/* ================= compute ================= */
+function baseRows(){
+  const rm=state.rm||{},cnt=state.cnt||{},prev=state.prev?state.prev.items:{},cat=state.cat||{};
+  const barcodes=new Set([...Object.keys(rm),...Object.keys(cnt),...Object.keys(prev)]);
+  const rows=[];
+  for(const bc of barcodes){
+    const r=rm[bc]||{},c=cnt[bc]||{},p=prev[bc]||{},k=cat[bc];
+    rows.push({barcode:bc,name:c.name||r.name||p.name||(k&&k.name)||'—',
+      grp:p.grp??'',grpName:p.grpName||'ללא שיוך',
+      catSellPrice:p.catPrice||r.sellPrice||0,
+      catalogPrice:k?k.price:0,rmPrice:r.buyPrice||0,prevPrice:p.lastBuy||0,cntPrice:c.price||0,
+      purchased:!!r.purchased,
+      opening:p.actual??0,buyQty:r.buyQty||0,salesQty:r.salesQty||0,
+      buyAmt:r.buyAmt||0,salesAmt:r.salesAmt||0,
+      wasCounted:Object.prototype.hasOwnProperty.call(cnt,bc),counted:c.counted||0});
+  }
+  return rows;
+}
+function effectivePrice(r){
+  if(state.overrides[r.barcode])return {p:state.overrides[r.barcode],src:'ידני'};
+  if(r.catalogPrice>0)return {p:r.catalogPrice,src:'קטלוג'};
+  if(r.rmPrice>0)return {p:r.rmPrice,src:'קובץ רכש'};
+  if(r.prevPrice>0)return {p:r.prevPrice,src:'שבוע קודם'};
+  if(r.cntPrice>0)return {p:r.cntPrice,src:'קובץ ספירה'};
+  return {p:0,src:''};
+}
+function firstCalc(){
+  state.baseRows=baseRows();
+  state.groups=[...new Set(state.baseRows.map(r=>r.grpName))].sort((a,b)=>(a==='ללא שיוך')-(b==='ללא שיוך'));
+  state.overrides={};
+  state.hasCount=!!state.cnt;
+  $('noCountBanner').className='banner'+(state.hasCount?'':' warn');
+  recalc();
+  $('report').style.display='block';
+  $('btnExport').style.display='inline-block';
+  $('report').scrollIntoView({behavior:'smooth'});
+}
+function recalc(){
+  const V=vatF();
+  const rows=[];
+  for(const b of state.baseRows){
+    const {p:buyPrice,src:priceSrc}=effectivePrice(b);
+    const calcStock=b.opening+b.buyQty-b.salesQty;
+    const actual=state.hasCount?(b.wasCounted?b.counted:0):calcStock;
+    const diff=calcStock-actual;
+    const diffVal=diff*buyPrice;
+    const stockVal=actual*buyPrice;
+    const openVal=b.opening*buyPrice*V, closeVal=actual*buyPrice*V;
+    const profit=b.salesAmt-(openVal+b.buyAmt-closeVal); // תנועת מלאי, כמו בקובץ הידני
+    const flags=[];
+    if(state.hasCount&&!b.wasCounted&&Math.abs(calcStock)>1&&b.purchased)flags.push({t:'לא נספר',c:'w'});
+    if(calcStock<-1&&b.purchased)flags.push({t:'ברקוד בקופה?',c:'w'});
+    if(!buyPrice&&(Math.abs(calcStock)>0.01||Math.abs(actual)>0.01))flags.push({t:'אין מחיר',c:'b'});
+    const zero=Math.abs(b.opening)<0.01&&Math.abs(b.buyQty)<0.01&&Math.abs(b.salesQty)<0.01&&Math.abs(actual)<0.01;
+    rows.push({...b,buyPrice,priceSrc,calc:calcStock,actual,diff,diffVal,stockVal,openVal,closeVal,profit,flags,zero,hot:false});
+  }
+  const tPct=num($('threshPct').value)||8;
+  state.groupStats={};
+  for(const g of state.groups){
+    const gr=rows.filter(r=>r.grpName===g);
+    const t=totals(gr);
+    t.alert=state.hasCount&&t.pct!=null&&Math.abs(t.pct)>=tPct;
+    state.groupStats[g]=t;
+    if(t.alert)gr.forEach(r=>{if(Math.abs(r.diffVal)>200)r.hot=true});
+  }
+  state.rows=rows;
+  buildCards();buildGstrip();renderGroups();render();renderHistory();
+}
+function totals(rows){
+  const t={opening:0,buyQty:0,salesQty:0,calc:0,actual:0,diff:0,diffVal:0,stockVal:0,salesAmt:0,buyAmt:0,profit:0,openVal:0,closeVal:0};
+  rows.forEach(r=>{for(const k in t)t[k]+=r[k]||0});
+  t.pct=(t.opening+t.buyQty)>0.001?t.diff/(t.opening+t.buyQty)*100:null;
+  t.profitPct=t.salesAmt>0?t.profit/t.salesAmt*100:null;
+  return t;
+}
+function buildCards(){
+  const t=totals(state.rows);
+  const alerts=Object.values(state.groupStats).filter(g=>g.alert).length;
+  $('cards').innerHTML=`
+    <div class="kpi ${!state.hasCount?'warn':(t.diffVal>0?'bad':'ok')}"><div class="lbl">${state.hasCount?'שווי פחת (עצמות ושאריות)':'שבוע ללא ספירה'}</div><div class="val">${state.hasCount?money(t.diffVal):'—'}</div><div class="sub">${state.hasCount?fmt(t.diff,1)+' ק"ג · '+(t.pct!=null?fmt(t.pct,1)+'% מהנכנס':''):'הפחת יימדד בספירה הבאה'}</div></div>
+    <div class="kpi"><div class="lbl">שווי מלאי ${state.hasCount?'בפועל':'מחושב'}</div><div class="val">${money(t.stockVal)}</div><div class="sub">כולל מע"מ: ${money(t.stockVal*vatF())}</div></div>
+    <div class="kpi ok"><div class="lbl">רווח גולמי שבועי</div><div class="val">${money(t.profit)}</div><div class="sub">${t.profitPct!=null?fmt(t.profitPct,1)+'% ממכירות של '+money(t.salesAmt):''}</div></div>
+    <div class="kpi ${alerts?'warn':''}"><div class="lbl">קבוצות מעל סף פחת</div><div class="val">${state.hasCount?alerts:'—'}</div><div class="sub">סף: ${fmt(num($('threshPct').value))}% מהמשקל הנכנס</div></div>`;
+}
+function buildGstrip(){
+  let html='';
+  for(const g of state.groups){
+    const t=state.groupStats[g];
+    if(!t||(Math.abs(t.opening)<0.01&&Math.abs(t.buyQty)<0.01&&Math.abs(t.salesQty)<0.01))continue;
+    html+=`<div class="gcard ${t.alert?'bad':(state.hasCount?'ok':'')}">
+      <span class="g">${g} ${t.alert?'⚠':''}</span>
+      <span class="d">שווי מלאי ${money(t.stockVal)}</span>
+      <span class="m">${state.hasCount?'פחת '+fmt(t.diff,1)+' ק"ג'+(t.pct!=null?' ('+fmt(t.pct,1)+'%)':'')+' · ':'ללא ספירה · '}נכנס ${fmt(t.opening+t.buyQty,0)} · נמכר ${fmt(t.salesQty,0)} ק"ג</span>
+    </div>`;
+  }
+  $('gstrip').innerHTML=html;
+}
+function renderGroups(){
+  let html='';
+  for(const g of state.groups){
+    const t=state.groupStats[g];
+    if(!t||(Math.abs(t.opening)<0.01&&Math.abs(t.buyQty)<0.01&&Math.abs(t.salesQty)<0.01&&Math.abs(t.actual)<0.01))continue;
+    html+=`<tr class="${t.alert?'hot':''}">
+      <td><b>${g}</b> ${t.alert?'<span class="flag b">מעל סף</span>':''}</td>
+      <td class="num">${fmt(t.opening,1)}</td><td class="num">${fmt(t.buyQty,1)}</td><td class="num">${fmt(t.salesQty,1)}</td>
+      <td class="num">${fmt(t.calc,1)}</td><td class="num">${fmt(t.actual,1)}</td>
+      <td class="num ${t.diff>0?'neg':'pos'}">${fmt(t.diff,1)}</td>
+      <td class="num ${t.alert?'neg':''}">${state.hasCount&&t.pct!=null?fmt(t.pct,1)+'%':'—'}</td>
+      <td class="num">${money(t.stockVal)}</td>
+      <td class="num">${money(t.salesAmt)}</td>
+      <td class="num ${t.profit<0?'neg':''}">${money(t.profit)}</td>
+      <td class="num">${t.profitPct!=null?fmt(t.profitPct,1)+'%':''}</td></tr>`;
+  }
+  const T=totals(state.rows);
+  html+=`<tr class="grand"><td>סה"כ מחלקה</td>
+    <td class="num">${fmt(T.opening,1)}</td><td class="num">${fmt(T.buyQty,1)}</td><td class="num">${fmt(T.salesQty,1)}</td>
+    <td class="num">${fmt(T.calc,1)}</td><td class="num">${fmt(T.actual,1)}</td>
+    <td class="num">${fmt(T.diff,1)}</td><td class="num">${state.hasCount&&T.pct!=null?fmt(T.pct,1)+'%':'—'}</td>
+    <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.salesAmt)}</td>
+    <td class="num">${money(T.profit)}</td><td class="num">${T.profitPct!=null?fmt(T.profitPct,1)+'%':''}</td></tr>`;
+  $('tbodyGroups').innerHTML=html;
+}
+function setOverride(bc,v){
+  const n=num(v);
+  if(n>0)state.overrides[bc]=n;else delete state.overrides[bc];
+  recalc();
+}
+
+/* ================= item table ================= */
+function setFilter(btn){document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));btn.classList.add('on');state.filter=btn.dataset.f;render();}
+function sortBy(k){if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=-1}render();}
+function render(){
+  const q=$('q').value.trim();
+  let rows=state.rows.filter(r=>{
+    if(q&&!(r.barcode.includes(q)||String(r.name).includes(q)))return false;
+    if(state.filter==='hot'&&!r.hot&&!r.flags.length)return false;
+    if(state.filter==='purchased'&&!r.purchased)return false;
+    if(state.filter==='nz'&&r.zero)return false;
+    return true;
+  });
+  const k=state.sortKey,d=state.sortDir;
+  const cmp=k?(a,b)=>{const x=a[k],y=b[k];if(typeof x==='string')return d*String(x).localeCompare(String(y),'he');return d*((x??-1e18)-(y??-1e18));}:(a,b)=>b.salesQty-a.salesQty;
+  let html='';
+  for(const g of state.groups){
+    const gr=rows.filter(r=>r.grpName===g).sort((a,b)=>{
+      if(a.purchased!==b.purchased)return a.purchased?-1:1;
+      return cmp(a,b);
+    });
+    if(!gr.length)continue;
+    html+=`<tr class="grouphdr"><td colspan="13">🥩 ${g} (${gr.length} פריטים)</td></tr>`;
+    for(const r of gr){
+      const flags=r.flags.map(f=>`<span class="flag ${f.c}">${f.t}</span>`).join('');
+      const pTag=r.purchased?'<span class="flag g">נרכש</span>':'';
+      const ovr=state.overrides[r.barcode];
+      html+=`<tr class="${r.hot?'hot':''}">
+        <td class="num">${r.barcode}</td>
+        <td>${r.name}${pTag}${flags}</td>
+        <td><input class="ovr ${ovr?'set':''}" type="number" step="0.01" value="${r.buyPrice?Number(r.buyPrice.toFixed(2)):''}" title="מקור: ${r.priceSrc||'—'}" onchange="setOverride('${r.barcode}',this.value)"><div style="font-size:10px;color:var(--muted);margin-top:1px">${ovr?'ידני':(r.priceSrc||'אין מחיר')}</div></td>
+        <td class="num">${fmt(r.opening,2)}</td>
+        <td class="num">${fmt(r.buyQty,2)}</td>
+        <td class="num">${fmt(r.salesQty,2)}</td>
+        <td class="num">${fmt(r.calc,2)}</td>
+        <td class="num">${fmt(r.actual,2)}</td>
+        <td class="num ${r.diff>0.01?'neg':r.diff<-0.01?'pos':''}">${state.hasCount?fmt(r.diff,2):''}</td>
+        <td class="num">${money(r.stockVal)}</td>
+        <td class="num">${money(r.buyAmt)}</td>
+        <td class="num">${money(r.salesAmt)}</td>
+        <td class="num ${r.profit<0?'neg':''}">${money(r.profit)}</td></tr>`;
+    }
+    const t=state.groupStats[g];
+    html+=`<tr class="subtotal"><td colspan="3">סה"כ ${g}${state.hasCount&&t.pct!=null?' · פחת '+fmt(t.pct,1)+'%':''} ${t.alert?'<span class="flag b">מעל סף</span>':''}</td>
+      <td class="num">${fmt(t.opening,1)}</td><td class="num">${fmt(t.buyQty,1)}</td><td class="num">${fmt(t.salesQty,1)}</td>
+      <td class="num">${fmt(t.calc,1)}</td><td class="num">${fmt(t.actual,1)}</td>
+      <td class="num ${t.diff>0?'neg':'pos'}">${state.hasCount?fmt(t.diff,1):''}</td>
+      <td class="num">${money(t.stockVal)}</td><td class="num">${money(t.buyAmt)}</td><td class="num">${money(t.salesAmt)}</td><td class="num">${money(t.profit)}</td></tr>`;
+  }
+  const T=totals(rows);
+  html+=`<tr class="grand"><td colspan="3">סה"כ כללי${state.hasCount&&T.pct!=null?' · פחת '+fmt(T.pct,1)+'%':''}</td>
+    <td class="num">${fmt(T.opening,1)}</td><td class="num">${fmt(T.buyQty,1)}</td><td class="num">${fmt(T.salesQty,1)}</td>
+    <td class="num">${fmt(T.calc,1)}</td><td class="num">${fmt(T.actual,1)}</td>
+    <td class="num">${state.hasCount?fmt(T.diff,1):''}</td>
+    <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.buyAmt)}</td><td class="num">${money(T.salesAmt)}</td><td class="num">${money(T.profit)}</td></tr>`;
+  $('tbody').innerHTML=html||'<tr><td colspan="13" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
+}
+
+/* ================= history ================= */
+function currentWeekHistory(){
+  const dCur=$('dateCur').value||new Date().toISOString().slice(0,10);
+  const out=[];
+  for(const g of state.groups){
+    const t=state.groupStats[g];if(!t)continue;
+    if(Math.abs(t.opening)<0.01&&Math.abs(t.buyQty)<0.01&&Math.abs(t.salesQty)<0.01&&Math.abs(t.actual)<0.01)continue;
+    out.push({date:dCur,grpName:g,opening:t.opening,buyQty:t.buyQty,salesQty:t.salesQty,actual:t.actual,
+      diff:state.hasCount?t.diff:0,pct:state.hasCount?t.pct:null,diffVal:state.hasCount?t.diffVal:0,
+      salesAmt:t.salesAmt,profit:t.profit,counted:state.hasCount});
+  }
+  return out;
+}
+function allHistory(){
+  const prev=(state.prev&&state.prev.history)?state.prev.history:[];
+  const dCur=$('dateCur').value||new Date().toISOString().slice(0,10);
+  const keep=prev.filter(h=>{const d=h.date instanceof Date?h.date.toISOString().slice(0,10):String(h.date).slice(0,10);return d!==dCur;});
+  return [...keep,...currentWeekHistory()];
+}
+function renderHistory(){
+  const hist=allHistory();
+  if(!hist.length){$('histSect').style.display='none';return;}
+  const dates=[...new Set(hist.map(h=>h.date instanceof Date?h.date.toISOString().slice(0,10):String(h.date).slice(0,10)))].sort();
+  const groups=[...new Set(hist.map(h=>h.grpName))];
+  if(dates.length<1){$('histSect').style.display='none';return;}
+  let head='<tr><th>שבוע (ספירה)</th>'+groups.map(g=>`<th>${g}<br>% פחת · ₪</th>`).join('')+'<th>סה"כ ₪</th></tr>';
+  let body='';
+  for(const d of dates){
+    const wk=hist.filter(h=>(h.date instanceof Date?h.date.toISOString().slice(0,10):String(h.date).slice(0,10))===d);
+    const anyCount=wk.some(h=>h.counted);
+    let tot=0;
+    let cells=groups.map(g=>{
+      const h=wk.find(x=>x.grpName===g);
+      if(!h)return '<td class="num">—</td>';
+      if(!h.counted)return '<td class="num" style="color:var(--muted)">ללא ספירה</td>';
+      tot+=h.diffVal;
+      const cls=h.diffVal>0?'neg':'pos';
+      return `<td class="num ${cls}">${h.pct!=null?fmt(h.pct,1)+'%':''} · ${money(h.diffVal)}</td>`;
+    }).join('');
+    body+=`<tr><td><b>${d.split('-').reverse().join('.')}</b>${anyCount?'':' <span class="flag w">ללא ספירה</span>'}</td>${cells}<td class="num ${tot>0?'neg':'pos'}">${anyCount?money(tot):'—'}</td></tr>`;
+  }
+  $('histHead').innerHTML=head;$('histBody').innerHTML=body;
+  $('histSect').style.display='block';
+}
+
+/* ================= export styling ================= */
+const STYLES_OK=()=>{try{return typeof XLSX!=='undefined'}catch(e){return false}};
+const ST={
+  hdr:{font:{bold:true,color:{rgb:'FFFFFF'},sz:11,name:'Heebo'},fill:{fgColor:{rgb:'4A0D18'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{bottom:{style:'medium',color:{rgb:'C89B5A'}}}},
+  item:{font:{sz:10.5},border:{bottom:{style:'hair',color:{rgb:'E9E2D8'}}}},
+  itemName:{font:{sz:10.5,bold:false},alignment:{horizontal:'right'},border:{bottom:{style:'hair',color:{rgb:'E9E2D8'}}}},
+  gtot:{font:{bold:true,sz:11,color:{rgb:'4A0D18'}},fill:{fgColor:{rgb:'F4EEE4'}},border:{top:{style:'thin',color:{rgb:'C89B5A'}},bottom:{style:'thin',color:{rgb:'C89B5A'}}}},
+  grand:{font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'6E1423'}}},
+  dateLbl:{font:{bold:true,sz:11,color:{rgb:'6E1423'}}},
+  dateVal:{font:{bold:true,sz:11},numFmt:'dd/mm/yyyy',alignment:{horizontal:'center'}},
+  negVal:{font:{sz:10.5,color:{rgb:'B01E2E'},bold:true},border:{bottom:{style:'hair',color:{rgb:'E9E2D8'}}}},
+};
+function styleCell(ws,addr,st,keepFmt){
+  const c=ws[addr]; if(!c)return;
+  const z=c.z;
+  c.s=Object.assign({},c.s||{},st);
+  if(keepFmt&&z)c.z=z;
+}
+/* ================= export: 4 sheets ================= */
+function exportXlsx(){
+  const V=vatF();
+  const dPrev=$('datePrev').value?new Date($('datePrev').value):null;
+  const dCur=$('dateCur').value?new Date($('dateCur').value):null;
+  const dSellEnd=dCur?new Date(dCur.getTime()-86400000):null;
+
+  /* ---- Sheet "השוואה" — הפורמט המקורי, נוסחאות חיות ---- */
+  const aoa=[
+    ['','','ספירה אחרונה',dPrev,'','תחילת מכר',dPrev],
+    ['','','ספירה נוכחית',dCur,'','סוף מכר',dSellEnd],
+    [],
+    ['קבוצה','שם קבוצה','פריט','שם פריט','מחיר מכירה קטלוגי','מחיר קניה אחרון','מלאי פתיחה','רכש','מכר','מלאי מחושב','מלאי בפועל','הפרש','% פחת','שווי מלאי','שווי פתיחה','רכש','מכר','שווי מלאי בפועל','רווח גולמי','% רווח גולמי']];
+  let R=aoa.length+1;
+  const groupTotalRows=[],itemRowIdx=[],exportRows=[],groupMeta=[];
+  for(const g of state.groups){
+    const gr=state.rows.filter(r=>r.grpName===g&&!r.zero);
+    if(!gr.length)continue;
+    const start=R;
+    for(const r of gr){
+      aoa.push([r.grp,r.grpName,Number(r.barcode),r.name,r.catSellPrice||null,r.buyPrice||null,
+        r.opening,r.buyQty,r.salesQty,
+        {f:`G${R}+H${R}-I${R}`},
+        r.actual,
+        {f:`G${R}+H${R}-I${R}-K${R}`},
+        {f:`IF(G${R}+H${R}>0.001,L${R}/(G${R}+H${R}),"")`},
+        {f:`K${R}*F${R}`},
+        {f:`G${R}*F${R}*${V}`},
+        r.buyAmt||0,r.salesAmt||0,
+        {f:`K${R}*F${R}*${V}`},
+        {f:`Q${R}-(O${R}+P${R}-R${R})`},
+        {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
+      exportRows.push({row:R,item:r});
+      itemRowIdx.push(R);R++;
+    }
+    const end=R-1,S=c=>({f:`SUM(${c}${start}:${c}${end})`});
+    aoa.push(['',`${g} סה"כ`,`סה"כ ${g}`,`סה"כ ${g}`,'','',S('G'),S('H'),S('I'),S('J'),S('K'),S('L'),
+      {f:`IF(G${R}+H${R}>0.001,L${R}/(G${R}+H${R}),"")`},
+      S('N'),S('O'),S('P'),S('Q'),S('R'),
+      {f:`Q${R}-(O${R}+P${R}-R${R})`},
+      {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
+    groupMeta.push({name:g,totalRow:R});
+    groupTotalRows.push(R);R++;
+  }
+  let grandRow=null;
+  if(groupTotalRows.length){
+    const S=c=>({f:groupTotalRows.map(r=>`${c}${r}`).join('+')});
+    aoa.push(['','סכום כולל','','','','',S('G'),S('H'),S('I'),S('J'),S('K'),S('L'),
+      {f:`IF(G${R}+H${R}>0.001,L${R}/(G${R}+H${R}),"")`},
+      S('N'),S('O'),S('P'),S('Q'),S('R'),S('S'),
+      {f:`IF(Q${R}>0,S${R}/Q${R},"")`}]);
+    grandRow=R;R++;
+    aoa.push(['','','','','','','','','','','','','','שווי מלאי כולל מע"מ',{f:`N${R-1}*${V}`}]);
+  }
+  const ws1=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
+  ws1['!cols']=[{wch:7},{wch:12},{wch:9},{wch:24},{wch:9},{wch:10},{wch:10},{wch:9},{wch:9},{wch:11},{wch:10},{wch:9},{wch:8},{wch:12},{wch:11},{wch:11},{wch:11},{wch:13},{wch:11},{wch:9}];
+  for(let i=5;i<=R;i++){
+    for(const c of ['M','T']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='0.0%';}
+    const nCell=ws1['N'+i];if(nCell&&nCell.t!=='s')nCell.z='"₪" #,##0.00';
+    for(const c of ['O','P','Q','R','S']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='#,##0';}
+    for(const c of ['G','H','I','J','K','L']){const cell=ws1[c+i];if(cell&&cell.t!=='s')cell.z='#,##0.00';}
+  }
+  try{
+    const COLS='ABCDEFGHIJKLMNOPQRST'.split('');
+    for(const a of ['C1','F1','C2','F2'])styleCell(ws1,a,ST.dateLbl);
+    for(const a of ['D1','G1','D2','G2'])styleCell(ws1,a,ST.dateVal,true);
+    COLS.forEach(c=>styleCell(ws1,c+'4',ST.hdr));
+    for(const i of itemRowIdx)COLS.forEach(c=>{if(ws1[c+i])styleCell(ws1,c+i,c==='D'?ST.itemName:ST.item,true);});
+    for(const i of groupTotalRows)COLS.forEach(c=>styleCell(ws1,c+i,ST.gtot,true));
+    if(grandRow)COLS.forEach(c=>styleCell(ws1,c+grandRow,ST.grand,true));
+    styleCell(ws1,'N'+R,ST.gtot,true);styleCell(ws1,'O'+R,ST.gtot,true);
+    const rowsMeta=[];for(let i=0;i<R;i++)rowsMeta.push({});
+    for(const i of itemRowIdx)rowsMeta[i-1]={level:1};
+    ws1['!rows']=rowsMeta;
+    ws1['!outline']={above:false};
+  }catch(e){console.warn('styling skipped',e);}
+
+  /* ---- Sheet "נתונים" — טבלת סינון חיה, מקושרת בנוסחאות לגיליון השוואה ---- */
+  // שורה 1: הערה, שורה 2: SUBTOTAL שמתעדכן לפי הסינון, שורה 3: כותרות, נתונים מ-4
+  const HB=['תאריך ספירה','קבוצה','שם קבוצה','ברקוד','שם פריט','נרכש ישירות','מקור מחיר','מחיר קניה','מלאי פתיחה','רכש כמות','מכר כמות','מלאי מחושב','מלאי בפועל','הפרש','% פחת','שווי הפרש','שווי מלאי','סכום קניות','סכום מכירות','רווח גולמי','נערכה ספירה'];
+  const nRows=exportRows.length,first=4,last=3+nRows;
+  const flat=[
+    ['🔎 סנן בכותרות — שורת הסיכום למטה מתעדכנת לפי הסינון. הנתונים מקושרים לגיליון "השוואה": שינוי שם יתעדכן כאן.'],
+    ['','','סיכום מסונן →','','','','','',
+      {f:`SUBTOTAL(109,I${first}:I${last})`},{f:`SUBTOTAL(109,J${first}:J${last})`},{f:`SUBTOTAL(109,K${first}:K${last})`},
+      {f:`SUBTOTAL(109,L${first}:L${last})`},{f:`SUBTOTAL(109,M${first}:M${last})`},{f:`SUBTOTAL(109,N${first}:N${last})`},
+      {f:`IF(SUBTOTAL(109,I${first}:I${last})+SUBTOTAL(109,J${first}:J${last})>0.001,SUBTOTAL(109,N${first}:N${last})/(SUBTOTAL(109,I${first}:I${last})+SUBTOTAL(109,J${first}:J${last})),"")`},
+      {f:`SUBTOTAL(109,P${first}:P${last})`},{f:`SUBTOTAL(109,Q${first}:Q${last})`},
+      {f:`SUBTOTAL(109,R${first}:R${last})`},{f:`SUBTOTAL(109,S${first}:S${last})`},{f:`SUBTOTAL(109,T${first}:T${last})`},''],
+    HB];
+  for(const {row,item:r} of exportRows){
+    flat.push([dCur,r.grp,r.grpName,Number(r.barcode),
+      {f:`השוואה!D${row}`},
+      r.purchased?'כן':'לא',r.priceSrc,
+      {f:`השוואה!F${row}`},{f:`השוואה!G${row}`},{f:`השוואה!H${row}`},{f:`השוואה!I${row}`},
+      {f:`השוואה!J${row}`},{f:`השוואה!K${row}`},{f:`השוואה!L${row}`},{f:`השוואה!M${row}`},
+      {f:`השוואה!L${row}*השוואה!F${row}`},{f:`השוואה!N${row}`},
+      {f:`השוואה!P${row}`},{f:`השוואה!Q${row}`},{f:`השוואה!S${row}`},
+      state.hasCount?'כן':'לא']);
+  }
+  const ws2=XLSX.utils.aoa_to_sheet(flat,{cellDates:true});
+  ws2['!cols']=HB.map((h,i)=>({wch:i===4?24:(i<=2?11:10)}));
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:HB.length-1}}];
+  ws2['!autofilter']={ref:`A3:${XLSX.utils.encode_col(HB.length-1)}${last}`};
+  for(let i=first;i<=last;i++){
+    const o=ws2['O'+i];if(o)o.z='0.0%';
+    for(const c of ['P','Q','R','S','T']){const cell=ws2[c+i];if(cell)cell.z='#,##0';}
+    for(const c of ['H','I','J','K','L','M','N']){const cell=ws2[c+i];if(cell)cell.z='#,##0.00';}
+    const d=ws2['A'+i];if(d)d.z='dd/mm/yyyy';
+  }
+  const o2=ws2['O2'];if(o2)o2.z='0.0%';
+  for(const c of ['P','Q','R','S','T']){const cell=ws2[c+'2'];if(cell)cell.z='#,##0';}
+  for(const c of ['I','J','K','L','M','N']){const cell=ws2[c+'2'];if(cell)cell.z='#,##0.0';}
+  try{
+    styleCell(ws2,'A1',{font:{sz:10.5,italic:true,color:{rgb:'8A7F78'}}});
+    for(let c=0;c<HB.length;c++){
+      const a2=XLSX.utils.encode_cell({r:1,c});if(ws2[a2])styleCell(ws2,a2,{font:{bold:true,sz:10.5,color:{rgb:'4A0D18'}},fill:{fgColor:{rgb:'F4EEE4'}},border:{top:{style:'thin',color:{rgb:'C89B5A'}},bottom:{style:'thin',color:{rgb:'C89B5A'}}}},true);
+      styleCell(ws2,XLSX.utils.encode_cell({r:2,c}),ST.hdr);
+    }
+    for(let r=3;r<flat.length;r++)for(let c=0;c<HB.length;c++){const a=XLSX.utils.encode_cell({r,c});if(ws2[a])styleCell(ws2,a,r%2?{fill:{fgColor:{rgb:'FBF8F2'}},font:{sz:10.5}}:{font:{sz:10.5}},true);}
+  }catch(e){}
+
+  /* ---- Sheet "סיכום" — הדשבורד של ה-HTML באקסל, הכל נוסחאות חיות ---- */
+  const NR=(col)=>`'נתונים'!${col}${first}:${col}${last}`;
+  const sm=[];
+  sm.push(['השוואת מלאי · מחלקת בשר · סופרסטאר פלוס']);
+  sm.push(['ספירה קודמת',dPrev,'','ספירה נוכחית',dCur,'','סטטוס',state.hasCount?'נערכה ספירה':'שבוע ללא ספירה']);
+  sm.push([]);
+  sm.push(['שווי פחת (עצמות ושאריות)','','','פחת בק"ג / % מהנכנס','','','שווי מלאי (ללא / כולל מע"מ)','','','רווח גולמי ₪ / % ממכירות','','']);
+  sm.push([
+    {f:`SUM(${NR('P')})`},'','',
+    {f:`SUM(${NR('N')})`},'','',
+    {f:`SUM(${NR('Q')})`},'','',
+    {f:`SUM(${NR('T')})`},'','']);
+  sm.push([
+    'חיובי = חוסר במשקל','','',
+    {f:`IF(SUM(${NR('I')})+SUM(${NR('J')})>0.001,SUM(${NR('N')})/(SUM(${NR('I')})+SUM(${NR('J')})),"")`},'','',
+    {f:`SUM(${NR('Q')})*${V}`},'','',
+    {f:`IF(SUM(${NR('S')})>0,SUM(${NR('T')})/SUM(${NR('S')}),"")`},'','']);
+  sm.push([]);
+  sm.push(['דוח קבוצות — פחת עצמות, שאריות וחיתוך']);
+  sm.push(['קבוצה','מלאי פתיחה','רכש ק"ג','מכר ק"ג','מלאי מחושב','מלאי בפועל','הפרש ק"ג','% פחת','שווי מלאי ₪','מכירות ₪','רווח גולמי ₪','% רווח']);
+  const gStart=sm.length+1;
+  const GC='\'נתונים\'!$C$'+first+':$C$'+last;
+  const SIF=(col,row)=>({f:`SUMIF(${GC},$A${row},'נתונים'!${col}$${first}:${col}$${last})`});
+  for(const gm of groupMeta){
+    const row=sm.length+1;
+    sm.push([gm.name,SIF('I',row),SIF('J',row),SIF('K',row),SIF('L',row),SIF('M',row),SIF('N',row),
+      {f:`IF(B${row}+C${row}>0.001,G${row}/(B${row}+C${row}),"")`},
+      SIF('Q',row),SIF('S',row),SIF('T',row),
+      {f:`IF(J${row}>0,K${row}/J${row},"")`}]);
+  }
+  const gEnd=sm.length,totRow=sm.length+1;
+  sm.push(['סה"כ מחלקה',
+    {f:`SUM(B${gStart}:B${gEnd})`},{f:`SUM(C${gStart}:C${gEnd})`},{f:`SUM(D${gStart}:D${gEnd})`},
+    {f:`SUM(E${gStart}:E${gEnd})`},{f:`SUM(F${gStart}:F${gEnd})`},{f:`SUM(G${gStart}:G${gEnd})`},
+    {f:`IF(B${totRow}+C${totRow}>0.001,G${totRow}/(B${totRow}+C${totRow}),"")`},
+    {f:`SUM(I${gStart}:I${gEnd})`},{f:`SUM(J${gStart}:J${gEnd})`},{f:`SUM(K${gStart}:K${gEnd})`},
+    {f:`IF(J${totRow}>0,K${totRow}/J${totRow},"")`}]);
+  const ws0=XLSX.utils.aoa_to_sheet(sm,{cellDates:true});
+  ws0['!cols']=[{wch:16},{wch:11},{wch:10},{wch:12},{wch:12},{wch:11},{wch:10},{wch:9},{wch:12},{wch:11},{wch:12},{wch:9}];
+  ws0['!rows']=[{hpt:30},{},{hpt:6},{hpt:20},{hpt:30},{hpt:16},{hpt:6},{hpt:22}];
+  ws0['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:11}},
+    {s:{r:3,c:0},e:{r:3,c:2}},{s:{r:3,c:3},e:{r:3,c:5}},{s:{r:3,c:6},e:{r:3,c:8}},{s:{r:3,c:9},e:{r:3,c:11}},
+    {s:{r:4,c:0},e:{r:4,c:2}},{s:{r:4,c:3},e:{r:4,c:5}},{s:{r:4,c:6},e:{r:4,c:8}},{s:{r:4,c:9},e:{r:4,c:11}},
+    {s:{r:5,c:0},e:{r:5,c:2}},{s:{r:5,c:3},e:{r:5,c:5}},{s:{r:5,c:6},e:{r:5,c:8}},{s:{r:5,c:9},e:{r:5,c:11}},
+    {s:{r:7,c:0},e:{r:7,c:11}}];
+  // formats
+  ws0['B2'].z='dd/mm/yyyy';ws0['E2'].z='dd/mm/yyyy';
+  ws0['A5'].z='"₪" #,##0';ws0['D5'].z='#,##0.0 "ק\\"ג"';ws0['G5'].z='"₪" #,##0';ws0['J5'].z='"₪" #,##0';
+  if(ws0['D6'])ws0['D6'].z='0.0%';if(ws0['G6'])ws0['G6'].z='"₪" #,##0 "כולל מע\\"מ"';if(ws0['J6'])ws0['J6'].z='0.0%';
+  for(let i=gStart;i<=totRow;i++){
+    if(ws0['H'+i])ws0['H'+i].z='0.0%';if(ws0['L'+i])ws0['L'+i].z='0.0%';
+    for(const c of ['I','J','K'])if(ws0[c+i])ws0[c+i].z='#,##0';
+    for(const c of ['B','C','D','E','F','G'])if(ws0[c+i])ws0[c+i].z='#,##0.0';
+  }
+  try{
+    const C12='ABCDEFGHIJKL'.split('');
+    styleCell(ws0,'A1',{font:{bold:true,sz:16,color:{rgb:'FFFFFF'},name:'Heebo'},fill:{fgColor:{rgb:'4A0D18'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'medium',color:{rgb:'C89B5A'}}}});
+    for(const a of ['A2','D2','G2'])styleCell(ws0,a,ST.dateLbl);
+    for(const a of ['B2','E2','H2'])styleCell(ws0,a,ST.dateVal,true);
+    const cardLbl={font:{bold:true,sz:10.5,color:{rgb:'8A7F78'}},fill:{fgColor:{rgb:'FDFBF7'}},alignment:{horizontal:'center'},border:{top:{style:'medium',color:{rgb:'6E1423'}}}};
+    const cardVal={font:{bold:true,sz:16,color:{rgb:'221B18'}},fill:{fgColor:{rgb:'FDFBF7'}},alignment:{horizontal:'center',vertical:'center'}};
+    const cardSub={font:{sz:9.5,color:{rgb:'8A7F78'}},fill:{fgColor:{rgb:'FDFBF7'}},alignment:{horizontal:'center'},border:{bottom:{style:'thin',color:{rgb:'E9E2D8'}}}};
+    for(const c of C12){styleCell(ws0,c+'4',cardLbl,true);styleCell(ws0,c+'5',cardVal,true);styleCell(ws0,c+'6',cardSub,true);}
+    styleCell(ws0,'A5',{...cardVal,font:{...cardVal.font,color:{rgb:'B01E2E'}}},true);
+    styleCell(ws0,'J5',{...cardVal,font:{...cardVal.font,color:{rgb:'1E7A46'}}},true);
+    styleCell(ws0,'A8',{font:{bold:true,sz:13,color:{rgb:'4A0D18'}},border:{bottom:{style:'thin',color:{rgb:'C89B5A'}}}});
+    C12.forEach(c=>styleCell(ws0,c+'9',ST.hdr));
+    for(let i=gStart;i<gEnd+1;i++)C12.forEach(c=>{if(ws0[c+i])styleCell(ws0,c+i,(i-gStart)%2?{fill:{fgColor:{rgb:'FBF8F2'}},font:{sz:11}}:{font:{sz:11}},true);});
+    C12.forEach(c=>styleCell(ws0,c+totRow,ST.grand,true));
+  }catch(e){console.warn('summary styling skipped',e);}
+
+  /* ---- Sheet "היסטוריה" ---- */
+  const hist=allHistory();
+  const h3=[['תאריך','קבוצה','מלאי פתיחה','רכש','מכר','מלאי בפועל','הפרש','% פחת','שווי הפרש','מכירות','רווח גולמי','ספירה']];
+  for(const h of hist){
+    const d=h.date instanceof Date?h.date:new Date(h.date);
+    h3.push([d,h.grpName,h.opening,h.buyQty,h.salesQty,h.actual,h.diff,h.pct!=null?h.pct/100:null,h.diffVal,h.salesAmt,h.profit,h.counted?'כן':'לא']);
+  }
+  const ws3=XLSX.utils.aoa_to_sheet(h3,{cellDates:true});
+  ws3['!cols']=h3[0].map(()=>({wch:11}));
+  for(let i=2;i<=h3.length;i++){const c=ws3['H'+i];if(c&&c.t==='n')c.z='0.0%';const d=ws3['A'+i];if(d)d.z='dd/mm/yyyy';}
+  try{for(let c=0;c<h3[0].length;c++)styleCell(ws3,XLSX.utils.encode_cell({r:0,c}),ST.hdr);}catch(e){}
+  ws3['!autofilter']={ref:`A1:L${h3.length}`};
+
+  /* ---- book ---- */
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws0,'סיכום');
+  XLSX.utils.book_append_sheet(wb,ws1,'השוואה');
+  XLSX.utils.book_append_sheet(wb,ws2,'נתונים');
+  XLSX.utils.book_append_sheet(wb,ws3,'היסטוריה');
+  wb.Workbook={Views:[{RTL:true}]};
+  const dateStr=($('dateCur').value||new Date().toISOString().slice(0,10)).replace(/-/g,'_');
+  XLSX.writeFile(wb,`${dateStr}__השוואה_בשר.xlsx`);
+}
+$('threshPct').addEventListener('change',()=>{if(state.baseRows)recalc()});
+$('vat').addEventListener('change',()=>{if(state.baseRows)recalc()});
+</script>
+</body>
+</html>
