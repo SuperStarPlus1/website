@@ -171,7 +171,7 @@ tr.hot td{background:#FDF3F4}
       <table id="tblGroups" style="display:table">
         <thead><tr>
           <th>קבוצה</th><th>מלאי פתיחה</th><th>רכש ק"ג</th><th>מכר ק"ג</th><th>מלאי מחושב</th><th>מלאי בפועל</th>
-          <th>הפרש ק"ג</th><th>% פחת</th><th>שווי מלאי ₪</th><th>מכירות ₪</th><th>רווח גולמי ₪</th><th>% רווח</th>
+          <th>הפרש ק"ג</th><th>% פחת</th><th>שווי מלאי ₪</th><th>קניות ₪</th><th>מכירות ₪</th><th>רווח גולמי ₪</th><th>% רווח</th>
         </tr></thead>
         <tbody id="tbodyGroups"></tbody>
       </table>
@@ -461,6 +461,7 @@ function renderGroups(){
       <td class="num ${t.diff>0?'neg':'pos'}">${fmt(t.diff,1)}</td>
       <td class="num ${t.alert?'neg':''}">${state.hasCount&&t.pct!=null?fmt(t.pct,1)+'%':'—'}</td>
       <td class="num">${money(t.stockVal)}</td>
+      <td class="num">${money(t.buyAmt)}</td>
       <td class="num">${money(t.salesAmt)}</td>
       <td class="num ${t.profit<0?'neg':''}">${money(t.profit)}</td>
       <td class="num">${t.profitPct!=null?fmt(t.profitPct,1)+'%':''}</td></tr>`;
@@ -470,7 +471,7 @@ function renderGroups(){
     <td class="num">${fmt(T.opening,1)}</td><td class="num">${fmt(T.buyQty,1)}</td><td class="num">${fmt(T.salesQty,1)}</td>
     <td class="num">${fmt(T.calc,1)}</td><td class="num">${fmt(T.actual,1)}</td>
     <td class="num">${fmt(T.diff,1)}</td><td class="num">${state.hasCount&&T.pct!=null?fmt(T.pct,1)+'%':'—'}</td>
-    <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.salesAmt)}</td>
+    <td class="num">${money(T.stockVal)}</td><td class="num">${money(T.buyAmt)}</td><td class="num">${money(T.salesAmt)}</td>
     <td class="num">${money(T.profit)}</td><td class="num">${T.profitPct!=null?fmt(T.profitPct,1)+'%':''}</td></tr>`;
   $('tbodyGroups').innerHTML=html;
 }
@@ -741,7 +742,7 @@ function exportXlsx(){
     {f:`IF(SUM(${NR('S')})>0,SUM(${NR('T')})/SUM(${NR('S')}),"")`},'','']);
   sm.push([]);
   sm.push(['דוח קבוצות — פחת עצמות, שאריות וחיתוך']);
-  sm.push(['קבוצה','מלאי פתיחה','רכש ק"ג','מכר ק"ג','מלאי מחושב','מלאי בפועל','הפרש ק"ג','% פחת','שווי מלאי ₪','מכירות ₪','רווח גולמי ₪','% רווח']);
+  sm.push(['קבוצה','מלאי פתיחה','רכש ק"ג','מכר ק"ג','מלאי מחושב','מלאי בפועל','הפרש ק"ג','% פחת','שווי מלאי ₪','קניות ₪','מכירות ₪','רווח גולמי ₪','% רווח']);
   const gStart=sm.length+1;
   const GC='\'נתונים\'!$C$'+first+':$C$'+last;
   const SIF=(col,row)=>({f:`SUMIF(${GC},$A${row},'נתונים'!${col}$${first}:${col}$${last})`});
@@ -749,36 +750,36 @@ function exportXlsx(){
     const row=sm.length+1;
     sm.push([gm.name,SIF('I',row),SIF('J',row),SIF('K',row),SIF('L',row),SIF('M',row),SIF('N',row),
       {f:`IF(B${row}+C${row}>0.001,G${row}/(B${row}+C${row}),"")`},
-      SIF('Q',row),SIF('S',row),SIF('T',row),
-      {f:`IF(J${row}>0,K${row}/J${row},"")`}]);
+      SIF('Q',row),SIF('R',row),SIF('S',row),SIF('T',row),
+      {f:`IF(K${row}>0,L${row}/K${row},"")`}]);
   }
   const gEnd=sm.length,totRow=sm.length+1;
   sm.push(['סה"כ מחלקה',
     {f:`SUM(B${gStart}:B${gEnd})`},{f:`SUM(C${gStart}:C${gEnd})`},{f:`SUM(D${gStart}:D${gEnd})`},
     {f:`SUM(E${gStart}:E${gEnd})`},{f:`SUM(F${gStart}:F${gEnd})`},{f:`SUM(G${gStart}:G${gEnd})`},
     {f:`IF(B${totRow}+C${totRow}>0.001,G${totRow}/(B${totRow}+C${totRow}),"")`},
-    {f:`SUM(I${gStart}:I${gEnd})`},{f:`SUM(J${gStart}:J${gEnd})`},{f:`SUM(K${gStart}:K${gEnd})`},
-    {f:`IF(J${totRow}>0,K${totRow}/J${totRow},"")`}]);
+    {f:`SUM(I${gStart}:I${gEnd})`},{f:`SUM(J${gStart}:J${gEnd})`},{f:`SUM(K${gStart}:K${gEnd})`},{f:`SUM(L${gStart}:L${gEnd})`},
+    {f:`IF(K${totRow}>0,L${totRow}/K${totRow},"")`}]);
   const ws0=XLSX.utils.aoa_to_sheet(sm,{cellDates:true});
-  ws0['!cols']=[{wch:16},{wch:11},{wch:10},{wch:12},{wch:12},{wch:11},{wch:10},{wch:9},{wch:12},{wch:11},{wch:12},{wch:9}];
+  ws0['!cols']=[{wch:16},{wch:11},{wch:10},{wch:12},{wch:12},{wch:11},{wch:10},{wch:9},{wch:12},{wch:11},{wch:11},{wch:12},{wch:9}];
   ws0['!rows']=[{hpt:30},{},{hpt:6},{hpt:20},{hpt:30},{hpt:16},{hpt:6},{hpt:22}];
   ws0['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:11}},
+    {s:{r:0,c:0},e:{r:0,c:12}},
     {s:{r:3,c:0},e:{r:3,c:2}},{s:{r:3,c:3},e:{r:3,c:5}},{s:{r:3,c:6},e:{r:3,c:8}},{s:{r:3,c:9},e:{r:3,c:11}},
     {s:{r:4,c:0},e:{r:4,c:2}},{s:{r:4,c:3},e:{r:4,c:5}},{s:{r:4,c:6},e:{r:4,c:8}},{s:{r:4,c:9},e:{r:4,c:11}},
     {s:{r:5,c:0},e:{r:5,c:2}},{s:{r:5,c:3},e:{r:5,c:5}},{s:{r:5,c:6},e:{r:5,c:8}},{s:{r:5,c:9},e:{r:5,c:11}},
-    {s:{r:7,c:0},e:{r:7,c:11}}];
+    {s:{r:7,c:0},e:{r:7,c:12}}];
   // formats
   ws0['B2'].z='dd/mm/yyyy';ws0['E2'].z='dd/mm/yyyy';
   ws0['A5'].z='"₪" #,##0';ws0['D5'].z='#,##0.0 "ק\\"ג"';ws0['G5'].z='"₪" #,##0';ws0['J5'].z='"₪" #,##0';
   if(ws0['D6'])ws0['D6'].z='0.0%';if(ws0['G6'])ws0['G6'].z='"₪" #,##0 "כולל מע\\"מ"';if(ws0['J6'])ws0['J6'].z='0.0%';
   for(let i=gStart;i<=totRow;i++){
-    if(ws0['H'+i])ws0['H'+i].z='0.0%';if(ws0['L'+i])ws0['L'+i].z='0.0%';
-    for(const c of ['I','J','K'])if(ws0[c+i])ws0[c+i].z='#,##0';
+    if(ws0['H'+i])ws0['H'+i].z='0.0%';if(ws0['M'+i])ws0['M'+i].z='0.0%';
+    for(const c of ['I','J','K','L'])if(ws0[c+i])ws0[c+i].z='#,##0';
     for(const c of ['B','C','D','E','F','G'])if(ws0[c+i])ws0[c+i].z='#,##0.0';
   }
   try{
-    const C12='ABCDEFGHIJKL'.split('');
+    const C12='ABCDEFGHIJKLM'.split('');
     styleCell(ws0,'A1',{font:{bold:true,sz:16,color:{rgb:'FFFFFF'},name:'Heebo'},fill:{fgColor:{rgb:'4A0D18'}},alignment:{horizontal:'center',vertical:'center'},border:{bottom:{style:'medium',color:{rgb:'C89B5A'}}}});
     for(const a of ['A2','D2','G2'])styleCell(ws0,a,ST.dateLbl);
     for(const a of ['B2','E2','H2'])styleCell(ws0,a,ST.dateVal,true);
