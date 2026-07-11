@@ -128,25 +128,25 @@ tr.hot td{background:#FDF3F4}
       <div class="status" id="stRM">לחץ לבחירת קובץ…</div>
       <input type="file" id="fileRM" accept=".xlsx,.xls,.csv">
     </div>
-    <div class="upcard optional" id="cardCNT" onclick="document.getElementById('fileCNT').click()">
-      <span class="step">שלב 2 · אם נערכה ספירה</span>
-      <h3>🧮 ספירת מלאי</h3>
-      <p>דוח ספירה מקומקס. ללא קובץ — המערכת תגרור את המלאי המחושב מהספירה הקודמת (שבוע ללא ספירה).</p>
-      <div class="status" id="stCNT">ללא ספירה השבוע</div>
+    <div class="upcard" id="cardCNT" onclick="document.getElementById('fileCNT').click()">
+      <span class="step">שלב 2 · חובה</span>
+      <h3>🧮 ספירת מלאי נוכחית</h3>
+      <p>דוח הספירה החדשה מקומקס. עמודות: פריט, כמות שנספרה, מחיר.</p>
+      <div class="status" id="stCNT">לחץ לבחירת קובץ…</div>
       <input type="file" id="fileCNT" accept=".xlsx,.xls,.csv">
     </div>
     <div class="upcard optional" id="cardPREV" onclick="document.getElementById('filePREV').click()">
-      <span class="step">שלב 3 · מומלץ</span>
-      <h3>📋 השוואה משבוע שעבר</h3>
-      <p>הקובץ מההרצה הקודמת (או הקובץ הידני). ממנו: מלאי פתיחה, קבוצות, מחירים והיסטוריית פחת.</p>
+      <span class="step">שלב 3 · ספירה קודמת</span>
+      <h3>📋 ספירת מלאי קודמת</h3>
+      <p>דוח הספירה הקודמת מקומקס (אותו פורמט). ממנו נלקח מלאי הפתיחה. בהרצה ראשונה בלי קובץ — פתיחה 0.</p>
       <div class="status" id="stPREV">ללא קובץ — מלאי פתיחה 0</div>
       <input type="file" id="filePREV" accept=".xlsx,.xls,.csv">
     </div>
     <div class="upcard optional" id="cardCAT" onclick="document.getElementById('fileCAT').click()">
-      <span class="step">שלב 4 · קטלוג</span>
-      <h3>🏷️ קטלוג מחירי קניה</h3>
-      <p>קובץ עם ברקוד + מחיר קניה לכל פריט (ללא מע"מ). המחיר מהקטלוג גובר על כל מקור אחר מלבד עריכה ידנית.</p>
-      <div class="status" id="stCAT">אופציונלי</div>
+      <span class="step">שלב 4 · מחירון</span>
+      <h3>🏷️ מחירון קניה</h3>
+      <p>ברקוד + מחיר קניה (ללא מע"מ) לכל פריט. אפשר להוסיף עמודות "קבוצה" ו"שם קבוצה" — ומכאן יילקח השיוך לקבוצות עוף/טלה/עגל.</p>
+      <div class="status" id="stCAT">מומלץ</div>
       <input type="file" id="fileCAT" accept=".xlsx,.xls,.csv">
     </div>
   </div>
@@ -205,7 +205,7 @@ tr.hot td{background:#FDF3F4}
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="hint">💡 <b>המספר הקובע הוא שורת הסה"כ של כל קבוצה</b> — ההפרש הקבוצתי הוא פחת העצמות, השאריות והחיתוך: כל הק"ג שנכנסו פחות הק"ג שנמכרו, מול הספירה. ברמת פריט בודד הפרש שלילי טבעי לחלקים שנחתכים מנתח שלם. פריט המסומן <span class="flag g">נרכש</span> נקנה ישירות ומחירו נלקח מקובץ הרכש. סדר עדיפות מחיר: ידני ← קטלוג ← קובץ רכש ← שבוע קודם ← קובץ ספירה. רווח גולמי בשיטת תנועת מלאי: מכירות − (שווי פתיחה + רכש − שווי סגירה), כמו בקובץ הידני. קובץ הייצוא כולל גיליון "השוואה" בפורמט המוכר, גיליון "נתונים" שטוח לניתוח, וגיליון "היסטוריה" שנצבר משבוע לשבוע.</p>
+    <p class="hint">💡 <b>המספר הקובע הוא שורת הסה"כ של כל קבוצה</b> — ההפרש הקבוצתי הוא פחת העצמות, השאריות והחיתוך: כל הק"ג שנכנסו פחות הק"ג שנמכרו, מול הספירה. ברמת פריט בודד הפרש שלילי טבעי לחלקים שנחתכים מנתח שלם. פריט המסומן <span class="flag g">נרכש</span> נקנה ישירות ומחירו נלקח מקובץ הרכש. מלאי הפתיחה = הספירה הקודמת. סדר עדיפות מחיר: ידני ← מחירון ← קובץ רכש ← ספירה קודמת ← ספירה נוכחית. רווח גולמי בשיטת תנועת מלאי: מכירות − (שווי פתיחה + רכש − שווי סגירה), כמו בקובץ הידני. קובץ הייצוא כולל גיליון "השוואה" בפורמט המוכר, גיליון "נתונים" שטוח לניתוח, וגיליון "היסטוריה" עם סיכום הקבוצות של התקופה.</p>
 
     <div id="histSect">
       <div class="sect">📈 היסטוריית פחת שבועית לפי קבוצה</div>
@@ -265,43 +265,11 @@ function parseCNT(wb){
   const hi=findHeaderRow(rows,['פריט','שם פריט','כמות שנספרה']);
   if(hi<0) throw 'לא נמצאו עמודות "פריט / כמות שנספרה" — ודא שזה דוח ספירת מלאי מקומקס';
   const h=rows[hi].map(c=>String(c??'').trim()); const out={};
+  let spI=-1;h.forEach((c,i)=>{if(c==='ספק')spI=i;}); // עמודת ספק אחרונה = שם הספק
   const C={bc:colIdx(h,'פריט'),nm:colIdx(h,'שם פריט'),pr:colIdx(h,'מחיר'),cq:colIdx(h,'כמות שנספרה')};
   for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[C.bc];if(!isBarcode(bc))continue;
-    out[String(bc)]={name:r[C.nm],price:num(r[C.pr]),counted:num(r[C.cq])};}
+    out[String(bc)]={name:r[C.nm],price:num(r[C.pr]),counted:num(r[C.cq]),supplier:spI>=0?String(r[spI]??'').trim():''};}
   return out;
-}
-function parsePREV(wb){
-  // main comparison sheet: prefer sheet named השוואה, else first sheet that has the columns
-  let items=null,dates=null;
-  const tryNames=['השוואה',...wb.SheetNames];
-  for(const sn of tryNames){
-    const ws=wb.Sheets[sn]; if(!ws)continue;
-    const rows=sheetRows(ws);
-    const hi=findHeaderRow(rows,['פריט','שם פריט','מלאי בפועל']);
-    if(hi<0)continue;
-    const h=rows[hi].map(c=>String(c??'').trim()); items={};
-    const C={g:colIdx(h,'קבוצה'),gn:colIdx(h,'שם קבוצה'),bc:colIdx(h,'פריט'),nm:colIdx(h,'שם פריט'),ac:colIdx(h,'מלאי בפועל'),cp:colIdx(h,'מחיר מכירה קטלוגי'),bp:colIdx(h,'מחיר קניה אחרון')};
-    for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[C.bc];if(!isBarcode(bc))continue;
-      items[String(bc)]={grp:r[C.g],grpName:r[C.gn]??'',name:r[C.nm],actual:num(r[C.ac]),catPrice:num(r[C.cp]),lastBuy:num(r[C.bp])};}
-    for(let i=0;i<Math.min(rows.length,4);i++){const r=rows[i]||[];
-      for(let j=0;j<r.length;j++){const s=String(r[j]??'');
-        if(s.includes('ספירה נוכחית')){const d=toDate(r[j+1]);if(d){dates=dates||{};dates.cur=d;}}}}
-    break;
-  }
-  if(!items) throw 'לא נמצאו עמודות "פריט / מלאי בפועל" — יש להעלות קובץ השוואה (פלט המערכת או הקובץ הידני)';
-  // history sheet
-  const history=[];
-  const hws=wb.Sheets['היסטוריה'];
-  if(hws){
-    const rows=sheetRows(hws);
-    const hi=findHeaderRow(rows,['תאריך','קבוצה','הפרש']);
-    if(hi>=0){const h=rows[hi].map(c=>String(c??'').trim());
-      const C={dt:colIdx(h,'תאריך'),g:colIdx(h,'קבוצה'),op:colIdx(h,'מלאי פתיחה'),bq:colIdx(h,'רכש'),sq:colIdx(h,'מכר'),ac:colIdx(h,'מלאי בפועל'),df:colIdx(h,'הפרש'),pc:colIdx(h,'% פחת'),dv:colIdx(h,'שווי הפרש'),sa:colIdx(h,'מכירות'),pf:colIdx(h,'רווח גולמי'),cn:colIdx(h,'ספירה')};
-      for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];if(!r[C.g])continue;
-        history.push({date:toDate(r[C.dt])||r[C.dt],grpName:String(r[C.g]),opening:num(r[C.op]),buyQty:num(r[C.bq]),salesQty:num(r[C.sq]),actual:num(r[C.ac]),diff:num(r[C.df]),pct:r[C.pc]==null?null:num(r[C.pc])*100,diffVal:num(r[C.dv]),salesAmt:num(r[C.sa]),profit:num(r[C.pf]),counted:String(r[C.cn]??'')!=='לא'});}
-    }
-  }
-  return {items,dates,history};
 }
 function parseCAT(wb){
   const rows=sheetRows(wb.Sheets[wb.SheetNames[0]]);
@@ -313,12 +281,15 @@ function parseCAT(wb){
     const b=colIdxAny(r,bcNames),p=colIdxAny(r,prNames);
     if(b>=0&&p>=0){hi=i;h=r;bcI=b;prI=p;break;}
   }
-  if(hi<0) throw 'לא נמצאו עמודות ברקוד + מחיר קניה בקטלוג';
+  if(hi<0) throw 'לא נמצאו עמודות ברקוד + מחיר קניה במחירון';
   const nmI=colIdxAny(h,['שם פריט','שם','תיאור','name','Name']);
+  const gI=colIdx(h,'קבוצה'),gnI=colIdx(h,'שם קבוצה');
   const out={};let n=0;
   for(let i=hi+1;i<rows.length;i++){const r=rows[i]||[];const bc=r[bcI];if(!isBarcode(bc))continue;
-    const p=num(r[prI]);if(p>0){out[String(bc)]={price:p,name:nmI>=0?r[nmI]:null};n++;}}
-  if(!n) throw 'לא נמצאו מחירים תקינים בקטלוג';
+    const p=num(r[prI]);
+    out[String(bc)]={price:p>0?p:0,name:nmI>=0?r[nmI]:null,grp:gI>=0?(r[gI]??''):'',grpName:gnI>=0?String(r[gnI]??'').trim():''};
+    if(p>0)n++;}
+  if(!Object.keys(out).length) throw 'לא נמצאו שורות תקינות במחירון';
   return out;
 }
 
@@ -332,39 +303,35 @@ function wire(inputId,cardId,stId,parser,key){
       const parsed=parser(wb);
       state[key]=parsed;
       card.classList.remove('err');card.classList.add('loaded');
-      const n=key==='prev'?Object.keys(parsed.items).length:Object.keys(parsed).length;
-      st.textContent='✓ '+f.name+' — '+n+' פריטים'+(key==='prev'&&parsed.history.length?` · ${new Set(parsed.history.map(x=>String(x.date))).size} שבועות היסטוריה`:'');
-      if(key==='prev'&&parsed.dates&&parsed.dates.cur){
-        $('datePrev').value=parsed.dates.cur.toISOString().slice(0,10);
-        const d=new Date(parsed.dates.cur);d.setDate(d.getDate()+7);
-        $('dateCur').value=d.toISOString().slice(0,10);
-      }
+      const n=Object.keys(parsed).length;
+      st.textContent='✓ '+f.name+' — '+n+' פריטים';
     }catch(err){
       state[key]=null;card.classList.remove('loaded');card.classList.add('err');
       st.textContent='✗ '+(typeof err==='string'?err:'שגיאה בקריאת הקובץ');
       console.error(err);
     }
-    $('btnCalc').disabled=!state.rm;
+    $('btnCalc').disabled=!(state.rm&&state.cnt);
   });
 }
 wire('fileRM','cardRM','stRM',parseRM,'rm');
 wire('fileCNT','cardCNT','stCNT',parseCNT,'cnt');
-wire('filePREV','cardPREV','stPREV',parsePREV,'prev');
+wire('filePREV','cardPREV','stPREV',parseCNT,'prevCnt');
 wire('fileCAT','cardCAT','stCAT',parseCAT,'cat');
 
 /* ================= compute ================= */
 function baseRows(){
-  const rm=state.rm||{},cnt=state.cnt||{},prev=state.prev?state.prev.items:{},cat=state.cat||{};
+  const rm=state.rm||{},cnt=state.cnt||{},prev=state.prevCnt||{},cat=state.cat||{};
   const barcodes=new Set([...Object.keys(rm),...Object.keys(cnt),...Object.keys(prev)]);
   const rows=[];
   for(const bc of barcodes){
     const r=rm[bc]||{},c=cnt[bc]||{},p=prev[bc]||{},k=cat[bc];
+    const grpName=(k&&k.grpName)||c.supplier||p.supplier||'ללא שיוך';
     rows.push({barcode:bc,name:c.name||r.name||p.name||(k&&k.name)||'—',
-      grp:p.grp??'',grpName:p.grpName||'ללא שיוך',
-      catSellPrice:p.catPrice||r.sellPrice||0,
-      catalogPrice:k?k.price:0,rmPrice:r.buyPrice||0,prevPrice:p.lastBuy||0,cntPrice:c.price||0,
+      grp:(k&&k.grp)||'',grpName,
+      catSellPrice:r.sellPrice||0,
+      catalogPrice:k?k.price:0,rmPrice:r.buyPrice||0,prevPrice:p.price||0,cntPrice:c.price||0,
       purchased:!!r.purchased,
-      opening:p.actual??0,buyQty:r.buyQty||0,salesQty:r.salesQty||0,
+      opening:p.counted??0,buyQty:r.buyQty||0,salesQty:r.salesQty||0,
       buyAmt:r.buyAmt||0,salesAmt:r.salesAmt||0,
       wasCounted:Object.prototype.hasOwnProperty.call(cnt,bc),counted:c.counted||0});
   }
@@ -374,16 +341,15 @@ function effectivePrice(r){
   if(state.overrides[r.barcode])return {p:state.overrides[r.barcode],src:'ידני'};
   if(r.catalogPrice>0)return {p:r.catalogPrice,src:'קטלוג'};
   if(r.rmPrice>0)return {p:r.rmPrice,src:'קובץ רכש'};
-  if(r.prevPrice>0)return {p:r.prevPrice,src:'שבוע קודם'};
-  if(r.cntPrice>0)return {p:r.cntPrice,src:'קובץ ספירה'};
+  if(r.prevPrice>0)return {p:r.prevPrice,src:'ספירה קודמת'};
+  if(r.cntPrice>0)return {p:r.cntPrice,src:'ספירה נוכחית'};
   return {p:0,src:''};
 }
 function firstCalc(){
   state.baseRows=baseRows();
   state.groups=[...new Set(state.baseRows.map(r=>r.grpName))].sort((a,b)=>(a==='ללא שיוך')-(b==='ללא שיוך'));
   state.overrides={};
-  state.hasCount=!!state.cnt;
-  $('noCountBanner').className='banner'+(state.hasCount?'':' warn');
+  state.hasCount=true;
   recalc();
   $('report').style.display='block';
   $('btnExport').style.display='inline-block';
@@ -552,10 +518,7 @@ function currentWeekHistory(){
   return out;
 }
 function allHistory(){
-  const prev=(state.prev&&state.prev.history)?state.prev.history:[];
-  const dCur=$('dateCur').value||new Date().toISOString().slice(0,10);
-  const keep=prev.filter(h=>{const d=h.date instanceof Date?h.date.toISOString().slice(0,10):String(h.date).slice(0,10);return d!==dCur;});
-  return [...keep,...currentWeekHistory()];
+  return currentWeekHistory();
 }
 function renderHistory(){
   const hist=allHistory();
