@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סידור עבודה — סופרסטאר פלוס</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1b2a4a; --navy-2:#233763; --gold:#e8a819;
+  --bg:#f2f4f7; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+  --line:#e5e7eb; --ok:#16a34a; --warn:#dc2626;
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit;font-size:14px}
+
+/* ===== כותרת ===== */
+header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(15,23,42,.25)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .star{width:34px;height:34px;border-radius:9px;background:var(--gold);display:grid;place-items:center;font-family:'Rubik';font-weight:800;font-size:19px;color:var(--navy)}
+.brand h1{font-family:'Rubik';font-weight:800;font-size:17px;letter-spacing:.2px}
+.brand small{display:block;font-family:'Heebo';font-weight:400;font-size:11px;color:#c7d0e2}
+
+.weeknav{display:flex;align-items:center;gap:6px;background:var(--navy-2);border-radius:10px;padding:4px}
+.weeknav button{background:transparent;border:0;color:#fff;font-size:17px;width:32px;height:32px;border-radius:8px}
+.weeknav button:hover{background:rgba(255,255,255,.12)}
+.weeknav .range{font-family:'Rubik';font-weight:700;font-size:13px;padding:0 8px;min-width:150px;text-align:center}
+
+.spacer{flex:1}
+.hbtn{border:0;border-radius:9px;padding:8px 13px;font-weight:700;font-size:13px;background:var(--navy-2);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.hbtn:hover{background:#2c447a}
+.hbtn.gold{background:var(--gold);color:var(--navy)}
+.hbtn.ghost{background:transparent;border:1px solid #40527d}
+.hbtn:disabled{opacity:.45;cursor:default}
+select.hsel{background:var(--navy-2);color:#fff;border:0;border-radius:9px;padding:8px 10px;font-weight:500}
+
+.badge-dirty{background:var(--warn);color:#fff;border-radius:99px;font-size:10px;padding:2px 7px;font-weight:700}
+
+/* ===== פסי מצב ===== */
+.notice{padding:9px 16px;font-size:13px;font-weight:500;display:flex;gap:8px;align-items:center}
+.notice.demo{background:#fef3c7;color:#92400e;border-bottom:1px solid #fde68a}
+.notice.err{background:#fee2e2;color:#991b1b}
+.hidden{display:none!important}
+
+/* ===== לוח ===== */
+main{max-width:1280px;margin:16px auto;padding:0 12px 60px}
+.dept{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(15,23,42,.08);margin-bottom:16px;overflow:hidden;border-inline-start:5px solid var(--dc,#64748b)}
+.dept-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.dept-head .dot{width:11px;height:11px;border-radius:4px;background:var(--dc)}
+.dept-head h2{font-family:'Rubik';font-weight:700;font-size:15px}
+.dept-head .dsum{margin-inline-start:auto;font-size:12px;color:var(--muted);font-weight:500}
+
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{border-bottom:1px solid var(--line);border-inline-start:1px solid #f1f3f6;padding:0;vertical-align:top}
+thead th{background:#f8fafc;font-size:11.5px;font-weight:700;color:var(--muted);padding:7px 6px;text-align:center;white-space:nowrap}
+thead th.today{background:#fff8e6;color:#926a00}
+th.namecol,td.namecol{position:sticky;inset-inline-start:0;background:var(--card);z-index:2;min-width:150px;max-width:180px;border-inline-start:0;box-shadow:-1px 0 0 var(--line) inset}
+thead th.namecol{background:#f8fafc;text-align:start;padding-inline-start:14px}
+td.namecol{padding:8px 6px 8px 6px;padding-inline-start:14px}
+td.namecol .nm{font-weight:700;font-size:13px;line-height:1.25}
+td.namecol .hrs{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+
+td.cell{height:52px;min-width:96px;padding:4px;text-align:center}
+td.cell.today{background:#fffdf4}
+td.cell.clickable{cursor:pointer}
+td.cell.clickable:hover{background:#eef4ff}
+.chip{display:block;border-radius:8px;padding:5px 4px 4px;font-size:12px;font-weight:700;line-height:1.2;background:color-mix(in srgb,var(--dc) 12%,#fff);color:var(--navy);border:1px solid color-mix(in srgb,var(--dc) 35%,#fff);border-inline-start:4px solid var(--dc);font-variant-numeric:tabular-nums}
+.chip small{display:block;font-weight:500;font-size:10px;color:var(--muted)}
+.addhint{color:#c3cad6;font-size:18px;line-height:44px;user-select:none}
+
+tr.totals td{background:#f8fafc;padding:6px;text-align:center;font-size:11.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;height:auto}
+tr.totals td.namecol{background:#f8fafc;font-weight:700;color:var(--ink)}
+tr.totals b{display:block;color:var(--ink);font-size:12.5px}
+
+.addrow{border:0;background:none;color:var(--dc);font-weight:700;font-size:12.5px;padding:9px 14px;display:block}
+.addrow:hover{text-decoration:underline}
+
+/* סיכום אישי במסנן */
+.mysum{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(15,23,42,.08);padding:12px 16px;margin-bottom:16px;font-size:13.5px;display:flex;gap:18px;flex-wrap:wrap}
+.mysum b{font-family:'Rubik';font-size:16px}
+
+/* ===== מודאלים ===== */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:100;padding:14px}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden;max-height:92vh;display:flex;flex-direction:column}
+.modal.wide{max-width:560px}
+.modal header{background:var(--navy);position:static;padding:13px 16px;display:block;box-shadow:none}
+.modal header h3{font-family:'Rubik';font-size:15px;font-weight:700}
+.modal header p{font-size:12px;color:#c7d0e2;margin-top:2px}
+.mbody{padding:16px;overflow-y:auto}
+.mrow{margin-bottom:12px}
+.mrow label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.mrow input,.mrow select{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 10px}
+.mrow input:focus,.mrow select:focus{outline:none;border-color:var(--navy)}
+.timegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.preset{border:1.5px solid var(--line);background:#f8fafc;border-radius:10px;padding:10px;font-weight:700;font-size:13px}
+.preset small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.preset.active{border-color:var(--gold);background:#fff8e6}
+.mfoot{display:flex;gap:8px;padding:13px 16px;border-top:1px solid var(--line)}
+.btn{border:0;border-radius:9px;padding:10px 15px;font-weight:700;font-size:13.5px}
+.btn.primary{background:var(--navy);color:#fff}
+.btn.primary:hover{background:var(--navy-2)}
+.btn.danger{background:#fee2e2;color:#991b1b}
+.btn.plain{background:#eef1f5;color:var(--ink)}
+.mfoot .spacer{flex:1}
+.merr{color:var(--warn);font-size:12.5px;font-weight:600;margin-top:6px;min-height:16px}
+
+/* ניהול עובדים */
+.emp-list{display:flex;flex-direction:column;gap:8px}
+.emp-item{display:grid;grid-template-columns:1fr 150px 34px;gap:8px;align-items:center}
+.emp-item input,.emp-item select{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.emp-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
+.emp-item.inactive input{opacity:.5;text-decoration:line-through}
+
+/* טוסט */
+#toast{position:fixed;bottom:18px;inset-inline-start:50%;transform:translateX(50%);background:var(--navy);color:#fff;padding:11px 20px;border-radius:99px;font-weight:600;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:200;transition:opacity .3s}
+#toast.ok{background:var(--ok)}
+#toast.err{background:var(--warn)}
+
+.loading{text-align:center;padding:60px 0;color:var(--muted);font-weight:500}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--navy);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+@media (max-width:640px){
+  .brand small{display:none}
+  .weeknav .range{min-width:118px;font-size:12px}
+  main{padding:0 6px 60px}
+}
+
+/* ===== הדפסה ===== */
+@media print{
+  header .hbtn,header select.hsel,.weeknav button,.notice,.addrow,#toast{display:none!important}
+  header{position:static;background:#fff;color:#000;box-shadow:none;border-bottom:2px solid #000}
+  .brand .star{background:#000;color:#fff}
+  .weeknav{background:none}.weeknav .range{color:#000}
+  body{background:#fff}
+  .dept{box-shadow:none;border:1px solid #999;break-inside:avoid}
+  td.cell{height:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="star">★</div>
+    <div><h1>סידור עבודה</h1><small>סופרסטאר פלוס · קרמיאל</small></div>
+  </div>
+
+  <div class="weeknav">
+    <button id="prevW" title="שבוע קודם">›</button>
+    <div class="range" id="weekRange"></div>
+    <button id="nextW" title="שבוע הבא">‹</button>
+  </div>
+
+  <select class="hsel" id="empFilter" title="סינון לפי עובד">
+    <option value="">כל העובדים</option>
+  </select>
+
+  <div class="spacer"></div>
+
+  <button class="hbtn ghost" id="printBtn">🖨 הדפסה</button>
+
+  <!-- מצב צפייה -->
+  <button class="hbtn gold" id="adminLogin">🔒 כניסת מנהל</button>
+
+  <!-- מצב מנהל -->
+  <span id="adminTools" class="hidden">
+    <button class="hbtn" id="empMgr">👥 עובדים</button>
+    <button class="hbtn" id="copyPrev">⧉ העתק משבוע קודם</button>
+    <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
+    <button class="hbtn ghost" id="adminExit">יציאה</button>
+  </span>
+</header>
+
+<div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. סיסמת הדגמה: 1234</div>
+<div class="notice err hidden" id="errNotice"></div>
+
+<main>
+  <div class="mysum hidden" id="mySum"></div>
+  <div id="board"><div class="loading"><div class="spin"></div>טוען סידור…</div></div>
+</main>
+
+<!-- מודאל סיסמה -->
+<div class="overlay hidden" id="pwOverlay">
+  <div class="modal">
+    <header><h3>כניסת מנהל</h3><p>עריכת הסידור מוגנת בסיסמה</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>סיסמה</label><input type="password" id="pwInput" inputmode="numeric" autocomplete="off"></div>
+      <div class="merr" id="pwErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="pwOk">כניסה</button>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל עריכת משמרת -->
+<div class="overlay hidden" id="shOverlay">
+  <div class="modal">
+    <header><h3 id="shTitle"></h3><p id="shSub"></p></header>
+    <div class="mbody">
+      <div class="presets">
+        <button class="preset" data-s="08:00" data-e="15:00">☀ בוקר<small>8:00 – 15:00</small></button>
+        <button class="preset" data-s="15:00" data-e="22:00">🌙 ערב<small>15:00 – 22:00</small></button>
+      </div>
+      <div class="timegrid">
+        <div class="mrow"><label>התחלה</label><input type="time" id="shStart"></div>
+        <div class="mrow"><label>סיום</label><input type="time" id="shEnd"></div>
+      </div>
+      <div class="merr" id="shErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="shSave">שמירת משמרת</button>
+      <button class="btn danger hidden" id="shDel">מחיקה</button>
+      <span class="spacer"></span>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל הוספת עובד למחלקה -->
+<div class="overlay hidden" id="rowOverlay">
+  <div class="modal">
+    <header><h3 id="rowTitle">הוספת עובד למחלקה</h3></header>
+    <div class="mbody">
+      <div class="mrow"><label>עובד קיים</label><select id="rowSelect"></select></div>
+      <div class="mrow"><label>או עובד חדש (שם מלא)</label><input type="text" id="rowNew" placeholder="ישויך למחלקה זו"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="rowOk">הוספה</button>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל ניהול עובדים -->
+<div class="overlay hidden" id="empOverlay">
+  <div class="modal wide">
+    <header><h3>ניהול עובדים</h3><p>שם · מחלקה ראשית · הסרה (עובד לא פעיל — נקה את השם)</p></header>
+    <div class="mbody"><div class="emp-list" id="empList"></div>
+      <button class="btn plain" id="empAdd" style="margin-top:12px">+ עובד חדש</button>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="empOk">אישור</button>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="opacity:0"></div>
+
+<script>
+/* ================================================================
+   הגדרות — הדבק כאן את כתובת ה-Web App מ-Google Apps Script
+   ================================================================ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzEGWUf6fz5U3xpob0sz2YSPDP8N_vDdXzhNhU8uHx8aOU6imVle3PTrmAQvAk4rXYr/exec';
+
+const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const DEPT_COLORS = ['#2563eb','#0d9488','#7c3aed','#b45309','#0891b2','#16a34a','#db2777','#64748b','#9333ea','#ca8a04'];
+
+/* ============ מצב ============ */
+const state = {
+  demo: !GAS_URL,
+  weekStart: sundayOf(new Date()),
+  employees: [],          // {name, dept, active}
+  departments: [],
+  shifts: [],             // {date, employee, dept, start, end}
+  admin: false,
+  password: sessionStorage.getItem('sp_pw') || '',
+  dirtyShifts: false,
+  dirtyEmps: false,
+  extraRows: new Set(),   // "dept||name" שורות שנוספו ידנית לפני שיבוץ
+  filter: ''
+};
+
+/* ============ עזרי תאריך/שעה ============ */
+function sundayOf(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-x.getDay()); return x; }
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function weekDates(){ return Array.from({length:7},(_,i)=>{ const x=new Date(state.weekStart); x.setDate(x.getDate()+i); return x; }); }
+function ddmm(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function toMin(t){ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+(m||0); }
+function shiftMin(s){ let m=toMin(s.end)-toMin(s.start); if(m<0) m+=1440; return m; }
+function fmtMin(m){ return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
+function deptColor(dept){ const i=state.departments.indexOf(dept); return DEPT_COLORS[(i>=0?i:hashStr(dept))%DEPT_COLORS.length]; }
+function hashStr(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0; return h; }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ שכבת שרת ============ */
+async function apiGet(){
+  if(state.demo) return demoData();
+  const r = await fetch(GAS_URL+'?action=getData&week='+iso(state.weekStart));
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error||'שגיאת שרת');
+  return j;
+}
+async function apiPost(body){
+  if(state.demo){
+    if(body.action==='verify') return { ok: body.password==='1234', error:'סיסמה שגויה' };
+    return { ok:true };
+  }
+  const r = await fetch(GAS_URL,{ method:'POST', body: JSON.stringify(body) });
+  return await r.json();
+}
+function demoData(){
+  const deps = ['הנח"ש','חומרי ניקוי','כללי','מעדניה/פיצוחיה','מקרר','סדרנות מזון','קופאיות','קופה ראשית/גיבוי קופות'];
+  const emps = [
+    ['פתאן בקרי סרחאן','הנח"ש'],['לרין קדאח','חומרי ניקוי'],['רנא מנאע','חומרי ניקוי'],
+    ['חמדה סואעד','כללי'],['אמר קבלאוי','מעדניה/פיצוחיה'],['סהאם אסדי','מעדניה/פיצוחיה'],
+    ['סירנה קדאח','מעדניה/פיצוחיה'],['אילנה מנאע','מקרר'],['דוניא עותמאן','סדרנות מזון'],
+    ['מורגאן מסרי','סדרנות מזון'],['סמיחה עבד אלראזק','סדרנות מזון'],['איה חליל','קופאיות'],
+    ['אסמהאן חסארמה','קופאיות'],['גדיר סואעד','קופאיות'],['מור נסראוי','קופאיות'],
+    ['רולא כיוואן','קופאיות'],['שפיקה דיב','קופאיות'],['תימאא סרחאן','קופאיות'],
+    ['נורהאן עבד אלעזיז','קופה ראשית/גיבוי קופות']
+  ].map(e=>({name:e[0],dept:e[1],active:true}));
+  const ds = weekDates().map(iso);
+  const sh = [];
+  const add=(di,emp,dept,s,e)=>sh.push({date:ds[di],employee:emp,dept,start:s,end:e});
+  for(let i=0;i<5;i++) add(i,'פתאן בקרי סרחאן','הנח"ש','08:00','15:00');
+  for(let i=0;i<7;i++) add(i,'רנא מנאע','חומרי ניקוי','08:00','15:00');
+  for(let i=0;i<6;i++) add(i,'חמדה סואעד','כללי','07:00','16:00');
+  for(let i=0;i<7;i++){ add(i,'סירנה קדאח','מעדניה/פיצוחיה','08:00','15:00'); add(i,'אמר קבלאוי','מעדניה/פיצוחיה','15:00','22:00'); }
+  for(let i=0;i<7;i++) add(i,'אילנה מנאע','מקרר','08:00','15:00');
+  for(let i=0;i<7;i++){ add(i,'מורגאן מסרי','סדרנות מזון','08:00','15:00'); add(i,'דוניא עותמאן','סדרנות מזון','15:00','22:00'); }
+  ['איה חליל','אסמהאן חסארמה','גדיר סואעד'].forEach(n=>{ for(let i=0;i<6;i++) add(i,n,'קופאיות','08:00','15:00'); });
+  ['מור נסראוי','רולא כיוואן','שפיקה דיב'].forEach(n=>{ for(let i=0;i<6;i++) add(i,n,'קופאיות','15:00','22:00'); });
+  for(let i=0;i<6;i++) add(i,'נורהאן עבד אלעזיז','קופה ראשית/גיבוי קופות','08:00','16:00');
+  return { ok:true, employees:emps, departments:deps, shifts:sh };
+}
+
+/* ============ טעינה ורינדור ============ */
+async function load(){
+  document.getElementById('board').innerHTML = '<div class="loading"><div class="spin"></div>טוען סידור…</div>';
+  hideErr();
+  try{
+    const d = await apiGet();
+    state.employees = d.employees; state.departments = d.departments; state.shifts = d.shifts;
+    state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
+    render();
+  }catch(e){
+    document.getElementById('board').innerHTML='';
+    showErr('לא ניתן לטעון את הסידור: '+e.message+' — בדוק את כתובת GAS_URL ואת הרשאות הפריסה.');
+  }
+}
+
+function shiftsOf(emp, dept, dateIso){
+  return state.shifts.filter(s=>s.employee===emp && s.dept===dept && s.date===dateIso);
+}
+
+function render(){
+  const dates = weekDates();
+  const todayIso = iso(new Date());
+  document.getElementById('weekRange').textContent =
+    ddmm(dates[0])+' – '+ddmm(dates[6])+' · '+dates[0].getFullYear();
+
+  renderFilterOptions();
+  updateDirtyBadge();
+  document.getElementById('demoNotice').classList.toggle('hidden', !state.demo);
+
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  const deps = [...state.departments];
+  state.shifts.forEach(s=>{ if(s.dept && !deps.includes(s.dept)) deps.push(s.dept); });
+
+  let personalMin = 0, personalShifts = 0;
+
+  deps.forEach(dept=>{
+    // שורות: עובדים שהמחלקה ראשית שלהם + כל מי שמשובץ בה השבוע + שורות שנוספו ידנית
+    const names = new Set();
+    state.employees.forEach(e=>{ if(e.active && e.dept===dept) names.add(e.name); });
+    state.shifts.forEach(s=>{ if(s.dept===dept) names.add(s.employee); });
+    state.extraRows.forEach(k=>{ const [d,n]=k.split('||'); if(d===dept) names.add(n); });
+
+    let rows = [...names].sort((a,b)=>a.localeCompare(b,'he'));
+    if(state.filter) rows = rows.filter(n=>n===state.filter);
+    if(!rows.length && (state.filter || !state.admin)) return;
+
+    const color = deptColor(dept);
+    const sec = document.createElement('section');
+    sec.className='dept'; sec.style.setProperty('--dc',color);
+
+    // חישובי סיכום
+    const dayTotals = dates.map(d=>{
+      const di = iso(d);
+      const ss = state.shifts.filter(s=>s.dept===dept && s.date===di);
+      return { min: ss.reduce((a,s)=>a+shiftMin(s),0), ppl: new Set(ss.map(s=>s.employee)).size };
+    });
+    const weekMin = dayTotals.reduce((a,t)=>a+t.min,0);
+
+    let html = `<div class="dept-head"><span class="dot"></span><h2>${esc(dept)}</h2>
+      <span class="dsum">${fmtMin(weekMin)} שעות · שבוע</span></div><div class="tblwrap"><table><thead><tr>
+      <th class="namecol">עובד</th>`;
+    dates.forEach(d=>{
+      html += `<th class="${iso(d)===todayIso?'today':''}">${DAY_NAMES[d.getDay()]}<br>${ddmm(d)}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(name=>{
+      let empWeek = 0;
+      let cells = '';
+      dates.forEach(d=>{
+        const di = iso(d);
+        const ss = shiftsOf(name, dept, di);
+        const cellMin = ss.reduce((a,s)=>a+shiftMin(s),0);
+        empWeek += cellMin;
+        const chips = ss.map(s=>`<span class="chip">${esc(s.start)} – ${esc(s.end)}<small>${fmtMin(shiftMin(s))} ש'</small></span>`).join('');
+        cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${state.admin?'clickable':''}"
+          data-emp="${esc(name)}" data-dept="${esc(dept)}" data-date="${di}">
+          ${chips || (state.admin?'<span class="addhint">+</span>':'')}</td>`;
+      });
+      if(state.filter){ personalMin += empWeek; personalShifts += state.shifts.filter(s=>s.employee===name && s.dept===dept).length; }
+      html += `<tr><td class="namecol"><div class="nm">${esc(name)}</div><div class="hrs">${fmtMin(empWeek)} שעות</div></td>${cells}</tr>`;
+    });
+
+    if(!state.filter){
+      html += '<tr class="totals"><td class="namecol">סה"כ מחלקה</td>';
+      dayTotals.forEach(t=>{ html += `<td><b>${fmtMin(t.min)}</b>${t.ppl} עובדים</td>`; });
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    if(state.admin && !state.filter) html += `<button class="addrow" data-dept="${esc(dept)}">+ הוספת עובד למחלקה</button>`;
+    sec.innerHTML = html;
+    board.appendChild(sec);
+  });
+
+  // סיכום אישי
+  const my = document.getElementById('mySum');
+  if(state.filter){
+    my.classList.remove('hidden');
+    my.innerHTML = `<span>👤 <b>${esc(state.filter)}</b></span>
+      <span>סה"כ שבועי: <b>${fmtMin(personalMin)}</b> שעות</span>
+      <span>משמרות: <b>${personalShifts}</b></span>`;
+  } else my.classList.add('hidden');
+
+  if(!board.children.length){
+    board.innerHTML = '<div class="loading">אין נתונים להצגה בשבוע זה.</div>';
+  }
+
+  // מאזינים
+  if(state.admin){
+    board.querySelectorAll('td.cell').forEach(td=>td.addEventListener('click',()=>openShiftEditor(td.dataset)));
+    board.querySelectorAll('.addrow').forEach(b=>b.addEventListener('click',()=>openAddRow(b.dataset.dept)));
+  }
+}
+
+function renderFilterOptions(){
+  const sel = document.getElementById('empFilter');
+  const cur = state.filter;
+  const names = [...new Set(state.employees.filter(e=>e.active).map(e=>e.name)
+    .concat(state.shifts.map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
+  sel.innerHTML = '<option value="">כל העובדים</option>' +
+    names.map(n=>`<option value="${esc(n)}" ${n===cur?'selected':''}>${esc(n)}</option>`).join('');
+}
+
+/* ============ עריכת משמרת ============ */
+let editCtx = null;
+function openShiftEditor(ds){
+  editCtx = { emp: ds.emp, dept: ds.dept, date: ds.date };
+  const existing = shiftsOf(ds.emp, ds.dept, ds.date)[0];
+  const d = new Date(ds.date+'T00:00:00');
+  document.getElementById('shTitle').textContent = ds.emp;
+  document.getElementById('shSub').textContent = ds.dept+' · יום '+DAY_NAMES[d.getDay()]+' '+ddmm(d);
+  document.getElementById('shStart').value = existing ? existing.start : '08:00';
+  document.getElementById('shEnd').value   = existing ? existing.end   : '15:00';
+  document.getElementById('shDel').classList.toggle('hidden', !existing);
+  document.getElementById('shErr').textContent='';
+  markPreset();
+  show('shOverlay');
+}
+function markPreset(){
+  const s=document.getElementById('shStart').value, e=document.getElementById('shEnd').value;
+  document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active', p.dataset.s===s && p.dataset.e===e));
+}
+document.querySelectorAll('.preset').forEach(p=>p.addEventListener('click',()=>{
+  document.getElementById('shStart').value=p.dataset.s;
+  document.getElementById('shEnd').value=p.dataset.e;
+  markPreset();
+}));
+document.getElementById('shStart').addEventListener('input',markPreset);
+document.getElementById('shEnd').addEventListener('input',markPreset);
+
+document.getElementById('shSave').addEventListener('click',()=>{
+  const s=document.getElementById('shStart').value, e=document.getElementById('shEnd').value;
+  if(!s || !e){ document.getElementById('shErr').textContent='יש למלא שעת התחלה וסיום'; return; }
+  if(s===e){ document.getElementById('shErr').textContent='שעת הסיום זהה לשעת ההתחלה'; return; }
+  state.shifts = state.shifts.filter(x=>!(x.employee===editCtx.emp && x.dept===editCtx.dept && x.date===editCtx.date));
+  state.shifts.push({ date:editCtx.date, employee:editCtx.emp, dept:editCtx.dept, start:s, end:e });
+  state.dirtyShifts = true;
+  hide('shOverlay'); render();
+});
+document.getElementById('shDel').addEventListener('click',()=>{
+  state.shifts = state.shifts.filter(x=>!(x.employee===editCtx.emp && x.dept===editCtx.dept && x.date===editCtx.date));
+  state.extraRows.add(editCtx.dept+'||'+editCtx.emp); // להשאיר את השורה גלויה
+  state.dirtyShifts = true;
+  hide('shOverlay'); render();
+});
+
+/* ============ הוספת עובד למחלקה ============ */
+let rowDept = '';
+function openAddRow(dept){
+  rowDept = dept;
+  document.getElementById('rowTitle').textContent = 'הוספת עובד — '+dept;
+  const inDept = new Set();
+  state.employees.forEach(e=>{ if(e.active && e.dept===dept) inDept.add(e.name); });
+  state.shifts.forEach(s=>{ if(s.dept===dept) inDept.add(s.employee); });
+  const opts = state.employees.filter(e=>e.active && !inDept.has(e.name))
+    .map(e=>`<option value="${esc(e.name)}">${esc(e.name)} (${esc(e.dept)})</option>`).join('');
+  document.getElementById('rowSelect').innerHTML = '<option value="">— בחר —</option>'+opts;
+  document.getElementById('rowNew').value='';
+  show('rowOverlay');
+}
+document.getElementById('rowOk').addEventListener('click',()=>{
+  const newName = document.getElementById('rowNew').value.trim();
+  const selName = document.getElementById('rowSelect').value;
+  const name = newName || selName;
+  if(!name) return;
+  if(newName && !state.employees.some(e=>e.name===newName)){
+    state.employees.push({ name:newName, dept:rowDept, active:true });
+    state.dirtyEmps = true;
+  }
+  state.extraRows.add(rowDept+'||'+name);
+  hide('rowOverlay'); render();
+});
+
+/* ============ ניהול עובדים ============ */
+function openEmpMgr(){
+  const list = document.getElementById('empList');
+  list.innerHTML='';
+  state.employees.forEach(e=>list.appendChild(empRow(e)));
+  show('empOverlay');
+}
+function empRow(e){
+  const div = document.createElement('div');
+  div.className='emp-item';
+  div.innerHTML = `<input type="text" value="${esc(e.name)}" placeholder="שם העובד">
+    <select>${state.departments.map(d=>`<option ${d===e.dept?'selected':''}>${esc(d)}</option>`).join('')}</select>
+    <button class="del" title="הסרה">✕</button>`;
+  div.querySelector('.del').addEventListener('click',()=>div.remove());
+  return div;
+}
+document.getElementById('empAdd').addEventListener('click',()=>{
+  document.getElementById('empList').appendChild(empRow({name:'',dept:state.departments[0],active:true}));
+});
+document.getElementById('empOk').addEventListener('click',()=>{
+  const rows = [...document.querySelectorAll('#empList .emp-item')];
+  state.employees = rows.map(r=>({
+    name: r.querySelector('input').value.trim(),
+    dept: r.querySelector('select').value,
+    active: true
+  })).filter(e=>e.name);
+  state.dirtyEmps = true;
+  hide('empOverlay'); render();
+});
+
+/* ============ מנהל ============ */
+document.getElementById('adminLogin').addEventListener('click',()=>{
+  document.getElementById('pwInput').value=''; document.getElementById('pwErr').textContent='';
+  show('pwOverlay'); document.getElementById('pwInput').focus();
+});
+async function tryLogin(){
+  const pw = document.getElementById('pwInput').value;
+  document.getElementById('pwErr').textContent='בודק…';
+  const r = await apiPost({ action:'verify', password:pw });
+  if(r.ok){
+    state.admin = true; state.password = pw;
+    sessionStorage.setItem('sp_pw', pw);
+    hide('pwOverlay'); setAdminUI(); render();
+    toast('מצב מנהל פעיל','ok');
+  } else document.getElementById('pwErr').textContent = r.error || 'סיסמה שגויה';
+}
+document.getElementById('pwOk').addEventListener('click',tryLogin);
+document.getElementById('pwInput').addEventListener('keydown',e=>{ if(e.key==='Enter') tryLogin(); });
+
+document.getElementById('adminExit').addEventListener('click',()=>{
+  if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
+  state.admin=false; state.password=''; sessionStorage.removeItem('sp_pw');
+  state.dirtyShifts=false; state.dirtyEmps=false;
+  setAdminUI(); load();
+});
+function setAdminUI(){
+  document.getElementById('adminTools').classList.toggle('hidden', !state.admin);
+  document.getElementById('adminLogin').classList.toggle('hidden', state.admin);
+}
+
+/* ============ שמירה ============ */
+function hasDirty(){ return state.dirtyShifts || state.dirtyEmps; }
+function updateDirtyBadge(){ document.getElementById('dirtyBadge').classList.toggle('hidden', !hasDirty()); }
+
+document.getElementById('saveBtn').addEventListener('click',async ()=>{
+  const btn = document.getElementById('saveBtn'); btn.disabled=true;
+  try{
+    const weekIso = weekDates().map(iso);
+    if(state.dirtyShifts){
+      const r = await apiPost({ action:'saveWeek', password:state.password,
+        weekStart: iso(state.weekStart),
+        shifts: state.shifts.filter(s=>weekIso.includes(s.date)) });
+      if(!r.ok) throw new Error(r.error||'שגיאה בשמירת משמרות');
+      state.dirtyShifts=false;
+    }
+    if(state.dirtyEmps){
+      const r = await apiPost({ action:'saveEmployees', password:state.password, employees: state.employees });
+      if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
+      state.dirtyEmps=false;
+    }
+    updateDirtyBadge();
+    toast(state.demo ? 'מצב הדגמה — לא נשמר בפועל' : 'הסידור נשמר ✓','ok');
+  }catch(e){ toast(e.message,'err'); }
+  btn.disabled=false;
+});
+
+/* ============ העתקה משבוע קודם ============ */
+document.getElementById('copyPrev').addEventListener('click',async ()=>{
+  if(!confirm('להעתיק את כל המשמרות מהשבוע הקודם לשבוע הנוכחי? משמרות קיימות בשבוע זה יוחלפו.')) return;
+  try{
+    const cur = state.weekStart;
+    state.weekStart = new Date(cur.getTime()-7*86400000);
+    const prev = await apiGet();
+    state.weekStart = cur;
+    const map = {}; weekDates().forEach((d,i)=>{
+      const p = new Date(d.getTime()-7*86400000); map[iso(p)] = iso(d);
+    });
+    state.shifts = prev.shifts.filter(s=>map[s.date]).map(s=>({ ...s, date: map[s.date] }));
+    state.dirtyShifts = true;
+    render();
+    toast('הועתק. יש ללחוץ "שמור" לאישור.','ok');
+  }catch(e){ toast('שגיאה בהעתקה: '+e.message,'err'); }
+});
+
+/* ============ ניווט ושונות ============ */
+function moveWeek(days){
+  if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לעבור שבוע בכל זאת?')) return;
+  state.weekStart = new Date(state.weekStart.getTime()+days*86400000);
+  load();
+}
+document.getElementById('prevW').addEventListener('click',()=>moveWeek(-7));
+document.getElementById('nextW').addEventListener('click',()=>moveWeek(7));
+document.getElementById('empFilter').addEventListener('change',e=>{ state.filter=e.target.value; render(); });
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('empMgr').addEventListener('click',openEmpMgr);
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.overlay').classList.add('hidden')));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.add('hidden'); }));
+
+function showErr(msg){ const n=document.getElementById('errNotice'); n.textContent='⚠ '+msg; n.classList.remove('hidden'); }
+function hideErr(){ document.getElementById('errNotice').classList.add('hidden'); }
+let toastT;
+function toast(msg,cls){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=cls||''; t.style.opacity=1;
+  clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity=0,3000);
+}
+window.addEventListener('beforeunload',e=>{ if(hasDirty()){ e.preventDefault(); e.returnValue=''; } });
+
+/* ============ אתחול ============ */
+(async function init(){
+  if(state.password){
+    const r = await apiPost({ action:'verify', password:state.password }).catch(()=>({ok:false}));
+    if(r.ok) state.admin = true; else { state.password=''; sessionStorage.removeItem('sp_pw'); }
+  }
+  setAdminUI();
+  load();
+})();
+</script>
+</body>
+</html>
