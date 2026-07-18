@@ -148,6 +148,15 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
 .mgr-list{display:flex;flex-direction:column;gap:8px}
 
+/* שיבוץ אוטומטי */
+.aa-head{display:grid;grid-template-columns:1.3fr 58px 58px 1fr 1fr;gap:6px;font-size:10.5px;font-weight:700;color:var(--muted);margin:10px 0 4px;padding:0 2px}
+.aa-item{display:grid;grid-template-columns:1.3fr 58px 58px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.aa-item label{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px;min-width:0}
+.aa-item label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aa-item input[type=number]{border:1.5px solid var(--line);border-radius:8px;padding:6px;width:100%;text-align:center}
+.aa-item input[type=text]{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;font-size:12px}
+.aa-item.disabled input{opacity:.4;pointer-events:none}
+
 /* לוג */
 .logtbl{width:100%;border-collapse:collapse;font-size:12px}
 .logtbl th,.logtbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:start;vertical-align:top}
@@ -211,6 +220,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <span id="adminTools" class="hidden">
     <button class="hbtn" id="empMgr">👥 עובדים</button>
     <button class="hbtn" id="copyPrev">⧉ העתק משבוע קודם</button>
+    <button class="hbtn" id="autoBtn">🪄 שיבוץ אוטומטי</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -332,6 +342,24 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל שיבוץ אוטומטי -->
+<div class="overlay hidden" id="aaOverlay">
+  <div class="modal wide">
+    <header><h3>🪄 שיבוץ אוטומטי</h3><p>ממלא חוסרים עד היעד לפי שיוך מחלקות, חופשים והוגנות שעות · לא מוחק משמרות קיימות</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>ימים לשיבוץ</label><div class="chiprow" id="aaDays"></div></div>
+      <div class="aa-head"><span>מחלקה</span><span>בוקר 8–15</span><span>ערב 15–22</span><span>כישור חובה בבוקר</span><span>כישור חובה בערב</span></div>
+      <div id="aaDepts"></div>
+      <div class="merr" id="aaErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="aaOk">צור שיבוץ</button>
+      <span class="spacer"></span>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- מודאל לוג (אדמין) -->
 <div class="overlay hidden" id="logOverlay">
   <div class="modal wide">
@@ -399,8 +427,25 @@ function tint(hex,p){
 }
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function parseDepts(str){ return String(str||'').split(',').map(x=>x.trim()).filter(Boolean); }
-function parseOffDays(str){ return String(str||'').split(',').map(x=>DAY_LETTERS.indexOf(x.trim())).filter(i=>i>=0); }
-function offDaysToStr(arr){ return (arr||[]).map(i=>DAY_LETTERS[i]).join(','); }
+/* פורמט ימי חופש קבועים: "ש" = יום מלא, "ג-בוקר" / "ד-ערב" = חלקי */
+function parseOffDays(str){
+  const out=[];
+  String(str||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(tok=>{
+    const [d,p]=tok.split('-').map(x=>(x||'').trim());
+    const i=DAY_LETTERS.indexOf(d);
+    if(i<0) return;
+    out.push({ day:i, part: p==='בוקר'?'בוקר' : p==='ערב'?'ערב' : 'מלא' });
+  });
+  return out;
+}
+function offDaysToStr(arr){
+  return (arr||[]).map(o=>o.part==='מלא'?DAY_LETTERS[o.day]:DAY_LETTERS[o.day]+'-'+o.part).join(',');
+}
+function fixedOff(emp,dow){
+  const o=((emp&&emp.offDays)||[]).find(x=>x.day===dow);
+  return o ? o.part : null;
+}
+function parseSkills(str){ return String(str||'').split(',').map(x=>x.trim()).filter(Boolean); }
 function empByName(n){ return state.employees.find(e=>e.name===n); }
 function primaryOf(n){ const e=empByName(n); return e && e.depts.length ? e.depts[0] : null; }
 
@@ -422,8 +467,10 @@ function confirmConflicts(emp, dateIso, start){
   }
   const e = empByName(emp);
   const dow = new Date(dateIso+'T00:00:00').getDay();
-  if(e && e.offDays.includes(dow)){
-    if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' יום חופש קבוע. לשבץ בכל זאת?')) return false;
+  const fo = fixedOff(e, dow);
+  if(fo==='מלא' || (fo==='בוקר' && !isEvening) || (fo==='ערב' && isEvening)){
+    const what = fo==='מלא' ? 'יום חופש קבוע' : 'חופש '+fo+' קבוע';
+    if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' '+what+'. לשבץ בכל זאת?')) return false;
   }
   return true;
 }
@@ -464,8 +511,11 @@ function demoData(){
     ['אסמהאן חסארמה','קופאיות'],['גדיר סואעד','קופאיות'],['מור נסראוי','קופאיות'],
     ['רולא כיוואן','קופאיות'],['שפיקה דיב','קופאיות'],['תימאא סרחאן','קופאיות'],
     ['נורהאן עבד אלעזיז','קופה ראשית/גיבוי קופות']
-  ].map(e=>({name:e[0],dept:e[1],active:true,offDays:'',hasPw:false}));
+  ].map(e=>({name:e[0],dept:e[1],active:true,offDays:'',skills:'',hasPw:false}));
   emps.find(e=>e.name==='חמדה סואעד').offDays='ש';
+  emps.find(e=>e.name==='איה חליל').offDays='ו-ערב';
+  emps.find(e=>e.name==='גדיר סואעד').skills='טביעת אצבע';
+  emps.find(e=>e.name==='שפיקה דיב').skills='טביעת אצבע';
   const ds = weekDates().map(iso);
   const sh = [];
   const add=(di,emp,dept,s,e)=>sh.push({date:ds[di],employee:emp,dept,start:s,end:e});
@@ -608,9 +658,10 @@ function render(){
         const off = unavailOf(name, di);
         if(off.morning) chips += `<span class="chip off">🏖 חופש בוקר</span>`;
         if(off.evening) chips += `<span class="chip off">🏖 חופש ערב</span>`;
-        if(!off.morning && !off.evening && emp && emp.offDays.includes(d.getDay())){
-          chips += `<span class="chip off">🏖 חופש קבוע</span>`;
-        }
+        const fo = emp ? fixedOff(emp, d.getDay()) : null;
+        if(fo==='מלא' && !off.morning && !off.evening) chips += `<span class="chip off">🏖 חופש קבוע</span>`;
+        if(fo==='בוקר' && !off.morning) chips += `<span class="chip off">🏖 בוקר קבוע</span>`;
+        if(fo==='ערב' && !off.evening) chips += `<span class="chip off">🏖 ערב קבוע</span>`;
 
         cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${isMgr()?'clickable':''}"
           data-emp="${esc(name)}" data-dept="${esc(dept)}" data-date="${di}">
@@ -811,7 +862,7 @@ document.getElementById('rowOk').addEventListener('click',()=>{
       state.dirtyEmps = true;
     }
   } else {
-    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'' });
+    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'' });
     state.dirtyEmps = true;
   }
   state.extraRows.add(rowDept+'||'+name);
@@ -829,7 +880,8 @@ async function openEmpMgr(){
           const local = empByName(se.name);
           if(local){ local.password = se.password; local.username = se.username||''; }
           else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
-            active:se.active, offDays:parseOffDays(se.offDays), password:se.password, username:se.username||'' });
+            active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
+            username:se.username||'', skills:se.skills||'' });
         });
       }
     }catch(e){ toast('לא נטענו סיסמאות עובדים: '+e.message,'err'); }
@@ -849,10 +901,21 @@ function empRow(e){
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${state.departments.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
-    <div class="chiprow"><span class="lbl">חופש קבוע:</span>${DAY_LETTERS.map((l,i)=>
-      `<button class="dchip day ${e.offDays && e.offDays.includes(i)?'active':''}" data-i="${i}">${l}</button>`).join('')}</div>`;
+    <div class="chiprow"><span class="lbl">חופש קבוע (לחיצות: מלא → בוקר → ערב → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
+      const fo=((e.offDays)||[]).find(x=>x.day===i);
+      return `<button class="dchip day ${fo?'active':''}" data-i="${i}" data-part="${fo?fo.part:''}">${l}${fo?(fo.part==='מלא'?'':fo.part==='בוקר'?' ☀':' 🌙'):''}</button>`;
+    }).join('')}</div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">כישורים:</span>
+      <input type="text" class="i-skills" value="${esc(e.skills||'')}" placeholder="למשל: טביעת אצבע, ותק" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
-  div.querySelectorAll('.dchip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
+  div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
+  div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
+    const seq=['','מלא','בוקר','ערב'];
+    const next=seq[(seq.indexOf(c.dataset.part)+1)%seq.length];
+    c.dataset.part=next;
+    c.classList.toggle('active', !!next);
+    c.textContent=DAY_LETTERS[Number(c.dataset.i)]+(next===''?'':next==='מלא'?'':next==='בוקר'?' ☀':' 🌙');
+  }));
   return div;
 }
 document.getElementById('empAdd').addEventListener('click',()=>{
@@ -863,10 +926,12 @@ document.getElementById('empOk').addEventListener('click',()=>{
   state.employees = rows.map(r=>{
     const depts = [...r.querySelectorAll('.dchip.dept.active')].map(c=>c.dataset.d);
     if(!depts.length) depts.push(state.departments[0]);
-    const offDays = [...r.querySelectorAll('.dchip.day.active')].map(c=>Number(c.dataset.i));
+    const offDays = [...r.querySelectorAll('.dchip.day')].filter(c=>c.dataset.part)
+      .map(c=>({ day:Number(c.dataset.i), part:c.dataset.part }));
     return { name: r.querySelector('.i-name').value.trim(), dept: depts.join(', '), depts,
              active: true, offDays, password: r.querySelector('.i-pw').value.trim(),
-             username: r.querySelector('.i-user').value.trim() };
+             username: r.querySelector('.i-user').value.trim(),
+             skills: r.querySelector('.i-skills').value.trim() };
   }).filter(e=>e.name);
   state.dirtyEmps = true;
   hide('empOverlay'); render();
@@ -930,6 +995,112 @@ async function openLog(){
     ).join('') || '<tr><td colspan="4">הלוג ריק</td></tr>';
     show('logOverlay');
   }catch(e){ toast('שגיאה: '+e.message,'err'); }
+}
+
+/* ============ שיבוץ אוטומטי ============ */
+const AA_TIMES = { 'בוקר': ['08:00','15:00'], 'ערב': ['15:00','22:00'] };
+function partOf(start){ return toMin(start) >= EVENING_FROM ? 'ערב' : 'בוקר'; }
+function hasSkill(e, skill){ return parseSkills(e.skills).includes(skill); }
+
+function openAutoAssign(){
+  // ימים — ברירת מחדל: כולם
+  document.getElementById('aaDays').innerHTML = DAY_LETTERS.map((l,i)=>
+    `<button class="dchip day active" data-i="${i}">${l}</button>`).join('');
+  document.querySelectorAll('#aaDays .dchip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
+  // מחלקות — כלול/החרג + יעדים + כישורי חובה
+  document.getElementById('aaDepts').innerHTML = state.departments.map((d,i)=>`
+    <div class="aa-item" data-dept="${esc(d)}">
+      <label><input type="checkbox" class="a-on" checked><span>${esc(d)}</span></label>
+      <input type="number" class="a-m" min="0" max="9" value="1">
+      <input type="number" class="a-e" min="0" max="9" value="1">
+      <input type="text" class="a-ms" placeholder="—">
+      <input type="text" class="a-es" placeholder="למשל: טביעת אצבע">
+    </div>`).join('');
+  document.querySelectorAll('#aaDepts .a-on').forEach(cb=>cb.addEventListener('change',()=>{
+    cb.closest('.aa-item').classList.toggle('disabled', !cb.checked);
+  }));
+  document.getElementById('aaErr').textContent='';
+  show('aaOverlay');
+}
+document.getElementById('autoBtn').addEventListener('click', openAutoAssign);
+
+document.getElementById('aaOk').addEventListener('click',()=>{
+  const days = [...document.querySelectorAll('#aaDays .dchip.active')].map(c=>Number(c.dataset.i));
+  if(!days.length){ document.getElementById('aaErr').textContent='יש לבחור לפחות יום אחד'; return; }
+  const cfg = {};
+  document.querySelectorAll('#aaDepts .aa-item').forEach(r=>{
+    if(!r.querySelector('.a-on').checked) return; // מחלקה מוחרגת
+    cfg[r.dataset.dept] = {
+      m: Number(r.querySelector('.a-m').value)||0,
+      e: Number(r.querySelector('.a-e').value)||0,
+      ms: r.querySelector('.a-ms').value.trim(),
+      es: r.querySelector('.a-es').value.trim()
+    };
+  });
+  const res = runAutoAssign(days, cfg);
+  hide('aaOverlay');
+  if(res.created){ state.dirtyShifts = true; render(); }
+  let msg = 'נוצרו '+res.created+' משמרות. בדוק את הלוח ולחץ "שמור" לאישור.';
+  if(res.issues.length) msg += '\n\nלא הושלם:\n• '+res.issues.join('\n• ');
+  alert(msg);
+});
+
+function runAutoAssign(days, cfg){
+  const dates = weekDates();
+  const weekSet = new Set(dates.map(iso));
+  let created = 0; const issues = [];
+
+  // דקות משובצות לעובד השבוע (הוגנות)
+  const minutes = {};
+  const addMin = (n,m)=>{ minutes[n]=(minutes[n]||0)+m; };
+  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)) addMin(s.employee, shiftMin(s)); });
+  // תפוסה: עובד|תאריך|חלק־יום
+  const busy = new Set();
+  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)) busy.add(s.employee+'|'+s.date+'|'+partOf(s.start)); });
+
+  function blocked(e, di, dow, part){
+    if(busy.has(e.name+'|'+di+'|'+part)) return true;
+    const off = unavailOf(e.name, di);
+    if(part==='בוקר' && off.morning) return true;
+    if(part==='ערב' && off.evening) return true;
+    const fo = fixedOff(e, dow);
+    return fo==='מלא' || fo===part;
+  }
+
+  days.forEach(dow=>{
+    const d = dates[dow], di = iso(d);
+    ['בוקר','ערב'].forEach(part=>{
+      Object.keys(cfg).forEach(dept=>{
+        const target = part==='בוקר' ? cfg[dept].m : cfg[dept].e;
+        if(!target) return;
+        const reqSkill = part==='בוקר' ? cfg[dept].ms : cfg[dept].es;
+        const existing = state.shifts.filter(s=>s.dept===dept && s.date===di && s.dept!==UNAVAIL && partOf(s.start)===part);
+        let need = target - existing.length;
+
+        let cands = state.employees.filter(e=>e.active && e.depts.includes(dept) && !blocked(e, di, dow, part));
+        cands.sort((a,b)=>(minutes[a.name]||0)-(minutes[b.name]||0));
+
+        const chosen = [];
+        // דרישת כישור: אם אין כבר עובד עם הכישור במשמרת — לבחור אחד כזה קודם
+        if(reqSkill && need>0 && !existing.some(s=>{ const e=empByName(s.employee); return e && hasSkill(e, reqSkill); })){
+          const skilled = cands.find(e=>hasSkill(e, reqSkill));
+          if(skilled){ chosen.push(skilled); cands = cands.filter(e=>e!==skilled); }
+          else issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': אין עובד זמין עם הכישור "'+reqSkill+'"');
+        }
+        while(chosen.length < need && cands.length) chosen.push(cands.shift());
+        if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים');
+
+        chosen.forEach(e=>{
+          const [st,en] = AA_TIMES[part];
+          state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
+          busy.add(e.name+'|'+di+'|'+part);
+          addMin(e.name, toMin(en)-toMin(st));
+          created++;
+        });
+      });
+    });
+  });
+  return { created, issues };
 }
 
 /* ============ כניסה ויציאה ============ */
@@ -1026,7 +1197,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'' })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'' })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
