@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>סידור עבודה — סופרסטאר פלוס</title>
+<title>סידור עבודה — סופרסטאר</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --navy:#1b2a4a; --navy-2:#233763; --gold:#e8a819;
@@ -15,12 +17,12 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 button{font-family:inherit;cursor:pointer}
 input,select{font-family:inherit;font-size:14px}
 
 /* ===== כותרת ===== */
-header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(15,23,42,.25)}
+header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(15,23,42,.25)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand .star{width:34px;height:34px;border-radius:9px;background:var(--gold);display:grid;place-items:center;font-family:'Rubik';font-weight:800;font-size:19px;color:var(--navy)}
 .brand h1{font-family:'Rubik';font-weight:800;font-size:17px;letter-spacing:.2px}
@@ -29,16 +31,17 @@ header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-it
 .weeknav{display:flex;align-items:center;gap:6px;background:var(--navy-2);border-radius:10px;padding:4px}
 .weeknav button{background:transparent;border:0;color:#fff;font-size:17px;width:32px;height:32px;border-radius:8px}
 .weeknav button:hover{background:rgba(255,255,255,.12)}
-.weeknav .range{font-family:'Rubik';font-weight:700;font-size:13px;padding:0 8px;min-width:150px;text-align:center}
+.weeknav .range{font-family:'Rubik';font-weight:700;font-size:13px;padding:0 8px;min-width:140px;text-align:center}
 
 .spacer{flex:1}
-.hbtn{border:0;border-radius:9px;padding:8px 13px;font-weight:700;font-size:13px;background:var(--navy-2);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.hbtn{border:0;border-radius:9px;padding:8px 12px;font-weight:700;font-size:13px;background:var(--navy-2);color:#fff;display:inline-flex;align-items:center;gap:6px}
 .hbtn:hover{background:#2c447a}
 .hbtn.gold{background:var(--gold);color:var(--navy)}
 .hbtn.ghost{background:transparent;border:1px solid #40527d}
 .hbtn:disabled{opacity:.45;cursor:default}
-select.hsel{background:var(--navy-2);color:#fff;border:0;border-radius:9px;padding:8px 10px;font-weight:500}
-
+select.hsel{background:var(--navy-2);color:#fff;border:0;border-radius:9px;padding:8px 10px;font-weight:500;max-width:170px}
+.whoami{font-size:12px;color:#c7d0e2;font-weight:500}
+.whoami b{color:#fff}
 .badge-dirty{background:var(--warn);color:#fff;border-radius:99px;font-size:10px;padding:2px 7px;font-weight:700}
 
 /* ===== פסי מצב ===== */
@@ -70,8 +73,15 @@ td.cell{height:52px;min-width:96px;padding:4px;text-align:center}
 td.cell.today{background:#fffdf4}
 td.cell.clickable{cursor:pointer}
 td.cell.clickable:hover{background:#eef4ff}
+td.cell.dropover{background:#e0edff;outline:2px dashed #2563eb;outline-offset:-2px}
 .chip{display:block;border-radius:8px;padding:5px 4px 4px;font-size:12px;font-weight:700;line-height:1.2;background:color-mix(in srgb,var(--dc) 12%,#fff);color:var(--navy);border:1px solid color-mix(in srgb,var(--dc) 35%,#fff);border-inline-start:4px solid var(--dc);font-variant-numeric:tabular-nums}
 .chip small{display:block;font-weight:500;font-size:10px;color:var(--muted)}
+.chip + .chip{margin-top:3px}
+.chip.foreign{background:color-mix(in srgb,var(--fc) 12%,#fff);border:1px solid color-mix(in srgb,var(--fc) 35%,#fff);border-inline-start:4px solid var(--fc)}
+.chip.foreign small{color:var(--fc);font-weight:700}
+.chip.off{background:repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 6px,#e9ebef 6px,#e9ebef 12px);color:#6b7280;border:1px dashed #c3c9d4;border-inline-start:4px solid #9ca3af}
+.chip[draggable="true"]{cursor:grab}
+.chip.dragging{opacity:.4}
 .addhint{color:#c3cad6;font-size:18px;line-height:44px;user-select:none}
 
 tr.totals td{background:#f8fafc;padding:6px;text-align:center;font-size:11.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;height:auto}
@@ -81,14 +91,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .addrow{border:0;background:none;color:var(--dc);font-weight:700;font-size:12.5px;padding:9px 14px;display:block}
 .addrow:hover{text-decoration:underline}
 
-/* סיכום אישי במסנן */
 .mysum{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(15,23,42,.08);padding:12px 16px;margin-bottom:16px;font-size:13.5px;display:flex;gap:18px;flex-wrap:wrap}
 .mysum b{font-family:'Rubik';font-size:16px}
 
 /* ===== מודאלים ===== */
 .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:100;padding:14px}
 .modal{background:#fff;border-radius:14px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden;max-height:92vh;display:flex;flex-direction:column}
-.modal.wide{max-width:560px}
+.modal.wide{max-width:600px}
 .modal header{background:var(--navy);position:static;padding:13px 16px;display:block;box-shadow:none}
 .modal header h3{font-family:'Rubik';font-size:15px;font-weight:700}
 .modal header p{font-size:12px;color:#c7d0e2;margin-top:2px}
@@ -99,9 +108,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mrow input:focus,.mrow select:focus{outline:none;border-color:var(--navy)}
 .timegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.preset{border:1.5px solid var(--line);background:#f8fafc;border-radius:10px;padding:10px;font-weight:700;font-size:13px}
+.preset{border:1.5px solid var(--line);background:#f8fafc;border-radius:10px;padding:9px;font-weight:700;font-size:13px}
 .preset small{display:block;font-weight:500;color:var(--muted);font-size:11px}
 .preset.active{border-color:var(--gold);background:#fff8e6}
+.offtoggles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.offbtn{border:1.5px solid var(--line);background:#f8fafc;border-radius:10px;padding:9px;font-weight:700;font-size:13px;color:var(--muted)}
+.offbtn.active{border-color:#9ca3af;background:repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 6px,#e9ebef 6px,#e9ebef 12px);color:var(--ink)}
 .mfoot{display:flex;gap:8px;padding:13px 16px;border-top:1px solid var(--line)}
 .btn{border:0;border-radius:9px;padding:10px 15px;font-weight:700;font-size:13.5px}
 .btn.primary{background:var(--navy);color:#fff}
@@ -111,14 +123,36 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mfoot .spacer{flex:1}
 .merr{color:var(--warn);font-size:12.5px;font-weight:600;margin-top:6px;min-height:16px}
 
-/* ניהול עובדים */
-.emp-list{display:flex;flex-direction:column;gap:8px}
-.emp-item{display:grid;grid-template-columns:1fr 150px 34px;gap:8px;align-items:center}
-.emp-item input,.emp-item select{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
-.emp-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
-.emp-item.inactive input{opacity:.5;text-decoration:line-through}
+/* טאבים בכניסה */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--line)}
+.tab{border:0;background:#f8fafc;padding:11px;font-weight:700;font-size:13.5px;color:var(--muted);border-bottom:2.5px solid transparent}
+.tab.active{background:#fff;color:var(--navy);border-bottom-color:var(--gold)}
 
-/* טוסט */
+/* ניהול עובדים / מנהלים */
+.emp-list{display:flex;flex-direction:column;gap:12px}
+.emp-item{border:1px solid var(--line);border-radius:10px;padding:10px}
+.emp-top{display:grid;grid-template-columns:1fr 130px 34px;gap:8px;align-items:center;margin-bottom:8px}
+.emp-item input{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.emp-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.chiprow + .chiprow{margin-top:7px}
+.chiprow .lbl{font-size:11px;font-weight:700;color:var(--muted);align-self:center}
+.dchip{border:1.5px solid var(--line);background:#f8fafc;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--muted)}
+.dchip.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.dchip.day{padding:4px 9px}
+.dchip.day.active{background:#9ca3af;border-color:#9ca3af}
+
+.mgr-item{display:grid;grid-template-columns:1fr 110px 130px 34px;gap:8px;align-items:center}
+.mgr-item input,.mgr-item select{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
+.mgr-list{display:flex;flex-direction:column;gap:8px}
+
+/* לוג */
+.logtbl{width:100%;border-collapse:collapse;font-size:12px}
+.logtbl th,.logtbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:start;vertical-align:top}
+.logtbl th{background:#f8fafc;font-size:11px;color:var(--muted);position:sticky;top:0}
+.logtbl td:first-child{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+
 #toast{position:fixed;bottom:18px;inset-inline-start:50%;transform:translateX(50%);background:var(--navy);color:#fff;padding:11px 20px;border-radius:99px;font-weight:600;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:200;transition:opacity .3s}
 #toast.ok{background:var(--ok)}
 #toast.err{background:var(--warn)}
@@ -128,21 +162,18 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 
+/* במה נסתרת לייצוא PDF */
+#pdfStage{position:absolute;inset-inline-start:-99999px;top:0;width:1240px;background:#fff}
+#pdfStage .tblwrap{overflow:visible}
+#pdfStage .addhint,#pdfStage .addrow{display:none}
+#pdfStage .pdftitle{font-family:'Rubik';font-weight:800;font-size:22px;color:var(--navy);padding:6px 4px 14px;display:flex;align-items:center;gap:10px}
+#pdfStage .pdftitle .star{width:30px;height:30px;border-radius:8px;background:var(--gold);display:grid;place-items:center;color:var(--navy);font-size:17px}
+
 @media (max-width:640px){
   .brand small{display:none}
-  .weeknav .range{min-width:118px;font-size:12px}
+  .weeknav .range{min-width:112px;font-size:12px}
   main{padding:0 6px 60px}
-}
-
-/* ===== הדפסה ===== */
-@media print{
-  header .hbtn,header select.hsel,.weeknav button,.notice,.addrow,#toast{display:none!important}
-  header{position:static;background:#fff;color:#000;box-shadow:none;border-bottom:2px solid #000}
-  .brand .star{background:#000;color:#fff}
-  .weeknav{background:none}.weeknav .range{color:#000}
-  body{background:#fff}
-  .dept{box-shadow:none;border:1px solid #999;break-inside:avoid}
-  td.cell{height:auto}
+  select.hsel{max-width:130px}
 }
 </style>
 </head>
@@ -151,7 +182,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <header>
   <div class="brand">
     <div class="star">★</div>
-    <div><h1>סידור עבודה</h1><small>סופרסטאר פלוס · קרמיאל</small></div>
+    <div><h1>סידור עבודה</h1><small>סופרסטאר</small></div>
   </div>
 
   <div class="weeknav">
@@ -163,24 +194,31 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <select class="hsel" id="empFilter" title="סינון לפי עובד">
     <option value="">כל העובדים</option>
   </select>
+  <select class="hsel" id="deptFilter" title="סינון לפי מחלקה">
+    <option value="">כל המחלקות</option>
+  </select>
 
   <div class="spacer"></div>
 
-  <button class="hbtn ghost" id="printBtn">🖨 הדפסה</button>
+  <button class="hbtn ghost" id="pdfBtn">📄 PDF</button>
 
   <!-- מצב צפייה -->
-  <button class="hbtn gold" id="adminLogin">🔒 כניסת מנהל</button>
+  <button class="hbtn gold" id="loginBtn">🔒 כניסה</button>
+  <span id="viewerChip" class="whoami hidden">👤 <b id="viewerName"></b> <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
   <span id="adminTools" class="hidden">
     <button class="hbtn" id="empMgr">👥 עובדים</button>
     <button class="hbtn" id="copyPrev">⧉ העתק משבוע קודם</button>
+    <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
+    <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
+    <span class="whoami"><b id="mgrName"></b> · <span id="mgrRole"></span></span>
     <button class="hbtn ghost" id="adminExit">יציאה</button>
   </span>
 </header>
 
-<div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. סיסמת הדגמה: 1234</div>
+<div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. כניסת מנהל: כל שם + סיסמה 1234</div>
 <div class="notice err hidden" id="errNotice"></div>
 
 <main>
@@ -188,16 +226,29 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div id="board"><div class="loading"><div class="spin"></div>טוען סידור…</div></div>
 </main>
 
-<!-- מודאל סיסמה -->
-<div class="overlay hidden" id="pwOverlay">
+<div id="pdfStage"></div>
+
+<!-- מודאל כניסה -->
+<div class="overlay hidden" id="loginOverlay">
   <div class="modal">
-    <header><h3>כניסת מנהל</h3><p>עריכת הסידור מוגנת בסיסמה</p></header>
+    <header><h3>כניסה למערכת</h3><p>מנהלים עורכים · עובדים צופים בסידור האישי</p></header>
+    <div class="tabs">
+      <button class="tab active" id="tabMgr">מנהל</button>
+      <button class="tab" id="tabEmp">עובד</button>
+    </div>
     <div class="mbody">
-      <div class="mrow"><label>סיסמה</label><input type="password" id="pwInput" inputmode="numeric" autocomplete="off"></div>
-      <div class="merr" id="pwErr"></div>
+      <div id="mgrPane">
+        <div class="mrow"><label>שם מנהל</label><input type="text" id="lgMgrName" autocomplete="off"></div>
+        <div class="mrow"><label>סיסמה</label><input type="password" id="lgMgrPw" autocomplete="off"></div>
+      </div>
+      <div id="empPane" class="hidden">
+        <div class="mrow"><label>שם עובד</label><select id="lgEmpName"></select></div>
+        <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" autocomplete="off"></div>
+      </div>
+      <div class="merr" id="lgErr"></div>
     </div>
     <div class="mfoot">
-      <button class="btn primary" id="pwOk">כניסה</button>
+      <button class="btn primary" id="lgOk">כניסה</button>
       <button class="btn plain" data-close>ביטול</button>
     </div>
   </div>
@@ -208,13 +259,22 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3 id="shTitle"></h3><p id="shSub"></p></header>
     <div class="mbody">
+      <div class="mrow"><label>עובד (אפשר להעביר את המשמרת לעובד אחר)</label><select id="shEmp"></select></div>
       <div class="presets">
         <button class="preset" data-s="08:00" data-e="15:00">☀ בוקר<small>8:00 – 15:00</small></button>
+        <button class="preset" data-s="10:00" data-e="16:00">☀ בוקר 2<small>10:00 – 16:00</small></button>
         <button class="preset" data-s="15:00" data-e="22:00">🌙 ערב<small>15:00 – 22:00</small></button>
+        <button class="preset" data-s="16:00" data-e="22:00">🌙 ערב 2<small>16:00 – 22:00</small></button>
       </div>
       <div class="timegrid">
-        <div class="mrow"><label>התחלה</label><input type="time" id="shStart"></div>
-        <div class="mrow"><label>סיום</label><input type="time" id="shEnd"></div>
+        <div class="mrow"><label>התחלה</label><select id="shStart"></select></div>
+        <div class="mrow"><label>סיום</label><select id="shEnd"></select></div>
+      </div>
+      <div class="mrow" style="margin-top:4px"><label>חופש / אי-זמינות ליום זה (נשמר עם "שמור")</label>
+        <div class="offtoggles">
+          <button class="offbtn" id="offMorning">🏖 חופש בוקר</button>
+          <button class="offbtn" id="offEvening">🏖 חופש ערב</button>
+        </div>
       </div>
       <div class="merr" id="shErr"></div>
     </div>
@@ -232,7 +292,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3 id="rowTitle">הוספת עובד למחלקה</h3></header>
     <div class="mbody">
-      <div class="mrow"><label>עובד קיים</label><select id="rowSelect"></select></div>
+      <div class="mrow"><label>עובד קיים (ישויך קבוע גם למחלקה זו)</label><select id="rowSelect"></select></div>
       <div class="mrow"><label>או עובד חדש (שם מלא)</label><input type="text" id="rowNew" placeholder="ישויך למחלקה זו"></div>
     </div>
     <div class="mfoot">
@@ -245,7 +305,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל ניהול עובדים -->
 <div class="overlay hidden" id="empOverlay">
   <div class="modal wide">
-    <header><h3>ניהול עובדים</h3><p>שם · מחלקה ראשית · הסרה (עובד לא פעיל — נקה את השם)</p></header>
+    <header><h3>ניהול עובדים</h3><p>שם · סיסמת עובד · מחלקות · ימי חופש קבועים</p></header>
     <div class="mbody"><div class="emp-list" id="empList"></div>
       <button class="btn plain" id="empAdd" style="margin-top:12px">+ עובד חדש</button>
     </div>
@@ -256,33 +316,71 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל ניהול מנהלים (אדמין) -->
+<div class="overlay hidden" id="mgrsOverlay">
+  <div class="modal wide">
+    <header><h3>ניהול מנהלים</h3><p>אדמין — הכל · מנהל משמרת — עובדים ומשמרות בלבד. חייב להישאר אדמין אחד לפחות.</p></header>
+    <div class="mbody"><div class="mgr-list" id="mgrList"></div>
+      <button class="btn plain" id="mgrAdd" style="margin-top:12px">+ מנהל חדש</button>
+      <div class="merr" id="mgrErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="mgrsOk">שמירה</button>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל לוג (אדמין) -->
+<div class="overlay hidden" id="logOverlay">
+  <div class="modal wide">
+    <header><h3>לוג שינויים</h3><p>200 הפעולות האחרונות — החדשות למעלה</p></header>
+    <div class="mbody" style="padding:0">
+      <table class="logtbl"><thead><tr><th>זמן</th><th>מנהל</th><th>פעולה</th><th>פירוט</th></tr></thead>
+      <tbody id="logBody"></tbody></table>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
 <div id="toast" style="opacity:0"></div>
 
 <script>
 /* ================================================================
-   הגדרות — הדבק כאן את כתובת ה-Web App מ-Google Apps Script
+   הגדרות
    ================================================================ */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzEGWUf6fz5U3xpob0sz2YSPDP8N_vDdXzhNhU8uHx8aOU6imVle3PTrmAQvAk4rXYr/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 const DEPT_COLORS = ['#2563eb','#0d9488','#7c3aed','#b45309','#0891b2','#16a34a','#db2777','#64748b','#9333ea','#ca8a04'];
+const UNAVAIL = 'אי-זמינות';   // בגיליון המשמרות: מחלקה="אי-זמינות", התחלה="בוקר"/"ערב"
+const EVENING_FROM = 15 * 60;  // משמרת שמתחילה מ-15:00 נחשבת ערב
+const ROLE_ADMIN = 'אדמין';
 
 /* ============ מצב ============ */
+const store = {
+  get(){ try{ return JSON.parse(sessionStorage.getItem('sp_auth')||'null'); }catch(e){ return null; } },
+  set(v){ try{ sessionStorage.setItem('sp_auth', JSON.stringify(v)); }catch(e){} },
+  clear(){ try{ sessionStorage.removeItem('sp_auth'); }catch(e){} }
+};
 const state = {
   demo: !GAS_URL,
   weekStart: sundayOf(new Date()),
-  employees: [],          // {name, dept, active}
+  employees: [],          // {name, dept, depts:[], active, offDays:[], hasPw}
   departments: [],
-  shifts: [],             // {date, employee, dept, start, end}
-  admin: false,
-  password: sessionStorage.getItem('sp_pw') || '',
+  shifts: [],             // {_id, date, employee, dept, start, end} + שורות אי-זמינות
+  mgr: null,              // {name, pw, role}
+  viewer: '',             // עובד מחובר
   dirtyShifts: false,
   dirtyEmps: false,
-  extraRows: new Set(),   // "dept||name" שורות שנוספו ידנית לפני שיבוץ
-  filter: ''
+  extraRows: new Set(),
+  filterEmp: '',
+  filterDept: ''
 };
+let SID = 1;
 
-/* ============ עזרי תאריך/שעה ============ */
+/* ============ עזרים ============ */
 function sundayOf(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-x.getDay()); return x; }
 function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function weekDates(){ return Array.from({length:7},(_,i)=>{ const x=new Date(state.weekStart); x.setDate(x.getDate()+i); return x; }); }
@@ -293,8 +391,38 @@ function fmtMin(m){ return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
 function deptColor(dept){ const i=state.departments.indexOf(dept); return DEPT_COLORS[(i>=0?i:hashStr(dept))%DEPT_COLORS.length]; }
 function hashStr(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0; return h; }
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function parseDepts(str){ return String(str||'').split(',').map(x=>x.trim()).filter(Boolean); }
+function parseOffDays(str){ return String(str||'').split(',').map(x=>DAY_LETTERS.indexOf(x.trim())).filter(i=>i>=0); }
+function offDaysToStr(arr){ return (arr||[]).map(i=>DAY_LETTERS[i]).join(','); }
+function empByName(n){ return state.employees.find(e=>e.name===n); }
+function primaryOf(n){ const e=empByName(n); return e && e.depts.length ? e.depts[0] : null; }
+
+function unavailOf(emp, dateIso){
+  const rows = state.shifts.filter(s=>s.dept===UNAVAIL && s.employee===emp && s.date===dateIso);
+  return { morning: rows.some(r=>r.start==='בוקר'), evening: rows.some(r=>r.start==='ערב') };
+}
+function setUnavail(emp, dateIso, morning, evening){
+  state.shifts = state.shifts.filter(s=>!(s.dept===UNAVAIL && s.employee===emp && s.date===dateIso));
+  if(morning) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'בוקר', end:'' });
+  if(evening) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'ערב', end:'' });
+}
+/** אזהרת התנגשות: חופש ידני או יום חופש קבוע. מחזיר true אם אפשר להמשיך */
+function confirmConflicts(emp, dateIso, start){
+  const isEvening = toMin(start) >= EVENING_FROM;
+  const off = unavailOf(emp, dateIso);
+  if((isEvening && off.evening) || (!isEvening && off.morning)){
+    if(!confirm('לעובד '+emp+' מסומן חופש ב'+(isEvening?'ערב':'בוקר')+' ביום זה. לשבץ בכל זאת?')) return false;
+  }
+  const e = empByName(emp);
+  const dow = new Date(dateIso+'T00:00:00').getDay();
+  if(e && e.offDays.includes(dow)){
+    if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' יום חופש קבוע. לשבץ בכל זאת?')) return false;
+  }
+  return true;
+}
 
 /* ============ שכבת שרת ============ */
+function mgrAuth(){ return state.mgr ? { mname: state.mgr.name, password: state.mgr.pw } : {}; }
 async function apiGet(){
   if(state.demo) return demoData();
   const r = await fetch(GAS_URL+'?action=getData&week='+iso(state.weekStart));
@@ -303,46 +431,67 @@ async function apiGet(){
   return j;
 }
 async function apiPost(body){
-  if(state.demo){
-    if(body.action==='verify') return { ok: body.password==='1234', error:'סיסמה שגויה' };
-    return { ok:true };
-  }
+  if(state.demo) return demoPost(body);
   const r = await fetch(GAS_URL,{ method:'POST', body: JSON.stringify(body) });
   return await r.json();
 }
+
+/* --- מצב הדגמה --- */
 function demoData(){
   const deps = ['הנח"ש','חומרי ניקוי','כללי','מעדניה/פיצוחיה','מקרר','סדרנות מזון','קופאיות','קופה ראשית/גיבוי קופות'];
   const emps = [
-    ['פתאן בקרי סרחאן','הנח"ש'],['לרין קדאח','חומרי ניקוי'],['רנא מנאע','חומרי ניקוי'],
-    ['חמדה סואעד','כללי'],['אמר קבלאוי','מעדניה/פיצוחיה'],['סהאם אסדי','מעדניה/פיצוחיה'],
+    ['פתאן בקרי סרחאן','הנח"ש'],['לרין קדאח','חומרי ניקוי, מעדניה/פיצוחיה'],['רנא מנאע','חומרי ניקוי'],
+    ['חמדה סואעד','כללי'],['אמר קבלאוי','מעדניה/פיצוחיה, מקרר'],['סהאם אסדי','מעדניה/פיצוחיה'],
     ['סירנה קדאח','מעדניה/פיצוחיה'],['אילנה מנאע','מקרר'],['דוניא עותמאן','סדרנות מזון'],
     ['מורגאן מסרי','סדרנות מזון'],['סמיחה עבד אלראזק','סדרנות מזון'],['איה חליל','קופאיות'],
     ['אסמהאן חסארמה','קופאיות'],['גדיר סואעד','קופאיות'],['מור נסראוי','קופאיות'],
     ['רולא כיוואן','קופאיות'],['שפיקה דיב','קופאיות'],['תימאא סרחאן','קופאיות'],
     ['נורהאן עבד אלעזיז','קופה ראשית/גיבוי קופות']
-  ].map(e=>({name:e[0],dept:e[1],active:true}));
+  ].map(e=>({name:e[0],dept:e[1],active:true,offDays:'',hasPw:false}));
+  emps.find(e=>e.name==='חמדה סואעד').offDays='ש';
   const ds = weekDates().map(iso);
   const sh = [];
   const add=(di,emp,dept,s,e)=>sh.push({date:ds[di],employee:emp,dept,start:s,end:e});
   for(let i=0;i<5;i++) add(i,'פתאן בקרי סרחאן','הנח"ש','08:00','15:00');
   for(let i=0;i<7;i++) add(i,'רנא מנאע','חומרי ניקוי','08:00','15:00');
+  for(let i=0;i<5;i++) add(i,'לרין קדאח','חומרי ניקוי','08:00','15:00');
+  add(5,'לרין קדאח','מעדניה/פיצוחיה','15:00','22:00');
+  add(6,'לרין קדאח','מעדניה/פיצוחיה','15:00','22:00');
   for(let i=0;i<6;i++) add(i,'חמדה סואעד','כללי','07:00','16:00');
   for(let i=0;i<7;i++){ add(i,'סירנה קדאח','מעדניה/פיצוחיה','08:00','15:00'); add(i,'אמר קבלאוי','מעדניה/פיצוחיה','15:00','22:00'); }
+  add(3,'אמר קבלאוי','מקרר','08:00','13:00');
   for(let i=0;i<7;i++) add(i,'אילנה מנאע','מקרר','08:00','15:00');
   for(let i=0;i<7;i++){ add(i,'מורגאן מסרי','סדרנות מזון','08:00','15:00'); add(i,'דוניא עותמאן','סדרנות מזון','15:00','22:00'); }
   ['איה חליל','אסמהאן חסארמה','גדיר סואעד'].forEach(n=>{ for(let i=0;i<6;i++) add(i,n,'קופאיות','08:00','15:00'); });
   ['מור נסראוי','רולא כיוואן','שפיקה דיב'].forEach(n=>{ for(let i=0;i<6;i++) add(i,n,'קופאיות','15:00','22:00'); });
   for(let i=0;i<6;i++) add(i,'נורהאן עבד אלעזיז','קופה ראשית/גיבוי קופות','08:00','16:00');
+  add(4,'תימאא סרחאן',UNAVAIL,'בוקר','');
+  add(4,'תימאא סרחאן',UNAVAIL,'ערב','');
   return { ok:true, employees:emps, departments:deps, shifts:sh };
 }
+function demoPost(body){
+  if(body.action==='elogin') return { ok:false, error:'במצב הדגמה אין סיסמאות עובדים' };
+  if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
+  if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
+  if(body.action==='getAdminData') return { ok:true, role:ROLE_ADMIN,
+    employees: state.employees.map(e=>({name:e.name,dept:e.dept,active:e.active,password:'',offDays:offDaysToStr(e.offDays)})),
+    managers: [{name:'מנהל ראשי',password:'1234',role:ROLE_ADMIN}],
+    log: [{time:'—',manager:'מצב הדגמה',action:'—',detail:'הלוג יופיע לאחר חיבור לשרת'}] };
+  return { ok:true };
+}
 
-/* ============ טעינה ורינדור ============ */
+/* ============ טעינה ============ */
 async function load(){
   document.getElementById('board').innerHTML = '<div class="loading"><div class="spin"></div>טוען סידור…</div>';
   hideErr();
   try{
     const d = await apiGet();
-    state.employees = d.employees; state.departments = d.departments; state.shifts = d.shifts;
+    state.employees = d.employees; state.departments = d.departments;
+    state.employees.forEach(e=>{
+      e.depts = parseDepts(e.dept); if(!e.depts.length) e.depts=[state.departments[0]];
+      e.offDays = parseOffDays(e.offDays);
+    });
+    state.shifts = d.shifts.map(s=>({ ...s, _id:SID++ }));
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
   }catch(e){
@@ -354,7 +503,9 @@ async function load(){
 function shiftsOf(emp, dept, dateIso){
   return state.shifts.filter(s=>s.employee===emp && s.dept===dept && s.date===dateIso);
 }
+function isMgr(){ return !!state.mgr; }
 
+/* ============ רינדור ============ */
 function render(){
   const dates = weekDates();
   const todayIso = iso(new Date());
@@ -368,27 +519,24 @@ function render(){
   const board = document.getElementById('board');
   board.innerHTML = '';
 
-  const deps = [...state.departments];
-  state.shifts.forEach(s=>{ if(s.dept && !deps.includes(s.dept)) deps.push(s.dept); });
-
-  let personalMin = 0, personalShifts = 0;
+  let deps = [...state.departments];
+  state.shifts.forEach(s=>{ if(s.dept && s.dept!==UNAVAIL && !deps.includes(s.dept)) deps.push(s.dept); });
+  if(state.filterDept) deps = deps.filter(d=>d===state.filterDept);
 
   deps.forEach(dept=>{
-    // שורות: עובדים שהמחלקה ראשית שלהם + כל מי שמשובץ בה השבוע + שורות שנוספו ידנית
     const names = new Set();
-    state.employees.forEach(e=>{ if(e.active && e.dept===dept) names.add(e.name); });
+    state.employees.forEach(e=>{ if(e.active && e.depts.includes(dept)) names.add(e.name); });
     state.shifts.forEach(s=>{ if(s.dept===dept) names.add(s.employee); });
     state.extraRows.forEach(k=>{ const [d,n]=k.split('||'); if(d===dept) names.add(n); });
 
     let rows = [...names].sort((a,b)=>a.localeCompare(b,'he'));
-    if(state.filter) rows = rows.filter(n=>n===state.filter);
-    if(!rows.length && (state.filter || !state.admin)) return;
+    if(state.filterEmp) rows = rows.filter(n=>n===state.filterEmp);
+    if(!rows.length && (state.filterEmp || !isMgr())) return;
 
     const color = deptColor(dept);
     const sec = document.createElement('section');
     sec.className='dept'; sec.style.setProperty('--dc',color);
 
-    // חישובי סיכום
     const dayTotals = dates.map(d=>{
       const di = iso(d);
       const ss = state.shifts.filter(s=>s.dept===dept && s.date===di);
@@ -405,76 +553,156 @@ function render(){
     html += '</tr></thead><tbody>';
 
     rows.forEach(name=>{
+      const emp = empByName(name);
+      const isPrimary = primaryOf(name)===dept;
       let empWeek = 0;
       let cells = '';
       dates.forEach(d=>{
         const di = iso(d);
-        const ss = shiftsOf(name, dept, di);
-        const cellMin = ss.reduce((a,s)=>a+shiftMin(s),0);
-        empWeek += cellMin;
-        const chips = ss.map(s=>`<span class="chip">${esc(s.start)} – ${esc(s.end)}<small>${fmtMin(shiftMin(s))} ש'</small></span>`).join('');
-        cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${state.admin?'clickable':''}"
+        const own = shiftsOf(name, dept, di);
+        // משמרות ממחלקות אחרות מוצגות במחלקה הראשית עם תווית
+        const foreign = isPrimary
+          ? state.shifts.filter(s=>s.employee===name && s.date===di && s.dept!==dept && s.dept!==UNAVAIL)
+          : [];
+        empWeek += own.reduce((a,s)=>a+shiftMin(s),0) + foreign.reduce((a,s)=>a+shiftMin(s),0);
+
+        const drag = isMgr() ? 'draggable="true"' : '';
+        let chips = own.map(s=>`<span class="chip" ${drag} data-sid="${s._id}">${esc(s.start)} – ${esc(s.end)}<small>${fmtMin(shiftMin(s))} ש'</small></span>`).join('');
+        chips += foreign.map(s=>`<span class="chip foreign" ${drag} data-sid="${s._id}" style="--fc:${deptColor(s.dept)}">${esc(s.start)} – ${esc(s.end)}<small>${esc(s.dept)}</small></span>`).join('');
+
+        const off = unavailOf(name, di);
+        if(off.morning) chips += `<span class="chip off">🏖 חופש בוקר</span>`;
+        if(off.evening) chips += `<span class="chip off">🏖 חופש ערב</span>`;
+        if(!off.morning && !off.evening && emp && emp.offDays.includes(d.getDay())){
+          chips += `<span class="chip off">🏖 חופש קבוע</span>`;
+        }
+
+        cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${isMgr()?'clickable':''}"
           data-emp="${esc(name)}" data-dept="${esc(dept)}" data-date="${di}">
-          ${chips || (state.admin?'<span class="addhint">+</span>':'')}</td>`;
+          ${chips || (isMgr()?'<span class="addhint">+</span>':'')}</td>`;
       });
-      if(state.filter){ personalMin += empWeek; personalShifts += state.shifts.filter(s=>s.employee===name && s.dept===dept).length; }
       html += `<tr><td class="namecol"><div class="nm">${esc(name)}</div><div class="hrs">${fmtMin(empWeek)} שעות</div></td>${cells}</tr>`;
     });
 
-    if(!state.filter){
+    if(!state.filterEmp){
       html += '<tr class="totals"><td class="namecol">סה"כ מחלקה</td>';
       dayTotals.forEach(t=>{ html += `<td><b>${fmtMin(t.min)}</b>${t.ppl} עובדים</td>`; });
       html += '</tr>';
     }
     html += '</tbody></table></div>';
-    if(state.admin && !state.filter) html += `<button class="addrow" data-dept="${esc(dept)}">+ הוספת עובד למחלקה</button>`;
+    if(isMgr() && !state.filterEmp) html += `<button class="addrow" data-dept="${esc(dept)}">+ הוספת עובד למחלקה</button>`;
     sec.innerHTML = html;
     board.appendChild(sec);
   });
 
   // סיכום אישי
   const my = document.getElementById('mySum');
-  if(state.filter){
+  if(state.filterEmp){
+    const weekIso = dates.map(iso);
+    const mine = state.shifts.filter(s=>s.employee===state.filterEmp && s.dept!==UNAVAIL && weekIso.includes(s.date));
+    const min = mine.reduce((a,s)=>a+shiftMin(s),0);
     my.classList.remove('hidden');
-    my.innerHTML = `<span>👤 <b>${esc(state.filter)}</b></span>
-      <span>סה"כ שבועי: <b>${fmtMin(personalMin)}</b> שעות</span>
-      <span>משמרות: <b>${personalShifts}</b></span>`;
+    my.innerHTML = `<span>👤 <b>${esc(state.filterEmp)}</b></span>
+      <span>סה"כ שבועי: <b>${fmtMin(min)}</b> שעות</span>
+      <span>משמרות: <b>${mine.length}</b></span>`;
   } else my.classList.add('hidden');
 
   if(!board.children.length){
-    board.innerHTML = '<div class="loading">אין נתונים להצגה בשבוע זה.</div>';
+    board.innerHTML = '<div class="loading">אין נתונים להצגה.</div>';
   }
 
-  // מאזינים
-  if(state.admin){
-    board.querySelectorAll('td.cell').forEach(td=>td.addEventListener('click',()=>openShiftEditor(td.dataset)));
+  if(isMgr()){
+    board.querySelectorAll('td.cell').forEach(td=>{
+      td.addEventListener('click',()=>openShiftEditor(td.dataset));
+      td.addEventListener('dragover',e=>{ e.preventDefault(); td.classList.add('dropover'); });
+      td.addEventListener('dragleave',()=>td.classList.remove('dropover'));
+      td.addEventListener('drop',e=>{ e.preventDefault(); td.classList.remove('dropover'); onDrop(td); });
+    });
+    board.querySelectorAll('.chip[draggable="true"]').forEach(ch=>{
+      ch.addEventListener('dragstart',e=>{
+        e.stopPropagation();
+        dragSid = Number(ch.dataset.sid);
+        ch.classList.add('dragging');
+      });
+      ch.addEventListener('dragend',()=>ch.classList.remove('dragging'));
+      ch.addEventListener('click',e=>e.stopPropagation() || openChipEditor(Number(ch.dataset.sid)));
+    });
     board.querySelectorAll('.addrow').forEach(b=>b.addEventListener('click',()=>openAddRow(b.dataset.dept)));
   }
 }
 
 function renderFilterOptions(){
   const sel = document.getElementById('empFilter');
-  const cur = state.filter;
   const names = [...new Set(state.employees.filter(e=>e.active).map(e=>e.name)
-    .concat(state.shifts.map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
+    .concat(state.shifts.filter(s=>s.dept!==UNAVAIL).map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
   sel.innerHTML = '<option value="">כל העובדים</option>' +
-    names.map(n=>`<option value="${esc(n)}" ${n===cur?'selected':''}>${esc(n)}</option>`).join('');
+    names.map(n=>`<option value="${esc(n)}" ${n===state.filterEmp?'selected':''}>${esc(n)}</option>`).join('');
+  const ds = document.getElementById('deptFilter');
+  ds.innerHTML = '<option value="">כל המחלקות</option>' +
+    state.departments.map(d=>`<option value="${esc(d)}" ${d===state.filterDept?'selected':''}>${esc(d)}</option>`).join('');
+}
+
+/* ============ גרירת משמרות ============ */
+let dragSid = null;
+function onDrop(td){
+  if(dragSid==null) return;
+  const s = state.shifts.find(x=>x._id===dragSid);
+  dragSid = null;
+  if(!s || s.dept===UNAVAIL) return;
+  const { emp, dept, date } = td.dataset;
+  if(s.employee===emp && s.dept===dept && s.date===date) return;
+  if(!confirmConflicts(emp, date, s.start)) { render(); return; }
+  const existing = shiftsOf(emp, dept, date).filter(x=>x._id!==s._id);
+  if(existing.length && !confirm('לעובד '+emp+' כבר יש משמרת בתא זה ('+existing[0].start+'–'+existing[0].end+'). להחליף אותה?')){ render(); return; }
+  state.shifts = state.shifts.filter(x=>!existing.includes(x));
+  s.employee = emp; s.dept = dept; s.date = date;
+  state.dirtyShifts = true;
+  render();
 }
 
 /* ============ עריכת משמרת ============ */
+(function buildTimeOptions(){
+  let opts='';
+  for(let h=5;h<=23;h++) for(const m of [0,30]){
+    const t=String(h).padStart(2,'0')+':'+(m?'30':'00');
+    opts+=`<option value="${t}">${t}</option>`;
+  }
+  document.getElementById('shStart').innerHTML=opts;
+  document.getElementById('shEnd').innerHTML=opts;
+})();
+
 let editCtx = null;
+function openChipEditor(sid){
+  const s = state.shifts.find(x=>x._id===sid);
+  if(!s || s.dept===UNAVAIL) return;
+  openShiftEditor({ emp:s.employee, dept:s.dept, date:s.date });
+}
 function openShiftEditor(ds){
   editCtx = { emp: ds.emp, dept: ds.dept, date: ds.date };
   const existing = shiftsOf(ds.emp, ds.dept, ds.date)[0];
+  editCtx.sid = existing ? existing._id : null;
   const d = new Date(ds.date+'T00:00:00');
   document.getElementById('shTitle').textContent = ds.emp;
   document.getElementById('shSub').textContent = ds.dept+' · יום '+DAY_NAMES[d.getDay()]+' '+ddmm(d);
+
+  const empSel = document.getElementById('shEmp');
+  const names = state.employees.filter(e=>e.active).map(e=>e.name).sort((a,b)=>a.localeCompare(b,'he'));
+  if(!names.includes(ds.emp)) names.unshift(ds.emp);
+  empSel.innerHTML = names.map(n=>`<option value="${esc(n)}" ${n===ds.emp?'selected':''}>${esc(n)}</option>`).join('');
+
   document.getElementById('shStart').value = existing ? existing.start : '08:00';
   document.getElementById('shEnd').value   = existing ? existing.end   : '15:00';
   document.getElementById('shDel').classList.toggle('hidden', !existing);
   document.getElementById('shErr').textContent='';
+  refreshOffToggles();
   markPreset();
   show('shOverlay');
+}
+function refreshOffToggles(){
+  const emp = document.getElementById('shEmp').value;
+  const off = unavailOf(emp, editCtx.date);
+  document.getElementById('offMorning').classList.toggle('active', off.morning);
+  document.getElementById('offEvening').classList.toggle('active', off.evening);
 }
 function markPreset(){
   const s=document.getElementById('shStart').value, e=document.getElementById('shEnd').value;
@@ -485,21 +713,38 @@ document.querySelectorAll('.preset').forEach(p=>p.addEventListener('click',()=>{
   document.getElementById('shEnd').value=p.dataset.e;
   markPreset();
 }));
-document.getElementById('shStart').addEventListener('input',markPreset);
-document.getElementById('shEnd').addEventListener('input',markPreset);
+document.getElementById('shStart').addEventListener('change',markPreset);
+document.getElementById('shEnd').addEventListener('change',markPreset);
+document.getElementById('shEmp').addEventListener('change',refreshOffToggles);
+
+['offMorning','offEvening'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',()=>{
+    document.getElementById(id).classList.toggle('active');
+    setUnavail(document.getElementById('shEmp').value, editCtx.date,
+      document.getElementById('offMorning').classList.contains('active'),
+      document.getElementById('offEvening').classList.contains('active'));
+    state.dirtyShifts = true; updateDirtyBadge();
+  });
+});
 
 document.getElementById('shSave').addEventListener('click',()=>{
   const s=document.getElementById('shStart').value, e=document.getElementById('shEnd').value;
+  const targetEmp = document.getElementById('shEmp').value;
   if(!s || !e){ document.getElementById('shErr').textContent='יש למלא שעת התחלה וסיום'; return; }
   if(s===e){ document.getElementById('shErr').textContent='שעת הסיום זהה לשעת ההתחלה'; return; }
-  state.shifts = state.shifts.filter(x=>!(x.employee===editCtx.emp && x.dept===editCtx.dept && x.date===editCtx.date));
-  state.shifts.push({ date:editCtx.date, employee:editCtx.emp, dept:editCtx.dept, start:s, end:e });
+  if(!confirmConflicts(targetEmp, editCtx.date, s)) return;
+  // הסרת המשמרת המקורית + משמרת קיימת אצל עובד היעד באותו תא
+  state.shifts = state.shifts.filter(x=>
+    x._id!==editCtx.sid &&
+    !(x.employee===targetEmp && x.dept===editCtx.dept && x.date===editCtx.date && x.dept!==UNAVAIL));
+  state.shifts.push({ _id:SID++, date:editCtx.date, employee:targetEmp, dept:editCtx.dept, start:s, end:e });
+  if(targetEmp!==editCtx.emp) state.extraRows.add(editCtx.dept+'||'+editCtx.emp);
   state.dirtyShifts = true;
   hide('shOverlay'); render();
 });
 document.getElementById('shDel').addEventListener('click',()=>{
-  state.shifts = state.shifts.filter(x=>!(x.employee===editCtx.emp && x.dept===editCtx.dept && x.date===editCtx.date));
-  state.extraRows.add(editCtx.dept+'||'+editCtx.emp); // להשאיר את השורה גלויה
+  state.shifts = state.shifts.filter(x=>x._id!==editCtx.sid);
+  state.extraRows.add(editCtx.dept+'||'+editCtx.emp);
   state.dirtyShifts = true;
   hide('shOverlay'); render();
 });
@@ -510,10 +755,10 @@ function openAddRow(dept){
   rowDept = dept;
   document.getElementById('rowTitle').textContent = 'הוספת עובד — '+dept;
   const inDept = new Set();
-  state.employees.forEach(e=>{ if(e.active && e.dept===dept) inDept.add(e.name); });
+  state.employees.forEach(e=>{ if(e.active && e.depts.includes(dept)) inDept.add(e.name); });
   state.shifts.forEach(s=>{ if(s.dept===dept) inDept.add(s.employee); });
   const opts = state.employees.filter(e=>e.active && !inDept.has(e.name))
-    .map(e=>`<option value="${esc(e.name)}">${esc(e.name)} (${esc(e.dept)})</option>`).join('');
+    .map(e=>`<option value="${esc(e.name)}">${esc(e.name)} (${esc(e.depts.join(', '))})</option>`).join('');
   document.getElementById('rowSelect').innerHTML = '<option value="">— בחר —</option>'+opts;
   document.getElementById('rowNew').value='';
   show('rowOverlay');
@@ -523,8 +768,15 @@ document.getElementById('rowOk').addEventListener('click',()=>{
   const selName = document.getElementById('rowSelect').value;
   const name = newName || selName;
   if(!name) return;
-  if(newName && !state.employees.some(e=>e.name===newName)){
-    state.employees.push({ name:newName, dept:rowDept, active:true });
+  const existing = empByName(name);
+  if(existing){
+    if(!existing.depts.includes(rowDept)){
+      existing.depts.push(rowDept);
+      existing.dept = existing.depts.join(', ');
+      state.dirtyEmps = true;
+    }
+  } else {
+    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'' });
     state.dirtyEmps = true;
   }
   state.extraRows.add(rowDept+'||'+name);
@@ -532,7 +784,21 @@ document.getElementById('rowOk').addEventListener('click',()=>{
 });
 
 /* ============ ניהול עובדים ============ */
-function openEmpMgr(){
+async function openEmpMgr(){
+  // מנהל מחובר — נטען סיסמאות עובדים מהשרת
+  if(!state.demo){
+    try{
+      const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+      if(r.ok){
+        r.employees.forEach(se=>{
+          const local = empByName(se.name);
+          if(local){ local.password = se.password; }
+          else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
+            active:se.active, offDays:parseOffDays(se.offDays), password:se.password });
+        });
+      }
+    }catch(e){ toast('לא נטענו סיסמאות עובדים: '+e.message,'err'); }
+  }
   const list = document.getElementById('empList');
   list.innerHTML='';
   state.employees.forEach(e=>list.appendChild(empRow(e)));
@@ -541,54 +807,168 @@ function openEmpMgr(){
 function empRow(e){
   const div = document.createElement('div');
   div.className='emp-item';
-  div.innerHTML = `<input type="text" value="${esc(e.name)}" placeholder="שם העובד">
-    <select>${state.departments.map(d=>`<option ${d===e.dept?'selected':''}>${esc(d)}</option>`).join('')}</select>
-    <button class="del" title="הסרה">✕</button>`;
+  div.innerHTML = `<div class="emp-top">
+      <input type="text" class="i-name" value="${esc(e.name)}" placeholder="שם העובד">
+      <input type="text" class="i-pw" value="${esc(e.password||'')}" placeholder="סיסמת עובד">
+      <button class="del" title="הסרה">✕</button></div>
+    <div class="chiprow"><span class="lbl">מחלקות:</span>${state.departments.map(d=>
+      `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
+    <div class="chiprow"><span class="lbl">חופש קבוע:</span>${DAY_LETTERS.map((l,i)=>
+      `<button class="dchip day ${e.offDays && e.offDays.includes(i)?'active':''}" data-i="${i}">${l}</button>`).join('')}</div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
+  div.querySelectorAll('.dchip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   return div;
 }
 document.getElementById('empAdd').addEventListener('click',()=>{
-  document.getElementById('empList').appendChild(empRow({name:'',dept:state.departments[0],active:true}));
+  document.getElementById('empList').appendChild(empRow({name:'',depts:[],offDays:[],password:''}));
 });
 document.getElementById('empOk').addEventListener('click',()=>{
   const rows = [...document.querySelectorAll('#empList .emp-item')];
-  state.employees = rows.map(r=>({
-    name: r.querySelector('input').value.trim(),
-    dept: r.querySelector('select').value,
-    active: true
-  })).filter(e=>e.name);
+  state.employees = rows.map(r=>{
+    const depts = [...r.querySelectorAll('.dchip.dept.active')].map(c=>c.dataset.d);
+    if(!depts.length) depts.push(state.departments[0]);
+    const offDays = [...r.querySelectorAll('.dchip.day.active')].map(c=>Number(c.dataset.i));
+    return { name: r.querySelector('.i-name').value.trim(), dept: depts.join(', '), depts,
+             active: true, offDays, password: r.querySelector('.i-pw').value.trim() };
+  }).filter(e=>e.name);
   state.dirtyEmps = true;
   hide('empOverlay'); render();
 });
 
-/* ============ מנהל ============ */
-document.getElementById('adminLogin').addEventListener('click',()=>{
-  document.getElementById('pwInput').value=''; document.getElementById('pwErr').textContent='';
-  show('pwOverlay'); document.getElementById('pwInput').focus();
-});
-async function tryLogin(){
-  const pw = document.getElementById('pwInput').value;
-  document.getElementById('pwErr').textContent='בודק…';
-  const r = await apiPost({ action:'verify', password:pw });
-  if(r.ok){
-    state.admin = true; state.password = pw;
-    sessionStorage.setItem('sp_pw', pw);
-    hide('pwOverlay'); setAdminUI(); render();
-    toast('מצב מנהל פעיל','ok');
-  } else document.getElementById('pwErr').textContent = r.error || 'סיסמה שגויה';
+/* ============ ניהול מנהלים (אדמין) ============ */
+async function openMgrs(){
+  try{
+    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    if(!r.ok) throw new Error(r.error);
+    const list = document.getElementById('mgrList');
+    list.innerHTML='';
+    (r.managers||[]).forEach(m=>list.appendChild(mgrRowEl(m)));
+    document.getElementById('mgrErr').textContent='';
+    show('mgrsOverlay');
+  }catch(e){ toast('שגיאה: '+e.message,'err'); }
 }
-document.getElementById('pwOk').addEventListener('click',tryLogin);
-document.getElementById('pwInput').addEventListener('keydown',e=>{ if(e.key==='Enter') tryLogin(); });
+function mgrRowEl(m){
+  const div = document.createElement('div');
+  div.className='mgr-item';
+  div.innerHTML = `<input type="text" class="i-name" value="${esc(m.name)}" placeholder="שם מנהל">
+    <input type="text" class="i-pw" value="${esc(m.password)}" placeholder="סיסמה">
+    <select class="i-role">
+      <option ${m.role===ROLE_ADMIN?'selected':''}>${ROLE_ADMIN}</option>
+      <option ${m.role!==ROLE_ADMIN?'selected':''}>מנהל משמרת</option>
+    </select>
+    <button class="del" title="הסרה">✕</button>`;
+  div.querySelector('.del').addEventListener('click',()=>div.remove());
+  return div;
+}
+document.getElementById('mgrAdd').addEventListener('click',()=>{
+  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת'}));
+});
+document.getElementById('mgrsOk').addEventListener('click',async ()=>{
+  const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
+    name: r.querySelector('.i-name').value.trim(),
+    password: r.querySelector('.i-pw').value.trim(),
+    role: r.querySelector('.i-role').value
+  })).filter(m=>m.name && m.password);
+  if(!list.some(m=>m.role===ROLE_ADMIN)){
+    document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;
+  }
+  try{
+    const r = await apiPost({ action:'saveManagers', ...mgrAuth(), managers:list });
+    if(!r.ok) throw new Error(r.error);
+    // אם המנהל הנוכחי שינה את הסיסמה של עצמו — עדכון החיבור
+    const me = list.find(m=>m.name===state.mgr.name);
+    if(me){ state.mgr.pw = me.password; state.mgr.role = me.role; store.set({kind:'mgr',name:me.name,pw:me.password}); }
+    hide('mgrsOverlay');
+    toast('המנהלים נשמרו ✓','ok');
+  }catch(e){ document.getElementById('mgrErr').textContent = e.message; }
+});
+
+/* ============ לוג (אדמין) ============ */
+async function openLog(){
+  try{
+    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    if(!r.ok) throw new Error(r.error);
+    document.getElementById('logBody').innerHTML = (r.log||[]).map(l=>
+      `<tr><td>${esc(l.time)}</td><td>${esc(l.manager)}</td><td>${esc(l.action)}</td><td>${esc(l.detail)}</td></tr>`
+    ).join('') || '<tr><td colspan="4">הלוג ריק</td></tr>';
+    show('logOverlay');
+  }catch(e){ toast('שגיאה: '+e.message,'err'); }
+}
+
+/* ============ כניסה ויציאה ============ */
+let loginTab = 'mgr';
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  document.getElementById('lgErr').textContent='';
+  document.getElementById('lgMgrPw').value=''; document.getElementById('lgEmpPw').value='';
+  const sel = document.getElementById('lgEmpName');
+  sel.innerHTML = state.employees.filter(e=>e.active).map(e=>`<option>${esc(e.name)}</option>`).join('');
+  show('loginOverlay');
+});
+function setTab(t){
+  loginTab = t;
+  document.getElementById('tabMgr').classList.toggle('active', t==='mgr');
+  document.getElementById('tabEmp').classList.toggle('active', t==='emp');
+  document.getElementById('mgrPane').classList.toggle('hidden', t!=='mgr');
+  document.getElementById('empPane').classList.toggle('hidden', t!=='emp');
+  document.getElementById('lgErr').textContent='';
+}
+document.getElementById('tabMgr').addEventListener('click',()=>setTab('mgr'));
+document.getElementById('tabEmp').addEventListener('click',()=>setTab('emp'));
+
+async function doLogin(){
+  const err = document.getElementById('lgErr');
+  err.textContent='בודק…';
+  try{
+    if(loginTab==='mgr'){
+      const name = document.getElementById('lgMgrName').value.trim();
+      const pw = document.getElementById('lgMgrPw').value;
+      if(!name){ err.textContent='יש להזין שם מנהל'; return; }
+      const r = await apiPost({ action:'mlogin', mname:name, password:pw });
+      if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+      state.mgr = { name:r.name||name, pw, role:r.role };
+      store.set({ kind:'mgr', name:state.mgr.name, pw });
+      hide('loginOverlay'); setAuthUI(); render();
+      toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
+    } else {
+      const name = document.getElementById('lgEmpName').value;
+      const pw = document.getElementById('lgEmpPw').value;
+      const r = await apiPost({ action:'elogin', name, password:pw });
+      if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+      state.viewer = name;
+      store.set({ kind:'emp', name, pw });
+      state.filterEmp = name;
+      hide('loginOverlay'); setAuthUI(); render();
+      toast('שלום '+name,'ok');
+    }
+  }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
+}
+document.getElementById('lgOk').addEventListener('click',doLogin);
+['lgMgrPw','lgEmpPw'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }));
 
 document.getElementById('adminExit').addEventListener('click',()=>{
   if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
-  state.admin=false; state.password=''; sessionStorage.removeItem('sp_pw');
+  state.mgr=null; store.clear();
   state.dirtyShifts=false; state.dirtyEmps=false;
-  setAdminUI(); load();
+  setAuthUI(); load();
 });
-function setAdminUI(){
-  document.getElementById('adminTools').classList.toggle('hidden', !state.admin);
-  document.getElementById('adminLogin').classList.toggle('hidden', state.admin);
+document.getElementById('viewerExit').addEventListener('click',()=>{
+  state.viewer=''; state.filterEmp=''; store.clear();
+  setAuthUI(); render();
+});
+
+function setAuthUI(){
+  const m = isMgr();
+  document.getElementById('adminTools').classList.toggle('hidden', !m);
+  document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.viewer);
+  document.getElementById('viewerChip').classList.toggle('hidden', !state.viewer || m);
+  if(m){
+    document.getElementById('mgrName').textContent = state.mgr.name;
+    document.getElementById('mgrRole').textContent = state.mgr.role;
+    const admin = state.mgr.role===ROLE_ADMIN;
+    document.getElementById('mgrsBtn').classList.toggle('hidden', !admin);
+    document.getElementById('logBtn').classList.toggle('hidden', !admin);
+  }
+  if(state.viewer) document.getElementById('viewerName').textContent = state.viewer;
 }
 
 /* ============ שמירה ============ */
@@ -600,14 +980,16 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
   try{
     const weekIso = weekDates().map(iso);
     if(state.dirtyShifts){
-      const r = await apiPost({ action:'saveWeek', password:state.password,
+      const r = await apiPost({ action:'saveWeek', ...mgrAuth(),
         weekStart: iso(state.weekStart),
-        shifts: state.shifts.filter(s=>weekIso.includes(s.date)) });
+        shifts: state.shifts.filter(s=>weekIso.includes(s.date)).map(s=>({date:s.date,employee:s.employee,dept:s.dept,start:s.start,end:s.end})) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת משמרות');
       state.dirtyShifts=false;
     }
     if(state.dirtyEmps){
-      const r = await apiPost({ action:'saveEmployees', password:state.password, employees: state.employees });
+      const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
+        employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
+          password:e.password||'', offDays:offDaysToStr(e.offDays) })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
@@ -625,14 +1007,45 @@ document.getElementById('copyPrev').addEventListener('click',async ()=>{
     state.weekStart = new Date(cur.getTime()-7*86400000);
     const prev = await apiGet();
     state.weekStart = cur;
-    const map = {}; weekDates().forEach((d,i)=>{
+    const map = {}; weekDates().forEach(d=>{
       const p = new Date(d.getTime()-7*86400000); map[iso(p)] = iso(d);
     });
-    state.shifts = prev.shifts.filter(s=>map[s.date]).map(s=>({ ...s, date: map[s.date] }));
+    state.shifts = prev.shifts.filter(s=>map[s.date]).map(s=>({ ...s, date: map[s.date], _id:SID++ }));
     state.dirtyShifts = true;
     render();
     toast('הועתק. יש ללחוץ "שמור" לאישור.','ok');
   }catch(e){ toast('שגיאה בהעתקה: '+e.message,'err'); }
+});
+
+/* ============ ייצוא PDF ============ */
+document.getElementById('pdfBtn').addEventListener('click',async ()=>{
+  const btn = document.getElementById('pdfBtn'); btn.disabled=true;
+  toast('מכין PDF…');
+  try{
+    const dates = weekDates();
+    const stage = document.getElementById('pdfStage');
+    stage.innerHTML = `<div class="pdftitle"><span class="star">★</span>
+      סידור עבודה · סופרסטאר · ${ddmm(dates[0])} – ${ddmm(dates[6])} · ${dates[0].getFullYear()}</div>`;
+    document.querySelectorAll('#board .dept').forEach(sec=>stage.appendChild(sec.cloneNode(true)));
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const pageW=297, pageH=210, margin=8, imgW=pageW-2*margin;
+    let y = margin, first = true;
+
+    for(const el of stage.children){
+      const canvas = await html2canvas(el, { scale:2, backgroundColor:'#ffffff' });
+      let w = imgW, h = canvas.height * imgW / canvas.width;
+      if(h > pageH-2*margin){ h = pageH-2*margin; w = canvas.width * h / canvas.height; }
+      if(!first && y + h > pageH-margin){ pdf.addPage(); y = margin; }
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', pageW-margin-w, y, w, h);
+      y += h + 3; first = false;
+    }
+    pdf.save('sidur_'+iso(state.weekStart)+'.pdf');
+    stage.innerHTML='';
+    toast('קובץ ה-PDF ירד ✓','ok');
+  }catch(e){ toast('שגיאה ביצירת PDF: '+e.message,'err'); }
+  btn.disabled=false;
 });
 
 /* ============ ניווט ושונות ============ */
@@ -643,9 +1056,11 @@ function moveWeek(days){
 }
 document.getElementById('prevW').addEventListener('click',()=>moveWeek(-7));
 document.getElementById('nextW').addEventListener('click',()=>moveWeek(7));
-document.getElementById('empFilter').addEventListener('change',e=>{ state.filter=e.target.value; render(); });
-document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('empFilter').addEventListener('change',e=>{ state.filterEmp=e.target.value; render(); });
+document.getElementById('deptFilter').addEventListener('change',e=>{ state.filterDept=e.target.value; render(); });
 document.getElementById('empMgr').addEventListener('click',openEmpMgr);
+document.getElementById('mgrsBtn').addEventListener('click',openMgrs);
+document.getElementById('logBtn').addEventListener('click',openLog);
 
 function show(id){ document.getElementById(id).classList.remove('hidden'); }
 function hide(id){ document.getElementById(id).classList.add('hidden'); }
@@ -664,11 +1079,15 @@ window.addEventListener('beforeunload',e=>{ if(hasDirty()){ e.preventDefault(); 
 
 /* ============ אתחול ============ */
 (async function init(){
-  if(state.password){
-    const r = await apiPost({ action:'verify', password:state.password }).catch(()=>({ok:false}));
-    if(r.ok) state.admin = true; else { state.password=''; sessionStorage.removeItem('sp_pw'); }
+  const auth = store.get();
+  if(auth && auth.kind==='mgr'){
+    const r = await apiPost({ action:'mlogin', mname:auth.name, password:auth.pw }).catch(()=>({ok:false}));
+    if(r.ok) state.mgr = { name:r.name||auth.name, pw:auth.pw, role:r.role };
+    else store.clear();
+  } else if(auth && auth.kind==='emp'){
+    state.viewer = auth.name; state.filterEmp = auth.name;
   }
-  setAdminUI();
+  setAuthUI();
   load();
 })();
 </script>
