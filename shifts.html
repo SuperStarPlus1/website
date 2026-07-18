@@ -74,7 +74,7 @@ td.cell.today{background:#fffdf4}
 td.cell.clickable{cursor:pointer}
 td.cell.clickable:hover{background:#eef4ff}
 td.cell.dropover{background:#e0edff;outline:2px dashed #2563eb;outline-offset:-2px}
-.chip{display:block;border-radius:8px;padding:5px 4px 4px;font-size:12px;font-weight:700;line-height:1.2;background:color-mix(in srgb,var(--dc) 12%,#fff);color:var(--navy);border:1px solid color-mix(in srgb,var(--dc) 35%,#fff);border-inline-start:4px solid var(--dc);font-variant-numeric:tabular-nums}
+.chip{display:block;border-radius:8px;padding:5px 4px 4px;font-size:12px;font-weight:700;line-height:1.2;background:var(--dc-bg,#eef1f5);color:var(--navy);border:1px solid var(--dc-bd,#d7dbe3);border-inline-start:4px solid var(--dc);font-variant-numeric:tabular-nums}
 .chip small{display:block;font-weight:500;font-size:10px;color:var(--muted)}
 .chip + .chip{margin-top:3px}
 .chip.foreign{background:#f3f4f6;border:1px solid #d1d5db;border-inline-start:4px solid #9ca3af;color:#4b5563}
@@ -219,7 +219,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </span>
 </header>
 
-<div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. כניסת מנהל: כל שם + סיסמה 1234</div>
+<div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. התחברות כמנהל: כל שם + סיסמה 1234</div>
 <div class="notice err hidden" id="errNotice"></div>
 
 <main>
@@ -372,7 +372,7 @@ const state = {
   departments: [],
   shifts: [],             // {_id, date, employee, dept, start, end} + שורות אי-זמינות
   mgr: null,              // {name, pw, role}
-  viewer: '',             // עובד מחובר
+  emp: null,              // עובד מחובר: {name, username, pw}
   dirtyShifts: false,
   dirtyEmps: false,
   extraRows: new Set(),
@@ -391,6 +391,12 @@ function shiftMin(s){ let m=toMin(s.end)-toMin(s.start); if(m<0) m+=1440; return
 function fmtMin(m){ return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
 function deptColor(dept){ const i=state.departments.indexOf(dept); return DEPT_COLORS[(i>=0?i:hashStr(dept))%DEPT_COLORS.length]; }
 function hashStr(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0; return h; }
+/** ערבוב צבע hex עם לבן (p = משקל הצבע, 0..1) — תואם html2canvas */
+function tint(hex,p){
+  const n=parseInt(hex.slice(1),16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const mix=v=>Math.round(v*p+255*(1-p));
+  return 'rgb('+mix(r)+','+mix(g)+','+mix(b)+')';
+}
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function parseDepts(str){ return String(str||'').split(',').map(x=>x.trim()).filter(Boolean); }
 function parseOffDays(str){ return String(str||'').split(',').map(x=>DAY_LETTERS.indexOf(x.trim())).filter(i=>i>=0); }
@@ -424,11 +430,21 @@ function confirmConflicts(emp, dateIso, start){
 
 /* ============ שכבת שרת ============ */
 function mgrAuth(){ return state.mgr ? { mname: state.mgr.name, password: state.mgr.pw } : {}; }
+function authed(){ return !!(state.mgr || state.emp); }
+function anyAuth(){
+  if(state.mgr) return { mname: state.mgr.name, password: state.mgr.pw };
+  if(state.emp) return { username: state.emp.username, password: state.emp.pw };
+  return {};
+}
 async function apiGet(){
   if(state.demo) return demoData();
-  const r = await fetch(GAS_URL+'?action=getData&week='+iso(state.weekStart));
+  const r = await fetch(GAS_URL,{ method:'POST',
+    body: JSON.stringify({ action:'getData', week: iso(state.weekStart), ...anyAuth() }) });
   const j = await r.json();
-  if(!j.ok) throw new Error(j.error||'שגיאת שרת');
+  if(!j.ok){
+    if(j.authRequired){ state.mgr=null; state.emp=null; store.clear(); setAuthUI(); }
+    throw new Error(j.error||'שגיאת שרת');
+  }
   return j;
 }
 async function apiPost(body){
@@ -482,7 +498,23 @@ function demoPost(body){
 }
 
 /* ============ טעינה ============ */
+function renderGate(){
+  document.getElementById('mySum').classList.add('hidden');
+  document.getElementById('weekRange').textContent = '— — —';
+  document.getElementById('demoNotice').classList.toggle('hidden', !state.demo);
+  document.getElementById('board').innerHTML = `
+    <div class="loading" style="padding:80px 0">
+      <div style="font-size:42px;margin-bottom:10px">🔒</div>
+      <div style="font-weight:700;font-size:16px;color:var(--ink);margin-bottom:6px">הסידור מוצג למשתמשים מחוברים בלבד</div>
+      <div style="margin-bottom:18px">יש להתחבר עם שם המשתמש והסיסמה שקיבלת מהמנהל</div>
+      <button class="btn primary" id="gateLogin" style="font-size:15px;padding:12px 26px">🔑 התחברות</button>
+    </div>`;
+  document.getElementById('gateLogin').addEventListener('click', openLoginModal);
+}
+function gateOrLoad(){ if(authed()) load(); else renderGate(); }
+
 async function load(){
+  if(!authed()){ renderGate(); return; }
   document.getElementById('board').innerHTML = '<div class="loading"><div class="spin"></div>טוען סידור…</div>';
   hideErr();
   try{
@@ -537,6 +569,8 @@ function render(){
     const color = deptColor(dept);
     const sec = document.createElement('section');
     sec.className='dept'; sec.style.setProperty('--dc',color);
+    sec.style.setProperty('--dc-bg', tint(color,0.12));
+    sec.style.setProperty('--dc-bd', tint(color,0.35));
 
     const dayTotals = dates.map(d=>{
       const di = iso(d);
@@ -900,11 +934,12 @@ async function openLog(){
 
 /* ============ כניסה ויציאה ============ */
 let loginTab = 'mgr';
-document.getElementById('loginBtn').addEventListener('click',()=>{
+function openLoginModal(){
   document.getElementById('lgErr').textContent='';
   document.getElementById('lgMgrPw').value=''; document.getElementById('lgEmpPw').value='';
   show('loginOverlay');
-});
+}
+document.getElementById('loginBtn').addEventListener('click', openLoginModal);
 function setTab(t){
   loginTab = t;
   document.getElementById('tabMgr').classList.toggle('active', t==='mgr');
@@ -928,7 +963,7 @@ async function doLogin(){
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
       state.mgr = { name:r.name||name, pw, role:r.role };
       store.set({ kind:'mgr', name:state.mgr.name, pw });
-      hide('loginOverlay'); setAuthUI(); render();
+      hide('loginOverlay'); setAuthUI(); load();
       toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
     } else {
       const username = document.getElementById('lgEmpUser').value.trim();
@@ -936,10 +971,10 @@ async function doLogin(){
       if(!username){ err.textContent='יש להזין שם משתמש'; return; }
       const r = await apiPost({ action:'elogin', username, password:pw });
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
-      state.viewer = r.name;
-      store.set({ kind:'emp', name:r.name });
+      state.emp = { name:r.name, username, pw };
+      store.set({ kind:'emp', name:r.name, username, pw });
       state.filterEmp = r.name;
-      hide('loginOverlay'); setAuthUI(); render();
+      hide('loginOverlay'); setAuthUI(); load();
       toast('שלום '+r.name,'ok');
     }
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
@@ -951,18 +986,18 @@ document.getElementById('adminExit').addEventListener('click',()=>{
   if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
   state.mgr=null; store.clear();
   state.dirtyShifts=false; state.dirtyEmps=false;
-  setAuthUI(); load();
+  setAuthUI(); gateOrLoad();
 });
 document.getElementById('viewerExit').addEventListener('click',()=>{
-  state.viewer=''; state.filterEmp=''; store.clear();
-  setAuthUI(); render();
+  state.emp=null; state.filterEmp=''; store.clear();
+  setAuthUI(); gateOrLoad();
 });
 
 function setAuthUI(){
   const m = isMgr();
   document.getElementById('adminTools').classList.toggle('hidden', !m);
-  document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.viewer);
-  document.getElementById('viewerChip').classList.toggle('hidden', !state.viewer || m);
+  document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.emp);
+  document.getElementById('viewerChip').classList.toggle('hidden', !state.emp || m);
   if(m){
     document.getElementById('mgrName').textContent = state.mgr.name;
     document.getElementById('mgrRole').textContent = state.mgr.role;
@@ -970,7 +1005,7 @@ function setAuthUI(){
     document.getElementById('mgrsBtn').classList.toggle('hidden', !admin);
     document.getElementById('logBtn').classList.toggle('hidden', !admin);
   }
-  if(state.viewer) document.getElementById('viewerName').textContent = state.viewer;
+  if(state.emp) document.getElementById('viewerName').textContent = state.emp.name;
 }
 
 /* ============ שמירה ============ */
@@ -1086,11 +1121,13 @@ window.addEventListener('beforeunload',e=>{ if(hasDirty()){ e.preventDefault(); 
     const r = await apiPost({ action:'mlogin', mname:auth.name, password:auth.pw }).catch(()=>({ok:false}));
     if(r.ok) state.mgr = { name:r.name||auth.name, pw:auth.pw, role:r.role };
     else store.clear();
-  } else if(auth && auth.kind==='emp'){
-    state.viewer = auth.name; state.filterEmp = auth.name;
+  } else if(auth && auth.kind==='emp' && auth.username){
+    const r = await apiPost({ action:'elogin', username:auth.username, password:auth.pw }).catch(()=>({ok:false}));
+    if(r.ok){ state.emp = { name:r.name, username:auth.username, pw:auth.pw }; state.filterEmp = r.name; }
+    else store.clear();
   }
   setAuthUI();
-  load();
+  gateOrLoad();
 })();
 </script>
 </body>
