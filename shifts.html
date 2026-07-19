@@ -548,8 +548,14 @@ function setUnavail(emp, dateIso, morning, evening){
   if(morning) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'בוקר', end:'' });
   if(evening) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'ערב', end:'' });
 }
-/** אזהרת התנגשות: חופש ידני או יום חופש קבוע. מחזיר true אם אפשר להמשיך */
-function confirmConflicts(emp, dateIso, start){
+/** אזהרת התנגשות: חופש/אילוץ/משמרת כפולה/רצף. מחזיר true אם אפשר להמשיך */
+function confirmConflicts(emp, dateIso, start, excludeSids){
+  excludeSids = excludeSids || [];
+  // משמרת אחת ביום לכל עובד
+  const other = state.shifts.find(s=>s.employee===emp && s.date===dateIso && s.dept!==UNAVAIL && !excludeSids.includes(s._id));
+  if(other){
+    if(!confirm('לעובד '+emp+' כבר יש משמרת ביום זה ('+other.dept+' '+other.start+'–'+other.end+'). המערכת מגבילה למשמרת אחת ביום — לשבץ בכל זאת?')) return false;
+  }
   const isEvening = toMin(start) >= EVENING_FROM;
   const off = unavailOf(emp, dateIso);
   if((isEvening && off.evening) || (!isEvening && off.morning)){
@@ -696,6 +702,7 @@ async function load(){
     state.swaps = d.swaps || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
+    checkMyUpdates();
   }catch(e){
     document.getElementById('board').innerHTML='';
     showErr('לא ניתן לטעון את הסידור: '+e.message+' — בדוק את כתובת GAS_URL ואת הרשאות הפריסה.');
@@ -863,8 +870,8 @@ function onDrop(td){
   if(!s || s.dept===UNAVAIL) return;
   const { emp, dept, date } = td.dataset;
   if(s.employee===emp && s.dept===dept && s.date===date) return;
-  if(!confirmConflicts(emp, date, s.start)) { render(); return; }
   const existing = shiftsOf(emp, dept, date).filter(x=>x._id!==s._id);
+  if(!confirmConflicts(emp, date, s.start, [s._id, ...existing.map(x=>x._id)])) { render(); return; }
   if(existing.length && !confirm('לעובד '+emp+' כבר יש משמרת בתא זה ('+existing[0].start+'–'+existing[0].end+'). להחליף אותה?')){ render(); return; }
   state.shifts = state.shifts.filter(x=>!existing.includes(x));
   s.employee = emp; s.dept = dept; s.date = date;
@@ -944,7 +951,8 @@ document.getElementById('shSave').addEventListener('click',()=>{
   const targetEmp = document.getElementById('shEmp').value;
   if(!s || !e){ document.getElementById('shErr').textContent='יש למלא שעת התחלה וסיום'; return; }
   if(s===e){ document.getElementById('shErr').textContent='שעת הסיום זהה לשעת ההתחלה'; return; }
-  if(!confirmConflicts(targetEmp, editCtx.date, s)) return;
+  const replaced = state.shifts.filter(x=>x.employee===targetEmp && x.dept===editCtx.dept && x.date===editCtx.date && x.dept!==UNAVAIL);
+  if(!confirmConflicts(targetEmp, editCtx.date, s, [editCtx.sid, ...replaced.map(x=>x._id)])) return;
   // הסרת המשמרת המקורית + משמרת קיימת אצל עובד היעד באותו תא
   state.shifts = state.shifts.filter(x=>
     x._id!==editCtx.sid &&
@@ -1037,7 +1045,7 @@ function empRow(e){
       <input type="text" class="i-skills" value="${esc(e.skills||'')}" placeholder="למשל: טביעת אצבע, ותק" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">דירוג:</span>
       <select class="i-rating" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-        <option value="1" ${e.rating===1?'selected':''}>1 — גבוה (עד 5 משמרות)</option>
+        <option value="1" ${e.rating===1?'selected':''}>1 — גבוה (עד 6 משמרות)</option>
         <option value="2" ${(!e.rating||e.rating===2)?'selected':''}>2 — בינוני (עד 4)</option>
         <option value="3" ${e.rating===3?'selected':''}>3 — נמוך (עד 3)</option>
       </select>
@@ -1140,7 +1148,7 @@ async function openLog(){
 
 /* ============ שיבוץ אוטומטי ============ */
 const AA_TIMES = { 'בוקר': ['08:00','15:00'], 'ערב': ['15:00','22:00'] };
-const RATING_QUOTA = { 1: 5, 2: 4, 3: 3 };   // דירוג → מקסימום משמרות בשבוע
+const RATING_QUOTA = { 1: 6, 2: 4, 3: 3 };   // דירוג → מקסימום משמרות בשבוע
 function partOf(start){ return toMin(start) >= EVENING_FROM ? 'ערב' : 'בוקר'; }
 function hasSkill(e, skill){ return parseSkills(e.skills).includes(skill); }
 function quotaOf(e){ return RATING_QUOTA[e.rating||2] || 4; }
@@ -1264,6 +1272,7 @@ function runAutoAssign(cfg, prevShifts){
 
   function blocked(e, di, dow, part){
     if((counts[e.name]||0) >= quotaOf(e)) return true;   // מכסת דירוג — קשיחה
+    if((worked[e.name]||new Set()).has(di)) return true; // משמרת אחת ביום — קשיחה
     if(busy.has(e.name+'|'+di+'|'+part)) return true;
     const off = unavailOf(e.name, di);
     if(part==='בוקר' && off.morning) return true;
@@ -1449,6 +1458,40 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
   await load();
   renderSwList();
 });
+
+/* ============ עדכונים אישיים לעובד ============ */
+function checkMyUpdates(){
+  if(!state.emp) return;
+  let seen = {};
+  try{ seen = JSON.parse(localStorage.getItem('sp_seen_'+state.emp.username)||'{}'); }catch(e){}
+  const items = [];
+  const fmtD = di => { const d=new Date(di+'T00:00:00'); return DAY_NAMES[d.getDay()]+' '+ddmm(d); };
+
+  // אילוצים שהוכרעו — רלוונטי לשישי/שבת (ממתין→הוחלט) ולכל דחייה
+  state.constraints.filter(c=>c.employee===state.emp.name && c.status!=='ממתין').forEach(c=>{
+    const dow = new Date(c.date+'T00:00:00').getDay();
+    const needsNotice = c.status==='נדחה' || (c.status==='מאושר' && (dow===5 || dow===6));
+    if(!needsNotice) return;
+    const k = 'c|'+c.date+'|'+c.part;
+    if(seen[k]!==c.status){
+      items.push('בקשת האילוץ ל'+fmtD(c.date)+' ('+c.part+') — '+(c.status==='מאושר'?'אושרה ✓':'נדחתה ✗'));
+      seen[k]=c.status;
+    }
+  });
+
+  // החלפות שהוכרעו — כמבקש או כמחליף
+  state.swaps.filter(s=>(s.requester===state.emp.name || s.target===state.emp.name) && s.status!=='ממתין').forEach(s=>{
+    const k = 's|'+s.date+'|'+s.dept+'|'+s.start+'|'+s.requester;
+    if(seen[k]!==s.status){
+      const other = s.requester===state.emp.name ? s.target : s.requester;
+      items.push('החלפת המשמרת ב'+fmtD(s.date)+' ('+s.dept+') עם '+other+' — '+(s.status==='מאושר'?'אושרה ✓':'נדחתה ✗'));
+      seen[k]=s.status;
+    }
+  });
+
+  try{ localStorage.setItem('sp_seen_'+state.emp.username, JSON.stringify(seen)); }catch(e){}
+  if(items.length) alert('🔔 עדכונים עבורך:\n• '+items.join('\n• '));
+}
 
 /* ============ בקשות אילוצים ============ */
 function updateConsBadge(){
