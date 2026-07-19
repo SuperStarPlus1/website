@@ -231,7 +231,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <!-- מצב צפייה -->
   <button class="hbtn gold" id="loginBtn">🔒 כניסה</button>
   <span id="viewerChip" class="whoami hidden">👤 <b id="viewerName"></b>
-    <button class="hbtn gold" id="myConsBtn" style="padding:6px 10px;font-size:12px">🖐 האילוצים שלי</button>
+    <button class="hbtn gold" id="myConsBtn" style="padding:6px 10px;font-size:12px">🖐 אילוצים</button>
+    <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -239,7 +240,9 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="empMgr">👥 עובדים</button>
     <button class="hbtn" id="copyPrev">⧉ העתק משבוע קודם</button>
     <button class="hbtn" id="autoBtn">🪄 שיבוץ אוטומטי</button>
-    <button class="hbtn" id="consBtn">🖐 אילוצים <span id="consBadge" class="badge-dirty hidden"></span></button>
+    <button class="hbtn" id="consBtn">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
+    <button class="hbtn" id="resetBtn">🗑 איפוס</button>
+    <button class="hbtn" id="publishBtn">📣 פרסום</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -397,6 +400,39 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל הודעת פרסום לוואטסאפ -->
+<div class="overlay hidden" id="pubOverlay">
+  <div class="modal">
+    <header><h3>📣 הסידור פורסם</h3><p id="pubSub"></p></header>
+    <div class="mbody">
+      <div class="mrow"><label>הודעה מוכנה לקבוצת העובדים</label>
+        <textarea id="pubMsg" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px;font-family:inherit;font-size:13.5px;min-height:110px;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="pubWa">💬 פתח בוואטסאפ</button>
+      <button class="btn plain" id="pubCopy">📋 העתקה</button>
+      <span class="spacer"></span>
+      <button class="btn plain" data-close>סגירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל החלפת משמרת — עובד -->
+<div class="overlay hidden" id="empSwapOverlay">
+  <div class="modal">
+    <header><h3>🔁 בקשת החלפת משמרת</h3><p>ההחלפה מותרת עם עובד מאותה מחלקה, פנוי או משובץ באותו יום · טעונה אישור מנהל</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>המשמרת שלי</label><select id="swShift"></select></div>
+      <div class="mrow"><label>להחליף עם</label><select id="swTarget"></select></div>
+      <button class="btn primary" id="swAdd" style="width:100%">שליחת בקשה</button>
+      <div class="merr" id="swErr"></div>
+      <div class="mrow" style="margin-top:14px"><label>הבקשות שלי בשבוע המוצג</label><div id="swList"></div></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
 <!-- מודאל אילוצים — מנהל -->
 <div class="overlay hidden" id="consOverlay">
   <div class="modal wide">
@@ -446,6 +482,7 @@ const state = {
   departments: [],
   shifts: [],             // {_id, date, employee, dept, start, end} + שורות אי-זמינות
   constraints: [],        // בקשות אילוצים: {date, employee, part, status}
+  swaps: [],              // בקשות החלפה: {date, dept, start, end, requester, target, status}
   mgr: null,              // {name, pw, role}
   emp: null,              // עובד מחובר: {name, username, pw}
   dirtyShifts: false,
@@ -607,16 +644,20 @@ function demoData(){
     { date: ds[5], employee: 'רולא כיוואן', part: 'מלא', status: 'ממתין' },
     { date: ds[2], employee: 'תימאא סרחאן', part: 'ערב', status: 'מאושר' }
   ];
-  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons };
+  const swp = [{ date: ds[3], dept:'קופאיות', start:'15:00', end:'22:00',
+                 requester:'שפיקה דיב', target:'תימאא סרחאן', status:'ממתין' }];
+  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons, swaps:swp };
 }
 function demoPost(body){
   if(body.action==='elogin') return { ok:false, error:'במצב הדגמה אין סיסמאות עובדים' };
   if(body.action==='addConstraint') return { ok:true, status:'ממתין' };
   if(body.action==='deleteConstraint'||body.action==='reviewConstraint'||body.action==='saveStaffing') return { ok:true };
+  if(body.action==='addSwap'||body.action==='deleteSwap'||body.action==='reviewSwap') return { ok:true };
+  if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
   if(body.action==='getAdminData') return { ok:true, role:ROLE_ADMIN,
-    employees: state.employees.map(e=>({name:e.name,dept:e.dept,active:e.active,password:'',username:'',offDays:offDaysToStr(e.offDays)})),
+    employees: state.employees.map(e=>({name:e.name,dept:e.dept,active:e.active,password:'',username:'',offDays:offDaysToStr(e.offDays),skills:e.skills||'',rating:e.rating||2,fixedShifts:e.fixedShifts||'',email:e.email||''})),
     managers: [{name:'מנהל ראשי',password:'1234',role:ROLE_ADMIN}],
     staffing: {},
     log: [{time:'—',manager:'מצב הדגמה',action:'—',detail:'הלוג יופיע לאחר חיבור לשרת'}] };
@@ -652,6 +693,7 @@ async function load(){
     });
     state.shifts = d.shifts.map(s=>({ ...s, _id:SID++ }));
     state.constraints = d.constraints || [];
+    state.swaps = d.swaps || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
   }catch(e){
@@ -946,7 +988,7 @@ document.getElementById('rowOk').addEventListener('click',()=>{
       state.dirtyEmps = true;
     }
   } else {
-    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'' });
+    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'', rating:2, fixedShifts:'', email:'' });
     state.dirtyEmps = true;
   }
   state.extraRows.add(rowDept+'||'+name);
@@ -962,10 +1004,12 @@ async function openEmpMgr(){
       if(r.ok){
         r.employees.forEach(se=>{
           const local = empByName(se.name);
-          if(local){ local.password = se.password; local.username = se.username||''; }
+          if(local){ local.password = se.password; local.username = se.username||'';
+            local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; local.email = se.email||''; }
           else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
             active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
-            username:se.username||'', skills:se.skills||'' });
+            username:se.username||'', skills:se.skills||'', rating:se.rating||2,
+            fixedShifts:se.fixedShifts||'', email:se.email||'' });
         });
       }
     }catch(e){ toast('לא נטענו סיסמאות עובדים: '+e.message,'err'); }
@@ -990,7 +1034,17 @@ function empRow(e){
       return `<button class="dchip day ${fo?'active':''}" data-i="${i}" data-part="${fo?fo.part:''}">${l}${fo?(fo.part==='מלא'?'':fo.part==='בוקר'?' ☀':' 🌙'):''}</button>`;
     }).join('')}</div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">כישורים:</span>
-      <input type="text" class="i-skills" value="${esc(e.skills||'')}" placeholder="למשל: טביעת אצבע, ותק" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>`;
+      <input type="text" class="i-skills" value="${esc(e.skills||'')}" placeholder="למשל: טביעת אצבע, ותק" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">דירוג:</span>
+      <select class="i-rating" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <option value="1" ${e.rating===1?'selected':''}>1 — גבוה (עד 5 משמרות)</option>
+        <option value="2" ${(!e.rating||e.rating===2)?'selected':''}>2 — בינוני (עד 4)</option>
+        <option value="3" ${e.rating===3?'selected':''}>3 — נמוך (עד 3)</option>
+      </select>
+      <span class="lbl">משמרת קבועה:</span>
+      <input type="text" class="i-fixed" value="${esc(e.fixedShifts||'')}" placeholder="למשל: ש-בוקר, ג-ערב" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
+      <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
@@ -1015,7 +1069,10 @@ document.getElementById('empOk').addEventListener('click',()=>{
     return { name: r.querySelector('.i-name').value.trim(), dept: depts.join(', '), depts,
              active: true, offDays, password: r.querySelector('.i-pw').value.trim(),
              username: r.querySelector('.i-user').value.trim(),
-             skills: r.querySelector('.i-skills').value.trim() };
+             skills: r.querySelector('.i-skills').value.trim(),
+             rating: Number(r.querySelector('.i-rating').value)||2,
+             fixedShifts: r.querySelector('.i-fixed').value.trim(),
+             email: r.querySelector('.i-email').value.trim() };
   }).filter(e=>e.name);
   state.dirtyEmps = true;
   hide('empOverlay'); render();
@@ -1083,8 +1140,21 @@ async function openLog(){
 
 /* ============ שיבוץ אוטומטי ============ */
 const AA_TIMES = { 'בוקר': ['08:00','15:00'], 'ערב': ['15:00','22:00'] };
+const RATING_QUOTA = { 1: 5, 2: 4, 3: 3 };   // דירוג → מקסימום משמרות בשבוע
 function partOf(start){ return toMin(start) >= EVENING_FROM ? 'ערב' : 'בוקר'; }
 function hasSkill(e, skill){ return parseSkills(e.skills).includes(skill); }
+function quotaOf(e){ return RATING_QUOTA[e.rating||2] || 4; }
+/* משמרות קבועות: "ש-בוקר, ג-ערב" או "ש-בוקר-קופאיות" */
+function parseFixedShifts(str){
+  const out=[];
+  String(str||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(tok=>{
+    const p = tok.split('-').map(x=>x.trim());
+    const day = DAY_LETTERS.indexOf(p[0]);
+    if(day<0 || (p[1]!=='בוקר' && p[1]!=='ערב')) return;
+    out.push({ day, part:p[1], dept:p[2]||'' });
+  });
+  return out;
+}
 
 async function openAutoAssign(){
   // טעינת התקן השמור
@@ -1092,14 +1162,22 @@ async function openAutoAssign(){
   try{
     const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
     if(r.ok && r.staffing) staffing = r.staffing;
+    if(r.ok && r.employees) r.employees.forEach(se=>{
+      const local = empByName(se.name);
+      if(local){ local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; }
+    });
   }catch(e){}
   document.getElementById('aaDepts').innerHTML = state.departments.map(d=>{
-    const days = staffing[d] || Array.from({length:7},()=>[1,1]);
+    let st = staffing[d];
+    if(Array.isArray(st)) st = { days: st, ms:'', es:'' };            // תאימות לפורמט ישן
+    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '' };
+    if(d==='קופאיות' && !st.es) st.es = 'טביעת אצבע';                 // ברירת מחדל: טביעת אצבע בערב קופאיות
+    const days = st.days;
     return `<div class="aa-dept" data-dept="${esc(d)}">
       <div class="aa-dhead">
         <label><input type="checkbox" class="a-on" checked><b>${esc(d)}</b></label>
-        <input type="text" class="a-ms" placeholder="כישור חובה בבוקר">
-        <input type="text" class="a-es" placeholder="כישור חובה בערב">
+        <input type="text" class="a-ms" value="${esc(st.ms)}" placeholder="כישור חובה בבוקר">
+        <input type="text" class="a-es" value="${esc(st.es)}" placeholder="כישור חובה בערב">
       </div>
       <div class="aa-grid">${DAY_LETTERS.map((l,i)=>`
         <div class="aa-day"><div class="dl">${l}</div>
@@ -1126,11 +1204,11 @@ document.getElementById('aaOk').addEventListener('click', async ()=>{
         Number(r.querySelector('.a-m[data-dow="'+i+'"]').value)||0,
         Number(r.querySelector('.a-e[data-dow="'+i+'"]').value)||0
       ]);
-      staffing[dept] = days; // התקן נשמר גם עבור מחלקות מוחרגות
+      const ms = r.querySelector('.a-ms').value.trim();
+      const es = r.querySelector('.a-es').value.trim();
+      staffing[dept] = { days, ms, es }; // התקן נשמר גם עבור מחלקות מוחרגות
       if(!r.querySelector('.a-on').checked) return;
-      cfg[dept] = { days,
-        ms: r.querySelector('.a-ms').value.trim(),
-        es: r.querySelector('.a-es').value.trim() };
+      cfg[dept] = { days, ms, es };
     });
 
     // שמירת התקן לגיליון
@@ -1160,10 +1238,13 @@ function runAutoAssign(cfg, prevShifts){
   const weekSet = new Set(dates.map(iso));
   let created = 0; const issues = [];
 
-  // דקות משובצות השבוע (הוגנות)
-  const minutes = {};
+  // דקות, מס' משמרות ומאזן בוקר/ערב לכל עובד (הוגנות + מכסות דירוג)
+  const minutes = {}, counts = {}, partCounts = {};
   const addMin = (n,m)=>{ minutes[n]=(minutes[n]||0)+m; };
-  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)) addMin(s.employee, shiftMin(s)); });
+  const addCount = (n,part)=>{ counts[n]=(counts[n]||0)+1;
+    partCounts[n]=partCounts[n]||{'בוקר':0,'ערב':0}; partCounts[n][part]++; };
+  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)){
+    addMin(s.employee, shiftMin(s)); addCount(s.employee, partOf(s.start)); } });
 
   // תפוסה לפי חלק יום + ימי עבודה (כולל שבוע קודם) לרצף
   const busy = new Set();
@@ -1182,6 +1263,7 @@ function runAutoAssign(cfg, prevShifts){
   }
 
   function blocked(e, di, dow, part){
+    if((counts[e.name]||0) >= quotaOf(e)) return true;   // מכסת דירוג — קשיחה
     if(busy.has(e.name+'|'+di+'|'+part)) return true;
     const off = unavailOf(e.name, di);
     if(part==='בוקר' && off.morning) return true;
@@ -1195,6 +1277,25 @@ function runAutoAssign(cfg, prevShifts){
     return false;
   }
 
+  // שלב 0: הצבת משמרות קבועות של עובדים (למשל: קופאית קבועה בשבת בוקר)
+  state.employees.filter(e=>e.active && e.fixedShifts).forEach(e=>{
+    parseFixedShifts(e.fixedShifts).forEach(f=>{
+      const dept = f.dept || e.depts[0];
+      if(!cfg[dept]) return;                                    // מחלקה מוחרגת
+      if(!cfg[dept].days[f.day][f.part==='בוקר'?0:1]) return;   // אין תקן ליום/משמרת
+      const di = iso(dates[f.day]);
+      if(busy.has(e.name+'|'+di+'|'+f.part)) return;            // כבר משובץ
+      if(blocked(e, di, f.day, f.part)) return;                 // חופש/אילוץ/רצף גוברים
+      const [st,en] = AA_TIMES[f.part];
+      state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
+      busy.add(e.name+'|'+di+'|'+f.part);
+      pushW(e.name, di);
+      addMin(e.name, toMin(en)-toMin(st));
+      addCount(e.name, f.part);
+      created++;
+    });
+  });
+
   dates.forEach((d,dow)=>{
     const di = iso(d);
     ['בוקר','ערב'].forEach(part=>{
@@ -1207,7 +1308,11 @@ function runAutoAssign(cfg, prevShifts){
         if(need<=0) return;
 
         let cands = state.employees.filter(e=>e.active && e.depts.includes(dept) && !blocked(e, di, dow, part));
-        cands.sort((a,b)=>(minutes[a.name]||0)-(minutes[b.name]||0));
+        // מיון: מעט משמרות, אח"כ איזון בוקר/ערב, אח"כ מעט שעות
+        cands.sort((a,b)=>
+          (counts[a.name]||0)-(counts[b.name]||0) ||
+          ((partCounts[a.name]||{})[part]||0)-((partCounts[b.name]||{})[part]||0) ||
+          (minutes[a.name]||0)-(minutes[b.name]||0));
 
         const chosen = [];
         if(reqSkill && !existing.some(s=>{ const e=empByName(s.employee); return e && hasSkill(e, reqSkill); })){
@@ -1216,14 +1321,14 @@ function runAutoAssign(cfg, prevShifts){
           else issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': אין עובד זמין עם הכישור "'+reqSkill+'"');
         }
         while(chosen.length < need && cands.length) chosen.push(cands.shift());
-        if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים');
-
+        if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים (חופשים/אילוצים/מכסות דירוג)');
         chosen.forEach(e=>{
           const [st,en] = AA_TIMES[part];
           state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
           busy.add(e.name+'|'+di+'|'+part);
           pushW(e.name, di);
           addMin(e.name, toMin(en)-toMin(st));
+          addCount(e.name, part);
           created++;
         });
       });
@@ -1232,9 +1337,123 @@ function runAutoAssign(cfg, prevShifts){
   return { created, issues };
 }
 
+/* ============ איפוס סידור ופרסום ============ */
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('לאפס את הסידור של השבוע המוצג? כל המשמרות יימחקו (חופשים ואילוצים יישמרו). יש ללחוץ "שמור" לאישור סופי.')) return;
+  const weekSet = new Set(weekDates().map(iso));
+  const before = state.shifts.length;
+  state.shifts = state.shifts.filter(s=>!weekSet.has(s.date) || s.dept===UNAVAIL);
+  state.dirtyShifts = true;
+  render();
+  toast('נמחקו '+(before-state.shifts.length)+' משמרות. לחץ "שמור" לאישור.','ok');
+});
+
+document.getElementById('publishBtn').addEventListener('click', async ()=>{
+  if(hasDirty()){ toast('יש לשמור את הסידור לפני פרסום','err'); return; }
+  if(!confirm('לפרסם את הסידור? תישלח התראה במייל לעובדים עם אימייל, ותקבל הודעה מוכנה לקבוצת הוואטסאפ.')) return;
+  const r = await apiPost({ action:'publish', ...mgrAuth(), week: iso(state.weekStart) });
+  if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+  const dates = weekDates();
+  const link = location.href.split('#')[0];
+  const msg = '📅 סופרסטאר — פורסם סידור עבודה חדש!' + '\n\n' +
+    'לשבוע ' + ddmm(dates[0]) + ' – ' + ddmm(dates[6]) + '\n' +
+    'לצפייה: ' + link + '\n' +
+    'יש להתחבר עם שם המשתמש והסיסמה האישיים שלכם.';
+  document.getElementById('pubSub').textContent = 'נשלחו '+(r.sent||0)+' התראות במייל';
+  document.getElementById('pubMsg').value = msg;
+  show('pubOverlay');
+});
+document.getElementById('pubCopy').addEventListener('click', ()=>{
+  const t = document.getElementById('pubMsg');
+  t.select();
+  try{ navigator.clipboard.writeText(t.value); }catch(e){ document.execCommand('copy'); }
+  toast('ההודעה הועתקה — הדבק בקבוצת הוואטסאפ ✓','ok');
+});
+document.getElementById('pubWa').addEventListener('click', ()=>{
+  window.open('https://wa.me/?text='+encodeURIComponent(document.getElementById('pubMsg').value), '_blank');
+});
+
+/* ============ בקשות החלפת משמרת — עובד ============ */
+function openEmpSwap(){
+  const mine = state.shifts.filter(s=>s.employee===state.emp.name && s.dept!==UNAVAIL)
+    .sort((a,b)=>a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+  const sel = document.getElementById('swShift');
+  sel.innerHTML = mine.length ? mine.map(s=>{
+    const d = new Date(s.date+'T00:00:00');
+    return `<option value="${s._id}">${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(s.dept)} · ${esc(s.start)}–${esc(s.end)}</option>`;
+  }).join('') : '<option value="">אין לך משמרות בשבוע המוצג</option>';
+  fillSwapTargets();
+  document.getElementById('swErr').textContent='';
+  renderSwList();
+  show('empSwapOverlay');
+}
+function fillSwapTargets(){
+  const sid = Number(document.getElementById('swShift').value);
+  const s = state.shifts.find(x=>x._id===sid);
+  const tsel = document.getElementById('swTarget');
+  if(!s){ tsel.innerHTML='<option value="">—</option>'; return; }
+  const part = partOf(s.start);
+  const cands = state.employees.filter(e=>{
+    if(!e.active || e.name===state.emp.name) return false;
+    if(!e.depts.includes(s.dept)) return false;                       // אותה מחלקה
+    const sameCell = state.shifts.some(x=>x.employee===e.name && x.date===s.date && x.dept===s.dept && x.dept!==UNAVAIL && partOf(x.start)===part);
+    if(sameCell) return false;                                        // כבר באותה משמרת בדיוק
+    const off = unavailOf(e.name, s.date);
+    if(part==='בוקר' && off.morning) return false;
+    if(part==='ערב' && off.evening) return false;
+    const fo = fixedOff(e, new Date(s.date+'T00:00:00').getDay());
+    if(fo==='מלא' || fo===part) return false;
+    if(constraintsOf(e.name, s.date).some(c=>c.part==='מלא' || c.part===part)) return false;
+    return true;                                                      // פנוי, או משובץ באותו יום (החלפה הדדית)
+  });
+  tsel.innerHTML = cands.length ? cands.map(e=>{
+    const hasShift = state.shifts.some(x=>x.employee===e.name && x.date===s.date && x.dept!==UNAVAIL);
+    return `<option value="${esc(e.name)}">${esc(e.name)}${hasShift?' (משובץ באותו יום — החלפה הדדית)':' (פנוי)'}</option>`;
+  }).join('') : '<option value="">אין עובדים מתאימים להחלפה</option>';
+}
+document.getElementById('swShift').addEventListener('change', fillSwapTargets);
+document.getElementById('mySwapBtn').addEventListener('click', openEmpSwap);
+
+function renderSwList(){
+  const mine = state.swaps.filter(s=>s.requester===state.emp.name || s.target===state.emp.name);
+  document.getElementById('swList').innerHTML = mine.length ? mine.map(s=>{
+    const d = new Date(s.date+'T00:00:00');
+    const del = (s.requester===state.emp.name && s.status==='ממתין')
+      ? `<button class="dl2" data-date="${s.date}" data-dept="${esc(s.dept)}" data-start="${esc(s.start)}" data-target="${esc(s.target)}">ביטול</button>` : '';
+    return `<div class="cons-item">
+      <span>${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(s.dept)} · ${esc(s.requester)} ⇄ ${esc(s.target)}
+        <span class="st ${s.status==='ממתין'?'wait':'ok'}">${esc(s.status)}</span></span>
+      <span class="acts">${del}</span></div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות החלפה בשבוע המוצג</div>';
+  document.querySelectorAll('#swList .dl2').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = await apiPost({ action:'deleteSwap', username:state.emp.username, password:state.emp.pw,
+      date:b.dataset.date, dept:b.dataset.dept, start:b.dataset.start,
+      requester:state.emp.name, target:b.dataset.target });
+    if(r.ok){ toast('הבקשה בוטלה','ok'); await load(); renderSwList(); }
+    else toast(r.error||'שגיאה','err');
+  }));
+}
+document.getElementById('swAdd').addEventListener('click', async ()=>{
+  const err = document.getElementById('swErr');
+  const sid = Number(document.getElementById('swShift').value);
+  const s = state.shifts.find(x=>x._id===sid);
+  const target = document.getElementById('swTarget').value;
+  if(!s || !target){ err.textContent='יש לבחור משמרת ועובד להחלפה'; return; }
+  if(!confirm('האם ההחלפה מתואמת עם '+target+'? יש לתאם איתו/ה מראש לפני שליחת הבקשה.')) return;
+  err.textContent='שולח…';
+  const r = await apiPost({ action:'addSwap', username:state.emp.username, password:state.emp.pw,
+    date:s.date, dept:s.dept, start:s.start, end:s.end, target });
+  err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  alert('הבקשה נשלחה לאישור מנהל. תקבל עדכון כשתאושר או תידחה.');
+  await load();
+  renderSwList();
+});
+
 /* ============ בקשות אילוצים ============ */
 function updateConsBadge(){
-  const n = state.constraints.filter(c=>c.status==='ממתין').length;
+  const n = state.constraints.filter(c=>c.status==='ממתין').length
+          + state.swaps.filter(s=>s.status==='ממתין').length;
   const b = document.getElementById('consBadge');
   b.textContent = n; b.classList.toggle('hidden', !n);
 }
@@ -1292,8 +1511,25 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 
 // --- מנהל ---
 function openConsReview(){
+  const swaps = [...state.swaps].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
+  const swapsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🔁 בקשות החלפה</div>' +
+    (swaps.length ? swaps.map(s=>{
+      const d = new Date(s.date+'T00:00:00');
+      const req = empByName(s.requester), tgt = empByName(s.target);
+      const missing = req && tgt ? parseSkills(req.skills).filter(k=>!parseSkills(tgt.skills).includes(k)) : [];
+      const warn = missing.length ? ` <span style="color:#9a3412;font-size:11px;font-weight:700">⚠ למחליף חסר: ${esc(missing.join(', '))}</span>` : '';
+      const acts = s.status==='ממתין'
+        ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
+        : `<button class="dl2" data-a="מחק">מחיקה</button>`;
+      return `<div class="cons-item swap" data-date="${s.date}" data-dept="${esc(s.dept)}" data-start="${esc(s.start)}" data-req="${esc(s.requester)}" data-tgt="${esc(s.target)}">
+        <span><b>${esc(s.requester)}</b> ⇄ <b>${esc(s.target)}</b> · ${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(s.dept)} ${esc(s.start)}–${esc(s.end)}
+          <span class="st ${s.status==='ממתין'?'wait':'ok'}">${esc(s.status)}</span>${warn}</span>
+        <span class="acts">${acts}</span></div>`;
+    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות החלפה</div>');
+
   const list = [...state.constraints].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
-  document.getElementById('consList').innerHTML = list.length ? list.map(c=>{
+  const consHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🖐 אילוצים</div>' +
+    (list.length ? list.map(c=>{
     const d = new Date(c.date+'T00:00:00');
     const acts = c.status==='ממתין'
       ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
@@ -1302,14 +1538,27 @@ function openConsReview(){
       <span><b>${esc(c.employee)}</b> · ${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(c.part)}
         <span class="st ${c.status==='ממתין'?'wait':'ok'}">${esc(c.status)}</span></span>
       <span class="acts">${acts}</span></div>`;
-  }).join('') : '<div style="color:var(--muted)">אין אילוצים בשבוע המוצג</div>';
-  document.querySelectorAll('#consList .acts button').forEach(b=>b.addEventListener('click', async ()=>{
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים בשבוע המוצג</div>');
+
+  document.getElementById('consList').innerHTML = swapsHtml + consHtml;
+
+  document.querySelectorAll('#consList .cons-item:not(.swap) .acts button').forEach(b=>b.addEventListener('click', async ()=>{
     const it = b.closest('.cons-item');
     const base = { date:it.dataset.date, employee:it.dataset.emp, part:it.dataset.part };
     const r = b.dataset.a==='מחק'
       ? await apiPost({ action:'deleteConstraint', ...mgrAuth(), ...base })
       : await apiPost({ action:'reviewConstraint', ...mgrAuth(), ...base, status:b.dataset.a });
     if(r.ok){ toast('בוצע ✓','ok'); await load(); openConsReview(); }
+    else toast(r.error||'שגיאה','err');
+  }));
+  document.querySelectorAll('#consList .cons-item.swap .acts button').forEach(b=>b.addEventListener('click', async ()=>{
+    const it = b.closest('.cons-item');
+    const base = { date:it.dataset.date, dept:it.dataset.dept, start:it.dataset.start,
+                   requester:it.dataset.req, target:it.dataset.tgt };
+    const r = b.dataset.a==='מחק'
+      ? await apiPost({ action:'deleteSwap', ...mgrAuth(), ...base })
+      : await apiPost({ action:'reviewSwap', ...mgrAuth(), ...base, status:b.dataset.a });
+    if(r.ok){ toast(b.dataset.a==='מאושר'?'ההחלפה אושרה ובוצעה ✓':'בוצע ✓','ok'); await load(); openConsReview(); }
     else toast(r.error||'שגיאה','err');
   }));
   show('consOverlay');
@@ -1410,7 +1659,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'' })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'' })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
