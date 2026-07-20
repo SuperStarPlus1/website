@@ -143,7 +143,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .dchip.day{padding:4px 9px}
 .dchip.day.active{background:#9ca3af;border-color:#9ca3af}
 
-.mgr-item{display:grid;grid-template-columns:1fr 110px 130px 34px;gap:8px;align-items:center}
+.mgr-item{display:grid;grid-template-columns:1fr 95px 120px 1fr 34px;gap:7px;align-items:center}
 .mgr-item input,.mgr-item select{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
 .mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
 .mgr-list{display:flex;flex-direction:column;gap:8px}
@@ -163,6 +163,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 /* אילוצים */
 .chip.pend{background:#fff7ed;color:#9a3412;border:1px dashed #fdba74;border-inline-start:4px solid #f97316}
+.chip.vac{background:#dc2626;color:#fff;border:1px solid #b91c1c;border-inline-start:4px solid #7f1d1d;font-weight:800}
+.chip.vac small{color:#fecaca}
 .cons-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:8px 2px;font-size:13px}
 .cons-item .st{font-size:11px;font-weight:700;border-radius:99px;padding:2px 9px}
 .cons-item .st.ok{background:#dcfce7;color:#166534}
@@ -384,7 +386,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל אילוצים — עובד -->
 <div class="overlay hidden" id="empConsOverlay">
   <div class="modal">
-    <header><h3>🖐 האילוצים שלי</h3><p>עד 2 אילוצים בשבוע (א׳–ה׳) · שישי ושבת מחייבים אישור מנהל</p></header>
+    <header><h3>🖐 אילוצים וחופשות</h3><p>אילוצים: עד 2 בשבוע (א׳–ה׳), שישי/שבת באישור מנהל · חופשה: תמיד באישור מנהל</p></header>
     <div class="mbody">
       <div class="timegrid">
         <div class="mrow"><label>תאריך</label><input type="date" id="ecDate"></div>
@@ -395,6 +397,16 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button class="btn primary" id="ecAdd" style="width:100%">הגשת אילוץ</button>
       <div class="merr" id="ecErr"></div>
       <div class="mrow" style="margin-top:14px"><label>האילוצים שלי בשבוע המוצג</label><div id="ecList"></div></div>
+      <div style="border-top:1px solid var(--line);margin:14px 0 12px"></div>
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:8px">🏖 בקשת חופשה (טווח תאריכים)</div>
+      <div class="timegrid">
+        <div class="mrow"><label>מתאריך</label><input type="date" id="vcFrom"></div>
+        <div class="mrow"><label>עד תאריך</label><input type="date" id="vcTo"></div>
+      </div>
+      <div class="mrow"><label>סיבת החופשה</label><input type="text" id="vcReason" placeholder="למשל: חתונה משפחתית, נסיעה"></div>
+      <button class="btn primary" id="vcAdd" style="width:100%">הגשת בקשת חופשה</button>
+      <div class="merr" id="vcErr"></div>
+      <div class="mrow" style="margin-top:10px"><label>בקשות החופשה שלי</label><div id="vcList"></div></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
@@ -483,6 +495,7 @@ const state = {
   shifts: [],             // {_id, date, employee, dept, start, end} + שורות אי-זמינות
   constraints: [],        // בקשות אילוצים: {date, employee, part, status}
   swaps: [],              // בקשות החלפה: {date, dept, start, end, requester, target, status}
+  vacations: [],          // בקשות חופשה: {from, to, employee, reason, status}
   mgr: null,              // {name, pw, role}
   emp: null,              // עובד מחובר: {name, username, pw}
   dirtyShifts: false,
@@ -530,6 +543,9 @@ function fixedOff(emp,dow){
   return o ? o.part : null;
 }
 function parseSkills(str){ return String(str||'').split(',').map(x=>x.trim()).filter(Boolean); }
+function vacationOf(emp, dateIso){
+  return state.vacations.find(v=>v.employee===emp && v.status!=='נדחה' && v.from<=dateIso && v.to>=dateIso) || null;
+}
 function constraintsOf(emp, dateIso){
   return state.constraints.filter(c=>c.employee===emp && c.date===dateIso && c.status!=='נדחה');
 }
@@ -567,6 +583,12 @@ function confirmConflicts(emp, dateIso, start, excludeSids){
   if(fo==='מלא' || (fo==='בוקר' && !isEvening) || (fo==='ערב' && isEvening)){
     const what = fo==='מלא' ? 'יום חופש קבוע' : 'חופש '+fo+' קבוע';
     if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' '+what+'. לשבץ בכל זאת?')) return false;
+  }
+  // חופשה מתוכננת
+  const vc0 = vacationOf(emp, dateIso);
+  if(vc0){
+    const stV = vc0.status==='מאושר' ? 'חופשה מתוכננת מאושרת' : 'בקשת חופשה הממתינה לאישור';
+    if(!confirm('לעובד '+emp+' '+stV+' ('+vc0.from+' עד '+vc0.to+'). לשבץ בכל זאת?')) return false;
   }
   // בקשת אילוץ של העובד
   const cc = constraintsOf(emp, dateIso).find(c=>c.part==='מלא' || (c.part==='ערב')===isEvening);
@@ -652,19 +674,24 @@ function demoData(){
   ];
   const swp = [{ date: ds[3], dept:'קופאיות', start:'15:00', end:'22:00',
                  requester:'שפיקה דיב', target:'תימאא סרחאן', status:'ממתין' }];
-  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons, swaps:swp };
+  const vacs = [
+    { from: ds[1], to: ds[2], employee:'סהאם אסדי', reason:'חתונה משפחתית', status:'מאושר' },
+    { from: ds[4], to: ds[5], employee:'גדיר סואעד', reason:'נסיעה', status:'ממתין' }
+  ];
+  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons, swaps:swp, vacations:vacs };
 }
 function demoPost(body){
   if(body.action==='elogin') return { ok:false, error:'במצב הדגמה אין סיסמאות עובדים' };
   if(body.action==='addConstraint') return { ok:true, status:'ממתין' };
   if(body.action==='deleteConstraint'||body.action==='reviewConstraint'||body.action==='saveStaffing') return { ok:true };
   if(body.action==='addSwap'||body.action==='deleteSwap'||body.action==='reviewSwap') return { ok:true };
+  if(body.action==='addVacation'||body.action==='deleteVacation'||body.action==='reviewVacation') return { ok:true };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
   if(body.action==='getAdminData') return { ok:true, role:ROLE_ADMIN,
     employees: state.employees.map(e=>({name:e.name,dept:e.dept,active:e.active,password:'',username:'',offDays:offDaysToStr(e.offDays),skills:e.skills||'',rating:e.rating||2,fixedShifts:e.fixedShifts||'',email:e.email||''})),
-    managers: [{name:'מנהל ראשי',password:'1234',role:ROLE_ADMIN}],
+    managers: [{name:'מנהל ראשי',password:'1234',role:ROLE_ADMIN,email:''}],
     staffing: {},
     log: [{time:'—',manager:'מצב הדגמה',action:'—',detail:'הלוג יופיע לאחר חיבור לשרת'}] };
   return { ok:true };
@@ -700,6 +727,7 @@ async function load(){
     state.shifts = d.shifts.map(s=>({ ...s, _id:SID++ }));
     state.constraints = d.constraints || [];
     state.swaps = d.swaps || [];
+    state.vacations = d.vacations || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
     checkMyUpdates();
@@ -789,6 +817,12 @@ function render(){
         if(fo==='מלא' && !off.morning && !off.evening) chips += `<span class="chip off">🏖 חופש קבוע</span>`;
         if(fo==='בוקר' && !off.morning) chips += `<span class="chip off">🏖 בוקר קבוע</span>`;
         if(fo==='ערב' && !off.evening) chips += `<span class="chip off">🏖 ערב קבוע</span>`;
+        const vac = vacationOf(name, di);
+        if(vac){
+          chips += vac.status==='מאושר'
+            ? `<span class="chip vac">🏖 חופשה מתוכננת<small>${esc(vac.reason)}</small></span>`
+            : `<span class="chip pend">⏳ חופשה · ממתין</span>`;
+        }
         constraintsOf(name, di).forEach(c=>{
           const lbl = c.part==='מלא' ? 'יום' : c.part;
           chips += c.status==='ממתין'
@@ -1107,18 +1141,20 @@ function mgrRowEl(m){
       <option ${m.role===ROLE_ADMIN?'selected':''}>${ROLE_ADMIN}</option>
       <option ${m.role!==ROLE_ADMIN?'selected':''}>מנהל משמרת</option>
     </select>
+    <input type="text" class="i-memail" value="${esc(m.email||'')}" placeholder="אימייל להתראות" dir="ltr">
     <button class="del" title="הסרה">✕</button>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   return div;
 }
 document.getElementById('mgrAdd').addEventListener('click',()=>{
-  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת'}));
+  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:''}));
 });
 document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
     name: r.querySelector('.i-name').value.trim(),
     password: r.querySelector('.i-pw').value.trim(),
-    role: r.querySelector('.i-role').value
+    role: r.querySelector('.i-role').value,
+    email: r.querySelector('.i-memail').value.trim()
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;
@@ -1281,6 +1317,8 @@ function runAutoAssign(cfg, prevShifts){
     if(fo==='מלא' || fo===part) return true;
     // בקשות אילוצים: מאושר או ממתין חוסמים שיבוץ אוטומטי
     if(constraintsOf(e.name, di).some(c=>c.part==='מלא' || c.part===part)) return true;
+    // חופשה מתוכננת (מאושרת או ממתינה)
+    if(vacationOf(e.name, di)) return true;
     // איסור 7 ימים רצופים
     if(streakWith(e.name, di) >= 7) return true;
     return false;
@@ -1479,6 +1517,15 @@ function checkMyUpdates(){
     }
   });
 
+  // חופשות שהוכרעו
+  state.vacations.filter(v=>v.employee===state.emp.name && v.status!=='ממתין').forEach(v=>{
+    const k = 'v|'+v.from+'|'+v.to;
+    if(seen[k]!==v.status){
+      items.push('בקשת החופשה '+fmtD(v.from)+' – '+fmtD(v.to)+' — '+(v.status==='מאושר'?'אושרה ✓':'נדחתה ✗'));
+      seen[k]=v.status;
+    }
+  });
+
   // החלפות שהוכרעו — כמבקש או כמחליף
   state.swaps.filter(s=>(s.requester===state.emp.name || s.target===state.emp.name) && s.status!=='ממתין').forEach(s=>{
     const k = 's|'+s.date+'|'+s.dept+'|'+s.start+'|'+s.requester;
@@ -1496,7 +1543,8 @@ function checkMyUpdates(){
 /* ============ בקשות אילוצים ============ */
 function updateConsBadge(){
   const n = state.constraints.filter(c=>c.status==='ממתין').length
-          + state.swaps.filter(s=>s.status==='ממתין').length;
+          + state.swaps.filter(s=>s.status==='ממתין').length
+          + state.vacations.filter(v=>v.status==='ממתין').length;
   const b = document.getElementById('consBadge');
   b.textContent = n; b.classList.toggle('hidden', !n);
 }
@@ -1506,10 +1554,50 @@ function openEmpCons(){
   const d = document.getElementById('ecDate');
   d.min = iso(new Date());
   if(!d.value || d.value < d.min) d.value = d.min;
+  const f = document.getElementById('vcFrom'), t = document.getElementById('vcTo');
+  f.min = iso(new Date()); t.min = f.min;
   document.getElementById('ecErr').textContent='';
+  document.getElementById('vcErr').textContent='';
   renderEcList();
+  renderVcList();
   show('empConsOverlay');
 }
+function renderVcList(){
+  const mine = state.vacations.filter(v=>v.employee===state.emp.name)
+    .sort((a,b)=>a.from.localeCompare(b.from));
+  const fmtR = v => ddmm(new Date(v.from+'T00:00:00'))+' – '+ddmm(new Date(v.to+'T00:00:00'));
+  document.getElementById('vcList').innerHTML = mine.length ? mine.map(v=>{
+    const del = v.status==='ממתין'
+      ? `<button class="dl2" data-from="${v.from}">ביטול</button>` : '';
+    return `<div class="cons-item">
+      <span>${fmtR(v)} · ${esc(v.reason)}
+        <span class="st ${v.status==='ממתין'?'wait':'ok'}">${esc(v.status)}</span></span>
+      <span class="acts">${del}</span></div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות חופשה</div>';
+  document.querySelectorAll('#vcList .dl2').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = await apiPost({ action:'deleteVacation', username:state.emp.username, password:state.emp.pw,
+      from:b.dataset.from, employee:state.emp.name });
+    if(r.ok){ toast('הבקשה בוטלה','ok'); await load(); renderVcList(); }
+    else toast(r.error||'שגיאה','err');
+  }));
+}
+document.getElementById('vcAdd').addEventListener('click', async ()=>{
+  const err = document.getElementById('vcErr');
+  const from = document.getElementById('vcFrom').value;
+  const to = document.getElementById('vcTo').value;
+  const reason = document.getElementById('vcReason').value.trim();
+  if(!from || !to){ err.textContent='יש לבחור טווח תאריכים'; return; }
+  if(to < from){ err.textContent='תאריך הסיום לפני תאריך ההתחלה'; return; }
+  if(!reason){ err.textContent='יש לציין סיבת חופשה'; return; }
+  err.textContent='שולח…';
+  const r = await apiPost({ action:'addVacation', username:state.emp.username, password:state.emp.pw, from, to, reason });
+  err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  alert('בקשת החופשה נשלחה לאישור מנהל. תקבל עדכון כשתאושר או תידחה.');
+  document.getElementById('vcReason').value='';
+  await load();
+  renderVcList();
+});
 function renderEcList(){
   const mine = state.constraints.filter(c=>c.employee===state.emp.name)
     .sort((a,b)=>a.date.localeCompare(b.date));
@@ -1554,6 +1642,19 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 
 // --- מנהל ---
 function openConsReview(){
+  const vacs = [...state.vacations].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
+  const fmtR = v => ddmm(new Date(v.from+'T00:00:00'))+' – '+ddmm(new Date(v.to+'T00:00:00'));
+  const vacsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🏖 בקשות חופשה</div>' +
+    (vacs.length ? vacs.map(v=>{
+      const acts = v.status==='ממתין'
+        ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
+        : `<button class="dl2" data-a="מחק">מחיקה</button>`;
+      return `<div class="cons-item vac" data-from="${v.from}" data-to="${v.to}" data-emp="${esc(v.employee)}">
+        <span><b>${esc(v.employee)}</b> · ${fmtR(v)} · ${esc(v.reason)}
+          <span class="st ${v.status==='ממתין'?'wait':'ok'}">${esc(v.status)}</span></span>
+        <span class="acts">${acts}</span></div>`;
+    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות חופשה</div>');
+
   const swaps = [...state.swaps].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
   const swapsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🔁 בקשות החלפה</div>' +
     (swaps.length ? swaps.map(s=>{
@@ -1583,9 +1684,19 @@ function openConsReview(){
       <span class="acts">${acts}</span></div>`;
   }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים בשבוע המוצג</div>');
 
-  document.getElementById('consList').innerHTML = swapsHtml + consHtml;
+  document.getElementById('consList').innerHTML = vacsHtml + '<div style="margin-top:14px"></div>' + swapsHtml + consHtml;
 
-  document.querySelectorAll('#consList .cons-item:not(.swap) .acts button').forEach(b=>b.addEventListener('click', async ()=>{
+  document.querySelectorAll('#consList .cons-item.vac .acts button').forEach(b=>b.addEventListener('click', async ()=>{
+    const it = b.closest('.cons-item');
+    const base = { from:it.dataset.from, to:it.dataset.to, employee:it.dataset.emp };
+    const r = b.dataset.a==='מחק'
+      ? await apiPost({ action:'deleteVacation', ...mgrAuth(), ...base })
+      : await apiPost({ action:'reviewVacation', ...mgrAuth(), ...base, status:b.dataset.a });
+    if(r.ok){ toast('בוצע ✓','ok'); await load(); openConsReview(); }
+    else toast(r.error||'שגיאה','err');
+  }));
+
+  document.querySelectorAll('#consList .cons-item:not(.swap):not(.vac) .acts button').forEach(b=>b.addEventListener('click', async ()=>{
     const it = b.closest('.cons-item');
     const base = { date:it.dataset.date, employee:it.dataset.emp, part:it.dataset.part };
     const r = b.dataset.a==='מחק'
