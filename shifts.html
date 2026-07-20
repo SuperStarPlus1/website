@@ -229,6 +229,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="spacer"></div>
 
   <button class="hbtn ghost" id="pdfBtn">📄 PDF</button>
+  <a class="hbtn ghost" id="guideBtn" href="https://www.superstar-plus.co.il/shifts-guide.pdf" target="_blank" rel="noopener" style="text-decoration:none">❓ מדריך</a>
 
   <!-- מצב צפייה -->
   <button class="hbtn gold" id="loginBtn">🔒 כניסה</button>
@@ -409,6 +410,23 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mrow" style="margin-top:10px"><label>בקשות החופשה שלי</label><div id="vcList"></div></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל החלפת סיסמה (כניסה ראשונה) -->
+<div class="overlay hidden" id="pwcOverlay">
+  <div class="modal">
+    <header><h3>🔑 בחירת סיסמה אישית</h3><p>זו כניסתך הראשונה (או שסיסמתך אופסה) — יש לבחור סיסמה חדשה כדי להמשיך</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="pwcNew" autocomplete="new-password"></div>
+      <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="pwcNew2" autocomplete="new-password"></div>
+      <div class="merr" id="pwcErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="pwcOk">שמירת סיסמה והמשך</button>
+      <span class="spacer"></span>
+      <button class="btn plain" id="pwcCancel">ביטול (יציאה)</button>
+    </div>
   </div>
 </div>
 
@@ -686,6 +704,7 @@ function demoPost(body){
   if(body.action==='deleteConstraint'||body.action==='reviewConstraint'||body.action==='saveStaffing') return { ok:true };
   if(body.action==='addSwap'||body.action==='deleteSwap'||body.action==='reviewSwap') return { ok:true };
   if(body.action==='addVacation'||body.action==='deleteVacation'||body.action==='reviewVacation') return { ok:true };
+  if(body.action==='changePassword') return { ok:true };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -1384,6 +1403,35 @@ function runAutoAssign(cfg, prevShifts){
   return { created, issues };
 }
 
+/* ============ החלפת סיסמה כפויה ============ */
+function openPwChange(){
+  document.getElementById('pwcNew').value='';
+  document.getElementById('pwcNew2').value='';
+  document.getElementById('pwcErr').textContent='';
+  show('pwcOverlay');
+  document.getElementById('pwcNew').focus();
+}
+document.getElementById('pwcOk').addEventListener('click', async ()=>{
+  const err = document.getElementById('pwcErr');
+  const np = document.getElementById('pwcNew').value.trim();
+  const np2 = document.getElementById('pwcNew2').value.trim();
+  if(np.length < 4){ err.textContent='הסיסמה חייבת להכיל לפחות 4 תווים'; return; }
+  if(np !== np2){ err.textContent='הסיסמאות אינן זהות'; return; }
+  err.textContent='שומר…';
+  const r = await apiPost({ action:'changePassword', username:state.emp.username, password:state.emp.pw, newPassword:np });
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  state.emp.pw = np;
+  store.set({ kind:'emp', name:state.emp.name, username:state.emp.username, pw:np });
+  hide('pwcOverlay');
+  toast('הסיסמה עודכנה ✓ שלום '+state.emp.name,'ok');
+  load();
+});
+document.getElementById('pwcCancel').addEventListener('click', ()=>{
+  hide('pwcOverlay');
+  state.emp=null; state.filterEmp=''; store.clear();
+  setAuthUI(); gateOrLoad();
+});
+
 /* ============ איפוס סידור ופרסום ============ */
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(!confirm('לאפס את הסידור של השבוע המוצג? כל המשמרות יימחקו (חופשים ואילוצים יישמרו). יש ללחוץ "שמור" לאישור סופי.')) return;
@@ -1761,8 +1809,9 @@ async function doLogin(){
       state.emp = { name:r.name, username, pw };
       store.set({ kind:'emp', name:r.name, username, pw });
       state.filterEmp = r.name;
-      hide('loginOverlay'); setAuthUI(); load();
-      toast('שלום '+r.name,'ok');
+      hide('loginOverlay'); setAuthUI();
+      if(r.mustChange){ openPwChange(); }
+      else { load(); toast('שלום '+r.name,'ok'); }
     }
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
 }
