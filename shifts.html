@@ -175,6 +175,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .cons-item .acts .rj{background:#fee2e2;color:#991b1b}
 .cons-item .acts .dl2{background:#eef1f5;color:var(--ink)}
 
+/* הודעה מרוכזת */
+.msg-emps{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:10px}
+.msg-emps label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;cursor:pointer}
+.msg-emps label.nomail{color:#b0b6c1;cursor:default}
+.msg-emps label.nomail small{font-size:10px}
+.msg-quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+
 /* לוג */
 .logtbl{width:100%;border-collapse:collapse;font-size:12px}
 .logtbl th,.logtbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:start;vertical-align:top}
@@ -246,6 +253,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="consBtn">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
     <button class="hbtn" id="resetBtn">🗑 איפוס</button>
     <button class="hbtn" id="publishBtn">📣 פרסום</button>
+    <button class="hbtn" id="msgBtn">✉ הודעה</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -410,6 +418,29 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mrow" style="margin-top:10px"><label>בקשות החופשה שלי</label><div id="vcList"></div></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל הודעה מרוכזת -->
+<div class="overlay hidden" id="msgOverlay">
+  <div class="modal wide">
+    <header><h3>✉ שליחת הודעה לעובדים</h3><p>כל עובד מקבל מייל אישי הפותח ב"שלום [שמו]" · אפשר לשלב {שם} בגוף ההודעה</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>נמענים</label>
+        <div class="msg-quick" id="msgQuick"></div>
+        <div class="msg-emps" id="msgEmps"></div>
+      </div>
+      <div class="mrow"><label>נושא</label><input type="text" id="msgSubj" placeholder="הודעה מהנהלת סופרסטאר"></div>
+      <div class="mrow"><label>תוכן ההודעה</label>
+        <textarea id="msgBody" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px;font-family:inherit;font-size:13.5px;min-height:120px;resize:vertical" placeholder="לדוגמה: תזכורת — ישיבת צוות ביום ראשון ב-9:00. נוכחותך חשובה."></textarea>
+      </div>
+      <div class="merr" id="msgErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="msgSend">שליחה <span id="msgCount" style="font-weight:500"></span></button>
+      <span class="spacer"></span>
+      <button class="btn plain" data-close>ביטול</button>
+    </div>
   </div>
 </div>
 
@@ -705,6 +736,7 @@ function demoPost(body){
   if(body.action==='addSwap'||body.action==='deleteSwap'||body.action==='reviewSwap') return { ok:true };
   if(body.action==='addVacation'||body.action==='deleteVacation'||body.action==='reviewVacation') return { ok:true };
   if(body.action==='changePassword') return { ok:true };
+  if(body.action==='sendMessage') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -1402,6 +1434,71 @@ function runAutoAssign(cfg, prevShifts){
   });
   return { created, issues };
 }
+
+/* ============ הודעה מרוכזת לעובדים ============ */
+async function openMsg(){
+  // שליפת אימיילים (מנהל) כדי לדעת למי אפשר לשלוח
+  const mails = {};
+  try{
+    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    if(r.ok && r.employees) r.employees.forEach(se=>{ mails[se.name] = se.email||''; });
+  }catch(e){}
+
+  const emps = state.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  document.getElementById('msgEmps').innerHTML = emps.map(e=>{
+    const has = (mails[e.name]||'').includes('@');
+    return `<label class="${has?'':'nomail'}">
+      <input type="checkbox" class="msg-cb" value="${esc(e.name)}" ${has?'checked':'disabled'}>
+      ${esc(e.name)}${has?'':' <small>(אין אימייל)</small>'}</label>`;
+  }).join('');
+
+  // כפתורי בחירה מהירה: הכל / אף אחד / לפי מחלקה
+  const quick = ['✔ הכל','✖ נקה', ...state.departments];
+  document.getElementById('msgQuick').innerHTML = quick.map(q=>`<button class="dchip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
+  document.querySelectorAll('#msgQuick .dchip').forEach(b=>b.addEventListener('click',()=>{
+    const q = b.dataset.q;
+    document.querySelectorAll('#msgEmps .msg-cb').forEach(cb=>{
+      if(cb.disabled) return;
+      if(q==='✔ הכל') cb.checked = true;
+      else if(q==='✖ נקה') cb.checked = false;
+      else {
+        const e = empByName(cb.value);
+        if(e && e.depts.includes(q)) cb.checked = true;
+      }
+    });
+    updateMsgCount();
+  }));
+  document.querySelectorAll('#msgEmps .msg-cb').forEach(cb=>cb.addEventListener('change', updateMsgCount));
+
+  document.getElementById('msgSubj').value='';
+  document.getElementById('msgBody').value='';
+  document.getElementById('msgErr').textContent='';
+  updateMsgCount();
+  show('msgOverlay');
+}
+function updateMsgCount(){
+  const n = document.querySelectorAll('#msgEmps .msg-cb:checked').length;
+  document.getElementById('msgCount').textContent = n ? '('+n+')' : '';
+}
+document.getElementById('msgBtn').addEventListener('click', openMsg);
+
+document.getElementById('msgSend').addEventListener('click', async ()=>{
+  const err = document.getElementById('msgErr');
+  const recipients = [...document.querySelectorAll('#msgEmps .msg-cb:checked')].map(cb=>cb.value);
+  const message = document.getElementById('msgBody').value.trim();
+  if(!recipients.length){ err.textContent='יש לבחור לפחות נמען אחד'; return; }
+  if(!message){ err.textContent='יש לכתוב תוכן הודעה'; return; }
+  if(!confirm('לשלוח את ההודעה ל-'+recipients.length+' עובדים? כל אחד יקבל מייל אישי בשמו.')) return;
+  const btn = document.getElementById('msgSend'); btn.disabled=true;
+  err.textContent='שולח…';
+  const r = await apiPost({ action:'sendMessage', ...mgrAuth(),
+    subject: document.getElementById('msgSubj').value.trim(), message, recipients });
+  btn.disabled=false; err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  hide('msgOverlay');
+  toast('נשלחו '+r.sent+' הודעות ✓','ok');
+  if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
+});
 
 /* ============ החלפת סיסמה כפויה ============ */
 function openPwChange(){
