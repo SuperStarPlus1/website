@@ -395,7 +395,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל אילוצים — עובד -->
 <div class="overlay hidden" id="empConsOverlay">
   <div class="modal">
-    <header><h3>🖐 אילוצים וחופשות</h3><p>אילוצים: עד 2 בשבוע (א׳–ה׳), שישי/שבת באישור מנהל · חופשה: תמיד באישור מנהל</p></header>
+    <header><h3>🖐 אילוצים וחופשות</h3><p>אילוצים: עד 2 בשבוע סה"כ (כולל שישי/שבת; שישי/שבת באישור מנהל) · חופשה: תמיד באישור מנהל</p></header>
     <div class="mbody">
       <div class="timegrid">
         <div class="mrow"><label>תאריך</label><input type="date" id="ecDate"></div>
@@ -1770,9 +1770,9 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
   err.textContent='שולח…';
   const r = await apiPost({ action:'addConstraint', username:state.emp.username, password:state.emp.pw, date, part });
   if(!r.ok){
-    err.textContent='';
-    if(r.code==='limit') alert('המערכת מוגבלת ל-2 אילוצים בשבוע בלבד (א׳–ה׳).\nלבקשה חריגה יש לפנות למנהל.');
-    else err.textContent = r.error || 'שגיאה';
+    if(r.code==='limit'){
+      err.innerHTML = '<span style="display:block;background:#fee2e2;border:1.5px solid #ef4444;border-radius:9px;padding:10px;font-size:13px;font-weight:800;color:#991b1b">⛔ אין אפשרות להכניס יותר מ-2 בקשות אילוץ לשבוע.<br>לבקשות חריגות יש לפנות למנהל.</span>';
+    } else err.textContent = r.error || 'שגיאה';
     return;
   }
   err.textContent='';
