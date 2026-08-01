@@ -337,6 +337,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div class="eh-punch" id="ehPunch"></div>
     <div class="eh-gps" id="ehGps"></div>
     <div class="eh-next hidden" id="ehNext"></div>
+    <div id="ehSites" class="hidden" style="margin-top:12px">
+      <div style="font-weight:700;font-size:12.5px;color:var(--muted);margin-bottom:6px">📍 דיווח נוכחות באתר נוסף</div>
+      <div id="ehSitesBtns" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
     <div class="eh-links">
       <button data-go="board"><span class="ic">📅</span>הסידור שלי</button>
       <button data-go="att"><span class="ic">📊</span>נוכחות חודשית</button>
@@ -949,6 +953,8 @@ function demoPost(body){
   if(body.action==='punch') return { ok:true, time:'08:03', status:'תקין', dist:42 };
   if(body.action==='myAttendance') return { ok:true, days:[], totalMinutes:0, minWage:35.40, gross:0 };
   if(body.action==='attendanceReport') return { ok:true, report:[], minWage:35.40 };
+  if(body.action==='listSites') return { ok:true, sites:[] };
+  if(body.action==='punchSite') return { ok:true, time:'10:15', status:'תקין', travelMin:25 };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -1895,6 +1901,7 @@ function showEmpHome(){
   renderHomePunch();
   refreshAttToday().then(()=>{ renderHomePunch(); });
   loadNextShift();
+  loadSites();
   attGetPos().then(p=>{
     attState.pos = p;
     document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
@@ -1931,6 +1938,36 @@ async function loadNextShift(){
     el.classList.add('none');
   }
   el.classList.remove('hidden');
+}
+
+async function loadSites(){
+  const wrap = document.getElementById('ehSites');
+  wrap.classList.add('hidden');
+  try{
+    const r = await apiPost({ action:'listSites', username:state.emp.username, password:state.emp.pw });
+    if(!r.ok || !r.sites || !r.sites.length) return;
+    attState.sites = r.sites;
+    if(!attState.pos) attState.pos = await attGetPos();   // המתנה למיקום לפני חיווי קרבה
+    const pos = attState.pos;
+    document.getElementById('ehSitesBtns').innerHTML = r.sites.map(s=>{
+      const near = pos ? distM(pos.lat,pos.lng,s.lat,s.lng) <= s.radius : false;
+      return `<button class="att-back" style="border:0;border-radius:12px;padding:13px;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer;${near?'outline:2.5px solid #16a34a':''}"
+        data-site="${esc(s.name)}">📍 ${esc(s.name)}${near?' · אתה נמצא כאן':''} <small style="font-weight:500">(נסיעה ~${s.travelMin} דק׳)</small></button>`;
+    }).join('');
+    wrap.classList.remove('hidden');
+    document.querySelectorAll('#ehSitesBtns button').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('לדווח נוכחות באתר "'+b.dataset.site+'"? יירשם דיווח בודד עם זיכוי זמן נסיעה.')) return;
+      b.disabled = true;
+      const p = attState.pos || await attGetPos();
+      const r2 = await apiPost({ action:'punchSite', username:state.emp.username, password:state.emp.pw,
+        site:b.dataset.site, lat:p?p.lat:0, lng:p?p.lng:0 });
+      b.disabled = false;
+      if(!r2.ok){ toast(r2.error||'שגיאה','err'); return; }
+      if(r2.status==='מחוץ לאזור') alert('⚠ הדיווח נקלט ('+r2.time+') אך המיקום מחוץ לאזור האתר. המנהל עודכן.');
+      else toast('נוכחות באתר נרשמה ✓ '+r2.time+' · זוכה זמן נסיעה '+r2.travelMin+' דק׳','ok');
+      refreshAttToday();
+    }));
+  }catch(e){}
 }
 
 function hideEmpHome(){
@@ -2098,8 +2135,8 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
     month: document.getElementById('attMyMonth').value });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.days.length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
-  const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹' };
-  const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת' };
+  const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹', 'נוכחות':'📍' };
+  const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת', 'נוכחות':'נוכחות באתר' };
   const toM = t => { const p=String(t).split(':'); return Number(p[0])*60+Number(p[1]); };
   box.innerHTML = `<table class="att-table">
     <tr><th>יום</th><th>כניסה</th><th>יציאה להפסקה</th><th>חזרה מהפסקה</th><th>סיום משמרת</th><th>שעות</th></tr>` +
@@ -2120,14 +2157,14 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
         ? `<span dir="ltr">${esc(b.to)}</span> <small style="color:var(--muted)">(${fmtMin(toM(b.to)-toM(b.from))})</small>`
         : '<span style="color:#b91c1c">⚠</span>').join('<br>') : '—';
       const flagged = d.events.some(e=>e.status && e.status!=='תקין');
-      const detail = d.events.map(e=>`<div class="att-ev"><span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span><span class="tm">${esc(e.time)}</span></div>`).join('');
+      const detail = d.events.map(e=>`<div class="att-ev"><span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.note?' <small style="color:var(--muted)">'+esc(e.note)+'</small>':''}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span><span class="tm">${esc(e.time)}</span></div>`).join('');
       return `<tr class="att-row" data-i="${i}" style="cursor:pointer" title="לחיצה לפירוט">
         <td style="font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flagged?' <span style="color:#b91c1c">⚠</span>':''}</td>
         <td dir="ltr">${esc(firstIn)}</td>
         <td>${brkOutCell}</td>
         <td>${brkBackCell}</td>
         <td dir="ltr">${lastOut==='⚠'?'<span style="color:#b91c1c">⚠</span>':esc(lastOut)}</td>
-        <td><b>${fmtMin(d.minutes)}</b></td></tr>
+        <td><b>${fmtMin(d.minutes)}</b>${d.travel?'<br><small style="color:#1e40af">כולל נסיעה '+d.travel+' דק׳</small>':''}</td></tr>
       <tr class="att-detail hidden" data-d="${i}"><td colspan="6" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
     }).join('') +
   `</table>
@@ -2156,14 +2193,15 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
     totAll+=e.minutes; grossAll+=e.gross;
     return `<tr><td style="text-align:right;font-weight:700">${esc(e.employee)}</td>
       <td>${e.days}</td><td><b>${fmtMin(e.minutes)}</b></td>
+      <td>${e.visits?e.visits+' ('+fmtMin(e.travel||0)+')':'—'}</td>
       <td>${e.incomplete?'<span style="color:#b91c1c">'+e.incomplete+'</span>':'0'}</td>
       <td>${e.flags?'<span style="color:#b91c1c">'+e.flags+' ⚠</span>':'—'}</td>
       <td>~${e.gross.toLocaleString()} ₪</td></tr>`;
   }).join('');
   box.innerHTML = `<table class="att-table">
-    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>ימים חסרי דיווח</th><th>חריגות מיקום</th><th>ברוטו צפוי</th></tr>
+    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>אתרים (נסיעה)</th><th>ימים חסרי דיווח</th><th>חריגות מיקום</th><th>ברוטו צפוי</th></tr>
     ${rows}
-    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
   </table>
   <div style="font-size:11px;color:var(--muted);margin-top:6px">ברוטו לפי שכר מינימום ${r.minWage} ₪/שעה, לפני מיסים · הגדרת מיקום החנות והרדיוס: גיליון "הגדרות" תאים D3–D4</div>`;
 });
