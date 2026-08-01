@@ -175,6 +175,23 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .cons-item .acts .rj{background:#fee2e2;color:#991b1b}
 .cons-item .acts .dl2{background:#eef1f5;color:var(--ink)}
 
+/* מסך בית לעובד */
+#empHome{max-width:560px;margin:14px auto;padding:0 12px}
+.eh-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 2px 10px rgba(27,42,74,.06)}
+.eh-hello{font-size:20px;font-weight:800;color:var(--navy)}
+.eh-date{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.eh-status{text-align:center;font-weight:800;font-size:16px;padding:12px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);margin-bottom:12px}
+.eh-punch{display:flex;flex-direction:column;gap:10px}
+.eh-punch button{border:0;border-radius:14px;padding:22px 10px;font-size:19px;font-weight:800;font-family:inherit;cursor:pointer;width:100%}
+.eh-punch button.secondary{padding:14px 10px;font-size:15px}
+.eh-gps{text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px}
+.eh-next{text-align:center;font-size:13.5px;font-weight:700;color:var(--navy);background:#eef4ff;border:1px solid #dbe6ff;border-radius:10px;padding:9px;margin-top:12px}
+.eh-next.none{background:#f8fafc;border-color:var(--line);color:var(--muted);font-weight:500}
+.eh-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.eh-links button{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 8px;font-family:inherit;font-weight:700;font-size:13.5px;color:var(--navy);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px}
+.eh-links button span.ic{font-size:22px}
+.eh-links button:active{background:#f1f5f9}
+
 /* נוכחות */
 .att-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .att-btns button{border:0;border-radius:12px;padding:16px 8px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
@@ -273,6 +290,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
     <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
+    <button class="hbtn gold" id="homeBtn" style="padding:6px 10px;font-size:12px">🏠</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -304,6 +322,24 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 </div>
 
 <main>
+<div id="empHome" class="hidden">
+  <div class="eh-card">
+    <div class="eh-hello">שלום <span id="ehName"></span> 👋</div>
+    <div class="eh-date" id="ehDate"></div>
+    <div class="eh-status" id="ehStatus">—</div>
+    <div class="eh-punch" id="ehPunch"></div>
+    <div class="eh-gps" id="ehGps"></div>
+    <div class="eh-next hidden" id="ehNext"></div>
+    <div class="eh-links">
+      <button data-go="board"><span class="ic">📅</span>הסידור שלי</button>
+      <button data-go="att"><span class="ic">📊</span>נוכחות חודשית</button>
+      <button data-go="pay"><span class="ic">🧾</span>תלושי שכר</button>
+      <button data-go="cons"><span class="ic">🏖</span>חופשות ואילוצים</button>
+      <button data-go="swap"><span class="ic">🔁</span>החלפת משמרת</button>
+      <button data-go="f101" id="ehF101" class="hidden"><span class="ic">📋</span>טופס 101</button>
+    </div>
+  </div>
+</div>
   <div class="mysum hidden" id="mySum"></div>
   <div id="board"><div class="loading"><div class="spin"></div>טוען סידור…</div></div>
 </main>
@@ -951,6 +987,7 @@ async function load(){
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
     checkMyUpdates();
+    if(state.emp && !state._homeShown){ state._homeShown = true; showEmpHome(); }
   }catch(e){
     document.getElementById('board').innerHTML='';
     showErr('לא ניתן לטעון את הסידור: '+e.message+' — בדוק את כתובת GAS_URL ואת הרשאות הפריסה.');
@@ -1721,6 +1758,7 @@ document.getElementById('pwcOk').addEventListener('click', async ()=>{
 document.getElementById('pwcCancel').addEventListener('click', ()=>{
   hide('pwcOverlay');
   state.emp=null; state.filterEmp=''; store.clear();
+  state._homeShown=false; hideEmpHome();
   setAuthUI(); gateOrLoad();
 });
 
@@ -1837,6 +1875,96 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
   renderSwList();
 });
 
+/* ============ מסך בית לעובד ============ */
+function showEmpHome(){
+  if(!state.emp) return;
+  document.getElementById('ehName').textContent = state.emp.name.split(' ')[0];
+  const d = new Date();
+  document.getElementById('ehDate').textContent = DAY_NAMES[d.getDay()]+' '+ddmm(d)+' · '+d.toTimeString().slice(0,5);
+  document.getElementById('empHome').classList.remove('hidden');
+  document.getElementById('board').classList.add('hidden');
+  document.getElementById('ehF101').classList.toggle('hidden', !f101Missing(empByName(state.emp.name)));
+  renderHomePunch();
+  refreshAttToday().then(()=>{ renderHomePunch(); });
+  loadNextShift();
+  attGetPos().then(p=>{
+    attState.pos = p;
+    document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
+  });
+}
+async function loadNextShift(){
+  const el = document.getElementById('ehNext');
+  el.classList.add('hidden');
+  const now = new Date(), today = iso(now);
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const pick = list => (list||[])
+    .filter(s=>s.employee===state.emp.name && s.dept!==UNAVAIL &&
+      (s.date>today || (s.date===today && toMin(s.end)>nowMin)))
+    .sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start))[0] || null;
+  let s = pick(state.shifts);
+  if(!s){
+    try{
+      const cur = state.weekStart;
+      state.weekStart = new Date(cur.getTime()+7*86400000);
+      const r = await apiGet();
+      state.weekStart = cur;
+      s = pick(r && r.shifts);
+    }catch(e){ state.weekStart = sundayOf(new Date()); }
+  }
+  if(!state.emp) return; // התנתק בינתיים
+  if(s){
+    const tomorrow = iso(new Date(now.getTime()+86400000));
+    const d = new Date(s.date+'T00:00:00');
+    const when = s.date===today ? 'היום' : s.date===tomorrow ? 'מחר' : DAY_NAMES[d.getDay()]+' '+ddmm(d);
+    el.textContent = '📅 המשמרת הבאה שלך: '+when+' '+s.start+'–'+s.end+' · '+s.dept;
+    el.classList.remove('none');
+  } else {
+    el.textContent = 'אין משמרות מתוכננות עבורך בשבועיים הקרובים';
+    el.classList.add('none');
+  }
+  el.classList.remove('hidden');
+}
+
+function hideEmpHome(){
+  document.getElementById('empHome').classList.add('hidden');
+  document.getElementById('board').classList.remove('hidden');
+}
+function renderHomePunch(){
+  const st = attCurrentState();
+  const last = attState.todayEvents[attState.todayEvents.length-1];
+  const inFrom = (attState.todayEvents.find(e=>e.type==='כניסה')||{}).time||'';
+  let statusTxt, btns;
+  if(st==='out'){
+    statusTxt = last && last.type==='יציאה' ? '✔ המשמרת הסתיימה היום ('+last.time+') — עבודה נעימה!' : 'טרם דיווחת כניסה היום';
+    btns = `<button class="att-in" data-p="כניסה">▶ כניסה למשמרת</button>`;
+  } else if(st==='break'){
+    statusTxt = '⏸ בהפסקה מ-'+(last?last.time:'');
+    btns = `<button class="att-back" data-p="חזרה">↩ סיום הפסקה — חזרה למשמרת</button>
+            <button class="att-out secondary" data-p="יציאה">⏹ סיום משמרת</button>`;
+  } else {
+    statusTxt = '🟢 במשמרת מ-'+inFrom;
+    btns = `<button class="att-break" data-p="הפסקה">⏸ יציאה להפסקה</button>
+            <button class="att-out" data-p="יציאה">⏹ סיום משמרת</button>`;
+  }
+  document.getElementById('ehStatus').textContent = statusTxt;
+  document.getElementById('ehPunch').innerHTML = btns;
+  document.querySelectorAll('#ehPunch button').forEach(b=>b.addEventListener('click', async ()=>{
+    b.disabled = true;
+    await punch(b.dataset.p);
+    renderHomePunch();
+  }));
+}
+document.getElementById('homeBtn').addEventListener('click', showEmpHome);
+document.querySelectorAll('#empHome .eh-links button').forEach(b=>b.addEventListener('click', ()=>{
+  const go = b.dataset.go;
+  if(go==='board'){ hideEmpHome(); return; }
+  if(go==='att'){ openAtt(); document.getElementById('attMyLoad').click(); return; }
+  if(go==='pay'){ document.getElementById('myPayBtn').click(); return; }
+  if(go==='cons'){ openEmpCons(); return; }
+  if(go==='swap'){ openEmpSwap(); return; }
+  if(go==='f101'){ openF101(); return; }
+}));
+
 /* ============ דיווח נוכחות ============ */
 let attState = { pos: null, watch: null, geoWarned: false, todayEvents: [] };
 function monthOptions(sel){
@@ -1917,6 +2045,7 @@ async function punch(type){
   else if(r.status==='ללא מיקום') toast('הדיווח נקלט ('+r.time+') ללא מיקום — הפעל GPS בפעם הבאה','err');
   else toast(type+' נרשם ✓ '+r.time,'ok');
   await refreshAttToday();
+  if(!document.getElementById('empHome').classList.contains('hidden')) renderHomePunch();
   if(type==='כניסה') startGeoWatch();
   if(type==='יציאה') stopGeoWatch();
 }
@@ -2580,6 +2709,7 @@ document.getElementById('adminExit').addEventListener('click',()=>{
 });
 document.getElementById('viewerExit').addEventListener('click',()=>{
   state.emp=null; state.filterEmp=''; store.clear();
+  state._homeShown=false; hideEmpHome();
   setAuthUI(); gateOrLoad();
 });
 
