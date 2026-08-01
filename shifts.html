@@ -2091,24 +2091,42 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   if(!r.days.length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
   const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹' };
   const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת' };
-  box.innerHTML = r.days.map(d=>{
-    const dd = new Date(d.date+'T00:00:00');
-    const evRows = d.events.map(e=>`
-      <div class="att-ev">
-        <span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span>
-        <span class="tm">${esc(e.time)}</span>
-      </div>`).join('');
-    const totLine = d.complete
-      ? `<div class="att-day-total"><span>סה"כ ליום זה</span><span>${fmtMin(d.minutes)} שעות</span></div>`
-      : `<div class="att-day-total warn"><span>⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</span><span>${fmtMin(d.minutes)}</span></div>`;
-    return `<div class="att-day">
-      <div class="att-day-head"><span>${DAY_NAMES[dd.getDay()]} ${d.date.slice(8,10)}/${d.date.slice(5,7)}</span></div>
-      ${evRows}
-      ${totLine}
-    </div>`;
-  }).join('') +
-  `<div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
-    <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות</div></div>`;
+  const toM = t => { const p=String(t).split(':'); return Number(p[0])*60+Number(p[1]); };
+  box.innerHTML = `<table class="att-table">
+    <tr><th>יום</th><th>כניסה</th><th>הפסקה (יציאה–חזרה)</th><th>יציאה</th><th>שעות</th></tr>` +
+    r.days.map((d,i)=>{
+      const dd = new Date(d.date+'T00:00:00');
+      const firstIn = (d.events.find(e=>e.type==='כניסה')||{}).time || '—';
+      const outs = d.events.filter(e=>e.type==='יציאה');
+      const lastOut = outs.length ? outs[outs.length-1].time : '⚠';
+      // זוגות הפסקה→חזרה: זמנים מדויקים + משך
+      const breaks = []; let brkFrom = null;
+      d.events.forEach(e=>{
+        if(e.type==='הפסקה') brkFrom = e.time;
+        else if(e.type==='חזרה' && brkFrom!==null){ breaks.push({ from:brkFrom, to:e.time }); brkFrom = null; }
+      });
+      if(brkFrom!==null) breaks.push({ from:brkFrom, to:null }); // הפסקה פתוחה ללא חזרה
+      const brkCell = breaks.length ? breaks.map(b=>{
+        if(!b.to) return `<span dir="ltr">${esc(b.from)}</span>–<span style="color:#b91c1c">⚠</span>`;
+        const dur = toM(b.to)-toM(b.from);
+        return `<span dir="ltr">${esc(b.from)}–${esc(b.to)}</span> <small style="color:var(--muted)">(${fmtMin(dur)})</small>`;
+      }).join('<br>') : '—';
+      const flagged = d.events.some(e=>e.status && e.status!=='תקין');
+      const detail = d.events.map(e=>`<div class="att-ev"><span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span><span class="tm">${esc(e.time)}</span></div>`).join('');
+      return `<tr class="att-row" data-i="${i}" style="cursor:pointer" title="לחיצה לפירוט">
+        <td style="font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flagged?' <span style="color:#b91c1c">⚠</span>':''}</td>
+        <td dir="ltr">${esc(firstIn)}</td>
+        <td>${brkCell}</td>
+        <td dir="ltr">${lastOut==='⚠'?'<span style="color:#b91c1c">⚠</span>':esc(lastOut)}</td>
+        <td><b>${fmtMin(d.minutes)}</b></td></tr>
+      <tr class="att-detail hidden" data-d="${i}"><td colspan="5" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
+    }).join('') +
+  `</table>
+  <div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
+    <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות · לחיצה על שורה מציגה פירוט מלא</div></div>`;
+  box.querySelectorAll('.att-row').forEach(row=>row.addEventListener('click',()=>{
+    box.querySelector('.att-detail[data-d="'+row.dataset.i+'"]').classList.toggle('hidden');
+  }));
 });
 
 /* --- מנהל --- */
