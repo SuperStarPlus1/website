@@ -443,7 +443,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <header><h3>🧾 תלושי שכר</h3><p>העלאת קובץ PDF מרוכז — המערכת מזהה כל תלוש לפי מספר עובד, מפצלת ומשייכת · הקבצים נשמרים ב-Drive שלך</p></header>
     <div class="mbody">
       <div class="timegrid">
-        <div class="mrow"><label>חודש התלושים</label><input type="month" id="payMonth"></div>
+        <div class="mrow"><label>חודש התלושים</label>
+          <div style="display:flex;gap:6px">
+            <select id="payMonthSel" style="flex:1"></select>
+            <select id="payYearSel" style="width:96px"></select>
+          </div>
+        </div>
         <div class="mrow"><label>קובץ PDF מרוכז</label><input type="file" id="payFile" accept="application/pdf"></div>
       </div>
       <button class="btn primary" id="payAnalyze" style="width:100%">🔍 ניתוח הקובץ וזיהוי עובדים</button>
@@ -1768,9 +1773,15 @@ async function openPay(){
   document.getElementById('payErr').textContent='';
   document.getElementById('payReview').classList.add('hidden');
   document.getElementById('payProg').textContent='';
-  // ברירת מחדל: החודש הקודם
+  // בוררי חודש/שנה — כולל שנים קודמות (עד 2018), ברירת מחדל: החודש הקודם
   const d = new Date(); d.setMonth(d.getMonth()-1);
-  document.getElementById('payMonth').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  document.getElementById('payMonthSel').innerHTML = monthNames.map((m,i)=>
+    `<option value="${String(i+1).padStart(2,'0')}" ${i===d.getMonth()?'selected':''}>${m}</option>`).join('');
+  const yNow = new Date().getFullYear();
+  let yOpts = '';
+  for(let y=yNow; y>=2018; y--) yOpts += `<option ${y===d.getFullYear()?'selected':''}>${y}</option>`;
+  document.getElementById('payYearSel').innerHTML = yOpts;
   // עובדים + מספרי עובד (מנהל)
   try{
     const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
@@ -1787,7 +1798,7 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
   const err = document.getElementById('payErr');
   const f = document.getElementById('payFile').files[0];
   if(!f){ err.textContent='יש לבחור קובץ PDF'; return; }
-  if(!document.getElementById('payMonth').value){ err.textContent='יש לבחור חודש'; return; }
+
   const noNums = payState.adminEmps.filter(e=>e.empNo).length;
   if(!noNums){ err.textContent='לא הוגדרו מספרי עובד — הוסף אותם בניהול עובדים (👥) ונסה שוב'; return; }
   err.textContent='טוען ספריות ומנתח…';
@@ -1834,7 +1845,7 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
 
 document.getElementById('payUpload').addEventListener('click', async ()=>{
   const prog = document.getElementById('payProg');
-  const month = document.getElementById('payMonth').value;
+  const month = document.getElementById('payYearSel').value+'-'+document.getElementById('payMonthSel').value;
   // קיבוץ עמודים רצופים לאותו עובד (תלוש של יותר מעמוד)
   const groups = [];
   payState.pages.forEach(pg=>{
