@@ -271,6 +271,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <div class="notice demo hidden" id="demoNotice">⚠ מצב הדגמה — לא הוגדרה כתובת שרת (GAS_URL). שינויים לא נשמרים. התחברות כמנהל: כל שם + סיסמה 1234</div>
 <div class="notice err hidden" id="errNotice"></div>
+<div class="notice hidden" id="f101Notice" style="background:#fff7ed;color:#9a3412;border-bottom:1px solid #fdba74;font-weight:600">
+  <span>📋 עליך למלא טופס 101 לשנת <b id="f101Year"></b> —</span>
+  <button id="f101Link" class="btn plain" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #fdba74;color:#9a3412;font-weight:800">📋 למילוי הטופס לחץ כאן</button>
+  <span class="spacer"></span>
+  <button class="btn plain" id="f101Done" style="padding:6px 12px;font-size:12px;background:#dcfce7;color:#166534">✓ סיימתי למלא</button>
+</div>
 
 <main>
   <div class="mysum hidden" id="mySum"></div>
@@ -429,6 +435,23 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל טופס 101 מוטמע -->
+<div class="overlay hidden" id="f101Overlay">
+  <div class="modal" style="max-width:920px;height:92vh">
+    <header><h3>📋 מילוי טופס 101</h3><p>הטופס ממולא ונחתם בשירות המאובטח — בסיום לחץ "סיימתי למלא" למטה</p></header>
+    <div class="mbody" style="padding:8px;display:flex;flex-direction:column;flex:1">
+      <div style="font-size:12px;color:var(--muted);margin:0 8px 6px">אם הטופס לא נטען כאן — לחץ "פתיחה בחלון נפרד"</div>
+      <iframe id="f101Frame" style="width:100%;flex:1;min-height:55vh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="f101MarkDone">✓ סיימתי למלא</button>
+      <button class="btn plain" id="f101External">↗ פתיחה בחלון נפרד</button>
+      <span class="spacer"></span>
+      <button class="btn plain" id="f101Close">סגירה</button>
+    </div>
+  </div>
+</div>
+
 <!-- מודאל הודעה מרוכזת -->
 <div class="overlay hidden" id="msgOverlay">
   <div class="modal wide">
@@ -538,6 +561,9 @@ const DEPT_COLORS = ['#2563eb','#0d9488','#7c3aed','#b45309','#0891b2','#16a34a'
 const UNAVAIL = 'אי-זמינות';   // בגיליון המשמרות: מחלקה="אי-זמינות", התחלה="בוקר"/"ערב"
 const EVENING_FROM = 15 * 60;  // משמרת שמתחילה מ-15:00 נחשבת ערב
 const ROLE_ADMIN = 'אדמין';
+const FORM101_URL = 'https://forms.tofes101.co.il/c/65f09cd2818640ddf5c7afca/run/';
+function requiredF101Year(){ const d=new Date(); return (d.getMonth()+1)>=3 ? d.getFullYear() : d.getFullYear()-1; }
+function f101Missing(e){ return e && (Number(e.f101)||0) < requiredF101Year(); }
 
 /* ============ מצב ============ */
 const store = {
@@ -747,6 +773,7 @@ function demoPost(body){
   if(body.action==='changePassword') return { ok:true };
   if(body.action==='sendMessage') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
   if(body.action==='sendWelcome') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
+  if(body.action==='mark101') return { ok:true, year: requiredF101Year() };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -813,6 +840,7 @@ function render(){
   renderFilterOptions();
   updateDirtyBadge();
   updateConsBadge();
+  updateF101Banner();
   document.getElementById('demoNotice').classList.toggle('hidden', !state.demo);
 
   const board = document.getElementById('board');
@@ -1091,7 +1119,7 @@ document.getElementById('rowOk').addEventListener('click',()=>{
       state.dirtyEmps = true;
     }
   } else {
-    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'', rating:2, fixedShifts:'', email:'' });
+    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'', rating:2, fixedShifts:'', email:'', f101:0 });
     state.dirtyEmps = true;
   }
   state.extraRows.add(rowDept+'||'+name);
@@ -1147,7 +1175,11 @@ function empRow(e){
       <span class="lbl">משמרת קבועה:</span>
       <input type="text" class="i-fixed" value="${esc(e.fixedShifts||'')}" placeholder="למשל: ש-בוקר, ג-ערב" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
-      <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>`;
+      <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
+      <input type="number" class="i-f101" value="${e.f101||''}" placeholder="—" style="width:90px;border:1.5px solid ${f101Missing(e)?'#ef4444':'var(--line)'};border-radius:8px;padding:6px 9px;text-align:center"
+        title="השנה האחרונה שבה מולא טופס 101. אדום = חסר לשנה הנדרשת (${requiredF101Year()})">
+      ${f101Missing(e)?'<span style="color:#b91c1c;font-weight:700;font-size:11.5px">⚠ חסר</span>':'<span style="color:#166534;font-weight:700;font-size:11.5px">✓ תקין</span>'}</div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
@@ -1175,7 +1207,8 @@ document.getElementById('empOk').addEventListener('click',()=>{
              skills: r.querySelector('.i-skills').value.trim(),
              rating: Number(r.querySelector('.i-rating').value)||2,
              fixedShifts: r.querySelector('.i-fixed').value.trim(),
-             email: r.querySelector('.i-email').value.trim() };
+             email: r.querySelector('.i-email').value.trim(),
+             f101: Number(r.querySelector('.i-f101').value)||0 };
   }).filter(e=>e.name);
   state.dirtyEmps = true;
   hide('empOverlay'); render();
@@ -1463,7 +1496,7 @@ async function openMsg(){
   }).join('');
 
   // כפתורי בחירה מהירה: הכל / אף אחד / לפי מחלקה
-  const quick = ['✔ הכל','✖ נקה', ...state.departments];
+  const quick = ['✔ הכל','✖ נקה','📋 חסרי 101', ...state.departments];
   document.getElementById('msgQuick').innerHTML = quick.map(q=>`<button class="dchip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
   document.querySelectorAll('#msgQuick .dchip').forEach(b=>b.addEventListener('click',()=>{
     const q = b.dataset.q;
@@ -1471,6 +1504,7 @@ async function openMsg(){
       if(cb.disabled) return;
       if(q==='✔ הכל') cb.checked = true;
       else if(q==='✖ נקה') cb.checked = false;
+      else if(q==='📋 חסרי 101'){ if(f101Missing(empByName(cb.value))) cb.checked = true; }
       else {
         const e = empByName(cb.value);
         if(e && e.depts.includes(q)) cb.checked = true;
@@ -1666,6 +1700,39 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
   await load();
   renderSwList();
 });
+
+/* ============ טופס 101 ============ */
+function updateF101Banner(){
+  const n = document.getElementById('f101Notice');
+  const me = state.emp ? empByName(state.emp.name) : null;
+  const showMe = me && f101Missing(me);
+  n.classList.toggle('hidden', !showMe);
+  if(showMe) document.getElementById('f101Year').textContent = requiredF101Year();
+}
+function openF101(){
+  document.getElementById('f101Frame').src = FORM101_URL;   // נטען רק בפתיחה
+  show('f101Overlay');
+}
+function closeF101(){
+  hide('f101Overlay');
+  document.getElementById('f101Frame').src = 'about:blank'; // שחרור זיכרון
+}
+document.getElementById('f101Link').addEventListener('click', openF101);
+document.getElementById('f101Close').addEventListener('click', closeF101);
+document.getElementById('f101External').addEventListener('click', ()=>window.open(FORM101_URL,'_blank'));
+
+async function mark101Flow(){
+  if(!confirm('לאשר שסיימת למלא ולחתום על טופס 101? המנהל יקבל עדכון ויוודא שהטופס התקבל.')) return;
+  const r = await apiPost({ action:'mark101', username:state.emp.username, password:state.emp.pw });
+  if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+  const me = empByName(state.emp.name);
+  if(me) me.f101 = r.year;
+  closeF101();
+  updateF101Banner();
+  toast('תודה! הסטטוס עודכן לשנת '+r.year+' ✓','ok');
+}
+document.getElementById('f101Done').addEventListener('click', mark101Flow);
+document.getElementById('f101MarkDone').addEventListener('click', mark101Flow);
 
 /* ============ עדכונים אישיים לעובד ============ */
 function checkMyUpdates(){
@@ -2003,7 +2070,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'' })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', f101:e.f101||0 })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
