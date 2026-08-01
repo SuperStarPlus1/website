@@ -346,6 +346,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button data-go="att"><span class="ic">📊</span>נוכחות חודשית</button>
       <button data-go="pay"><span class="ic">🧾</span>תלושי שכר</button>
       <button data-go="cons"><span class="ic">🏖</span>חופשות ואילוצים</button>
+      <button data-go="sick"><span class="ic">🤒</span>דיווח מחלה</button>
       <button data-go="swap"><span class="ic">🔁</span>החלפת משמרת</button>
       <button data-go="f101" id="ehF101" class="hidden"><span class="ic">📋</span>טופס 101</button>
     </div>
@@ -570,6 +571,23 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל דיווח מחלה — עובד -->
+<div class="overlay hidden" id="sickOverlay">
+  <div class="modal">
+    <header><h3>🤒 דיווח חופשת מחלה</h3><p>הדיווח יישלח למנהל במייל · יש לשמור אישור מחלה ולמסור למנהל</p></header>
+    <div class="mbody">
+      <div class="timegrid">
+        <div class="mrow"><label>מתאריך</label><input type="date" id="sickFrom"></div>
+        <div class="mrow"><label>עד תאריך</label><input type="date" id="sickTo"></div>
+      </div>
+      <div class="mrow"><label>הערה (רשות)</label><input type="text" id="sickNote" placeholder="למשל: אישור רופא יימסר מחר"></div>
+      <button class="btn primary" id="sickSend" style="width:100%">שליחת דיווח למנהל</button>
+      <div class="merr" id="sickErr"></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
 <!-- מודאל נוכחות — מנהל -->
 <div class="overlay hidden" id="attMgrOverlay">
   <div class="modal wide">
@@ -578,7 +596,9 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mrow"><label>חודש</label>
         <div style="display:flex;gap:6px">
           <select id="attMgrMonth" style="flex:1"></select>
-          <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">הצג דוח</button>
+          <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">סיכום</button>
+          <button class="btn plain" id="attMgrDetailed" style="padding:8px 16px">📋 מפורט</button>
+          <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
         </div>
       </div>
       <div id="attMgrReport"></div>
@@ -726,6 +746,7 @@ const FORM101_URL = 'https://forms.tofes101.co.il/c/65f09cd2818640ddf5c7afca/run
 const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const PDFLIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 function loadScript(src){ return new Promise((res,rej)=>{ if(document.querySelector('script[src="'+src+'"]')) return res();
   const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
 function requiredF101Year(){ const d=new Date(); return (d.getMonth()+1)>=3 ? d.getFullYear() : d.getFullYear()-1; }
@@ -955,6 +976,8 @@ function demoPost(body){
   if(body.action==='attendanceReport') return { ok:true, report:[], minWage:35.40 };
   if(body.action==='listSites') return { ok:true, sites:[] };
   if(body.action==='punchSite') return { ok:true, time:'10:15', status:'תקין', travelMin:25 };
+  if(body.action==='reportSick') return { ok:true, days:1 };
+  if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -2008,6 +2031,7 @@ document.querySelectorAll('#empHome .eh-links button').forEach(b=>b.addEventList
   if(go==='pay'){ document.getElementById('myPayBtn').click(); return; }
   if(go==='cons'){ openEmpCons(); return; }
   if(go==='swap'){ openEmpSwap(); return; }
+  if(go==='sick'){ openSick(); return; }
   if(go==='f101'){ openF101(); return; }
 }));
 
@@ -2175,6 +2199,27 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   }));
 });
 
+function openSick(){
+  const f=document.getElementById('sickFrom'), t=document.getElementById('sickTo');
+  f.value=iso(new Date()); t.value=iso(new Date());
+  document.getElementById('sickNote').value='';
+  document.getElementById('sickErr').textContent='';
+  show('sickOverlay');
+}
+document.getElementById('sickSend').addEventListener('click', async ()=>{
+  const err=document.getElementById('sickErr');
+  const from=document.getElementById('sickFrom').value, to=document.getElementById('sickTo').value;
+  if(!from||!to){ err.textContent='יש לבחור טווח תאריכים'; return; }
+  if(to<from){ err.textContent='תאריך הסיום לפני ההתחלה'; return; }
+  err.textContent='שולח…';
+  const r=await apiPost({ action:'reportSick', username:state.emp.username, password:state.emp.pw,
+    from, to, note:document.getElementById('sickNote').value.trim() });
+  err.textContent='';
+  if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+  hide('sickOverlay');
+  toast('דווחו '+r.days+' ימי מחלה · המנהל עודכן במייל ✓','ok');
+});
+
 /* --- מנהל --- */
 document.getElementById('attBtn').addEventListener('click', ()=>{
   monthOptions('attMgrMonth');
@@ -2191,19 +2236,97 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
   let totAll=0, grossAll=0;
   const rows = r.report.map(e=>{
     totAll+=e.minutes; grossAll+=e.gross;
-    return `<tr><td style="text-align:right;font-weight:700">${esc(e.employee)}</td>
+    const noRep = !e.reported;
+    return `<tr${noRep?' style="opacity:.6"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:11px">ללא דיווח</span>':''}</td>
       <td>${e.days}</td><td><b>${fmtMin(e.minutes)}</b></td>
+      <td>${e.sick?e.sick:'—'}</td>
       <td>${e.visits?e.visits+' ('+fmtMin(e.travel||0)+')':'—'}</td>
       <td>${e.incomplete?'<span style="color:#b91c1c">'+e.incomplete+'</span>':'0'}</td>
       <td>${e.flags?'<span style="color:#b91c1c">'+e.flags+' ⚠</span>':'—'}</td>
-      <td>~${e.gross.toLocaleString()} ₪</td></tr>`;
+      <td>${e.reported?'~'+e.gross.toLocaleString()+' ₪':'—'}</td></tr>`;
   }).join('');
   box.innerHTML = `<table class="att-table">
-    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>אתרים (נסיעה)</th><th>ימים חסרי דיווח</th><th>חריגות מיקום</th><th>ברוטו צפוי</th></tr>
+    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>מחלה</th><th>אתרים (נסיעה)</th><th>חסרי דיווח</th><th>חריגות</th><th>ברוטו צפוי</th></tr>
     ${rows}
-    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
   </table>
   <div style="font-size:11px;color:var(--muted);margin-top:6px">ברוטו לפי שכר מינימום ${r.minWage} ₪/שעה, לפני מיסים · הגדרת מיקום החנות והרדיוס: גיליון "הגדרות" תאים D3–D4</div>`;
+});
+
+/* --- דוח מפורט יום-ביום (מנהל) --- */
+async function fetchDetailed(){
+  return await apiPost({ action:'attendanceDetailed', ...mgrAuth(),
+    month: document.getElementById('attMgrMonth').value });
+}
+document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
+  const box=document.getElementById('attMgrReport'); box.innerHTML='טוען…';
+  const r=await fetchDetailed();
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  const withData = r.employees.filter(e=>e.days.length);
+  if(!withData.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחים בחודש זה</div>'; return; }
+  box.innerHTML = withData.map(emp=>{
+    const rows = emp.days.map(d=>{
+      const dd=new Date(d.date+'T00:00:00');
+      if(d.sick) return `<tr style="background:#fef3c7"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="4" style="text-align:center">🤒 מחלה</td><td>—</td></tr>`;
+      const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
+      return `<tr><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
+        <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
+        <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}</td>
+        <td><b>${fmtMin(d.minutes)}</b>${d.travel?' <small style="color:#1e40af">+נסיעה</small>':''}</td></tr>`;
+    }).join('');
+    return `<div style="margin-bottom:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden">
+      <div style="background:var(--navy);color:#fff;padding:7px 10px;font-weight:800;font-size:13px">
+        ${esc(emp.employee)}${emp.empNo?' · מס\' '+esc(emp.empNo):''}${emp.dept?' · '+esc(emp.dept):''}
+        <span style="float:left">${fmtMin(emp.totalMinutes)} שעות${emp.sick?' · '+emp.sick+' י\' מחלה':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
+      <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th></tr>${rows}</table>
+    </div>`;
+  }).join('');
+});
+
+document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
+  const box=document.getElementById('attMgrReport');
+  const btn=document.getElementById('attMgrExcel'); btn.disabled=true;
+  const prevTxt=btn.textContent; btn.textContent='מכין…';
+  try{
+    await loadScript(XLSX_URL);
+    const r=await fetchDetailed();
+    if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+    const month=document.getElementById('attMgrMonth').value;
+    const wb=XLSX.utils.book_new();
+    // גיליון 1 — ריכוז
+    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[],
+      ['מס\' עובד','שם עובד','מחלקה','ערך שעה','סה"כ שעות','ימי עבודה','ימי מחלה','ברוטו צפוי (₪)','הערות']];
+    let tHours=0, tGross=0;
+    r.employees.forEach(e=>{
+      const hrs=e.totalMinutes/60; tHours+=hrs; tGross+=e.gross;
+      sum.push([e.empNo||'', e.employee, e.dept||'', r.minWage,
+        Math.round(hrs*100)/100, e.days.filter(d=>!d.sick).length, e.sick||0, e.gross,
+        e.days.length?'':'ללא דיווח']);
+    });
+    sum.push([]); sum.push(['','','','סה"כ', Math.round(tHours*100)/100,'','',Math.round(tGross*100)/100]);
+    const ws1=XLSX.utils.aoa_to_sheet(sum);
+    ws1['!cols']=[{wch:9},{wch:20},{wch:14},{wch:9},{wch:11},{wch:10},{wch:9},{wch:14},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'ריכוז');
+    // גיליון 2 — פירוט יומי
+    const det=[['פירוט יומי — '+fmtMonth(month)],[],
+      ['שם עובד','תאריך','יום','כניסה','יציאה להפסקה','חזרה מהפסקה','סיום משמרת','שעות','סטטוס']];
+    r.employees.forEach(e=>{
+      e.days.forEach(d=>{
+        const dd=new Date(d.date+'T00:00:00');
+        if(d.sick){ det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳','','','','','','מחלה']); return; }
+        det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳',
+          d.inT||'', d.breakT||'', d.backT||'', d.outT||'',
+          Math.round(d.minutes/60*100)/100,
+          d.complete?(d.travel?'כולל נסיעה':'תקין'):'חסר סיום']);
+      });
+    });
+    const ws2=XLSX.utils.aoa_to_sheet(det);
+    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:13},{wch:13},{wch:11},{wch:8},{wch:13}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'פירוט יומי');
+    XLSX.writeFile(wb, 'דיווח_נוכחות_'+month+'.xlsx');
+    toast('קובץ האקסל הורד ✓','ok');
+  }catch(e){ toast('שגיאה: '+(e.message||e),'err'); }
+  finally{ btn.disabled=false; btn.textContent=prevTxt; }
 });
 
 /* ============ תלושי שכר ============ */
