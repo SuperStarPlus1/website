@@ -1807,30 +1807,90 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
     payState.pdfBytes = new Uint8Array(await f.arrayBuffer());
     const doc = await window.pdfjsLib.getDocument({ data: payState.pdfBytes.slice() }).promise;
-    // מיפוי מספר עובד → שם (מדויק לפי גבולות מילה)
-    const byNo = {};
-    payState.adminEmps.forEach(e=>{ if(e.empNo) byNo[e.empNo] = e.name; });
-    const nums = Object.keys(byNo).sort((a,b)=>b.length-a.length);
+    // זיהוי עמיד: השוואת אסימוני-ספרות מלאים (מנטרל אפסים מובילים, פיצול רווחים והיפוך כיווניות)
+    const cleanNo = s => String(s||'').replace(/[^0-9A-Za-zא-ת]/g,'');
+    const stripZeros = s => s.replace(/^0+/,'') || s;
+    const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const byNum = {}, byAlnum = {};
+    payState.adminEmps.forEach(e=>{
+      const k = cleanNo(e.empNo);
+      if(!k) return;
+      if(/^[0-9]+$/.test(k)) byNum[stripZeros(k)] = e.name;
+      else byAlnum[k] = e.name;
+    });
+    const alnumKeys = Object.keys(byAlnum).sort((a,b)=>b.length-a.length);
+    const lookupNum = t => byNum[stripZeros(t)] || byNum[stripZeros(t.split('').reverse().join(''))] || '';
     payState.pages = [];
     for(let p=1; p<=doc.numPages; p++){
       const tc = await (await doc.getPage(p)).getTextContent();
-      const text = tc.items.map(it=>it.str).join(' ');
-      let match = '';
-      for(const n of nums){
-        if(new RegExp('(^|[^0-9])'+n+'([^0-9]|$)').test(text)){ match = byNo[n]; break; }
+      const items = tc.items.map(it=>({ str: String(it.str||'').trim(), x: it.transform[4], y: it.transform[5] }))
+                            .filter(it=>it.str);
+      const text = items.map(it=>it.str).join(' ');
+
+      // שלב 1 — עיגון לפי הכותרת "מס' עובד" בתלוש: המספר הקרוב ביותר מתחת/ליד הכותרת
+      let anchors = items.filter(it=>/מס(פר)?\s*['׳]?\s*עובד/.test(it.str));
+      if(!anchors.length){
+        // הכותרת מפוצלת לשני פריטים ("מס'" + "עובד") באותה שורה
+        const ms = items.filter(i=>/^מס(פר)?['׳]?$/.test(i.str));
+        const ov = items.filter(i=>/^עובד$/.test(i.str));
+        ms.forEach(m=>ov.forEach(o=>{
+          if(Math.abs(m.y-o.y)<5 && Math.abs(m.x-o.x)<90) anchors.push({ str:'מס עובד', x:(m.x+o.x)/2, y:m.y });
+        }));
       }
-      payState.pages.push({ page:p, employee:match });
+      let anchoredNum = '';
+      for(const a of anchors){
+        let best = null;
+        for(const it of items){
+          const mm = it.str.replace(/\s+/g,'').match(/^([0-9]{1,7})$/);
+          if(!mm) continue;
+          const dy = a.y - it.y;                       // מתחת לכותרת = y קטן יותר
+          const dx = Math.abs(it.x - a.x);
+          if(dy >= -6 && dy < 70 && dx < 110){
+            const d = dy*dy + dx*dx;
+            if(!best || d < best.d) best = { t: mm[1], d };
+          }
+        }
+        if(best){ anchoredNum = best.t; break; }
+      }
+
+      let employee = '', ambiguous = null, tokens = [];
+      if(anchoredNum && lookupNum(anchoredNum)){
+        employee = lookupNum(anchoredNum);            // זיהוי ודאי לפי הכותרת
+      } else {
+        // שלב 2 — נפילה לזיהוי כללי לפי כל המספרים בעמוד
+        const tokSet = new Set();
+        const addTok = t => { if(t){ tokSet.add(stripZeros(t)); tokSet.add(stripZeros(t.split('').reverse().join(''))); } };
+        (text.match(/[0-9]+/g)||[]).forEach(addTok);
+        (text.replace(/\s+/g,'').match(/[0-9]+/g)||[]).forEach(addTok);
+        const found = new Set();
+        Object.keys(byNum).forEach(k=>{ if(tokSet.has(k)) found.add(byNum[k]); });
+        alnumKeys.forEach(k=>{
+          try{ if(new RegExp('(^|[^0-9A-Za-z])'+escRe(k)+'([^0-9A-Za-z]|$)').test(text)) found.add(byAlnum[k]); }catch(e2){}
+        });
+        if(found.size===1) employee = [...found][0];
+        else if(found.size>1) ambiguous = [...found];
+        tokens = [...tokSet].filter(t=>t.length>=2 && t.length<=10).slice(0,10);
+      }
+      payState.pages.push({ page:p, employee, ambiguous, tokens, anchoredNum });
     }
     // סקירת שיוך
     const empOpts = payState.adminEmps.filter(e=>e.active!==false).map(e=>e.name);
-    document.getElementById('payPages').innerHTML = payState.pages.map((pg,i)=>`
-      <div class="cons-item" style="grid-template-columns:90px 1fr">
+    document.getElementById('payPages').innerHTML = payState.pages.map((pg,i)=>{
+      let diag = '';
+      if(!pg.employee){
+        if(pg.anchoredNum) diag = `<div style="grid-column:1/-1;font-size:11px;color:#b91c1c">בעמוד כתוב מס' עובד <b>${esc(pg.anchoredNum)}</b> — אך לא נמצא עובד עם מספר זה בגיליון. עדכן את מספר העובד ב-👥 עובדים</div>`;
+        else if(pg.ambiguous) diag = `<div style="grid-column:1/-1;font-size:11px;color:#b91c1c">⚠ זוהו כמה עובדים בעמוד (${esc(pg.ambiguous.join(', '))}) — שייך ידנית</div>`;
+        else diag = `<div style="grid-column:1/-1;font-size:11px;color:var(--muted)">מספרים שנמצאו בעמוד: ${esc(pg.tokens.join(', ')||'לא נמצאו')} — השווה למספרי העובדים בגיליון</div>`;
+      }
+      return `<div class="cons-item" style="grid-template-columns:90px 1fr">
         <span>עמוד ${pg.page}</span>
         <select class="pay-sel" data-i="${i}" style="width:100%;border:1.5px solid ${pg.employee?'var(--line)':'#ef4444'};border-radius:8px;padding:6px">
           <option value="">— לא זוהה / דלג —</option>
           ${empOpts.map(n=>`<option ${n===pg.employee?'selected':''}>${esc(n)}</option>`).join('')}
         </select>
-      </div>`).join('');
+        ${diag}
+      </div>`;
+    }).join('');
     document.querySelectorAll('.pay-sel').forEach(s=>s.addEventListener('change',()=>{
       payState.pages[Number(s.dataset.i)].employee = s.value;
     }));
