@@ -2332,6 +2332,7 @@ function setAuthUI(){
     const admin = state.mgr.role===ROLE_ADMIN;
     document.getElementById('mgrsBtn').classList.toggle('hidden', !admin);
     document.getElementById('logBtn').classList.toggle('hidden', !admin);
+    document.getElementById('payBtn').classList.toggle('hidden', !admin);
   }
   if(state.emp) document.getElementById('viewerName').textContent = state.emp.name;
 }
