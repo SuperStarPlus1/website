@@ -175,6 +175,21 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .cons-item .acts .rj{background:#fee2e2;color:#991b1b}
 .cons-item .acts .dl2{background:#eef1f5;color:var(--ink)}
 
+/* נוכחות */
+.att-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.att-btns button{border:0;border-radius:12px;padding:16px 8px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
+.att-btns button:disabled{opacity:.35;cursor:default}
+.att-in{background:#dcfce7;color:#166534}
+.att-break{background:#ffedd5;color:#9a3412}
+.att-back{background:#dbeafe;color:#1e40af}
+.att-out{background:#fee2e2;color:#991b1b}
+.att-status{text-align:center;font-weight:800;font-size:15px;padding:10px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);margin-bottom:4px}
+.att-gps{text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.att-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.att-table th{background:var(--navy);color:#fff;padding:6px;font-size:11.5px}
+.att-table td{border-bottom:1px solid var(--line);padding:6px;text-align:center}
+.att-gross{background:#fff8e6;border:1.5px solid var(--gold);border-radius:10px;padding:10px;text-align:center;font-weight:800;margin-top:10px}
+
 /* הגדרות קבועות (קריאה בלבד) */
 .fixedbox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px}
 .fixedbox .fb-title{font-weight:700;color:var(--muted);font-size:11.5px;margin-bottom:6px}
@@ -251,6 +266,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn gold" id="myConsBtn" style="padding:6px 10px;font-size:12px">🖐 אילוצים</button>
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
+    <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -263,6 +279,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="publishBtn">📣 פרסום</button>
     <button class="hbtn" id="msgBtn">✉ הודעה</button>
     <button class="hbtn" id="payBtn">🧾 תלושים</button>
+    <button class="hbtn" id="attBtn">⏱ נוכחות</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -466,6 +483,50 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mrow"><label>צפייה בתלושים של עובד</label>
         <select id="payViewEmp"></select></div>
       <div id="payViewList"></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל נוכחות — עובד -->
+<div class="overlay hidden" id="attOverlay">
+  <div class="modal">
+    <header><h3>⏱ דיווח נוכחות</h3><p>הדיווח כולל מיקום GPS · יש לאשר הרשאת מיקום בדפדפן</p></header>
+    <div class="mbody">
+      <div class="att-status" id="attStatus">—</div>
+      <div class="att-gps" id="attGps">מאתר מיקום…</div>
+      <div class="att-btns">
+        <button class="att-in" id="pIn">▶ כניסה</button>
+        <button class="att-break" id="pBreak">⏸ הפסקה</button>
+        <button class="att-back" id="pBack">↩ חזרה מהפסקה</button>
+        <button class="att-out" id="pOut">⏹ סיום משמרת</button>
+      </div>
+      <div class="merr" id="attErr"></div>
+      <div style="border-top:1px solid var(--line);margin:12px 0 10px"></div>
+      <div class="mrow"><label>📊 הדוח החודשי שלי</label>
+        <div style="display:flex;gap:6px">
+          <select id="attMyMonth" style="flex:1"></select>
+          <button class="btn plain" id="attMyLoad" style="padding:8px 14px">הצג</button>
+        </div>
+      </div>
+      <div id="attMyReport"></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל נוכחות — מנהל -->
+<div class="overlay hidden" id="attMgrOverlay">
+  <div class="modal wide">
+    <header><h3>⏱ דוח נוכחות מרוכז</h3><p>שעות בפועל לפי דיווחי העובדים · ברוטו צפוי לפי שכר מינימום, לפני מיסים</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>חודש</label>
+        <div style="display:flex;gap:6px">
+          <select id="attMgrMonth" style="flex:1"></select>
+          <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">הצג דוח</button>
+        </div>
+      </div>
+      <div id="attMgrReport"></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
@@ -828,6 +889,9 @@ function demoPost(body){
   if(body.action==='uploadPayslip') return { ok:true, fileId:'demo' };
   if(body.action==='getPayslip') return { ok:false, error:'לא זמין במצב הדגמה' };
   if(body.action==='deletePayslip') return { ok:true };
+  if(body.action==='punch') return { ok:true, time:'08:03', status:'תקין', dist:42 };
+  if(body.action==='myAttendance') return { ok:true, days:[], totalMinutes:0, minWage:35.40, gross:0 };
+  if(body.action==='attendanceReport') return { ok:true, report:[], minWage:35.40 };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -1757,6 +1821,168 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
   alert('הבקשה נשלחה לאישור מנהל. תקבל עדכון כשתאושר או תידחה.');
   await load();
   renderSwList();
+});
+
+/* ============ דיווח נוכחות ============ */
+let attState = { pos: null, watch: null, geoWarned: false, todayEvents: [] };
+function monthOptions(sel){
+  const now = new Date();
+  let html='';
+  for(let i=0;i<13;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const v = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    html += `<option value="${v}">${fmtMonth(v)}</option>`;
+  }
+  document.getElementById(sel).innerHTML = html;
+}
+
+function attCurrentState(){
+  let st='out';
+  attState.todayEvents.forEach(e=>{
+    if(e.type==='כניסה'||e.type==='חזרה') st='in';
+    else if(e.type==='הפסקה') st='break';
+    else if(e.type==='יציאה') st='out';
+  });
+  return st;
+}
+function renderAttButtons(){
+  const st = attCurrentState();
+  document.getElementById('pIn').disabled = st!=='out';
+  document.getElementById('pBreak').disabled = st!=='in';
+  document.getElementById('pBack').disabled = st!=='break';
+  document.getElementById('pOut').disabled = !(st==='in'||st==='break');
+  const last = attState.todayEvents[attState.todayEvents.length-1];
+  document.getElementById('attStatus').textContent =
+    st==='out' ? (last&&last.type==='יציאה' ? '✔ המשמרת הסתיימה ('+last.time+')' : 'מחוץ למשמרת — טרם דווחה כניסה היום')
+    : st==='break' ? '⏸ בהפסקה מ-'+(last?last.time:'')
+    : '🟢 במשמרת מ-'+((attState.todayEvents.find(e=>e.type==='כניסה')||{}).time||'');
+}
+function attGetPos(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p=>res({ lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy) }),
+      ()=>res(null), { enableHighAccuracy:true, timeout:8000, maximumAge:30000 });
+  });
+}
+async function refreshAttToday(){
+  const m = iso(new Date()).slice(0,7);
+  const r = await apiPost({ action:'myAttendance', username:state.emp.username, password:state.emp.pw, month:m });
+  const today = iso(new Date());
+  attState.todayEvents = [];
+  if(r.ok){
+    const d = (r.days||[]).find(x=>x.date===today);
+    if(d) attState.todayEvents = d.events;
+  }
+  renderAttButtons();
+}
+async function openAtt(){
+  document.getElementById('attErr').textContent='';
+  document.getElementById('attMyReport').innerHTML='';
+  monthOptions('attMyMonth');
+  document.getElementById('attGps').textContent='מאתר מיקום…';
+  show('attOverlay');
+  await refreshAttToday();
+  attState.pos = await attGetPos();
+  document.getElementById('attGps').textContent = attState.pos
+    ? '📍 מיקום נקלט (דיוק ~'+attState.pos.acc+' מ׳)'
+    : '⚠ שירותי מיקום כבויים — הדיווח יסומן "ללא מיקום" ויעודכן המנהל';
+}
+document.getElementById('myAttBtn').addEventListener('click', openAtt);
+
+async function punch(type){
+  const err = document.getElementById('attErr');
+  err.textContent='שולח דיווח…';
+  const pos = attState.pos || await attGetPos();
+  attState.pos = pos;
+  const r = await apiPost({ action:'punch', username:state.emp.username, password:state.emp.pw,
+    type, lat: pos?pos.lat:0, lng: pos?pos.lng:0 });
+  err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  if(r.status==='מחוץ לאזור') alert('⚠ הדיווח נקלט ('+r.time+') אך המיקום שלך מחוץ לאזור החנות ('+r.dist+' מ׳). המנהל קיבל עדכון.');
+  else if(r.status==='ללא מיקום') toast('הדיווח נקלט ('+r.time+') ללא מיקום — הפעל GPS בפעם הבאה','err');
+  else toast(type+' נרשם ✓ '+r.time,'ok');
+  await refreshAttToday();
+  if(type==='כניסה') startGeoWatch();
+  if(type==='יציאה') stopGeoWatch();
+}
+document.getElementById('pIn').addEventListener('click', ()=>punch('כניסה'));
+document.getElementById('pBreak').addEventListener('click', ()=>punch('הפסקה'));
+document.getElementById('pBack').addEventListener('click', ()=>punch('חזרה'));
+document.getElementById('pOut').addEventListener('click', ()=>punch('יציאה'));
+
+// ניטור בזמן שהאפליקציה פתוחה: יציאה מהאזור בלי חתימת יציאה → אזהרה לעובד (חד-פעמית)
+function startGeoWatch(){
+  stopGeoWatch();
+  attState.geoWarned = false;
+  if(!navigator.geolocation) return;
+  attState.watch = setInterval(async ()=>{
+    if(attCurrentState()==='out'){ stopGeoWatch(); return; }
+    const p = await attGetPos();
+    if(!p || attState.geoWarned) return;
+    // בדיקה מול השרת נעשית בדיווחים; כאן אזהרה מקומית לפי מרחק גס מהדיווח האחרון התקין
+    if(attState.lastOkPos){
+      const d = distM(p.lat,p.lng,attState.lastOkPos.lat,attState.lastOkPos.lng);
+      if(d>400){
+        attState.geoWarned = true;
+        alert('⚠ נראה שהתרחקת מהחנות בלי לדווח יציאה או הפסקה. אם סיימת — דווח/י "סיום משמרת".');
+      }
+    } else attState.lastOkPos = p;
+  }, 180000);
+}
+function stopGeoWatch(){ if(attState.watch){ clearInterval(attState.watch); attState.watch=null; } }
+function distM(lat1,lng1,lat2,lng2){
+  const R=6371000, tr=Math.PI/180;
+  const dLat=(lat2-lat1)*tr, dLng=(lng2-lng1)*tr;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*tr)*Math.cos(lat2*tr)*Math.sin(dLng/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+// הדוח החודשי שלי
+document.getElementById('attMyLoad').addEventListener('click', async ()=>{
+  const box = document.getElementById('attMyReport');
+  box.innerHTML='טוען…';
+  const r = await apiPost({ action:'myAttendance', username:state.emp.username, password:state.emp.pw,
+    month: document.getElementById('attMyMonth').value });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  if(!r.days.length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
+  box.innerHTML = `<table class="att-table"><tr><th>תאריך</th><th>דיווחים</th><th>שעות</th></tr>`+
+    r.days.map(d=>`<tr><td>${d.date.slice(8,10)}/${d.date.slice(5,7)}</td>
+      <td style="font-size:11px">${d.events.map(e=>e.type+' '+e.time+(e.status&&e.status!=='תקין'?' ⚠':'')).join(' · ')}</td>
+      <td><b>${fmtMin(d.minutes)}</b>${d.complete?'':' <span style="color:#b91c1c">⚠</span>'}</td></tr>`).join('')+
+    `</table>
+    <div class="att-gross">סה"כ: ${fmtMin(r.totalMinutes)} שעות · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
+      <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות</div></div>`;
+});
+
+/* --- מנהל --- */
+document.getElementById('attBtn').addEventListener('click', ()=>{
+  monthOptions('attMgrMonth');
+  document.getElementById('attMgrReport').innerHTML='';
+  show('attMgrOverlay');
+});
+document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
+  const box = document.getElementById('attMgrReport');
+  box.innerHTML='טוען…';
+  const r = await apiPost({ action:'attendanceReport', ...mgrAuth(),
+    month: document.getElementById('attMgrMonth').value });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  if(!r.report.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחי נוכחות בחודש זה</div>'; return; }
+  let totAll=0, grossAll=0;
+  const rows = r.report.map(e=>{
+    totAll+=e.minutes; grossAll+=e.gross;
+    return `<tr><td style="text-align:right;font-weight:700">${esc(e.employee)}</td>
+      <td>${e.days}</td><td><b>${fmtMin(e.minutes)}</b></td>
+      <td>${e.incomplete?'<span style="color:#b91c1c">'+e.incomplete+'</span>':'0'}</td>
+      <td>${e.flags?'<span style="color:#b91c1c">'+e.flags+' ⚠</span>':'—'}</td>
+      <td>~${e.gross.toLocaleString()} ₪</td></tr>`;
+  }).join('');
+  box.innerHTML = `<table class="att-table">
+    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>ימים חסרי דיווח</th><th>חריגות מיקום</th><th>ברוטו צפוי</th></tr>
+    ${rows}
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+  </table>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">ברוטו לפי שכר מינימום ${r.minWage} ₪/שעה, לפני מיסים · הגדרת מיקום החנות והרדיוס: גיליון "הגדרות" תאים D3–D4</div>`;
 });
 
 /* ============ תלושי שכר ============ */
