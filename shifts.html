@@ -638,7 +638,7 @@ function confirmConflicts(emp, dateIso, start, excludeSids){
   const dow = new Date(dateIso+'T00:00:00').getDay();
   const fo = fixedOff(e, dow);
   if(fo==='מלא' || (fo==='בוקר' && !isEvening) || (fo==='ערב' && isEvening)){
-    const what = fo==='מלא' ? 'יום חופש קבוע' : 'חופש '+fo+' קבוע';
+    const what = fo==='מלא' ? 'יום חופש קבוע' : 'חסימת '+fo+' קבועה (ללא שיבוץ)';
     if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' '+what+'. לשבץ בכל זאת?')) return false;
   }
   // חופשה מתוכננת
@@ -874,8 +874,8 @@ function render(){
         if(off.evening) chips += `<span class="chip off">🏖 חופש ערב</span>`;
         const fo = emp ? fixedOff(emp, d.getDay()) : null;
         if(fo==='מלא' && !off.morning && !off.evening) chips += `<span class="chip off">🏖 חופש קבוע</span>`;
-        if(fo==='בוקר' && !off.morning) chips += `<span class="chip off">🏖 בוקר קבוע</span>`;
-        if(fo==='ערב' && !off.evening) chips += `<span class="chip off">🏖 ערב קבוע</span>`;
+        if(fo==='בוקר' && !off.morning) chips += `<span class="chip off">🚫 בוקר חסום</span>`;
+        if(fo==='ערב' && !off.evening) chips += `<span class="chip off">🚫 ערב חסום</span>`;
         const vac = vacationOf(name, di);
         if(vac){
           chips += vac.status==='מאושר'
@@ -1130,7 +1130,7 @@ function empRow(e){
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${state.departments.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
-    <div class="chiprow"><span class="lbl">חופש קבוע (לחיצות: מלא → בוקר → ערב → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
+    <div class="chiprow"><span class="lbl">חופש/חסימה קבועה (לחיצות: יום מלא → בוקר חסום → ערב חסום → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
       const fo=((e.offDays)||[]).find(x=>x.day===i);
       return `<button class="dchip day ${fo?'active':''}" data-i="${i}" data-part="${fo?fo.part:''}">${l}${fo?(fo.part==='מלא'?'':fo.part==='בוקר'?' ☀':' 🌙'):''}</button>`;
     }).join('')}</div>
@@ -1708,7 +1708,7 @@ function renderFixedInfo(){
   const box = document.getElementById('ecFixed');
   if(!e){ box.classList.add('hidden'); return; }
   const offTxt = (e.offDays && e.offDays.length)
-    ? e.offDays.map(o=>DAY_NAMES[o.day]+(o.part==='מלא'?' — יום מלא':' — '+o.part)).join(' · ')
+    ? e.offDays.map(o=>DAY_NAMES[o.day]+(o.part==='מלא'?' — יום מלא':' — '+o.part+' חסום (ללא שיבוץ)')).join(' · ')
     : 'לא הוגדר';
   const fs = parseFixedShifts(e.fixedShifts||'');
   const fsTxt = fs.length
