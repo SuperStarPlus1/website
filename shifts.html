@@ -432,7 +432,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל הודעה מרוכזת -->
 <div class="overlay hidden" id="msgOverlay">
   <div class="modal wide">
-    <header><h3>✉ שליחת הודעה לעובדים</h3><p>כל עובד מקבל מייל אישי הפותח ב"שלום [שמו]" · אפשר לשלב {שם} בגוף ההודעה</p></header>
+    <header><h3>✉ שליחת הודעה לעובדים</h3><p>כל עובד מקבל מייל אישי בשמו · {שם} בגוף יוחלף בשם העובד · כפתור Welcome שולח מייל קליטה עם פרטי כניסה ומדריך</p></header>
     <div class="mbody">
       <div class="mrow"><label>נמענים</label>
         <div class="msg-quick" id="msgQuick"></div>
@@ -446,6 +446,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     </div>
     <div class="mfoot">
       <button class="btn primary" id="msgSend">שליחה <span id="msgCount" style="font-weight:500"></span></button>
+      <button class="btn plain" id="msgWelcome" style="background:#fff8e6;color:#92400e;font-weight:700">⭐ שלח Welcome</button>
       <span class="spacer"></span>
       <button class="btn plain" data-close>ביטול</button>
     </div>
@@ -745,6 +746,7 @@ function demoPost(body){
   if(body.action==='addVacation'||body.action==='deleteVacation'||body.action==='reviewVacation') return { ok:true };
   if(body.action==='changePassword') return { ok:true };
   if(body.action==='sendMessage') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
+  if(body.action==='sendWelcome') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
   if(body.action==='mlogin') return { ok:true, role:ROLE_ADMIN, name: body.mname||'מנהל ראשי' };
@@ -1505,6 +1507,21 @@ document.getElementById('msgSend').addEventListener('click', async ()=>{
   if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
   hide('msgOverlay');
   toast('נשלחו '+r.sent+' הודעות ✓','ok');
+  if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
+});
+
+document.getElementById('msgWelcome').addEventListener('click', async ()=>{
+  const err = document.getElementById('msgErr');
+  const recipients = [...document.querySelectorAll('#msgEmps .msg-cb:checked')].map(cb=>cb.value);
+  if(!recipients.length){ err.textContent='יש לבחור לפחות נמען אחד'; return; }
+  if(!confirm('לשלוח הודעת Welcome ל-'+recipients.length+' עובדים?\n\nההודעה תכלול: שם משתמש, סיסמה ראשונית (הנוכחית בגיליון), קישור למערכת וקישור למדריך.\n⚠ כל נמען יידרש להחליף סיסמה בכניסה הבאה.')) return;
+  const btn = document.getElementById('msgWelcome'); btn.disabled=true;
+  err.textContent='שולח…';
+  const r = await apiPost({ action:'sendWelcome', ...mgrAuth(), recipients });
+  btn.disabled=false; err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  hide('msgOverlay');
+  toast('נשלחו '+r.sent+' הודעות Welcome ✓','ok');
   if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
 });
 
