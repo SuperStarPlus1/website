@@ -1759,6 +1759,10 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
 /* ============ תלושי שכר ============ */
 let payState = { pages: [], pdfBytes: null, adminEmps: [] };
 
+function fmtMonth(m){
+  const mm = String(m||'').match(/^(\d{4})-(\d{2})/);
+  return mm ? mm[2]+'/'+mm[1] : String(m||'');
+}
 function openBlobPdf(b64, filename){
   const bin = atob(b64);
   const arr = new Uint8Array(bin.length);
@@ -1948,7 +1952,7 @@ document.getElementById('payViewEmp').addEventListener('change', async ()=>{
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   box.innerHTML = r.payslips.length ? r.payslips.map(p=>`
     <div class="cons-item">
-      <span>🧾 ${esc(p.month)}</span>
+      <span>🧾 ${esc(fmtMonth(p.month))}</span>
       <span class="acts">
         <button class="ap pay-open" data-fid="${esc(p.fileId)}" data-fn="${esc(p.filename)}">צפייה</button>
         <button class="rj pay-del" data-fid="${esc(p.fileId)}">מחיקה</button>
@@ -1974,7 +1978,7 @@ document.getElementById('myPayBtn').addEventListener('click', async ()=>{
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   box.innerHTML = r.payslips.length ? r.payslips.map(p=>`
     <div class="cons-item">
-      <span>🧾 תלוש ${esc(p.month)}</span>
+      <span>🧾 תלוש ${esc(fmtMonth(p.month))}</span>
       <span class="acts"><button class="ap my-pay-open" data-fid="${esc(p.fileId)}" data-fn="${esc(p.filename)}">פתיחה</button></span>
     </div>`).join('') : '<div style="color:var(--muted);font-size:12.5px">עדיין אין תלושים במערכת</div>';
   box.querySelectorAll('.my-pay-open').forEach(b=>b.addEventListener('click', async ()=>{
