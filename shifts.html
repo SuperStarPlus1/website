@@ -175,6 +175,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .cons-item .acts .rj{background:#fee2e2;color:#991b1b}
 .cons-item .acts .dl2{background:#eef1f5;color:var(--ink)}
 
+/* הגדרות קבועות (קריאה בלבד) */
+.fixedbox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px}
+.fixedbox .fb-title{font-weight:700;color:var(--muted);font-size:11.5px;margin-bottom:6px}
+.fixedbox .fb-row{display:flex;gap:6px;margin-bottom:3px}
+.fixedbox .fb-row b{min-width:98px;font-weight:700}
+.fixedbox .fb-note{color:var(--muted);font-size:11px;margin-top:6px}
+
 /* הודעה מרוכזת */
 .msg-emps{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:10px}
 .msg-emps label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;cursor:pointer}
@@ -397,6 +404,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3>🖐 אילוצים וחופשות</h3><p>אילוצים: עד 2 בשבוע סה"כ (כולל שישי/שבת; שישי/שבת באישור מנהל) · חופשה: תמיד באישור מנהל</p></header>
     <div class="mbody">
+      <div class="fixedbox" id="ecFixed"></div>
       <div class="timegrid">
         <div class="mrow"><label>תאריך</label><input type="date" id="ecDate"></div>
         <div class="mrow"><label>חלק היום</label><select id="ecPart">
@@ -1695,7 +1703,26 @@ function updateConsBadge(){
 }
 
 // --- עובד ---
+function renderFixedInfo(){
+  const e = empByName(state.emp.name);
+  const box = document.getElementById('ecFixed');
+  if(!e){ box.classList.add('hidden'); return; }
+  const offTxt = (e.offDays && e.offDays.length)
+    ? e.offDays.map(o=>DAY_NAMES[o.day]+(o.part==='מלא'?' — יום מלא':' — '+o.part)).join(' · ')
+    : 'לא הוגדר';
+  const fs = parseFixedShifts(e.fixedShifts||'');
+  const fsTxt = fs.length
+    ? fs.map(f=>DAY_NAMES[f.day]+' '+f.part+' ('+(f.dept||e.depts[0])+')').join(' · ')
+    : 'לא הוגדרו';
+  box.classList.remove('hidden');
+  box.innerHTML = `<div class="fb-title">🔒 ההגדרות הקבועות שלך (נקבעות על ידי המנהל)</div>
+    <div class="fb-row"><b>חופש קבוע:</b><span>${esc(offTxt)}</span></div>
+    <div class="fb-row"><b>משמרות קבועות:</b><span>${esc(fsTxt)}</span></div>
+    <div class="fb-note">לא ניתן לשנות הגדרות אלו מכאן — לשינוי יש לפנות למנהל. אין צורך להגיש אילוץ על ימי חופש קבועים.</div>`;
+}
+
 function openEmpCons(){
+  renderFixedInfo();
   const d = document.getElementById('ecDate');
   d.min = iso(new Date());
   if(!d.value || d.value < d.min) d.value = d.min;
