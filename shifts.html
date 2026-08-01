@@ -297,7 +297,6 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
     <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
-    <button class="hbtn gold" id="homeBtn" style="padding:6px 10px;font-size:12px">🏠</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -542,7 +541,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <!-- מודאל נוכחות — עובד -->
 <div class="overlay hidden" id="attOverlay">
-  <div class="modal">
+  <div class="modal wide">
     <header><h3>⏱ דיווח נוכחות</h3><p>הדיווח כולל מיקום GPS · יש לאשר הרשאת מיקום בדפדפן</p></header>
     <div class="mbody">
       <div class="att-status" id="attStatus">—</div>
@@ -1964,7 +1963,6 @@ function renderHomePunch(){
     renderHomePunch();
   }));
 }
-document.getElementById('homeBtn').addEventListener('click', showEmpHome);
 document.getElementById('backHomeFab').addEventListener('click', showEmpHome);
 document.querySelectorAll('#empHome .eh-links button').forEach(b=>b.addEventListener('click', ()=>{
   const go = b.dataset.go;
@@ -2104,7 +2102,7 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת' };
   const toM = t => { const p=String(t).split(':'); return Number(p[0])*60+Number(p[1]); };
   box.innerHTML = `<table class="att-table">
-    <tr><th>יום</th><th>כניסה</th><th>הפסקה (יציאה–חזרה)</th><th>יציאה</th><th>שעות</th></tr>` +
+    <tr><th>יום</th><th>כניסה</th><th>יציאה להפסקה</th><th>חזרה מהפסקה</th><th>סיום משמרת</th><th>שעות</th></tr>` +
     r.days.map((d,i)=>{
       const dd = new Date(d.date+'T00:00:00');
       const firstIn = (d.events.find(e=>e.type==='כניסה')||{}).time || '—';
@@ -2117,20 +2115,20 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
         else if(e.type==='חזרה' && brkFrom!==null){ breaks.push({ from:brkFrom, to:e.time }); brkFrom = null; }
       });
       if(brkFrom!==null) breaks.push({ from:brkFrom, to:null }); // הפסקה פתוחה ללא חזרה
-      const brkCell = breaks.length ? breaks.map(b=>{
-        if(!b.to) return `<span dir="ltr">${esc(b.from)}</span>–<span style="color:#b91c1c">⚠</span>`;
-        const dur = toM(b.to)-toM(b.from);
-        return `<span dir="ltr">${esc(b.from)}–${esc(b.to)}</span> <small style="color:var(--muted)">(${fmtMin(dur)})</small>`;
-      }).join('<br>') : '—';
+      const brkOutCell = breaks.length ? breaks.map(b=>`<span dir="ltr">${esc(b.from)}</span>`).join('<br>') : '—';
+      const brkBackCell = breaks.length ? breaks.map(b=>b.to
+        ? `<span dir="ltr">${esc(b.to)}</span> <small style="color:var(--muted)">(${fmtMin(toM(b.to)-toM(b.from))})</small>`
+        : '<span style="color:#b91c1c">⚠</span>').join('<br>') : '—';
       const flagged = d.events.some(e=>e.status && e.status!=='תקין');
       const detail = d.events.map(e=>`<div class="att-ev"><span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span><span class="tm">${esc(e.time)}</span></div>`).join('');
       return `<tr class="att-row" data-i="${i}" style="cursor:pointer" title="לחיצה לפירוט">
         <td style="font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flagged?' <span style="color:#b91c1c">⚠</span>':''}</td>
         <td dir="ltr">${esc(firstIn)}</td>
-        <td>${brkCell}</td>
+        <td>${brkOutCell}</td>
+        <td>${brkBackCell}</td>
         <td dir="ltr">${lastOut==='⚠'?'<span style="color:#b91c1c">⚠</span>':esc(lastOut)}</td>
         <td><b>${fmtMin(d.minutes)}</b></td></tr>
-      <tr class="att-detail hidden" data-d="${i}"><td colspan="5" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
+      <tr class="att-detail hidden" data-d="${i}"><td colspan="6" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
     }).join('') +
   `</table>
   <div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
