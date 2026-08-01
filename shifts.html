@@ -189,6 +189,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .att-table th{background:var(--navy);color:#fff;padding:6px;font-size:11.5px}
 .att-table td{border-bottom:1px solid var(--line);padding:6px;text-align:center}
 .att-gross{background:#fff8e6;border:1.5px solid var(--gold);border-radius:10px;padding:10px;text-align:center;font-weight:800;margin-top:10px}
+.att-day{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.att-day-head{background:#f1f5f9;padding:6px 10px;font-weight:800;font-size:12.5px;display:flex;justify-content:space-between}
+.att-ev{display:flex;justify-content:space-between;padding:5px 12px;font-size:12.5px;border-top:1px dashed var(--line)}
+.att-ev .tm{font-weight:700;direction:ltr}
+.att-day-total{background:#eef7f0;border-top:1px solid var(--line);padding:6px 12px;font-weight:800;font-size:12.5px;display:flex;justify-content:space-between}
+.att-day-total.warn{background:#fee2e2;color:#991b1b}
 
 /* הגדרות קבועות (קריאה בלבד) */
 .fixedbox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px}
@@ -314,12 +320,14 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     </div>
     <div class="mbody">
       <div id="mgrPane">
-        <div class="mrow"><label>שם מנהל</label><input type="text" id="lgMgrName" autocomplete="off"></div>
-        <div class="mrow"><label>סיסמה</label><input type="password" id="lgMgrPw" autocomplete="off"></div>
+        <div class="mrow"><label>שם מנהל</label><input type="text" id="lgMgrName" name="mgr-username" autocomplete="username"></div>
+        <div class="mrow"><label>סיסמה</label><input type="password" id="lgMgrPw" name="mgr-password" autocomplete="current-password"></div>
       </div>
       <div id="empPane" class="hidden">
-        <div class="mrow"><label>שם משתמש (מקבלים מהמנהל)</label><input type="text" id="lgEmpUser" autocomplete="off" placeholder="לדוגמה: aya1"></div>
-        <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" autocomplete="off"></div>
+        <div class="mrow"><label>שם משתמש (מקבלים מהמנהל)</label><input type="text" id="lgEmpUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
+        <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" name="password" autocomplete="current-password"></div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
+          <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
       </div>
       <div class="merr" id="lgErr"></div>
     </div>
@@ -678,9 +686,15 @@ function f101Missing(e){ return e && (Number(e.f101)||0) < requiredF101Year(); }
 
 /* ============ מצב ============ */
 const store = {
-  get(){ try{ return JSON.parse(sessionStorage.getItem('sp_auth')||'null'); }catch(e){ return null; } },
-  set(v){ try{ sessionStorage.setItem('sp_auth', JSON.stringify(v)); }catch(e){} },
-  clear(){ try{ sessionStorage.removeItem('sp_auth'); }catch(e){} }
+  get(){ try{ return JSON.parse(localStorage.getItem('sp_auth') || sessionStorage.getItem('sp_auth') || 'null'); }catch(e){ return null; } },
+  set(v, remember){
+    try{
+      if(remember === undefined) remember = !!localStorage.getItem('sp_auth') || !sessionStorage.getItem('sp_auth');
+      (remember ? localStorage : sessionStorage).setItem('sp_auth', JSON.stringify(v));
+      (remember ? sessionStorage : localStorage).removeItem('sp_auth');
+    }catch(e){}
+  },
+  clear(){ try{ localStorage.removeItem('sp_auth'); sessionStorage.removeItem('sp_auth'); }catch(e){} }
 };
 const state = {
   demo: !GAS_URL,
@@ -1946,13 +1960,26 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
     month: document.getElementById('attMyMonth').value });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.days.length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
-  box.innerHTML = `<table class="att-table"><tr><th>תאריך</th><th>דיווחים</th><th>שעות</th></tr>`+
-    r.days.map(d=>`<tr><td>${d.date.slice(8,10)}/${d.date.slice(5,7)}</td>
-      <td style="font-size:11px">${d.events.map(e=>e.type+' '+e.time+(e.status&&e.status!=='תקין'?' ⚠':'')).join(' · ')}</td>
-      <td><b>${fmtMin(d.minutes)}</b>${d.complete?'':' <span style="color:#b91c1c">⚠</span>'}</td></tr>`).join('')+
-    `</table>
-    <div class="att-gross">סה"כ: ${fmtMin(r.totalMinutes)} שעות · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
-      <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות</div></div>`;
+  const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹' };
+  const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת' };
+  box.innerHTML = r.days.map(d=>{
+    const dd = new Date(d.date+'T00:00:00');
+    const evRows = d.events.map(e=>`
+      <div class="att-ev">
+        <span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span>
+        <span class="tm">${esc(e.time)}</span>
+      </div>`).join('');
+    const totLine = d.complete
+      ? `<div class="att-day-total"><span>סה"כ ליום זה</span><span>${fmtMin(d.minutes)} שעות</span></div>`
+      : `<div class="att-day-total warn"><span>⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</span><span>${fmtMin(d.minutes)}</span></div>`;
+    return `<div class="att-day">
+      <div class="att-day-head"><span>${DAY_NAMES[dd.getDay()]} ${d.date.slice(8,10)}/${d.date.slice(5,7)}</span></div>
+      ${evRows}
+      ${totLine}
+    </div>`;
+  }).join('') +
+  `<div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
+    <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות</div></div>`;
 });
 
 /* --- מנהל --- */
@@ -2534,7 +2561,7 @@ async function doLogin(){
       const r = await apiPost({ action:'elogin', username, password:pw });
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
       state.emp = { name:r.name, username, pw };
-      store.set({ kind:'emp', name:r.name, username, pw });
+      store.set({ kind:'emp', name:r.name, username, pw }, document.getElementById('lgRemember').checked);
       state.filterEmp = r.name;
       hide('loginOverlay'); setAuthUI();
       if(r.mustChange){ openPwChange(); }
