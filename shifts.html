@@ -456,7 +456,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div id="payReview" class="hidden" style="margin-top:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px">אימות שיוך — בדוק ותקן לפני העלאה:</div>
         <div id="payPages" style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px"></div>
-        <button class="btn primary" id="payUpload" style="width:100%;margin-top:10px">⬆ העלאה ושיוך</button>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;margin-top:8px;cursor:pointer">
+          <input type="checkbox" id="payNotify" checked> 📧 שלח מייל לכל עובד שהתלוש שלו הועלה
+        </label>
+        <button class="btn primary" id="payUpload" style="width:100%;margin-top:8px">⬆ העלאה ושיוך</button>
         <div id="payProg" style="font-size:12.5px;color:var(--muted);margin-top:6px"></div>
       </div>
       <div style="border-top:1px solid var(--line);margin:14px 0 10px"></div>
@@ -1924,7 +1927,8 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
   try{
     await loadScript(PDFLIB_URL);
     const src = await window.PDFLib.PDFDocument.load(payState.pdfBytes);
-    let done=0, fails=[];
+    let done=0, fails=[], notified=0;
+    const doNotify = document.getElementById('payNotify').checked;
     for(const g of groups){
       prog.textContent = 'מעלה '+(done+1)+'/'+groups.length+' — '+g.employee+'…';
       try{
@@ -1932,12 +1936,13 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
         const copied = await out.copyPages(src, g.pages.map(p=>p-1));
         copied.forEach(pg=>out.addPage(pg));
         const b64 = await out.saveAsBase64();
-        const r = await apiPost({ action:'uploadPayslip', ...mgrAuth(), employee:g.employee, month, data:b64 });
+        const r = await apiPost({ action:'uploadPayslip', ...mgrAuth(), employee:g.employee, month, data:b64, notify:doNotify });
         if(!r.ok) fails.push(g.employee+': '+(r.error||'שגיאה'));
+        else if(r.notified) notified++;
       }catch(e){ fails.push(g.employee+': '+(e.message||e)); }
       done++;
     }
-    prog.textContent = 'הועלו '+(groups.length-fails.length)+' תלושים ✓'+(fails.length?' · נכשלו: '+fails.join(' | '):'');
+    prog.textContent = 'הועלו '+(groups.length-fails.length)+' תלושים ✓ · נשלחו '+notified+' התראות מייל'+(fails.length?' · נכשלו: '+fails.join(' | '):'');
     if(!fails.length) toast('כל התלושים הועלו ושויכו ✓','ok');
   }finally{ btn.disabled=false; }
 });
