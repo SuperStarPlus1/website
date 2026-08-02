@@ -310,6 +310,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="msgBtn">✉ הודעה</button>
     <button class="hbtn" id="payBtn">🧾 תלושים</button>
     <button class="hbtn" id="attBtn">⏱ נוכחות</button>
+    <button class="hbtn" id="sickMgrBtn">🤒 מחלה</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -580,10 +581,22 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <div class="mrow"><label>מתאריך</label><input type="date" id="sickFrom"></div>
         <div class="mrow"><label>עד תאריך</label><input type="date" id="sickTo"></div>
       </div>
-      <div class="mrow"><label>הערה (רשות)</label><input type="text" id="sickNote" placeholder="למשל: אישור רופא יימסר מחר"></div>
-      <button class="btn primary" id="sickSend" style="width:100%">שליחת דיווח למנהל</button>
+      <div class="mrow"><label>אישור מחלה (חובה — PDF או תמונה)</label><input type="file" id="sickCert" accept="application/pdf,image/*"></div>
+      <div class="mrow"><label>הערה (רשות)</label><input type="text" id="sickNote" placeholder="למשל: מרפאת כללית"></div>
+      <button class="btn primary" id="sickSend" style="width:100%">שליחת בקשה לאישור מנהל</button>
       <div class="merr" id="sickErr"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px">⚠ ללא אישור מאושר, ימי ההיעדרות ייחשבו כחופשה (או היעדרות מעבר למכסה).</div>
+      <div class="mrow" style="margin-top:12px"><label>הבקשות שלי</label><div id="sickList"></div></div>
     </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל אישורי מחלה — מנהל -->
+<div class="overlay hidden" id="sickMgrOverlay">
+  <div class="modal wide">
+    <header><h3>🤒 אישורי מחלה</h3><p>בקשה ללא אישור מנהל — ימי ההיעדרות נזקפים לחופשה (או להיעדרות מעבר למכסה)</p></header>
+    <div class="mbody"><div id="sickMgrList">טוען…</div></div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
 </div>
@@ -976,7 +989,11 @@ function demoPost(body){
   if(body.action==='attendanceReport') return { ok:true, report:[], minWage:35.40 };
   if(body.action==='listSites') return { ok:true, sites:[] };
   if(body.action==='punchSite') return { ok:true, time:'10:15', status:'תקין', travelMin:25 };
-  if(body.action==='reportSick') return { ok:true, days:1 };
+  if(body.action==='reportSick') return { ok:true };
+  if(body.action==='mySick') return { ok:true, records:[] };
+  if(body.action==='listSick') return { ok:true, records:[] };
+  if(body.action==='reviewSick') return { ok:true };
+  if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
   if(body.action==='publish') return { ok:true, sent:0 };
   if(String(body.password)!=='1234') return { ok:false, error:'סיסמה שגויה (במצב הדגמה: 1234)' };
@@ -1342,7 +1359,7 @@ async function openEmpMgr(){
           const local = empByName(se.name);
           if(local){ local.password = se.password; local.username = se.username||'';
             local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; local.email = se.email||'';
-            local.empNo = se.empNo||''; }
+            local.empNo = se.empNo||''; local.vacQuota = se.vacQuota||0; local.hourRate = se.hourRate||0; }
           else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
             active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
             username:se.username||'', skills:se.skills||'', rating:se.rating||2,
@@ -1383,7 +1400,19 @@ function empRow(e){
     <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
       <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מס' עובד:</span>
-      <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
+      <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
+    <div class="chiprow" style="margin-top:7px">
+      <span class="lbl">תקן חופשה חודשי (ימים):</span>
+      <input type="number" step="0.01" class="i-vacq" value="${e.vacQuota||''}" placeholder="0" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center" title="ימי חופשה שנצברים בחודש. היעדרות עד מכסה זו נספגת כחופשה">
+      <span class="lbl">ערך שעה (₪):</span>
+      <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center" title="ריק = שכר מינימום"></div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
+      <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <span class="lbl">תקן חופשה/חודש:</span>
+      <input type="number" step="0.01" class="i-vac" value="${e.vacQuota||''}" placeholder="${e.vacMonthly||'אוטומטי'}" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"
+        title="ריק = חישוב אוטומטי לפי ותק">
+      <span class="lbl">ערך שעה:</span>
+      <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
       <input type="number" class="i-f101" value="${e.f101||''}" placeholder="—" style="width:90px;border:1.5px solid ${f101Missing(e)?'#ef4444':'var(--line)'};border-radius:8px;padding:6px 9px;text-align:center"
         title="השנה האחרונה שבה מולא טופס 101. אדום = חסר לשנה הנדרשת (${requiredF101Year()})">
@@ -1417,6 +1446,11 @@ document.getElementById('empOk').addEventListener('click',()=>{
              fixedShifts: r.querySelector('.i-fixed').value.trim(),
              email: r.querySelector('.i-email').value.trim(),
              empNo: r.querySelector('.i-empno').value.trim(),
+             startDate: r.querySelector('.i-start').value,
+             vacQuota: Number(r.querySelector('.i-vac').value)||0,
+             hourRate: Number(r.querySelector('.i-rate').value)||0,
+             vacQuota: Number(r.querySelector('.i-vacq').value)||0,
+             hourRate: Number(r.querySelector('.i-rate').value)||0,
              f101: Number(r.querySelector('.i-f101').value)||0 };
   }).filter(e=>e.name);
   state.dirtyEmps = true;
@@ -2199,25 +2233,49 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   }));
 });
 
-function openSick(){
+async function openSick(){
   const f=document.getElementById('sickFrom'), t=document.getElementById('sickTo');
   f.value=iso(new Date()); t.value=iso(new Date());
   document.getElementById('sickNote').value='';
+  document.getElementById('sickCert').value='';
   document.getElementById('sickErr').textContent='';
   show('sickOverlay');
+  renderMySick();
+}
+async function renderMySick(){
+  const box=document.getElementById('sickList');
+  box.innerHTML='טוען…';
+  const r=await apiPost({ action:'mySick', username:state.emp.username, password:state.emp.pw });
+  if(!r.ok){ box.innerHTML=''; return; }
+  const stCls={ 'מאושר':'ok','ממתין':'wait','נדחה':'wait' };
+  box.innerHTML = r.records.length ? r.records.sort((a,b)=>b.from.localeCompare(a.from)).map(s=>{
+    const f=new Date(s.from+'T00:00:00'), t=new Date(s.to+'T00:00:00');
+    return `<div class="cons-item"><span>${ddmm(f)}–${ddmm(t)}${s.note?' · '+esc(s.note):''}
+      <span class="st ${stCls[s.status]||'wait'}">${esc(s.status)}</span></span></div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות מחלה</div>';
+}
+function fileToB64(file){
+  return new Promise((res,rej)=>{ const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
 }
 document.getElementById('sickSend').addEventListener('click', async ()=>{
   const err=document.getElementById('sickErr');
   const from=document.getElementById('sickFrom').value, to=document.getElementById('sickTo').value;
+  const cert=document.getElementById('sickCert').files[0];
   if(!from||!to){ err.textContent='יש לבחור טווח תאריכים'; return; }
   if(to<from){ err.textContent='תאריך הסיום לפני ההתחלה'; return; }
-  err.textContent='שולח…';
+  if(!cert){ err.textContent='חובה לצרף קובץ אישור מחלה'; return; }
+  if(cert.size>8*1024*1024){ err.textContent='הקובץ גדול מדי (מקסימום 8MB)'; return; }
+  err.textContent='מעלה ושולח…';
+  const certData=await fileToB64(cert);
   const r=await apiPost({ action:'reportSick', username:state.emp.username, password:state.emp.pw,
-    from, to, note:document.getElementById('sickNote').value.trim() });
+    from, to, note:document.getElementById('sickNote').value.trim(),
+    certData, certMime:cert.type||'application/pdf' });
   err.textContent='';
   if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
-  hide('sickOverlay');
-  toast('דווחו '+r.days+' ימי מחלה · המנהל עודכן במייל ✓','ok');
+  document.getElementById('sickCert').value='';
+  toast('הבקשה נשלחה לאישור מנהל ✓','ok');
+  renderMySick();
 });
 
 /* --- מנהל --- */
@@ -2233,25 +2291,71 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
     month: document.getElementById('attMgrMonth').value });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.report.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחי נוכחות בחודש זה</div>'; return; }
-  let totAll=0, grossAll=0;
+  let grossAll=0;
+  const hh = m => (m/60).toFixed(1);
   const rows = r.report.map(e=>{
-    totAll+=e.minutes; grossAll+=e.gross;
+    grossAll+=e.gross;
     const noRep = !e.reported;
-    return `<tr${noRep?' style="opacity:.6"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:11px">ללא דיווח</span>':''}</td>
-      <td>${e.days}</td><td><b>${fmtMin(e.minutes)}</b></td>
+    return `<tr${noRep?' style="opacity:.55"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:10px">ללא דיווח</span>':''}</td>
+      <td>${e.days}</td>
+      <td>${e.regHours?e.regHours:'—'}</td>
+      <td>${e.ot125?'<b style="color:#9a3412">'+e.ot125+'</b>':'—'}</td>
+      <td>${e.ot150?'<b style="color:#b91c1c">'+e.ot150+'</b>':'—'}</td>
       <td>${e.sick?e.sick:'—'}</td>
-      <td>${e.visits?e.visits+' ('+fmtMin(e.travel||0)+')':'—'}</td>
-      <td>${e.incomplete?'<span style="color:#b91c1c">'+e.incomplete+'</span>':'0'}</td>
-      <td>${e.flags?'<span style="color:#b91c1c">'+e.flags+' ⚠</span>':'—'}</td>
+      <td>${e.vacUsed?e.vacUsed:'—'}${e.vacQuota?'<small style="color:var(--muted)">/'+e.vacQuota+'</small>':''}</td>
+      <td>${e.absence?'<span style="color:#b91c1c;font-weight:700">'+e.absence+'</span>':'—'}</td>
       <td>${e.reported?'~'+e.gross.toLocaleString()+' ₪':'—'}</td></tr>`;
   }).join('');
   box.innerHTML = `<table class="att-table">
-    <tr><th>עובד</th><th>ימים</th><th>שעות</th><th>מחלה</th><th>אתרים (נסיעה)</th><th>חסרי דיווח</th><th>חריגות</th><th>ברוטו צפוי</th></tr>
+    <tr><th>עובד</th><th>ימים</th><th>רגילות</th><th>125%</th><th>150%</th><th>מחלה מאושרת</th><th>חופשה (מכסה)</th><th>היעדרות</th><th>ברוטו צפוי</th></tr>
     ${rows}
-    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${fmtMin(totAll)}</td><td></td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ ברוטו</td><td colspan="7"></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
   </table>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">ברוטו לפי שכר מינימום ${r.minWage} ₪/שעה, לפני מיסים · הגדרת מיקום החנות והרדיוס: גיליון "הגדרות" תאים D3–D4</div>`;
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">שעות נוספות לפי חוק: מעל ${r.regHours} ש'/יום — 125% לשעתיים, 150% מעבר · חופשה: היעדרות (כולל מחלה ללא אישור) נספגת עד מכסה; מעבר = היעדרות · ברוטו לפי ערך שעה אישי או שכר מינימום ${r.minWage} ₪, לפני מיסים</div>`;
 });
+
+/* --- אישורי מחלה (מנהל) --- */
+async function renderSickMgr(){
+  const box=document.getElementById('sickMgrList');
+  box.innerHTML='טוען…';
+  const r=await apiPost({ action:'listSick', ...mgrAuth() });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  const pend=r.records.filter(s=>s.status==='ממתין');
+  const done=r.records.filter(s=>s.status!=='ממתין').sort((a,b)=>b.from.localeCompare(a.from)).slice(0,20);
+  const row=(s,isPend)=>{
+    const f=new Date(s.from+'T00:00:00'), t=new Date(s.to+'T00:00:00');
+    const days=Math.round((t-f)/86400000)+1;
+    return `<div class="cons-item">
+      <span><b>${esc(s.employee)}</b> · ${ddmm(f)}–${ddmm(t)} (${days} ימים)${s.note?' · '+esc(s.note):''}
+        ${isPend?'':'<span class="st '+(s.status==='מאושר'?'ok':'wait')+'">'+esc(s.status)+'</span>'}</span>
+      <span class="acts">
+        ${s.filename?`<button class="ap sk-view" data-f="${esc(s.from)}" data-e="${esc(s.employee)}">📄 אישור</button>`:'<span style="color:#b91c1c;font-size:11px">אין קובץ</span>'}
+        ${isPend?`<button class="ap sk-ok" data-f="${esc(s.from)}" data-t="${esc(s.to)}" data-e="${esc(s.employee)}">אשר</button>
+        <button class="rj sk-no" data-f="${esc(s.from)}" data-t="${esc(s.to)}" data-e="${esc(s.employee)}">דחה</button>`:''}
+      </span></div>`;
+  };
+  box.innerHTML = (pend.length?'<div style="font-weight:800;font-size:13px;margin-bottom:6px">ממתינות לאישור ('+pend.length+')</div>'+pend.map(s=>row(s,true)).join('')
+                 :'<div style="color:var(--muted);font-size:12.5px">אין בקשות ממתינות</div>')
+    + (done.length?'<div style="font-weight:800;font-size:13px;margin:14px 0 6px">היסטוריה</div>'+done.map(s=>row(s,false)).join(''):'');
+  box.querySelectorAll('.sk-view').forEach(b=>b.addEventListener('click', async ()=>{
+    b.textContent='טוען…';
+    const r2=await apiPost({ action:'getSickCert', ...mgrAuth(), from:b.dataset.f, employee:b.dataset.e });
+    b.textContent='📄 אישור';
+    if(!r2.ok){ toast(r2.error||'שגיאה','err'); return; }
+    openBlobFile(r2.data, r2.filename, r2.mimeType);
+  }));
+  const review=async (b,status)=>{
+    if(status==='נדחה' && !confirm('לדחות את בקשת המחלה? ימי ההיעדרות ייחשבו כחופשה/היעדרות.')) return;
+    const r2=await apiPost({ action:'reviewSick', ...mgrAuth(), status,
+      from:b.dataset.f, to:b.dataset.t, employee:b.dataset.e });
+    if(!r2.ok){ toast(r2.error||'שגיאה','err'); return; }
+    toast(status==='מאושר'?'אושר ✓':'נדחה','ok');
+    renderSickMgr();
+  };
+  box.querySelectorAll('.sk-ok').forEach(b=>b.addEventListener('click',()=>review(b,'מאושר')));
+  box.querySelectorAll('.sk-no').forEach(b=>b.addEventListener('click',()=>review(b,'נדחה')));
+}
+document.getElementById('sickMgrBtn').addEventListener('click', ()=>{ show('sickMgrOverlay'); renderSickMgr(); });
 
 /* --- דוח מפורט יום-ביום (מנהל) --- */
 async function fetchDetailed(){
@@ -2267,18 +2371,21 @@ document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
   box.innerHTML = withData.map(emp=>{
     const rows = emp.days.map(d=>{
       const dd=new Date(d.date+'T00:00:00');
-      if(d.sick) return `<tr style="background:#fef3c7"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="4" style="text-align:center">🤒 מחלה</td><td>—</td></tr>`;
+      if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="5" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td><td>—</td></tr>`;
       const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
       return `<tr><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
         <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
         <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}</td>
-        <td><b>${fmtMin(d.minutes)}</b>${d.travel?' <small style="color:#1e40af">+נסיעה</small>':''}</td></tr>`;
+        <td><b>${fmtMin(d.minutes)}</b>${d.travel?' <small style="color:#1e40af">+נסיעה</small>':''}</td>
+        <td>${d.ot?'<b style="color:#9a3412">'+d.ot+'</b>':'—'}</td></tr>`;
     }).join('');
     return `<div style="margin-bottom:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden">
       <div style="background:var(--navy);color:#fff;padding:7px 10px;font-weight:800;font-size:13px">
         ${esc(emp.employee)}${emp.empNo?' · מס\' '+esc(emp.empNo):''}${emp.dept?' · '+esc(emp.dept):''}
-        <span style="float:left">${fmtMin(emp.totalMinutes)} שעות${emp.sick?' · '+emp.sick+' י\' מחלה':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
-      <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th></tr>${rows}</table>
+        <span style="float:left">${fmtMin(emp.totalMinutes)} ש'${emp.ot125||emp.ot150?' (נוספות '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+')':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעדרות</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
+      <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
+        רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.hourRate} ₪</div>
+      <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th><th>נוספות</th></tr>${rows}</table>
     </div>`;
   }).join('');
 });
@@ -2294,34 +2401,39 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     const month=document.getElementById('attMgrMonth').value;
     const wb=XLSX.utils.book_new();
     // גיליון 1 — ריכוז
-    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[],
-      ['מס\' עובד','שם עובד','מחלקה','ערך שעה','סה"כ שעות','ימי עבודה','ימי מחלה','ברוטו צפוי (₪)','הערות']];
-    let tHours=0, tGross=0;
+    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],
+      ["נוספות לפי חוק: מעל "+r.regHours+" ש'/יום — 125% לשעתיים, 150% מעבר · תקן חופשה לפי ותק · מחלה ללא אישור מאושר נזקפת לחופשה"],[],
+      ['מס\' עובד','שם עובד','מחלקה','ערך שעה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','חופשה','מחלה מאושרת','היעדרות','ימי עבודה','ברוטו צפוי (₪)','הערות']];
+    let tReg=0,t125=0,t150=0,tGross=0;
     r.employees.forEach(e=>{
-      const hrs=e.totalMinutes/60; tHours+=hrs; tGross+=e.gross;
-      sum.push([e.empNo||'', e.employee, e.dept||'', r.minWage,
-        Math.round(hrs*100)/100, e.days.filter(d=>!d.sick).length, e.sick||0, e.gross,
+      const reg=e.regHours||0, o1=e.ot125||0, o2=e.ot150||0;
+      tReg+=reg; t125+=o1; t150+=o2; tGross+=e.gross;
+      const workDays=e.days.filter(d=>!d.sick).length;
+      sum.push([e.empNo||'', e.employee, e.dept||'', e.hourRate||r.minWage,
+        Math.round(reg*100)/100, Math.round(o1*100)/100, Math.round(o2*100)/100,
+        Math.round((reg+o1+o2)*100)/100,
+        e.vacUsed||0, e.sick||0, e.overAbsence||0, workDays, e.gross,
         e.days.length?'':'ללא דיווח']);
     });
-    sum.push([]); sum.push(['','','','סה"כ', Math.round(tHours*100)/100,'','',Math.round(tGross*100)/100]);
+    sum.push([]); sum.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','',Math.round(tGross*100)/100]);
     const ws1=XLSX.utils.aoa_to_sheet(sum);
-    ws1['!cols']=[{wch:9},{wch:20},{wch:14},{wch:9},{wch:11},{wch:10},{wch:9},{wch:14},{wch:22}];
+    ws1['!cols']=[{wch:9},{wch:20},{wch:12},{wch:8},{wch:11},{wch:11},{wch:11},{wch:10},{wch:8},{wch:12},{wch:9},{wch:10},{wch:13},{wch:14}];
     XLSX.utils.book_append_sheet(wb, ws1, 'ריכוז');
     // גיליון 2 — פירוט יומי
     const det=[['פירוט יומי — '+fmtMonth(month)],[],
-      ['שם עובד','תאריך','יום','כניסה','יציאה להפסקה','חזרה מהפסקה','סיום משמרת','שעות','סטטוס']];
+      ['שם עובד','תאריך','יום','כניסה','יציאה להפסקה','חזרה מהפסקה','סיום משמרת','שעות','מתוכן נוספות','סטטוס']];
     r.employees.forEach(e=>{
       e.days.forEach(d=>{
         const dd=new Date(d.date+'T00:00:00');
-        if(d.sick){ det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳','','','','','','מחלה']); return; }
+        if(d.sick){ det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳','','','','','','', d.sickApproved?'מחלה מאושרת':'מחלה/היעדרות']); return; }
         det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳',
           d.inT||'', d.breakT||'', d.backT||'', d.outT||'',
-          Math.round(d.minutes/60*100)/100,
+          Math.round(d.minutes/60*100)/100, d.ot||0,
           d.complete?(d.travel?'כולל נסיעה':'תקין'):'חסר סיום']);
       });
     });
     const ws2=XLSX.utils.aoa_to_sheet(det);
-    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:13},{wch:13},{wch:11},{wch:8},{wch:13}];
+    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:13},{wch:13},{wch:11},{wch:8},{wch:11},{wch:13}];
     XLSX.utils.book_append_sheet(wb, ws2, 'פירוט יומי');
     XLSX.writeFile(wb, 'דיווח_נוכחות_'+month+'.xlsx');
     toast('קובץ האקסל הורד ✓','ok');
@@ -2335,6 +2447,13 @@ let payState = { pages: [], pdfBytes: null, adminEmps: [] };
 function fmtMonth(m){
   const mm = String(m||'').match(/^(\d{4})-(\d{2})/);
   return mm ? mm[2]+'/'+mm[1] : String(m||'');
+}
+function openBlobFile(b64, filename, mime){
+  const bin=atob(b64); const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  const url=URL.createObjectURL(new Blob([arr],{type:mime||'application/pdf'}));
+  const w=window.open(url,'_blank');
+  if(!w){ const a=document.createElement('a'); a.href=url; a.download=filename||'file'; a.click(); }
 }
 function openBlobPdf(b64, filename){
   const bin = atob(b64);
@@ -2803,7 +2922,11 @@ function openConsReview(){
       <span class="acts">${acts}</span></div>`;
   }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים בשבוע המוצג</div>');
 
-  document.getElementById('consList').innerHTML = vacsHtml + '<div style="margin-top:14px"></div>' + swapsHtml + consHtml;
+  const sickHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🤒 בקשות מחלה</div>' +
+    '<div id="sickReviewList"><div style="color:var(--muted);font-size:12.5px">טוען…</div></div>';
+
+  document.getElementById('consList').innerHTML = vacsHtml + '<div style="margin-top:14px"></div>' + swapsHtml + consHtml + sickHtml;
+  loadSickReview();
 
   document.querySelectorAll('#consList .cons-item.vac .acts button').forEach(b=>b.addEventListener('click', async ()=>{
     const it = b.closest('.cons-item');
@@ -2835,6 +2958,40 @@ function openConsReview(){
     else toast(r.error||'שגיאה','err');
   }));
   show('consOverlay');
+}
+async function loadSickReview(){
+  const box=document.getElementById('sickReviewList');
+  if(!box) return;
+  const r=await apiPost({ action:'listSick', ...mgrAuth() });
+  if(!r.ok){ box.innerHTML='<div style="color:var(--muted);font-size:12px">שגיאה בטעינה</div>'; return; }
+  const recs=r.records.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || b.from.localeCompare(a.from));
+  box.innerHTML = recs.length ? recs.map(s=>{
+    const f=new Date(s.from+'T00:00:00'), t=new Date(s.to+'T00:00:00');
+    const stCls=s.status==='מאושר'?'ok':(s.status==='נדחה'?'wait':'wait');
+    const acts = s.status==='ממתין'
+      ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
+      : `<span style="font-size:11px;color:var(--muted)">${esc(s.status)}</span>`;
+    return `<div class="cons-item sick-item" data-from="${s.from}" data-to="${s.to}" data-emp="${esc(s.employee)}">
+      <span><b>${esc(s.employee)}</b> · ${ddmm(f)}–${ddmm(t)}${s.note?' · '+esc(s.note):''}
+        <span class="st ${stCls}">${esc(s.status)}</span>
+        ${s.filename?'<button class="cert-view" style="background:none;border:0;color:#1e40af;text-decoration:underline;cursor:pointer;font-size:11.5px">📎 אישור</button>':'<span style="color:#b91c1c;font-size:11px">ללא אישור</span>'}</span>
+      <span class="acts">${acts}</span></div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות מחלה</div>';
+
+  box.querySelectorAll('.sick-item .acts button').forEach(b=>b.addEventListener('click', async ()=>{
+    const it=b.closest('.sick-item');
+    const r2=await apiPost({ action:'reviewSick', ...mgrAuth(),
+      from:it.dataset.from, to:it.dataset.to, employee:it.dataset.emp, status:b.dataset.a });
+    if(r2.ok){ toast(b.dataset.a==='מאושר'?'אושר ✓':'נדחה','ok'); loadSickReview(); }
+    else toast(r2.error||'שגיאה','err');
+  }));
+  box.querySelectorAll('.sick-item .cert-view').forEach(b=>b.addEventListener('click', async ()=>{
+    const it=b.closest('.sick-item');
+    b.textContent='טוען…';
+    const r2=await apiPost({ action:'getSickCert', ...mgrAuth(), from:it.dataset.from, employee:it.dataset.emp });
+    b.textContent='📎 אישור';
+    if(r2.ok) openBlobPdf(r2.data, r2.filename); else toast(r2.error||'שגיאה','err');
+  }));
 }
 document.getElementById('consBtn').addEventListener('click', openConsReview);
 
@@ -2936,7 +3093,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', f101:e.f101||0 })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0 })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
