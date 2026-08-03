@@ -360,6 +360,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="attBtn">⏱ נוכחות</button>
     <button class="hbtn" id="sickMgrBtn">🤒 מחלה</button>
     <button class="hbtn" id="liveBtn">📍 נוכחות</button>
+    <button class="hbtn" id="mgrPushBtn" style="background:#f0fdf4;color:#166534;font-weight:700">🔔</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -1085,7 +1086,7 @@ function demoPost(body){
   if(body.action==='listSick') return { ok:true, records:[] };
   if(body.action==='reviewSick') return { ok:true };
   if(body.action==='requestManualPunch') return { ok:true };
-  if(body.action==='savePushId') return { ok:true };
+  if(body.action==='savePushId') return { ok:true }; // push
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
   if(body.action==='publish') return { ok:true, sent:0 };
@@ -2081,17 +2082,15 @@ function showEmpHome(){
 async function initPushButton(){
   const wrap = document.getElementById('ehPushWrap');
   if(!wrap) return;
-  // הצג תמיד — ואחר כך בדוק אם כבר רשום
+  // הצג תמיד
   wrap.classList.remove('hidden');
   const btn = document.getElementById('ehPushBtn');
-
-  // בדוק אם כבר רשום (localStorage)
-  if(localStorage.getItem('sp_push_subscribed')==='1'){
-    btn.textContent='🔔 התראות פעילות ✓';
-    btn.style.background='#dcfce7'; btn.style.color='#166534';
-    btn.disabled=true;
-    return;
-  }
+  // כבר רשום?
+  const alreadySub = localStorage.getItem('sp_push_subscribed')==='1';
+  btn.textContent = alreadySub ? '🔔 התראות פעילות ✓' : '🔔 הפעל התראות Push';
+  btn.style.background = alreadySub ? '#dcfce7' : '#f0fdf4';
+  btn.disabled = alreadySub;
+  if(alreadySub) return;
 
   // אם OneSignal טעון — בדוק מצב נוכחי
   const tryOS = async()=>{
@@ -2551,6 +2550,33 @@ async function renderLive(){
     `</table>`;
 }
 document.getElementById('liveBtn').addEventListener('click', ()=>{ show('liveOverlay'); renderLive(); });
+
+/* --- Push למנהל --- */
+document.getElementById('mgrPushBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('mgrPushBtn');
+  if(localStorage.getItem('sp_push_subscribed')==='1'){
+    toast('התראות Push כבר פעילות ✓','ok'); return;
+  }
+  if(!window.OneSignalDeferred){ toast('שירות Push לא טעון','err'); return; }
+  btn.textContent='…'; btn.disabled=true;
+  OneSignalDeferred.push(async (OneSignal)=>{
+    try{
+      await OneSignal.Slidedown.promptPush();
+      await new Promise(r=>setTimeout(r,2000));
+      const id=OneSignal.User.PushSubscription.id;
+      if(id){
+        localStorage.setItem('sp_onesignal_id',id);
+        localStorage.setItem('sp_push_subscribed','1');
+        apiPost({ action:'savePushId', ...mgrAuth(), pushId:id }).catch(()=>{});
+        btn.textContent='🔔✓'; btn.style.background='#dcfce7';
+        toast('התראות הופעלו למנהל ✓','ok');
+      } else {
+        btn.textContent='🔔'; btn.disabled=false;
+        toast('לא אושרו התראות','err');
+      }
+    }catch(e){ btn.textContent='🔔'; btn.disabled=false; }
+  });
+});
 document.getElementById('liveRefresh').addEventListener('click', renderLive);
 
 /* --- הזנה ידנית (עובד) --- */
