@@ -297,6 +297,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
     <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
+    <button class="hbtn gold" id="manualPunchBtn" style="padding:6px 10px;font-size:12px">✏ הזנה</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -311,6 +312,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn" id="payBtn">🧾 תלושים</button>
     <button class="hbtn" id="attBtn">⏱ נוכחות</button>
     <button class="hbtn" id="sickMgrBtn">🤒 מחלה</button>
+    <button class="hbtn" id="liveBtn">📍 נוכחות</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -338,10 +340,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div class="eh-punch" id="ehPunch"></div>
     <div class="eh-gps" id="ehGps"></div>
     <div class="eh-next hidden" id="ehNext"></div>
-    <div id="ehSites" class="hidden" style="margin-top:12px">
-      <div style="font-weight:700;font-size:12.5px;color:var(--muted);margin-bottom:6px">📍 דיווח נוכחות באתר נוסף</div>
-      <div id="ehSitesBtns" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
+    <div id="ehSites" class="hidden" style="display:none!important"></div>
     <div class="eh-links">
       <button data-go="board"><span class="ic">📅</span>הסידור שלי</button>
       <button data-go="att"><span class="ic">📊</span>נוכחות חודשית</button>
@@ -583,12 +582,47 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       </div>
       <div class="mrow"><label>אישור מחלה (חובה — PDF או תמונה)</label><input type="file" id="sickCert" accept="application/pdf,image/*"></div>
       <div class="mrow"><label>הערה (רשות)</label><input type="text" id="sickNote" placeholder="למשל: מרפאת כללית"></div>
-      <button class="btn primary" id="sickSend" style="width:100%">שליחת בקשה לאישור מנהל</button>
+      <button class="btn primary" id="sickSend" style="width:100%">שליחת אישור מחלה</button>
       <div class="merr" id="sickErr"></div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:8px">⚠ ללא אישור מאושר, ימי ההיעדרות ייחשבו כחופשה (או היעדרות מעבר למכסה).</div>
       <div class="mrow" style="margin-top:12px"><label>הבקשות שלי</label><div id="sickList"></div></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מסך נוכחות בזמן אמת (מנהל) -->
+<div class="overlay hidden" id="liveOverlay">
+  <div class="modal wide">
+    <header><h3>📍 נוכחות בזמן אמת</h3><p>עובדים שדיווחו כניסה ועדיין לא דיווחו יציאה היום</p></header>
+    <div class="mbody"><div id="liveList">טוען…</div></div>
+    <div class="mfoot">
+      <button class="btn plain" id="liveRefresh" style="background:#dbeafe;color:#1e40af">🔄 רענן</button>
+      <span class="spacer"></span><button class="btn plain" data-close>סגירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל הזנה ידנית (עובד) -->
+<div class="overlay hidden" id="manualPunchOverlay">
+  <div class="modal">
+    <header><h3>✏ בקשת הזנת שעה ידנית</h3><p>הדיווח יישלח לאישור מנהל לפני שיירשם</p></header>
+    <div class="mbody">
+      <div class="timegrid">
+        <div class="mrow"><label>תאריך</label><input type="date" id="mpDate"></div>
+        <div class="mrow"><label>שעה</label><input type="time" id="mpTime"></div>
+      </div>
+      <div class="mrow"><label>סוג דיווח</label>
+        <select id="mpType" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px">
+          <option>כניסה</option><option>הפסקה</option><option>חזרה</option><option>יציאה</option>
+        </select></div>
+      <div class="mrow"><label>סיבה</label><input type="text" id="mpReason" placeholder="למשל: שכחתי לדווח"></div>
+      <div class="merr" id="mpErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="mpSend">שליחה לאישור מנהל</button>
+      <span class="spacer"></span><button class="btn plain" data-close>ביטול</button>
+    </div>
   </div>
 </div>
 
@@ -993,6 +1027,7 @@ function demoPost(body){
   if(body.action==='mySick') return { ok:true, records:[] };
   if(body.action==='listSick') return { ok:true, records:[] };
   if(body.action==='reviewSick') return { ok:true };
+  if(body.action==='requestManualPunch') return { ok:true };
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
   if(body.action==='publish') return { ok:true, sent:0 };
@@ -1411,6 +1446,13 @@ function empRow(e){
       <span class="lbl">תקן חופשה/חודש:</span>
       <input type="number" step="0.01" class="i-vac" value="${e.vacQuota||''}" placeholder="${e.vacMonthly||'אוטומטי'}" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"
         title="ריק = חישוב אוטומטי לפי ותק">
+      <span class="lbl">סוג:</span>
+      <select class="i-emptype" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px">
+        <option ${!e.empType||e.empType==='שעתי'?'selected':''}>שעתי</option>
+        <option ${e.empType==='חודשי'?'selected':''}>חודשי</option>
+      </select>
+      <span class="lbl" style="${e.empType!=='חודשי'?'display:none':''}">תקן שעות/חודש:</span>
+      <input type="number" class="i-monthly" value="${e.monthlyHours||''}" placeholder="186" style="width:72px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType!=='חודשי'?'display:none':''}" title="תקן שעות חודשי (עובד חודשי בלבד)">
       <span class="lbl">ערך שעה:</span>
       <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
@@ -1448,6 +1490,8 @@ document.getElementById('empOk').addEventListener('click',()=>{
              empNo: r.querySelector('.i-empno').value.trim(),
              startDate: r.querySelector('.i-start').value,
              vacQuota: Number(r.querySelector('.i-vac').value)||0,
+             empType: r.querySelector('.i-emptype').value||'שעתי',
+             monthlyHours: Number(r.querySelector('.i-monthly').value)||0,
              hourRate: Number(r.querySelector('.i-rate').value)||0,
              vacQuota: Number(r.querySelector('.i-vacq').value)||0,
              hourRate: Number(r.querySelector('.i-rate').value)||0,
@@ -1958,7 +2002,7 @@ function showEmpHome(){
   renderHomePunch();
   refreshAttToday().then(()=>{ renderHomePunch(); });
   loadNextShift();
-  loadSites();
+  /* sites removed */
   attGetPos().then(p=>{
     attState.pos = p;
     document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
@@ -2291,10 +2335,10 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
     month: document.getElementById('attMgrMonth').value });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.report.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחי נוכחות בחודש זה</div>'; return; }
-  let grossAll=0;
+  let grossAll=0, totReg=0, tot125=0, tot150=0;
   const hh = m => (m/60).toFixed(1);
   const rows = r.report.map(e=>{
-    grossAll+=e.gross;
+    grossAll+=e.gross; totReg+=(e.regHours||0); tot125+=(e.ot125||0); tot150+=(e.ot150||0);
     const noRep = !e.reported;
     return `<tr${noRep?' style="opacity:.55"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:10px">ללא דיווח</span>':''}</td>
       <td>${e.days}</td>
@@ -2303,15 +2347,82 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
       <td>${e.ot150?'<b style="color:#b91c1c">'+e.ot150+'</b>':'—'}</td>
       <td>${e.sick?e.sick:'—'}</td>
       <td>${e.vacUsed?e.vacUsed:'—'}${e.vacQuota?'<small style="color:var(--muted)">/'+e.vacQuota+'</small>':''}</td>
+      <td>${e.lateCount?'<span style="color:#9a3412;font-weight:700">'+e.lateCount+'</span>':'—'}</td>
+      <td>${e.sick?e.sick:'—'}</td>
+      <td>${e.vacUsed?e.vacUsed.toFixed(2):'—'}<small style="color:var(--muted)">/${(e.vacQuota||0).toFixed(2)}</small></td>
       <td>${e.absence?'<span style="color:#b91c1c;font-weight:700">'+e.absence+'</span>':'—'}</td>
       <td>${e.reported?'~'+e.gross.toLocaleString()+' ₪':'—'}</td></tr>`;
   }).join('');
-  box.innerHTML = `<table class="att-table">
-    <tr><th>עובד</th><th>ימים</th><th>רגילות</th><th>125%</th><th>150%</th><th>מחלה מאושרת</th><th>חופשה (מכסה)</th><th>היעדרות</th><th>ברוטו צפוי</th></tr>
+  box.innerHTML = `<div style="overflow-x:auto"><table class="att-table" style="min-width:900px;width:100%">
+    <tr><th>עובד</th><th>ימים</th><th>רגילות</th><th>125%</th><th>150%</th><th>איחורים</th><th>מחלה</th><th>חופש (מתקן)</th><th>היעדרות</th><th>ברוטו צפוי</th></tr>
     ${rows}
-    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ ברוטו</td><td colspan="7"></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
-  </table>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">שעות נוספות לפי חוק: מעל ${r.regHours} ש'/יום — 125% לשעתיים, 150% מעבר · חופשה: היעדרות (כולל מחלה ללא אישור) נספגת עד מכסה; מעבר = היעדרות · ברוטו לפי ערך שעה אישי או שכר מינימום ${r.minWage} ₪, לפני מיסים</div>`;
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${totReg}</td><td>${tot125}</td><td>${tot150}</td><td></td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+  </table></div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">חודש: ${document.getElementById('attMgrMonth').value} · נוספות מעל ${r.regHours} ש'/יום — 125% לשעתיים, 150% מעבר · חופש: מחלה ללא אישור + היעדרות נספגים בתקן · ברוטו לפי תעריף אישי או מינימום ${r.minWage} ₪</div>`;
+});
+
+/* --- מסך נוכחות בזמן אמת (מנהל) --- */
+async function renderLive(){
+  const box=document.getElementById('liveList');
+  box.innerHTML='טוען…';
+  const today=iso(new Date());
+  const r=await apiPost({ action:'myAttendance', username:'__mgr__', password:'', month:today.slice(0,7) });
+  // לוגיקת זמן אמת: קוראים דוח של כולם לחודש הנוכחי
+  const r2=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:today.slice(0,7) });
+  if(!r2.ok){ box.innerHTML=esc(r2.error||'שגיאה'); return; }
+  const now=new Date();
+  const todayStr=iso(now);
+  const emps=state.employees.filter(e=>e.active);
+  const lines=[];
+  r2.employees.forEach(emp=>{
+    const d=emp.days.find(x=>x.date===todayStr);
+    if(!d || d.sick) return;
+    const hasIn=d.inT, hasOut=d.outT;
+    if(!hasIn) return; // לא הגיע בכלל
+    const status=hasOut?'יצא':'במשמרת';
+    const breakOn=d.breakT&&!d.backT;
+    const dur=hasIn&&!hasOut?Math.round((now-new Date(todayStr+'T'+d.inT))/60000):null;
+    lines.push({name:emp.employee,dept:emp.dept,inT:d.inT,outT:d.outT||'',
+      status:breakOn?'בהפסקה':status, dur});
+  });
+  if(!lines.length){ box.innerHTML='<div style="color:var(--muted)">אין עובדים במשמרת כרגע</div>'; return; }
+  const now2=new Date().toTimeString().slice(0,5);
+  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2}</div>`+
+    `<table class="att-table"><tr><th>עובד</th><th>מחלקה</th><th>כניסה</th><th>מצב</th><th>זמן מ-כניסה</th></tr>`+
+    lines.map(l=>`<tr>
+      <td style="font-weight:700">${esc(l.name)}</td><td>${esc(l.dept)}</td>
+      <td dir="ltr">${esc(l.inT)}</td>
+      <td><span class="st ${l.status==='במשמרת'?'ok':l.status==='בהפסקה'?'wait':''}">
+        ${l.status==='יצא'?'✔ יצא':l.status==='בהפסקה'?'⏸ הפסקה':'🟢 במשמרת'}</span></td>
+      <td>${l.dur?Math.floor(l.dur/60)+'ש׳ '+(l.dur%60)+'ד׳':'—'}</td></tr>`).join('')+
+    `</table>`;
+}
+document.getElementById('liveBtn').addEventListener('click', ()=>{ show('liveOverlay'); renderLive(); });
+document.getElementById('liveRefresh').addEventListener('click', renderLive);
+
+/* --- הזנה ידנית (עובד) --- */
+document.getElementById('manualPunchBtn').addEventListener('click', ()=>{
+  document.getElementById('mpDate').value=iso(new Date());
+  document.getElementById('mpTime').value=new Date().toTimeString().slice(0,5);
+  document.getElementById('mpReason').value='';
+  document.getElementById('mpErr').textContent='';
+  show('manualPunchOverlay');
+});
+document.getElementById('mpSend').addEventListener('click', async ()=>{
+  const err=document.getElementById('mpErr');
+  const date=document.getElementById('mpDate').value;
+  const time=document.getElementById('mpTime').value;
+  const type=document.getElementById('mpType').value;
+  const reason=document.getElementById('mpReason').value.trim();
+  if(!date||!time){ err.textContent='יש לבחור תאריך ושעה'; return; }
+  if(!reason){ err.textContent='יש לציין סיבה'; return; }
+  err.textContent='שולח…';
+  const r=await apiPost({ action:'requestManualPunch', username:state.emp.username,
+    password:state.emp.pw, date, time, type, reason });
+  err.textContent='';
+  if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+  hide('manualPunchOverlay');
+  toast('הבקשה נשלחה לאישור מנהל ✓','ok');
 });
 
 /* --- אישורי מחלה (מנהל) --- */
@@ -2382,7 +2493,8 @@ document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
     return `<div style="margin-bottom:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden">
       <div style="background:var(--navy);color:#fff;padding:7px 10px;font-weight:800;font-size:13px">
         ${esc(emp.employee)}${emp.empNo?' · מס\' '+esc(emp.empNo):''}${emp.dept?' · '+esc(emp.dept):''}
-        <span style="float:left">${fmtMin(emp.totalMinutes)} ש'${emp.ot125||emp.ot150?' (נוספות '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+')':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעדרות</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
+        <span style="font-size:11px;font-weight:500;opacity:.8"> · ${fmtMonth(r.month)}</span>
+        <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
       <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
         רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.hourRate} ₪</div>
       <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th><th>נוספות</th></tr>${rows}</table>
@@ -2401,7 +2513,8 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     const month=document.getElementById('attMgrMonth').value;
     const wb=XLSX.utils.book_new();
     // גיליון 1 — ריכוז
-    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],
+    const periodStr = 'תקופת דיווח: 01/'+month.slice(5,7)+'/'+month.slice(0,4)+' — '+(new Date(month.slice(0,4),month.slice(5,7),0).getDate())+'/'+month.slice(5,7)+'/'+month.slice(0,4);
+    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[periodStr],
       ["נוספות לפי חוק: מעל "+r.regHours+" ש'/יום — 125% לשעתיים, 150% מעבר · תקן חופשה לפי ותק · מחלה ללא אישור מאושר נזקפת לחופשה"],[],
       ['מס\' עובד','שם עובד','מחלקה','ערך שעה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','חופשה','מחלה מאושרת','היעדרות','ימי עבודה','ברוטו צפוי (₪)','הערות']];
     let tReg=0,t125=0,t150=0,tGross=0;
@@ -2415,6 +2528,15 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
         e.vacUsed||0, e.sick||0, e.overAbsence||0, workDays, e.gross,
         e.days.length?'':'ללא דיווח']);
     });
+    // סיכום לפי מחלקה
+    const byDept={};
+    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0};
+      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
+      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(d=>!d.sick).length; });
+    sum.push([]); sum.push(['סיכום לפי מחלקה']);
+    sum.push(['מחלקה','ימי עבודה','שעות רגילות','125%','150%','ברוטו (₪)']);
+    Object.keys(byDept).sort().forEach(d=>{ const v=byDept[d];
+      sum.push([d, v.days, Math.round(v.reg*100)/100, Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, Math.round(v.gross*100)/100]); });
     sum.push([]); sum.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','',Math.round(tGross*100)/100]);
     const ws1=XLSX.utils.aoa_to_sheet(sum);
     ws1['!cols']=[{wch:9},{wch:20},{wch:12},{wch:8},{wch:11},{wch:11},{wch:11},{wch:10},{wch:8},{wch:12},{wch:9},{wch:10},{wch:13},{wch:14}];
