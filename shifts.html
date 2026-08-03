@@ -877,7 +877,12 @@ function addDays(isoStr, n){
   const d = new Date(isoStr+'T00:00:00'); d.setDate(d.getDate()+n); return iso(d);
 }
 function empByName(n){ return state.employees.find(e=>e.name===n); }
-function primaryOf(n){ const e=empByName(n); return e && e.depts.length ? e.depts[0] : null; }
+function primaryOf(n){
+  const e=empByName(n);
+  if(!e) return null;
+  if(e.primaryDept && e.depts.includes(e.primaryDept)) return e.primaryDept;
+  return e.depts.length ? e.depts[0] : null;
+}
 
 function unavailOf(emp, dateIso){
   const rows = state.shifts.filter(s=>s.dept===UNAVAIL && s.employee===emp && s.date===dateIso);
@@ -1485,6 +1490,7 @@ document.getElementById('empOk').addEventListener('click',()=>{
              username: r.querySelector('.i-user').value.trim(),
              skills: r.querySelector('.i-skills').value.trim(),
              rating: Number(r.querySelector('.i-rating').value)||2,
+             primaryDept: r.querySelector('.i-primary') ? r.querySelector('.i-primary').value : '',
              fixedShifts: r.querySelector('.i-fixed').value.trim(),
              email: r.querySelector('.i-email').value.trim(),
              empNo: r.querySelector('.i-empno').value.trim(),
@@ -1736,6 +1742,13 @@ function runAutoAssign(cfg, prevShifts){
         if(need<=0) return;
 
         let cands = state.employees.filter(e=>e.active && e.depts.includes(dept) && !blocked(e, di, dow, part));
+        // עדיפות: מחלקה ראשית → מחלקות משנה
+        cands.sort((a,b)=>{
+          const aP=(primaryOf(a.name)===dept)?0:1;
+          const bP=(primaryOf(b.name)===dept)?0:1;
+          if(aP!==bP) return aP-bP;
+          return 0; // שאר המיון יטופל בהמשך (שעות, דירוג)
+        });
         // מיון: מעט משמרות, אח"כ איזון בוקר/ערב, אח"כ מעט שעות
         cands.sort((a,b)=>
           (counts[a.name]||0)-(counts[b.name]||0) ||
