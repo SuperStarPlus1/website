@@ -2074,6 +2074,7 @@ function showEmpHome(){
   refreshAttToday().then(()=>{ renderHomePunch(); });
   loadNextShift();
   /* sites removed */
+  initPushButton();
   attGetPos().then(p=>{
     attState.pos = p;
     document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
