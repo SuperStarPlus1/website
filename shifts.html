@@ -2080,25 +2080,67 @@ function showEmpHome(){
 }
 async function initPushButton(){
   const wrap = document.getElementById('ehPushWrap');
-  if(!wrap || !window.OneSignalDeferred) return;
-  OneSignalDeferred.push(async (OneSignal)=>{
-    const isSubscribed = OneSignal.User.PushSubscription.optedIn;
-    if(!isSubscribed){
-      wrap.classList.remove('hidden');
-      document.getElementById('ehPushBtn').addEventListener('click', async ()=>{
+  if(!wrap) return;
+  // הצג תמיד — ואחר כך בדוק אם כבר רשום
+  wrap.classList.remove('hidden');
+  const btn = document.getElementById('ehPushBtn');
+
+  // בדוק אם כבר רשום (localStorage)
+  if(localStorage.getItem('sp_push_subscribed')==='1'){
+    btn.textContent='🔔 התראות פעילות ✓';
+    btn.style.background='#dcfce7'; btn.style.color='#166534';
+    btn.disabled=true;
+    return;
+  }
+
+  // אם OneSignal טעון — בדוק מצב נוכחי
+  const tryOS = async()=>{
+    if(!window.OneSignalDeferred) return;
+    OneSignalDeferred.push(async (OneSignal)=>{
+      try{
+        if(OneSignal.User.PushSubscription.optedIn){
+          localStorage.setItem('sp_push_subscribed','1');
+          btn.textContent='🔔 התראות פעילות ✓';
+          btn.style.background='#dcfce7'; btn.disabled=true;
+        }
+      }catch(e){}
+    });
+  };
+  tryOS();
+
+  btn.addEventListener('click', async ()=>{
+    btn.textContent='מפעיל…'; btn.disabled=true;
+    // בדוק אם רצים כ-PWA (standalone) — נדרש ב-iOS
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+    if(!isStandalone){
+      alert('להפעלת התראות: פתח את האפליקציה מהאייקון על מסך הבית (לא מהדפדפן)');
+      btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false; return;
+    }
+    if(!window.OneSignalDeferred){
+      alert('שירות ההתראות לא טעון — ודא חיבור אינטרנט ונסה שוב'); 
+      btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false; return;
+    }
+    OneSignalDeferred.push(async (OneSignal)=>{
+      try{
         await OneSignal.Slidedown.promptPush();
-        await new Promise(r=>setTimeout(r,1500));
-        const id = OneSignal.User.PushSubscription.id;
+        await new Promise(r=>setTimeout(r,2000));
+        const id=OneSignal.User.PushSubscription.id;
         if(id){
           localStorage.setItem('sp_onesignal_id', id);
-          // שלח ל-GAS לשיוך לשם העובד
-          apiPost({ action:'savePushId', username:state.emp.username,
-            password:state.emp.pw, pushId:id }).catch(()=>{});
+          localStorage.setItem('sp_push_subscribed','1');
+          apiPost({ action:'savePushId', username:state.emp?.username,
+            password:state.emp?.pw, pushId:id }).catch(()=>{});
           wrap.classList.add('hidden');
           toast('התראות הופעלו ✓','ok');
+        } else {
+          btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false;
+          toast('לא אושרו התראות — אפשר לנסות שוב','err');
         }
-      });
-    }
+      }catch(e){
+        btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false;
+        toast('שגיאה: '+(e.message||e),'err');
+      }
+    });
   });
 }
 
