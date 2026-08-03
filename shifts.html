@@ -2,7 +2,18 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1b2a4a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- iOS Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="סופרסטאר ⭐">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
 <title>סידור עבודה — סופרסטאר</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
@@ -1448,6 +1459,10 @@ function empRow(e){
       <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center" title="ריק = שכר מינימום"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
       <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <span class="lbl">מחלקה ראשית:</span>
+      <select class="i-primary" style="border:2px solid var(--gold);border-radius:8px;padding:6px 10px;font-weight:700;background:#fffdf0">
+        ${e.depts.map(d=>`<option value="${esc(d)}" ${d===(e.primaryDept||e.depts[0])?'selected':''}>${esc(d)}</option>`).join('')}
+      </select>
       <span class="lbl">תקן חופשה/חודש:</span>
       <input type="number" step="0.01" class="i-vac" value="${e.vacQuota||''}" placeholder="${e.vacMonthly||'אוטומטי'}" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"
         title="ריק = חישוב אוטומטי לפי ותק">
@@ -3332,6 +3347,38 @@ function toast(msg,cls){
   clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity=0,3000);
 }
 window.addEventListener('beforeunload',e=>{ if(hasDirty()){ e.preventDefault(); e.returnValue=''; } });
+
+/* ── Service Worker (PWA) ── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(r => console.log('SW:', r.scope))
+      .catch(e => console.warn('SW error:', e));
+  });
+}
+
+/* ── Install Banner (Android Chrome) ── */
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  const btn = document.createElement('button');
+  btn.textContent = '📲 הוסף לדף הבית';
+  btn.style.cssText = [
+    'position:fixed','bottom:72px','left:50%','transform:translateX(-50%)',
+    'z-index:9000','background:#e8a819','color:#1b2a4a','font-weight:800',
+    'font-size:14px','border:0','border-radius:99px','padding:13px 30px',
+    'box-shadow:0 4px 18px rgba(0,0,0,.3)','font-family:inherit','cursor:pointer',
+    'white-space:nowrap'
+  ].join(';');
+  btn.addEventListener('click', () => {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.finally(() => { _pwaPrompt = null; btn.remove(); });
+  });
+  document.body.appendChild(btn);
+  setTimeout(() => btn.parentNode && btn.remove(), 25000);
+});
 
 /* ============ אתחול ============ */
 (async function init(){
