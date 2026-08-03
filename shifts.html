@@ -388,12 +388,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div class="eh-punch" id="ehPunch"></div>
     <div class="eh-gps" id="ehGps"></div>
     <div class="eh-next hidden" id="ehNext"></div>
+    <div id="ehSites" class="hidden" style="display:none!important"></div>
     <div id="ehPushWrap" style="margin-top:10px">
-      <button id="ehPushBtn" style="width:100%;border:0;border-radius:12px;padding:13px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;background:#f0fdf4;color:#166534;border:1.5px solid #86efac">
+      <button id="ehPushBtn" style="width:100%;border:0;border-radius:14px;padding:16px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;background:#f0fdf4;color:#166534;border:2px solid #86efac">
         🔔 הפעל התראות Push
       </button>
     </div>
-    <div id="ehSites" class="hidden" style="display:none!important"></div>
     <div class="eh-links">
       <button data-go="board"><span class="ic">📅</span>הסידור שלי</button>
       <button data-go="att"><span class="ic">📊</span>נוכחות חודשית</button>
@@ -2110,37 +2110,42 @@ async function initPushButton(){
 
   btn.addEventListener('click', async ()=>{
     btn.textContent='מפעיל…'; btn.disabled=true;
-    // בדוק אם רצים כ-PWA (standalone) — נדרש ב-iOS
-    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
-    if(!isStandalone){
-      alert('להפעלת התראות: פתח את האפליקציה מהאייקון על מסך הבית (לא מהדפדפן)');
-      btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false; return;
-    }
-    if(!window.OneSignalDeferred){
-      alert('שירות ההתראות לא טעון — ודא חיבור אינטרנט ונסה שוב'); 
-      btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false; return;
-    }
-    OneSignalDeferred.push(async (OneSignal)=>{
-      try{
-        await OneSignal.Slidedown.promptPush();
-        await new Promise(r=>setTimeout(r,2000));
-        const id=OneSignal.User.PushSubscription.id;
-        if(id){
-          localStorage.setItem('sp_onesignal_id', id);
-          localStorage.setItem('sp_push_subscribed','1');
-          apiPost({ action:'savePushId', username:state.emp?.username,
-            password:state.emp?.pw, pushId:id }).catch(()=>{});
-          wrap.classList.add('hidden');
-          toast('התראות הופעלו ✓','ok');
-        } else {
-          btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false;
-          toast('לא אושרו התראות — אפשר לנסות שוב','err');
-        }
-      }catch(e){
+    try{
+      // בקשת הרשאה ישירה (עובד ב-iOS PWA)
+      const perm = await Notification.requestPermission();
+      if(perm!=='granted'){
         btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false;
-        toast('שגיאה: '+(e.message||e),'err');
+        toast('ההרשאה נדחתה — אפשר להפעיל ידנית בהגדרות','err'); return;
       }
-    });
+      // המתן ל-OneSignal לרשום
+      if(window.OneSignalDeferred){
+        await new Promise(res=>{
+          OneSignalDeferred.push(async (OneSignal)=>{
+            try{
+              // OneSignal v16 — opt in
+              await OneSignal.User.PushSubscription.optIn();
+              await new Promise(r=>setTimeout(r,2000));
+              const id=OneSignal.User.PushSubscription.id;
+              if(id){
+                localStorage.setItem('sp_onesignal_id',id);
+                localStorage.setItem('sp_push_subscribed','1');
+                apiPost({ action:'savePushId',
+                  username:state.emp?.username||'', password:state.emp?.pw||'',
+                  pushId:id }).catch(()=>{});
+              }
+            }catch(e){ console.warn('OS optIn:',e); }
+            res();
+          });
+        });
+      }
+      localStorage.setItem('sp_push_subscribed','1');
+      btn.textContent='🔔 התראות פעילות ✓';
+      btn.style.background='#dcfce7'; btn.disabled=true;
+      toast('התראות הופעלו ✓','ok');
+    }catch(e){
+      btn.textContent='🔔 הפעל התראות Push'; btn.disabled=false;
+      toast('שגיאה: '+(e.message||e),'err');
+    }
   });
 }
 
