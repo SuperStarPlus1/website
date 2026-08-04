@@ -9,9 +9,9 @@
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
-        appId: "346517a0-34af-40bf-b7cd-b3f98ad06d8b",   // ← תחליף אחרי ההרשמה
+        appId: "346517a0-34af-40bf-b7cd-b3f98ad06d8b",
         serviceWorkerParam: { scope: "/" },
-        serviceWorkerPath: "/OneSignalSDKWorker.js",
+        serviceWorkerPath: "/sw.js",
         notifyButton: { enable: false },   // כפתור מובנה — מכובה (יש לנו משלנו)
         allowLocalhostAsSecureOrigin: true,
         promptOptions: {
