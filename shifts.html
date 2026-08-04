@@ -1135,6 +1135,7 @@ async function load(){
     render();
     checkMyUpdates();
     if(state.emp && !state._homeShown){ state._homeShown = true; showEmpHome(); }
+    if(state.emp) retryPushSave();
   }catch(e){
     document.getElementById('board').innerHTML='';
     showErr('לא ניתן לטעון את הסידור: '+e.message+' — בדוק את כתובת GAS_URL ואת הרשאות הפריסה.');
@@ -2169,19 +2170,30 @@ async function initPushButton(){
       }
 
       // שלב 3: שמור ב-GAS
+      console.log('OneSignal ID:', osId);
+      console.log('emp:', state.emp?.name, '| user:', state.emp?.username, '| mgr:', state.mgr?.name);
       if(osId){
         localStorage.setItem('sp_onesignal_id', osId);
-        const who = state.emp || state.mgr;
-        const res = await apiPost({ action:'savePushId',
+        const payload = {
+          action:'savePushId',
           username: state.emp?.username || state.mgr?.name || '',
           password: state.emp?.pw || state.mgr?.pw || '',
           empName: state.emp?.name || state.mgr?.name || '',
-          pushId: osId });
+          pushId: osId
+        };
+        console.log('savePushId payload:', JSON.stringify({...payload, pushId:osId.slice(0,12)+'...'}));
+        const res = await apiPost(payload);
         console.log('savePushId result:', JSON.stringify(res));
-        toast('🔔 התראות Push הופעלו ✓','ok');
+        if(res.ok){
+          toast('🔔 התראות Push הופעלו ✓ ('+res.owner+')','ok');
+        } else {
+          toast('🔔 הרשאה ניתנה — שגיאת שמירה: '+(res.error||'?'),'err');
+          // שמור לניסיון מאוחר יותר
+          localStorage.setItem('sp_push_pending', osId);
+        }
       } else {
-        // גם בלי ID — ה-OneSignal ירשום ברקע בפעם הבאה
-        toast('🔔 הרשאה ניתנה ✓ (OneSignal ירשום ברקע)','ok');
+        console.warn('No OneSignal ID received after timeout');
+        toast('🔔 הרשאה ניתנה — ה-ID ייאסף בפעם הבאה','ok');
       }
       localStorage.setItem('sp_push_subscribed','1');
       btn.textContent='🔔 התראות פעילות ✓';
@@ -3532,6 +3544,23 @@ function toast(msg,cls){
   clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity=0,3000);
 }
 window.addEventListener('beforeunload',e=>{ if(hasDirty()){ e.preventDefault(); e.returnValue=''; } });
+
+/* ── ניסיון חוזר לשמירת Push ID ── */
+async function retryPushSave(){
+  const pending = localStorage.getItem('sp_push_pending');
+  if(!pending || !state.emp) return;
+  const who = state.emp;
+  try{
+    const res = await apiPost({ action:'savePushId',
+      username:who.username||'', password:who.pw||'',
+      empName:who.name||'', pushId:pending });
+    if(res.ok){
+      localStorage.removeItem('sp_push_pending');
+      localStorage.setItem('sp_onesignal_id', pending);
+      console.log('Push ID saved on retry:', res.owner);
+    }
+  }catch(e){}
+}
 
 /* ── Service Worker (PWA) ── */
 if ('serviceWorker' in navigator) {
