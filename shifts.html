@@ -2108,6 +2108,33 @@ async function initPushButton(){
   };
   tryOS();
 
+  // כפתור debug: לחיצה ארוכה (3 שניות) מאפסת רישום
+  let pressTimer;
+  btn.addEventListener('mousedown', ()=>{ pressTimer=setTimeout(async()=>{
+    localStorage.removeItem('sp_push_subscribed');
+    localStorage.removeItem('sp_onesignal_id');
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs) await r.unregister();
+    }
+    btn.textContent='🔔 הפעל התראות Push';
+    btn.style.background='#f0fdf4'; btn.disabled=false;
+    alert('איפוס Push הושלם — לחץ שוב להרשמה מחדש');
+  },3000); });
+  btn.addEventListener('mouseup',()=>clearTimeout(pressTimer));
+  btn.addEventListener('touchstart',()=>{ pressTimer=setTimeout(async()=>{
+    localStorage.removeItem('sp_push_subscribed');
+    localStorage.removeItem('sp_onesignal_id');
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs) await r.unregister();
+    }
+    btn.textContent='🔔 הפעל התראות Push';
+    btn.style.background='#f0fdf4'; btn.disabled=false;
+    alert('איפוס ✓ — פתח מחדש את האפליקציה מהאייקון ולחץ שוב');
+  },3000); });
+  btn.addEventListener('touchend',()=>clearTimeout(pressTimer));
+
   btn.addEventListener('click', async ()=>{
     btn.textContent='מבקש הרשאה…'; btn.disabled=true;
     try{
