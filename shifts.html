@@ -2175,6 +2175,7 @@ async function initPushButton(){
         const res = await apiPost({ action:'savePushId',
           username: state.emp?.username || state.mgr?.name || '',
           password: state.emp?.pw || state.mgr?.pw || '',
+          empName: state.emp?.name || state.mgr?.name || '',
           pushId: osId });
         console.log('savePushId result:', JSON.stringify(res));
         toast('🔔 התראות Push הופעלו ✓','ok');
