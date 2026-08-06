@@ -12,6 +12,7 @@
         appId: "346517a0-34af-40bf-b7cd-b3f98ad06d8b",
         serviceWorkerParam: { scope: "/" },
         serviceWorkerPath: "/sw.js",
+        autoRegister: false,
         notifyButton: { enable: false },   // כפתור מובנה — מכובה (יש לנו משלנו)
         allowLocalhostAsSecureOrigin: true,
         promptOptions: {
@@ -29,13 +30,36 @@
         }
       });
       // שמירת מזהה המשתמש לשימוש בשליחה מ-Apps Script
+      // מאזין לשינוי subscription
       OneSignal.User.PushSubscription.addEventListener("change", async (event) => {
-        if (event.current.optedIn) {
+        if (event.current.optedIn && event.current.id) {
           const id = event.current.id;
-          // שמור ב-localStorage לשיוך לשם העובד
-          if (id) localStorage.setItem('sp_onesignal_id', id);
+          localStorage.setItem('sp_onesignal_id', id);
+          console.log('OneSignal subscription changed, ID:', id);
+          // שמור מיד אם יש משתמש מחובר
+          const who = window.state?.emp || window.state?.mgr;
+          if(who && (window.apiPost)){
+            apiPost({ action:'savePushId',
+              username: state.emp?.username || state.mgr?.name || '',
+              password: state.emp?.pw || state.mgr?.pw || '',
+              empName: state.emp?.name || state.mgr?.name || '',
+              pushId: id }).then(r=>console.log('auto-saved Push ID:', r)).catch(()=>{});
+          }
         }
       });
+
+      // בדוק ID קיים בכל פתיחה
+      setTimeout(async ()=>{
+        try{
+          const id = OneSignal.User.PushSubscription.id;
+          if(id) {
+            console.log('Existing OneSignal ID on load:', id);
+            localStorage.setItem('sp_onesignal_id', id);
+            const pending = localStorage.getItem('sp_push_pending');
+            if(pending && pending !== id) localStorage.setItem('sp_push_pending', id);
+          }
+        }catch(e){}
+      }, 3000);
     });
   </script>
 
@@ -393,6 +417,11 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button id="ehPushBtn" style="width:100%;border:0;border-radius:14px;padding:16px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;background:#f0fdf4;color:#166534;border:2px solid #86efac">
         🔔 הפעל התראות Push
       </button>
+      <div style="text-align:center;margin-top:6px">
+        <button id="ehPushReset" style="border:0;background:none;color:#9ca3af;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline">
+          איפוס רישום Push
+        </button>
+      </div>
     </div>
     <div class="eh-links">
       <button data-go="board"><span class="ic">📅</span>הסידור שלי</button>
@@ -2135,6 +2164,21 @@ async function initPushButton(){
     alert('איפוס ✓ — פתח מחדש את האפליקציה מהאייקון ולחץ שוב');
   },3000); });
   btn.addEventListener('touchend',()=>clearTimeout(pressTimer));
+
+  document.getElementById('ehPushReset').addEventListener('click', async ()=>{
+    if(!confirm('לאפס את רישום ה-Push? תצטרך לאשר שוב.')) return;
+    localStorage.removeItem('sp_push_subscribed');
+    localStorage.removeItem('sp_onesignal_id');
+    localStorage.removeItem('sp_push_pending');
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const r of regs) await r.unregister();
+    }
+    const btn = document.getElementById('ehPushBtn');
+    btn.textContent='🔔 הפעל התראות Push';
+    btn.style.background='#f0fdf4'; btn.disabled=false;
+    toast('איפוס הושלם — לחץ 🔔 להרשמה מחדש','ok');
+  });
 
   btn.addEventListener('click', async ()=>{
     btn.textContent='מבקש הרשאה…'; btn.disabled=true;
