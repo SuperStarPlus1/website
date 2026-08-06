@@ -840,7 +840,15 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל אילוצים — מנהל -->
 <div class="overlay hidden" id="consOverlay">
   <div class="modal wide">
-    <header><h3>🖐 אילוצי עובדים — השבוע המוצג</h3><p>אילוצי שישי/שבת ממתינים לאישורך · אילוצי אמצע שבוע מאושרים אוטומטית</p></header>
+    <header>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <h3>🖐 בקשות ממתינות לאישור</h3>
+          <p id="consSubtitle">מוצגות רק בקשות ממתינות · אילוצי אמצע שבוע מאושרים אוטומטית</p>
+        </div>
+        <button id="consToggleHistory" class="btn plain" style="font-size:12px;padding:6px 12px;white-space:nowrap;flex-shrink:0">📋 היסטוריה</button>
+      </div>
+    </header>
     <div class="mbody"><div id="consList"></div></div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
@@ -1161,6 +1169,7 @@ async function load(){
     state.shifts = d.shifts.map(s=>({ ...s, _id:SID++ }));
     state.constraints = d.constraints || [];
     state.swaps = d.swaps || [];
+    state.swapsPending = d.swapsPending || state.swaps.filter(s=>s.status==='ממתין');
     state.vacations = d.vacations || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
@@ -3346,7 +3355,11 @@ function openConsReview(){
         <span class="acts">${acts}</span></div>`;
     }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות חופשה</div>');
 
-  const swaps = [...state.swaps].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
+  // מציג ממתינות מכל השבועות + שאר מהשבוע הנוכחי
+  const allPending = state.swapsPending || [];
+  const thisWeekSwaps = state.swaps.filter(s=>s.status!=='ממתין');
+  const swapsAll = [...allPending, ...thisWeekSwaps.filter(s=>!allPending.find(p=>p.date===s.date&&p.requester===s.requester))];
+  const swaps = swapsAll.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1)||a.date.localeCompare(b.date));
   const swapsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🔁 בקשות החלפה</div>' +
     (swaps.length ? swaps.map(s=>{
       const d = new Date(s.date+'T00:00:00');
