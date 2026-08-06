@@ -270,6 +270,17 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .eh-links button span.ic{font-size:22px}
 .eh-links button:active{background:#f1f5f9}
 
+
+/* תפריטי מנהל */
+.mgr-menu{position:relative;display:inline-block}
+.mgr-menu-btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:7px 12px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.mgr-menu-btn:after{content:'▾';font-size:10px;opacity:.7}
+.mgr-menu-btn.active:after{content:'▴'}
+.mgr-dropdown{display:none;position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(27,42,74,.15);min-width:160px;z-index:200;padding:4px}
+.mgr-dropdown.open{display:block}
+.mgr-dropdown button{display:block;width:100%;text-align:right;border:0;background:none;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:7px;color:var(--navy)}
+.mgr-dropdown button:hover{background:#f1f5f9}
+.mgr-dropdown hr{border:0;border-top:1px solid var(--line);margin:3px 0}
 /* נוכחות */
 .att-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .att-btns button{border:0;border-radius:12px;padding:16px 8px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
@@ -373,18 +384,38 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
   <!-- מצב מנהל -->
   <span id="adminTools" class="hidden">
-    <button class="hbtn" id="empMgr">👥 עובדים</button>
-    <button class="hbtn" id="copyPrev">⧉ העתק משבוע קודם</button>
-    <button class="hbtn" id="autoBtn">🪄 שיבוץ אוטומטי</button>
-    <button class="hbtn" id="consBtn">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
-    <button class="hbtn" id="resetBtn">🗑 איפוס</button>
-    <button class="hbtn" id="publishBtn">📣 פרסום</button>
-    <button class="hbtn" id="msgBtn">✉ הודעה</button>
-    <button class="hbtn" id="payBtn">🧾 תלושים</button>
-    <button class="hbtn" id="attBtn">⏱ נוכחות</button>
-    <button class="hbtn" id="sickMgrBtn">🤒 מחלה</button>
-    <button class="hbtn" id="liveBtn">📍 נוכחות</button>
-    <button class="hbtn" id="mgrPushBtn" style="background:#f0fdf4;color:#166534;font-weight:700">🔔</button>
+    <!-- תפריט 1: נוכחות -->
+    <div class="mgr-menu" id="menuAtt">
+      <button class="mgr-menu-btn" id="menuAttBtn">📍 נוכחות</button>
+      <div class="mgr-dropdown" id="menuAttDrop">
+        <button id="liveBtn">📍 בזמן אמת</button>
+        <button id="attBtn">⏱ דוח חודשי</button>
+        <button id="sickMgrBtn">🤒 אישורי מחלה</button>
+        <hr>
+        <button id="consBtn">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
+      </div>
+    </div>
+    <!-- תפריט 2: סידור -->
+    <div class="mgr-menu" id="menuSched">
+      <button class="mgr-menu-btn" id="menuSchedBtn">📅 סידור</button>
+      <div class="mgr-dropdown" id="menuSchedDrop">
+        <button id="autoBtn">🪄 שיבוץ אוטומטי</button>
+        <button id="copyPrev">⧉ העתק משבוע קודם</button>
+        <button id="publishBtn">📣 פרסום</button>
+        <button id="resetBtn">🗑 איפוס</button>
+      </div>
+    </div>
+    <!-- תפריט 3: אדמין -->
+    <div class="mgr-menu" id="menuAdmin">
+      <button class="mgr-menu-btn" id="menuAdminBtn">⚙ אדמין</button>
+      <div class="mgr-dropdown" id="menuAdminDrop">
+        <button id="empMgr">👥 עובדים</button>
+        <button id="msgBtn">✉ הודעה</button>
+        <button id="payBtn">🧾 תלושים</button>
+        <button id="mgrPushBtn2" style="color:#166534">🔔 Push</button>
+      </div>
+    </div>
+    <button class="hbtn" id="mgrPushBtn" style="display:none">🔔</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
@@ -1125,6 +1156,7 @@ function demoPost(body){
   if(body.action==='reviewSick') return { ok:true };
   if(body.action==='requestManualPunch') return { ok:true };
   if(body.action==='reviewManualPunch') return { ok:true };
+  if(body.action==='getSettings') return { ok:true, storeLocation:'32.9186,35.2952', radius:150 };
   if(body.action==='savePushId') return { ok:true }; // push
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
@@ -1877,6 +1909,28 @@ function runAutoAssign(cfg, prevShifts){
   return { created, issues };
 }
 
+/* ============ תפריטי מנהל ============ */
+['menuAttBtn','menuSchedBtn','menuAdminBtn'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', e=>{
+    e.stopPropagation();
+    const drop = id.replace('Btn','Drop');
+    const isOpen = document.getElementById(drop).classList.contains('open');
+    // סגור כולם
+    document.querySelectorAll('.mgr-dropdown').forEach(d=>d.classList.remove('open'));
+    document.querySelectorAll('.mgr-menu-btn').forEach(b=>b.classList.remove('active'));
+    if(!isOpen){
+      document.getElementById(drop).classList.add('open');
+      document.getElementById(id).classList.add('active');
+    }
+  });
+});
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.mgr-dropdown').forEach(d=>d.classList.remove('open'));
+  document.querySelectorAll('.mgr-menu-btn').forEach(b=>b.classList.remove('active'));
+});
+// כפתור Push מהתפריט
+document.getElementById('mgrPushBtn2').addEventListener('click', ()=>document.getElementById('mgrPushBtn').click());
+
 /* ============ הודעה מרוכזת לעובדים ============ */
 async function openMsg(){
   // שליפת אימיילים (מנהל) כדי לדעת למי אפשר לשלוח
@@ -2118,6 +2172,12 @@ function showEmpHome(){
   initPushButton();
   attGetPos().then(p=>{
     attState.pos = p;
+    // טען מיקום חנות מה-GAS settings
+    if(!attState.storePos){
+      apiPost({action:'getSettings',...(state.emp?{username:state.emp.username,password:state.emp.pw}:{})}).then(r=>{
+        if(r && r.storeLocation){ const loc=r.storeLocation.split(','); if(loc.length>=2&&Number(loc[0])) attState.storePos={lat:Number(loc[0]),lng:Number(loc[1])}; }
+      }).catch(()=>{});
+    }
     document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
   });
 }
