@@ -3343,9 +3343,12 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 // --- מנהל ---
 function openConsReview(){
   const vacs = [...state.vacations].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
+  const showAll = state._showAllRequests;
   const fmtR = v => ddmm(new Date(v.from+'T00:00:00'))+' – '+ddmm(new Date(v.to+'T00:00:00'));
+  // חופשות: רק ממתינות (או הכל בהיסטוריה)
+  const vacsFiltered = showAll ? vacs : vacs.filter(v=>v.status==='ממתין');
   const vacsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🏖 בקשות חופשה</div>' +
-    (vacs.length ? vacs.map(v=>{
+    (vacsFiltered.length ? vacsFiltered.map(v=>{
       const acts = v.status==='ממתין'
         ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
         : `<button class="dl2" data-a="מחק">מחיקה</button>`;
@@ -3353,13 +3356,14 @@ function openConsReview(){
         <span><b>${esc(v.employee)}</b> · ${fmtR(v)} · ${esc(v.reason)}
           <span class="st ${v.status==='ממתין'?'wait':'ok'}">${esc(v.status)}</span></span>
         <span class="acts">${acts}</span></div>`;
-    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות חופשה</div>');
+    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות חופשה ממתינות</div>');
 
-  // מציג ממתינות מכל השבועות + שאר מהשבוע הנוכחי
+  // החלפות: ממתינות מכל השבועות (או הכל בהיסטוריה)
   const allPending = state.swapsPending || [];
   const thisWeekSwaps = state.swaps.filter(s=>s.status!=='ממתין');
   const swapsAll = [...allPending, ...thisWeekSwaps.filter(s=>!allPending.find(p=>p.date===s.date&&p.requester===s.requester))];
-  const swaps = swapsAll.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1)||a.date.localeCompare(b.date));
+  const swapsFiltered = showAll ? swapsAll : swapsAll.filter(s=>s.status==='ממתין');
+  const swaps = swapsFiltered.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1)||a.date.localeCompare(b.date));
   const swapsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🔁 בקשות החלפה</div>' +
     (swaps.length ? swaps.map(s=>{
       const d = new Date(s.date+'T00:00:00');
@@ -3373,9 +3377,11 @@ function openConsReview(){
         <span><b>${esc(s.requester)}</b> ⇄ <b>${esc(s.target)}</b> · ${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(s.dept)} ${esc(s.start)}–${esc(s.end)}
           <span class="st ${s.status==='ממתין'?'wait':'ok'}">${esc(s.status)}</span>${warn}</span>
         <span class="acts">${acts}</span></div>`;
-    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות החלפה</div>');
+    }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות החלפה ממתינות</div>');
 
-  const list = [...state.constraints].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
+  // אילוצים: רק ממתינות (או הכל בהיסטוריה)
+  const allCons = [...state.constraints].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
+  const list = showAll ? allCons : allCons.filter(c=>c.status==='ממתין');
   const consHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🖐 אילוצים</div>' +
     (list.length ? list.map(c=>{
     const d = new Date(c.date+'T00:00:00');
@@ -3386,7 +3392,7 @@ function openConsReview(){
       <span><b>${esc(c.employee)}</b> · ${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(c.part)}
         <span class="st ${c.status==='ממתין'?'wait':'ok'}">${esc(c.status)}</span></span>
       <span class="acts">${acts}</span></div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים בשבוע המוצג</div>');
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים ממתינים</div>');
 
   const sickHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🤒 בקשות מחלה</div>' +
     '<div id="sickReviewList"><div style="color:var(--muted);font-size:12.5px">טוען…</div></div>';
@@ -3430,7 +3436,8 @@ async function loadSickReview(){
   if(!box) return;
   const r=await apiPost({ action:'listSick', ...mgrAuth() });
   if(!r.ok){ box.innerHTML='<div style="color:var(--muted);font-size:12px">שגיאה בטעינה</div>'; return; }
-  const recs=r.records.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || b.from.localeCompare(a.from));
+  const recsAll=r.records.sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || b.from.localeCompare(a.from));
+  const recs = state._showAllRequests ? recsAll : recsAll.filter(s=>s.status==='ממתין');
   box.innerHTML = recs.length ? recs.map(s=>{
     const f=new Date(s.from+'T00:00:00'), t=new Date(s.to+'T00:00:00');
     const stCls=s.status==='מאושר'?'ok':(s.status==='נדחה'?'wait':'wait');
