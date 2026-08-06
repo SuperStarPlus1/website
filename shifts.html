@@ -728,6 +728,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
           <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">סיכום</button>
           <button class="btn plain" id="attMgrDetailed" style="padding:8px 16px">📋 מפורט</button>
           <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
+          <button class="btn plain" id="attMgrManual" style="padding:8px 16px;background:#fef3c7;color:#92400e;font-weight:700">✏ ממתינות</button>
         </div>
       </div>
       <div id="attMgrReport"></div>
@@ -1115,6 +1116,7 @@ function demoPost(body){
   if(body.action==='listSick') return { ok:true, records:[] };
   if(body.action==='reviewSick') return { ok:true };
   if(body.action==='requestManualPunch') return { ok:true };
+  if(body.action==='reviewManualPunch') return { ok:true };
   if(body.action==='savePushId') return { ok:true }; // push
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
@@ -2696,6 +2698,7 @@ document.getElementById('manualPunchBtn').addEventListener('click', ()=>{
 });
 document.getElementById('mpSend').addEventListener('click', async ()=>{
   const err=document.getElementById('mpErr');
+  if(!state.emp){ err.textContent='הזנה ידנית זמינה לעובדים בלבד — כנס כעובד'; return; }
   const date=document.getElementById('mpDate').value;
   const time=document.getElementById('mpTime').value;
   const type=document.getElementById('mpType').value;
@@ -2786,6 +2789,48 @@ document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
       <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th><th>נוספות</th></tr>${rows}</table>
     </div>`;
   }).join('');
+});
+
+/* --- הזנות ידניות ממתינות --- */
+document.getElementById('attMgrManual').addEventListener('click', async ()=>{
+  const box=document.getElementById('attMgrReport');
+  box.innerHTML='טוען…';
+  const month=document.getElementById('attMgrMonth').value;
+  const r=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  // סנן רק "ממתין לאישור"
+  const pending=[];
+  (r.employees||[]).forEach(emp=>{
+    (emp.days||[]).forEach(d=>{
+      (d.events||[]).filter(e=>e.status==='ממתין לאישור').forEach(e=>{
+        pending.push({employee:emp.employee, date:d.date, type:e.type, time:e.time, note:e.note||''});
+      });
+    });
+  });
+  if(!pending.length){ box.innerHTML='<div style="color:var(--muted);padding:10px">אין הזנות ידניות ממתינות לאישור</div>'; return; }
+  box.innerHTML=`<table class="att-table">
+    <tr><th>עובד</th><th>תאריך</th><th>סוג</th><th>שעה</th><th>סיבה</th><th>פעולה</th></tr>
+    ${pending.map((p,i)=>`<tr>
+      <td style="font-weight:700">${esc(p.employee)}</td>
+      <td dir="ltr">${esc(p.date)}</td>
+      <td>${esc(p.type)}</td>
+      <td dir="ltr"><b>${esc(p.time)}</b></td>
+      <td style="font-size:11px;color:var(--muted)">${esc(p.note.replace('הזנה ידנית - ',''))}</td>
+      <td>
+        <button class="ap man-ok" data-i="${i}" data-e="${esc(p.employee)}" data-d="${esc(p.date)}" data-t="${esc(p.time)}">אשר</button>
+        <button class="rj man-no" data-i="${i}" data-e="${esc(p.employee)}" data-d="${esc(p.date)}" data-t="${esc(p.time)}">דחה</button>
+      </td></tr>`).join('')}
+  </table>`;
+  const review=async(btn,approved)=>{
+    const r2=await apiPost({ action:'reviewManualPunch', ...mgrAuth(),
+      employee:btn.dataset.e, date:btn.dataset.d, time:btn.dataset.t, approved });
+    if(!r2.ok){ toast(r2.error||'שגיאה','err'); return; }
+    toast(approved?'אושר ✓':'נדחה','ok');
+    btn.closest('tr').style.opacity='0.4';
+    btn.closest('td').innerHTML=approved?'<span style="color:green">✓ אושר</span>':'<span style="color:red">✗ נדחה</span>';
+  };
+  box.querySelectorAll('.man-ok').forEach(b=>b.addEventListener('click',()=>review(b,true)));
+  box.querySelectorAll('.man-no').forEach(b=>b.addEventListener('click',()=>review(b,false)));
 });
 
 document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
