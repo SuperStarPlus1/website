@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <!-- OneSignal Push Notifications -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
@@ -77,8 +77,8 @@
 <title>סידור עבודה — סופרסטאר</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
 <style>
 :root{
   --navy:#1b2a4a; --navy-2:#233763; --gold:#e8a819;
@@ -281,15 +281,6 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-dropdown button{display:block;width:100%;text-align:right;border:0;background:none;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:7px;color:var(--navy)}
 .mgr-dropdown button:hover{background:#f1f5f9}
 .mgr-dropdown hr{border:0;border-top:1px solid var(--line);margin:3px 0}
-
-/* כרטיס עובד */
-#empCard .chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
-#empCard .i-name,#empCard .i-user,#empCard .i-pw,#empCard .i-email{
-  width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;
-  font-family:inherit;font-size:14px;box-sizing:border-box}
-#empCard .lbl{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
-#empCard .sec-title{font-weight:800;font-size:13px;color:var(--navy);
-  margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 /* נוכחות */
 .att-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .att-btns button{border:0;border-radius:12px;padding:16px 8px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
@@ -498,11 +489,6 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" name="password" autocomplete="current-password"></div>
         <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
           <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
-        <div style="text-align:left;margin-top:6px">
-          <button id="lgForgot" type="button" style="border:0;background:none;color:#2563eb;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">
-            שכחתי סיסמה
-          </button>
-        </div>
       </div>
       <div class="merr" id="lgErr"></div>
     </div>
@@ -563,54 +549,14 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <!-- מודאל ניהול עובדים -->
 <div class="overlay hidden" id="empOverlay">
-  <div class="modal wide" style="max-height:92vh;display:flex;flex-direction:column">
-    <header style="flex-shrink:0">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <h3 style="margin:0">👥 ניהול עובדים</h3>
-        <select id="empSelector" style="flex:1;min-width:180px;border:1.5px solid var(--gold);border-radius:9px;padding:7px 10px;font-family:inherit;font-weight:700;font-size:14px;background:#fffdf0">
-          <option value="">— בחר עובד —</option>
-        </select>
-        <button class="btn plain" id="empAdd" style="background:#dbeafe;color:#1e40af;font-weight:700;white-space:nowrap">+ חדש</button>
-      </div>
-    </header>
-    <div class="mbody" style="flex:1;overflow-y:auto;padding-top:8px">
-      <!-- כרטיס עובד -->
-      <div id="empCard" class="hidden">
-        <!-- תמונה + שם -->
-        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">
-          <div style="position:relative;flex-shrink:0">
-            <div id="empAvatarWrap" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:#e2e8f0;border:3px solid var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center">
-              <img id="empAvatarImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
-              <span id="empAvatarInit" style="font-size:28px;font-weight:800;color:var(--navy)"></span>
-            </div>
-            <input type="file" id="empAvatarFile" accept="image/*" style="display:none">
-            <div style="text-align:center;font-size:10px;color:var(--muted);margin-top:3px">לחץ לתמונה</div>
-          </div>
-          <div style="flex:1">
-            <div id="empCardName" style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px"></div>
-            <div id="empCardDept" style="font-size:13px;color:var(--muted);margin-bottom:6px"></div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <span id="empCardType" class="chip"></span>
-              <span id="empCardActive" class="chip"></span>
-            </div>
-          </div>
-        </div>
-        <!-- שדות -->
-        <div id="empList" style="display:block"></div>
-        <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn primary" id="empOk" style="flex:1">💾 שמור</button>
-          <button class="btn plain" id="empDelete" style="background:#fee2e2;color:#b91c1c;font-weight:700">🗑 מחק</button>
-        </div>
-      </div>
-      <!-- ריק -->
-      <div id="empCardEmpty" style="text-align:center;padding:40px;color:var(--muted)">
-        <div style="font-size:40px;margin-bottom:12px">👥</div>
-        <div>בחר עובד מהרשימה למעלה</div>
-        <div style="font-size:12px;margin-top:6px">או לחץ <b>+ חדש</b> להוספת עובד</div>
-      </div>
+  <div class="modal wide">
+    <header><h3>ניהול עובדים</h3><p>שם מלא · שם משתמש (לכניסה) · סיסמה · מחלקות · ימי חופש קבועים</p></header>
+    <div class="mbody"><div class="emp-list" id="empList"></div>
+      <button class="btn plain" id="empAdd" style="margin-top:12px">+ עובד חדש</button>
     </div>
-    <div class="mfoot" style="flex-shrink:0">
-      <button class="btn plain" data-close>סגירה</button>
+    <div class="mfoot">
+      <button class="btn primary" id="empOk">אישור</button>
+      <button class="btn plain" data-close>ביטול</button>
     </div>
   </div>
 </div>
@@ -872,39 +818,6 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
-<!-- מודאל איפוס סיסמה -->
-<div class="overlay hidden" id="otpOverlay">
-  <div class="modal">
-    <header><h3>🔑 איפוס סיסמה</h3><p>הזן שם משתמש ותקבל קוד לאימייל שלך</p></header>
-    <div class="mbody">
-      <div id="otpStep1">
-        <div class="mrow"><label>שם משתמש</label>
-          <input type="text" id="otpUser" autocomplete="username" placeholder="שם המשתמש שלך"></div>
-        <button class="btn primary" id="otpSend" style="width:100%">📧 שלח קוד לאימייל</button>
-      </div>
-      <div id="otpStep2" class="hidden">
-        <div class="mrow" style="background:#f0fdf4;border-radius:8px;padding:8px 12px;font-size:13px;color:#166534">
-          ✅ קוד נשלח לאימייל שלך · תקף 15 דקות
-          <div id="otpHint" style="font-size:11px;color:#6b7280;margin-top:2px"></div>
-        </div>
-        <div class="mrow"><label>קוד מהמייל (6 ספרות)</label>
-          <input type="text" id="otpCode" inputmode="numeric" maxlength="6" placeholder="123456"
-            style="font-size:22px;letter-spacing:6px;text-align:center"></div>
-        <div class="mrow"><label>סיסמה חדשה</label>
-          <input type="password" id="otpNewPw" autocomplete="new-password" placeholder="לפחות 4 תווים"></div>
-        <div class="mrow"><label>אישור סיסמה</label>
-          <input type="password" id="otpConfPw" autocomplete="new-password" placeholder="הזן שוב"></div>
-        <button class="btn primary" id="otpVerify" style="width:100%">✅ אפס סיסמה</button>
-        <div style="text-align:center;margin-top:8px">
-          <button id="otpResend" style="border:0;background:none;color:#6b7280;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">לא קיבלתי — שלח שוב</button>
-        </div>
-      </div>
-      <div class="merr" id="otpErr" style="margin-top:8px"></div>
-    </div>
-    <div class="mfoot"><button class="btn plain" data-close>ביטול</button></div>
-  </div>
-</div>
-
 <!-- מודאל החלפת סיסמה (כניסה ראשונה) -->
 <div class="overlay hidden" id="pwcOverlay">
   <div class="modal">
@@ -990,7 +903,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzEGWUf6fz5U3xpob0sz2YSPDP8N_vDdXzhNhU8uHx8aOU6imVle3PTrmAQvAk4rXYr/exec';
+const GAS_URL = '';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1234,7 +1147,10 @@ function demoPost(body){
   if(body.action==='deletePayslip') return { ok:true };
   if(body.action==='punch') return { ok:true, time:'08:03', status:'תקין', dist:42 };
   if(body.action==='myAttendance') return { ok:true, days:[], totalMinutes:0, minWage:35.40, gross:0 };
-  if(body.action==='attendanceReport') return { ok:true, report:[], minWage:35.40 };
+  if(body.action==='attendanceReport') return { ok:true, minWage:35.40, regHours:8.6, report:[
+    {employee:'פאתן בקרי',dept:'קופה',days:21,regHours:172,ot125:3.5,ot150:0,sick:0,vacQuota:1,vacUsed:0,absence:0,flags:1,lateCount:2,reported:true,gross:6100},
+    {employee:'רנא מנאע',dept:'ירקות',days:18,regHours:145,ot125:0,ot150:0,sick:2,vacQuota:1,vacUsed:1,absence:0,flags:0,lateCount:0,reported:true,gross:5133},
+    {employee:'חמדה סואעד',dept:'ניקיון',days:0,regHours:0,ot125:0,ot150:0,sick:0,vacQuota:1,vacUsed:0,absence:0,flags:0,lateCount:0,reported:false,gross:0}]};
   if(body.action==='listSites') return { ok:true, sites:[] };
   if(body.action==='punchSite') return { ok:true, time:'10:15', status:'תקין', travelMin:25 };
   if(body.action==='reportSick') return { ok:true };
@@ -1244,8 +1160,6 @@ function demoPost(body){
   if(body.action==='requestManualPunch') return { ok:true };
   if(body.action==='reviewManualPunch') return { ok:true };
   if(body.action==='getSettings') return { ok:true, storeLocation:'32.9186,35.2952', radius:150 };
-  if(body.action==='sendOtp') return { ok:true, hint:'te***@gmail.com' };
-  if(body.action==='verifyOtp') return { ok:true };
   if(body.action==='savePushId') return { ok:true }; // push
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
@@ -1606,39 +1520,27 @@ document.getElementById('rowOk').addEventListener('click',()=>{
 
 /* ============ ניהול עובדים ============ */
 async function openEmpMgr(){
+  // מנהל מחובר — נטען סיסמאות עובדים מהשרת
   if(!state.demo){
     try{
       const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
       if(r.ok){
         r.employees.forEach(se=>{
           const local = empByName(se.name);
-          if(local){ local.password=se.password; local.username=se.username||'';
-            local.rating=se.rating||2; local.fixedShifts=se.fixedShifts||''; local.email=se.email||'';
-            local.empNo=se.empNo||''; local.vacQuota=se.vacQuota||0; local.hourRate=se.hourRate||0;
-            local.empType=se.empType||'שעתי'; local.monthlyHours=se.monthlyHours||0;
-            local.primaryDept=se.primaryDept||''; local.startDate=se.startDate||'';
-            local.avatar=se.avatar||''; }
+          if(local){ local.password = se.password; local.username = se.username||'';
+            local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; local.email = se.email||'';
+            local.empNo = se.empNo||''; local.vacQuota = se.vacQuota||0; local.hourRate = se.hourRate||0; }
           else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
             active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
             username:se.username||'', skills:se.skills||'', rating:se.rating||2,
-            fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
-            vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
-            monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'', startDate:se.startDate||'' });
+            fixedShifts:se.fixedShifts||'', email:se.email||'' });
         });
       }
-    }catch(e){ toast('לא נטענו נתוני עובדים: '+e.message,'err'); }
+    }catch(e){ toast('לא נטענו סיסמאות עובדים: '+e.message,'err'); }
   }
-  // מלא selector
-  const sel = document.getElementById('empSelector');
-  sel.innerHTML = '<option value="">— בחר עובד —</option>';
-  state.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach((e,i)=>{
-    const opt = document.createElement('option');
-    opt.value = e.name;
-    opt.textContent = e.name + (e.primaryDept ? ' · ' + e.primaryDept : '');
-    sel.appendChild(opt);
-  });
-  document.getElementById('empCard').classList.add('hidden');
-  document.getElementById('empCardEmpty').classList.remove('hidden');
+  const list = document.getElementById('empList');
+  list.innerHTML='';
+  state.employees.forEach(e=>list.appendChild(empRow(e)));
   show('empOverlay');
 }
 function empRow(e){
@@ -1707,66 +1609,12 @@ function empRow(e){
   }));
   return div;
 }
-/* === ניהול עובדים — כרטיס === */
-let _currentEmp = null;
-
-function loadEmpCard(empName){
-  const e = empName ? state.employees.find(x=>x.name===empName) : null;
-  _currentEmp = e || {name:'',depts:[state.departments[0]||''],offDays:[],password:'',active:true};
-  const card = document.getElementById('empCard');
-  const empty = document.getElementById('empCardEmpty');
-  card.classList.remove('hidden');
-  empty.classList.add('hidden');
-  // עדכן פרטים בכרטיס
-  document.getElementById('empCardName').textContent = e ? e.name : 'עובד חדש';
-  document.getElementById('empCardDept').textContent = e ? (e.primaryDept||e.depts?.[0]||'') : '';
-  document.getElementById('empCardType').textContent = e ? (e.empType||'שעתי') : 'שעתי';
-  document.getElementById('empCardType').className = 'chip ' + (e?.empType==='חודשי'?'ok':'');
-  document.getElementById('empCardActive').textContent = e?.active===false ? '❌ לא פעיל' : '✅ פעיל';
-  // תמונה
-  const img = document.getElementById('empAvatarImg');
-  const init = document.getElementById('empAvatarInit');
-  if(e?.avatar){ img.src=e.avatar; img.style.display='block'; init.style.display='none'; }
-  else{ img.style.display='none'; init.style.display=''; init.textContent=(_currentEmp.name||'?').charAt(0); }
-  // שדות
-  const list = document.getElementById('empList');
-  list.innerHTML='';
-  const row = empRow(_currentEmp);
-  list.appendChild(row);
-}
-
-// selector
-document.getElementById('empSelector').addEventListener('change', e=>{
-  const name = e.target.value;
-  if(!name){ document.getElementById('empCard').classList.add('hidden'); document.getElementById('empCardEmpty').classList.remove('hidden'); return; }
-  loadEmpCard(name);
-});
-
-// כפתור + חדש
 document.getElementById('empAdd').addEventListener('click',()=>{
-  document.getElementById('empSelector').value='';
-  loadEmpCard(null);
-  document.getElementById('empCardName').textContent='עובד חדש';
-});
-
-// תמונה — לחיצה על אווטאר
-document.getElementById('empAvatarWrap').addEventListener('click',()=>document.getElementById('empAvatarFile').click());
-document.getElementById('empAvatarFile').addEventListener('change', e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    const src = ev.target.result;
-    document.getElementById('empAvatarImg').src=src;
-    document.getElementById('empAvatarImg').style.display='block';
-    document.getElementById('empAvatarInit').style.display='none';
-    if(_currentEmp) _currentEmp.avatar=src;
-  };
-  reader.readAsDataURL(file);
+  document.getElementById('empList').appendChild(empRow({name:'',depts:[],offDays:[],password:''}));
 });
 document.getElementById('empOk').addEventListener('click',()=>{
   const rows = [...document.querySelectorAll('#empList .emp-item')];
-  const updated = rows.map(r=>{
+  state.employees = rows.map(r=>{
     const depts = [...r.querySelectorAll('.dchip.dept.active')].map(c=>c.dataset.d);
     if(!depts.length) depts.push(state.departments[0]);
     const offDays = [...r.querySelectorAll('.dchip.day')].filter(c=>c.dataset.part)
@@ -1789,33 +1637,8 @@ document.getElementById('empOk').addEventListener('click',()=>{
              hourRate: Number(r.querySelector('.i-rate').value)||0,
              f101: Number(r.querySelector('.i-f101').value)||0 };
   }).filter(e=>e.name);
-  if(updated.length){
-    const upd = updated[0];
-    const existing = state.employees.findIndex(x=>x.name===(_currentEmp?.name||''));
-    if(existing>=0) state.employees[existing]={...state.employees[existing],...upd};
-    else state.employees.push(upd);
-    // עדכן selector
-    const sel=document.getElementById('empSelector');
-    const exists=[...sel.options].find(o=>o.value===upd.name);
-    if(!exists){ const opt=document.createElement('option'); opt.value=upd.name; opt.textContent=upd.name+(upd.primaryDept?' · '+upd.primaryDept:''); sel.appendChild(opt); }
-    sel.value=upd.name;
-    loadEmpCard(upd.name);
-  }
   state.dirtyEmps = true;
-  toast('נשמר ✓','ok'); render();
-});
-
-// מחיקת עובד
-document.getElementById('empDelete').addEventListener('click',()=>{
-  if(!_currentEmp?.name) return;
-  if(!confirm('למחוק את '+_currentEmp.name+'? הפעולה לא ניתנת לביטול.')) return;
-  state.employees = state.employees.filter(e=>e.name!==_currentEmp.name);
-  const sel=document.getElementById('empSelector');
-  [...sel.options].filter(o=>o.value===_currentEmp.name).forEach(o=>sel.removeChild(o));
-  sel.value='';
-  document.getElementById('empCard').classList.add('hidden');
-  document.getElementById('empCardEmpty').classList.remove('hidden');
-  state.dirtyEmps=true; toast('נמחק ✓','ok'); render();
+  hide('empOverlay'); render();
 });
 
 /* ============ ניהול מנהלים (אדמין) ============ */
@@ -2111,21 +1934,6 @@ document.addEventListener('click', ()=>{
 // כפתור Push מהתפריט
 document.getElementById('mgrPushBtn2').addEventListener('click', ()=>document.getElementById('mgrPushBtn').click());
 
-/* --- toggle היסטוריה בחלון בקשות --- */
-document.addEventListener('DOMContentLoaded', ()=>{
-  const togBtn = document.getElementById('consToggleHistory');
-  if(togBtn) togBtn.addEventListener('click', ()=>{
-    state._showAllRequests = !state._showAllRequests;
-    togBtn.textContent = state._showAllRequests ? '⏳ ממתינות בלבד' : '📋 היסטוריה';
-    const sub = document.getElementById('consSubtitle');
-    if(sub) sub.textContent = state._showAllRequests
-      ? 'מוצגות כל הבקשות כולל היסטוריה'
-      : 'מוצגות רק בקשות ממתינות לאישור';
-    renderConsOverlay();
-    loadSickReview();
-  });
-});
-
 /* ============ הודעה מרוכזת לעובדים ============ */
 async function openMsg(){
   // שליפת אימיילים (מנהל) כדי לדעת למי אפשר לשלוח
@@ -2205,57 +2013,6 @@ document.getElementById('msgWelcome').addEventListener('click', async ()=>{
   hide('msgOverlay');
   toast('נשלחו '+r.sent+' הודעות Welcome ✓','ok');
   if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
-});
-
-/* ============ איפוס סיסמה (OTP) ============ */
-document.getElementById('lgForgot').addEventListener('click', ()=>{
-  const user = document.getElementById('lgEmpUser').value.trim();
-  document.getElementById('otpUser').value = user;
-  document.getElementById('otpStep1').classList.remove('hidden');
-  document.getElementById('otpStep2').classList.add('hidden');
-  document.getElementById('otpErr').textContent = '';
-  document.getElementById('otpCode').value = '';
-  document.getElementById('otpNewPw').value = '';
-  document.getElementById('otpConfPw').value = '';
-  show('otpOverlay');
-});
-
-async function sendOtp(){
-  const err = document.getElementById('otpErr');
-  const user = document.getElementById('otpUser').value.trim();
-  if(!user){ err.textContent = 'הזן שם משתמש'; return; }
-  err.textContent = 'שולח קוד…';
-  const r = await apiPost({ action:'sendOtp', username:user });
-  err.textContent = '';
-  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
-  document.getElementById('otpHint').textContent = 'נשלח לכתובת: ' + (r.hint||'');
-  document.getElementById('otpStep1').classList.add('hidden');
-  document.getElementById('otpStep2').classList.remove('hidden');
-  document.getElementById('otpCode').focus();
-}
-document.getElementById('otpSend').addEventListener('click', sendOtp);
-document.getElementById('otpResend').addEventListener('click', sendOtp);
-
-document.getElementById('otpVerify').addEventListener('click', async ()=>{
-  const err = document.getElementById('otpErr');
-  const user = document.getElementById('otpUser').value.trim();
-  const code = document.getElementById('otpCode').value.trim();
-  const pw1 = document.getElementById('otpNewPw').value;
-  const pw2 = document.getElementById('otpConfPw').value;
-  if(!code || code.length < 6){ err.textContent = 'הזן קוד 6 ספרות'; return; }
-  if(!pw1 || pw1.length < 4){ err.textContent = 'סיסמה חדשה חייבת להכיל לפחות 4 תווים'; return; }
-  if(pw1 !== pw2){ err.textContent = 'הסיסמאות אינן תואמות'; return; }
-  err.textContent = 'מאמת…';
-  const r = await apiPost({ action:'verifyOtp', username:user, code, newPassword:pw1 });
-  err.textContent = '';
-  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
-  hide('otpOverlay');
-  toast('✅ הסיסמה אופסה בהצלחה — כנס עם הסיסמה החדשה','ok');
-  // עדכן localStorage אם היה שמור
-  const saved = store.get();
-  if(saved && saved.kind==='emp' && saved.username===user){
-    store.set({...saved, pw:pw1});
-  }
 });
 
 /* ============ החלפת סיסמה כפויה ============ */
@@ -3598,7 +3355,12 @@ document.getElementById('vcAdd').addEventListener('click', async ()=>{
   err.textContent='שולח…';
   const r = await apiPost({ action:'addVacation', username:state.emp.username, password:state.emp.pw, from, to, reason });
   err.textContent='';
-  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  if(!r.ok){
+    if(r.code==='coverage'){
+      err.innerHTML = '<span style="display:block;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;padding:10px;font-size:13px;font-weight:700;color:#92400e">\u26a0\ufe0f '+esc(r.error)+'</span>';
+    } else { err.textContent = r.error||'\u05e9\u05d2\u05d9\u05d0\u05d4'; }
+    return;
+  }
   alert('בקשת החופשה נשלחה לאישור מנהל. תקבל עדכון כשתאושר או תידחה.');
   document.getElementById('vcReason').value='';
   await load();
@@ -3633,6 +3395,8 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
   if(!r.ok){
     if(r.code==='limit'){
       err.innerHTML = '<span style="display:block;background:#fee2e2;border:1.5px solid #ef4444;border-radius:9px;padding:10px;font-size:13px;font-weight:800;color:#991b1b">⛔ אין אפשרות להכניס יותר מ-2 בקשות אילוץ לשבוע.<br>לבקשות חריגות יש לפנות למנהל.</span>';
+    } else if(r.code==='coverage'){
+      err.innerHTML = '<span style="display:block;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;padding:10px;font-size:13px;font-weight:700;color:#92400e">⚠️ '+esc(r.error)+'</span>';
     } else err.textContent = r.error || 'שגיאה';
     return;
   }
@@ -3647,7 +3411,6 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 });
 
 // --- מנהל ---
-function renderConsOverlay(){ openConsReview(); }
 function openConsReview(){
   const vacs = [...state.vacations].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
   const showAll = state._showAllRequests;
@@ -3841,17 +3604,6 @@ document.getElementById('viewerExit').addEventListener('click',()=>{
 
 function setAuthUI(){
   const m = isMgr();
-  // קישור מדריך לפי תפקיד
-  const gBtn = document.getElementById('guideBtn');
-  if(gBtn){
-    if(m){
-      gBtn.href='https://www.superstar-plus.co.il/manager-guide.pdf';
-      gBtn.title='מדריך למנהל';
-    } else {
-      gBtn.href='https://www.superstar-plus.co.il/shifts-guide.pdf';
-      gBtn.title='מדריך לעובד';
-    }
-  }
   document.getElementById('adminTools').classList.toggle('hidden', !m);
   document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.emp);
   document.getElementById('viewerChip').classList.toggle('hidden', !state.emp || m);
