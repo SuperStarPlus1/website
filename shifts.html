@@ -437,8 +437,20 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <button id="backHomeFab" class="hidden">🏠 חזרה למסך הראשי</button>
 <div id="empHome" class="hidden">
   <div class="eh-card">
-    <div class="eh-hello">שלום <span id="ehName"></span> 👋</div>
-    <div class="eh-date" id="ehDate"></div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+      <div style="position:relative;cursor:pointer;flex-shrink:0" id="empSelfAvatarWrap" title="לחץ לשינוי תמונה">
+        <div style="width:54px;height:54px;border-radius:50%;overflow:hidden;background:#e2e8f0;border:2.5px solid var(--gold);display:flex;align-items:center;justify-content:center">
+          <img id="empSelfAvatarImg" src="" style="width:100%;height:100%;object-fit:cover;display:none" alt="">
+          <span id="empSelfAvatarInit" style="font-size:20px;font-weight:800;color:var(--navy)"></span>
+        </div>
+        <div style="position:absolute;bottom:-1px;right:-1px;background:var(--gold);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:9px">📷</div>
+      </div>
+      <div>
+        <div class="eh-hello">שלום <span id="ehName"></span> 👋</div>
+        <div class="eh-date" id="ehDate"></div>
+      </div>
+    </div>
+    <input type="file" id="empSelfAvatarFile" accept="image/*" capture="user" style="display:none">
     <div class="eh-status" id="ehStatus">—</div>
     <div class="eh-punch" id="ehPunch"></div>
     <div class="eh-gps" id="ehGps"></div>
@@ -1161,6 +1173,7 @@ function demoPost(body){
   if(body.action==='reviewManualPunch') return { ok:true };
   if(body.action==='getSettings') return { ok:true, storeLocation:'32.9186,35.2952', radius:150 };
   if(body.action==='savePushId') return { ok:true }; // push
+  if(body.action==='saveAvatar') return { ok:true };
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
   if(body.action==='publish') return { ok:true, sent:0 };
@@ -2162,12 +2175,15 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
 function showEmpHome(){
   if(!state.emp) return;
   document.getElementById('ehName').textContent = state.emp.name.split(' ')[0];
+  const ini=document.getElementById('empSelfAvatarInit'); if(ini) ini.textContent=state.emp.name.charAt(0);
   const d = new Date();
   document.getElementById('ehDate').textContent = DAY_NAMES[d.getDay()]+' '+ddmm(d)+' · '+d.toTimeString().slice(0,5);
   document.getElementById('empHome').classList.remove('hidden');
   document.getElementById('board').classList.add('hidden');
   document.getElementById('backHomeFab').classList.add('hidden');
   document.getElementById('ehF101').classList.toggle('hidden', !f101Missing(empByName(state.emp.name)));
+  const savedAvatar = localStorage.getItem('sp_avatar_'+state.emp.username) || empByName(state.emp.name)?.avatar || '';
+  updateSelfAvatar(savedAvatar);
   renderHomePunch();
   refreshAttToday().then(()=>{ renderHomePunch(); });
   loadNextShift();
@@ -3740,6 +3756,32 @@ async function retryPushSave(){
     }
   }catch(e){}
 }
+
+/* ── תמונת עובד עצמי ── */
+function updateSelfAvatar(src){
+  const img=document.getElementById('empSelfAvatarImg');
+  const ini=document.getElementById('empSelfAvatarInit');
+  if(!img) return;
+  if(src){ img.src=src; img.style.display='block'; if(ini) ini.style.display='none'; }
+  else { img.style.display='none'; if(ini){ ini.style.display=''; ini.textContent=(state.emp?.name||'?').charAt(0); } }
+}
+document.getElementById('empSelfAvatarWrap').addEventListener('click',()=>document.getElementById('empSelfAvatarFile').click());
+document.getElementById('empSelfAvatarFile').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  if(file.size>614400){ toast('התמונה גדולה מדי — עד 600KB','err'); return; }
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    const src=ev.target.result;
+    updateSelfAvatar(src);
+    if(state.emp){
+      localStorage.setItem('sp_avatar_'+state.emp.username, src);
+      const r=await apiPost({ action:'saveAvatar', username:state.emp.username, password:state.emp.pw, avatar:src });
+      if(r.ok) toast('תמונה עודכנה ✓','ok');
+      else toast('שגיאה: '+(r.error||'בשמירת תמונה'),'err');
+    }
+  };
+  reader.readAsDataURL(file);
+});
 
 /* ── Service Worker (PWA) ── */
 if ('serviceWorker' in navigator) {
