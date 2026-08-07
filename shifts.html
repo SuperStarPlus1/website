@@ -2708,8 +2708,18 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹', 'נוכחות':'📍' };
   const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת', 'נוכחות':'נוכחות באתר' };
   const toM = t => { const p=String(t).split(':'); return Number(p[0])*60+Number(p[1]); };
-  box.innerHTML = `<table class="att-table">
-    <tr><th>יום</th><th>כניסה</th><th>יציאה להפסקה</th><th>חזרה מהפסקה</th><th>סיום משמרת</th><th>שעות</th></tr>` +
+  // כפתור PDF
+  const pdfBtn = document.createElement('button');
+  pdfBtn.textContent = '📄 PDF';
+  pdfBtn.className = 'btn plain';
+  pdfBtn.style.cssText = 'margin-bottom:10px;background:#fee2e2;color:#b91c1c;font-weight:700';
+  pdfBtn.addEventListener('click', ()=>generateEmpPDF(r, month));
+  box.appendChild(pdfBtn);
+
+  const tbl = document.createElement('div');
+  box.appendChild(tbl);
+  tbl.innerHTML = `<table class="att-table">
+    <tr><th>יום</th><th>כניסה</th><th>יציאה להפסקה</th><th>חזרה מהפסקה</th><th>✅ סיום משמרת</th><th>שעות</th></tr>` +
     r.days.map((d,i)=>{
       const dd = new Date(d.date+'T00:00:00');
       const firstIn = (d.events.find(e=>e.type==='כניסה')||{}).time || '—';
@@ -2737,13 +2747,127 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
         <td><b>${fmtMin(d.minutes)}</b>${d.travel?'<br><small style="color:#1e40af">כולל נסיעה '+d.travel+' דק׳</small>':''}</td></tr>
       <tr class="att-detail hidden" data-d="${i}"><td colspan="6" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
     }).join('') +
-  `</table>
-  <div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
-    <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לפני מיסים · ללא תוספות שבת/נוספות · לחיצה על שורה מציגה פירוט מלא</div></div>`;
+  `</table>`;
+  tbl.innerHTML += `<div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
+    <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לחיצה ארוכה על שורה לעריכה ידנית</div></div>`;
   box.querySelectorAll('.att-row').forEach(row=>row.addEventListener('click',()=>{
     box.querySelector('.att-detail[data-d="'+row.dataset.i+'"]').classList.toggle('hidden');
   }));
+  // עדכון ידני: לחיצה ארוכה על שורה פותחת עורך
+  box.querySelectorAll('.att-row').forEach((row,idx)=>{
+    let pressT;
+    const startEdit = ()=>{
+      const d = r.days[idx];
+      if(!d) return;
+      const date = d.date;
+      const types = ['כניסה','הפסקה','חזרה','יציאה'];
+      const cur = {};
+      d.events.forEach(e=>{ cur[e.type]=e.time; });
+      const dlg = document.createElement('div');
+      dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+      dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:320px;direction:rtl;font-family:inherit">
+        <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:16px">✏ עריכת ${DAY_LETTERS[new Date(date+'T00:00:00').getDay()]}׳ ${date.slice(8,10)}/${date.slice(5,7)}</div>
+        ${types.map(t=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <label style="width:120px;font-size:13px">${t==='כניסה'?'כניסה':t==='הפסקה'?'יציאה להפסקה':t==='חזרה'?'חזרה מהפסקה':'סיום משמרת'}</label>
+          <input type="time" data-type="${t}" value="${cur[t]||''}" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
+        </div>`).join('')}
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">שינויים יישלחו לאישור מנהל</div>
+        <div style="display:flex;gap:8px">
+          <button id="editSave" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer">שמור ✓</button>
+          <button id="editCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">ביטול</button>
+        </div>
+        <div id="editErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
+      </div>`;
+      document.body.appendChild(dlg);
+      dlg.querySelector('#editCancel').addEventListener('click',()=>dlg.remove());
+      dlg.querySelector('#editSave').addEventListener('click',async()=>{
+        const inputs=[...dlg.querySelectorAll('input[data-type]')];
+        const err=dlg.querySelector('#editErr');
+        err.textContent='שולח…';
+        for(const inp of inputs){
+          if(!inp.value) continue;
+          const t=inp.dataset.type, time=inp.value;
+          if(cur[t]===time) continue; // לא השתנה
+          const res=await apiPost({ action:'requestManualPunch',
+            username:state.emp.username, password:state.emp.pw,
+            date, time, type:t, reason:'עדכון ידני מהדוח' });
+          if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
+        }
+        dlg.remove();
+        toast('נשלח לאישור מנהל ✓','ok');
+      });
+    };
+    row.addEventListener('mousedown',()=>{ pressT=setTimeout(startEdit,600); });
+    row.addEventListener('mouseup',()=>clearTimeout(pressT));
+    row.addEventListener('touchstart',()=>{ pressT=setTimeout(startEdit,600); },{passive:true});
+    row.addEventListener('touchend',()=>clearTimeout(pressT));
+  });
 });
+
+function generateEmpPDF(r, month){
+  const fmtMonth = m => { if(!m) return ''; const p=m.split('-'); const names=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']; return names[Number(p[1])-1]+' '+p[0]; };
+  const rows = r.days.map(d=>{
+    const dd=new Date(d.date+'T00:00:00');
+    const inT=(d.events.find(e=>e.type==='כניסה')||{}).time||'—';
+    const outs=d.events.filter(e=>e.type==='יציאה');
+    const outT=outs.length?outs[outs.length-1].time:'—';
+    const brks=d.events.filter(e=>e.type==='הפסקה');
+    const backs=d.events.filter(e=>e.type==='חזרה');
+    const brkT=brks.length?brks.map(b=>b.time).join(', '):'—';
+    const backT=backs.length?backs.map(b=>b.time).join(', '):'—';
+    const flag=d.events.some(e=>e.status&&e.status!=='תקין');
+    return `<tr style="background:${flag?'#fff3cd':'#fff'}">
+      <td style="text-align:center;font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td>
+      <td style="text-align:center">${inT}</td>
+      <td style="text-align:center">${brkT}</td>
+      <td style="text-align:center">${backT}</td>
+      <td style="text-align:center;font-weight:700${outT==='—'?';color:#b91c1c':''}">${outT}</td>
+      <td style="text-align:center"><b>${fmtMin(d.minutes)}</b></td>
+      <td style="text-align:center">${d.minutes>0?(d.minutes/60).toFixed(2):'—'}</td>
+    </tr>`;
+  }).join('');
+  const totalH=(r.totalMinutes/60).toFixed(2);
+  const workDays=r.days.filter(d=>d.minutes>0).length;
+  const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <title>דוח נוכחות — ${r.employee||''}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#1b2a4a}
+    h1{font-size:18px;margin-bottom:4px}
+    .sub{color:#6b7280;font-size:12px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th{background:#1b2a4a;color:#fff;padding:7px 6px;text-align:center;font-size:11px}
+    td{border:1px solid #e2e8f0;padding:6px;font-size:11px}
+    .summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-top:14px;display:flex;flex-wrap:wrap;gap:16px}
+    .stat{text-align:center}.stat .val{font-size:18px;font-weight:800;color:#1b2a4a}.stat .lbl{font-size:10px;color:#6b7280;margin-top:2px}
+    @media print{body{margin:10px}.no-print{display:none}}
+  </style></head><body>
+  <h1>⭐ סופרסטאר פלוס — דוח נוכחות</h1>
+  <div class="sub">עובד: <b>${esc(r.employee||'')}</b> · מחלקה: <b>${esc(r.dept||'')}</b> · מס' עובד: <b>${esc(r.empNo||'')}</b> · חודש: <b>${fmtMonth(month)}</b></div>
+  <div class="summary">
+    <div class="stat"><div class="val">${workDays}</div><div class="lbl">ימי עבודה</div></div>
+    <div class="stat"><div class="val">${totalH}</div><div class="lbl">סה"כ שעות</div></div>
+    <div class="stat"><div class="val">${(r.regHours||0).toFixed(2)}</div><div class="lbl">שעות רגילות</div></div>
+    <div class="stat"><div class="val">${(r.ot125||0).toFixed(2)}</div><div class="lbl">נוספות 125%</div></div>
+    <div class="stat"><div class="val">${(r.ot150||0).toFixed(2)}</div><div class="lbl">נוספות 150%</div></div>
+    <div class="stat"><div class="val">${r.lateCount||0}</div><div class="lbl">איחורים</div></div>
+    <div class="stat"><div class="val">~${r.gross.toLocaleString()}</div><div class="lbl">ברוטו צפוי (₪)</div></div>
+  </div>
+  <table>
+    <tr><th>יום</th><th>כניסה</th><th>יצ' הפסקה</th><th>חזרה</th><th>סיום</th><th>זמן</th><th>שעות</th></tr>
+    ${rows}
+    <tr style="background:#f0f9ff;font-weight:700">
+      <td colspan="5" style="text-align:right;font-weight:700">סה"כ</td>
+      <td style="text-align:center">${fmtMin(r.totalMinutes)}</td>
+      <td style="text-align:center">${totalH}</td>
+    </tr>
+  </table>
+  <div style="margin-top:16px;font-size:10px;color:#9ca3af">הופק: ${new Date().toLocaleDateString('he-IL')} · מערכת סידור עבודה — סופרסטאר פלוס</div>
+  <button class="no-print" onclick="window.print()" style="margin-top:12px;padding:10px 20px;background:#1b2a4a;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:14px">🖨 הדפס / שמור PDF</button>
+  </body></html>`;
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
 
 async function openSick(){
   const f=document.getElementById('sickFrom'), t=document.getElementById('sickTo');
@@ -3058,62 +3182,95 @@ document.getElementById('attMgrManual').addEventListener('click', async ()=>{
 });
 
 document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
-  const box=document.getElementById('attMgrReport');
   const btn=document.getElementById('attMgrExcel'); btn.disabled=true;
   const prevTxt=btn.textContent; btn.textContent='מכין…';
   try{
     await loadScript(XLSX_URL);
+    const month=document.getElementById('attMgrMonth').value;
     const r=await fetchDetailed();
     if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
-    const month=document.getElementById('attMgrMonth').value;
+
+    // חודש קודם להשוואה
+    const prevDate=new Date(month.slice(0,4),month.slice(5,7)-2,1);
+    const prevMonth=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0');
+    const rPrev=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:prevMonth });
+    const prevByDept={};
+    if(rPrev.ok){ rPrev.employees.forEach(e=>{
+      const d=e.dept||'ללא'; prevByDept[d]=prevByDept[d]||{reg:0,o1:0,o2:0,days:0};
+      prevByDept[d].reg+=e.regHours||0; prevByDept[d].o1+=e.ot125||0; prevByDept[d].o2+=e.ot150||0;
+      prevByDept[d].days+=e.days.filter(dd=>!dd.sick).length;
+    }); }
+
+    // חישוב ימי עבודה בחודש (לפי לוח שנה)
+    const daysInMonth=new Date(month.slice(0,4),month.slice(5,7),0).getDate();
+    let workingDays=0;
+    for(let i=1;i<=daysInMonth;i++){ const dow=new Date(month.slice(0,4)+'-'+month.slice(5,7)+'-'+String(i).padStart(2,'0')+'T00:00:00').getDay(); if(dow!==6) workingDays++; }
+
     const wb=XLSX.utils.book_new();
-    // גיליון 1 — ריכוז
-    const periodStr = 'תקופת דיווח: 01/'+month.slice(5,7)+'/'+month.slice(0,4)+' — '+(new Date(month.slice(0,4),month.slice(5,7),0).getDate())+'/'+month.slice(5,7)+'/'+month.slice(0,4);
-    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[periodStr],
-      ["נוספות לפי חוק: מעל "+r.regHours+" ש'/יום — 125% לשעתיים, 150% מעבר · תקן חופשה לפי ותק · מחלה ללא אישור מאושר נזקפת לחופשה"],[],
-      ['מס\' עובד','שם עובד','מחלקה','ערך שעה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','חופשה','מחלה מאושרת','היעדרות','ימי עבודה','ברוטו צפוי (₪)','הערות']];
+    const periodStr='תקופת דיווח: 01/'+month.slice(5,7)+'/'+month.slice(0,4)+' — '+daysInMonth+'/'+month.slice(5,7)+'/'+month.slice(0,4)+' · ימי עבודה בחודש: '+workingDays;
+
+    // ===== גיליון 1: סיכום מחלקות (ראשון!) =====
+    const byDept={};
+    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
+      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
+      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick).length; byDept[d].emps++; });
+
+    const deptSum=[
+      ['סיכום שעות לפי מחלקה — '+fmtMonth(month)],[periodStr],[],
+      ['מחלקה','עובדים','ימי עבודה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ברוטו (₪)',
+       'ימי עבודה (חודש קודם)','שעות רגילות (חודש קודם)','הפרש שעות']
+    ];
+    let tR=0,t1=0,t2=0,tG=0,tD=0;
+    Object.keys(byDept).sort().forEach(d=>{
+      const v=byDept[d], pv=prevByDept[d]||{reg:0,days:0};
+      const tot=Math.round((v.reg+v.o1+v.o2)*100)/100;
+      const diff=Math.round((v.reg-pv.reg)*100)/100;
+      deptSum.push([d, v.emps, v.days, Math.round(v.reg*100)/100,
+        Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, tot,
+        Math.round(v.gross*100)/100, pv.days||'—', Math.round(pv.reg*100)/100||'—',
+        diff>0?'+'+diff:diff]);
+      tR+=v.reg; t1+=v.o1; t2+=v.o2; tG+=v.gross; tD+=v.days;
+    });
+    deptSum.push([]);
+    deptSum.push(['סה"כ','',tD,Math.round(tR*100)/100,Math.round(t1*100)/100,Math.round(t2*100)/100,
+      Math.round((tR+t1+t2)*100)/100,Math.round(tG*100)/100,'','','']);
+    const wsDept=XLSX.utils.aoa_to_sheet(deptSum);
+    wsDept['!cols']=[{wch:18},{wch:8},{wch:12},{wch:13},{wch:11},{wch:11},{wch:11},{wch:12},{wch:18},{wch:20},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsDept, 'סיכום מחלקות');
+
+    // ===== גיליון 2: ריכוז עובדים =====
+    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[periodStr],[],
+      ['מס\' עובד','שם עובד','מחלקה','ערך שעה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ימי עבודה','מחלה','חופשה','היעדרות','איחורים','ברוטו (₪)','הערות']];
     let tReg=0,t125=0,t150=0,tGross=0;
     r.employees.forEach(e=>{
-      const reg=e.regHours||0, o1=e.ot125||0, o2=e.ot150||0;
+      const reg=e.regHours||0,o1=e.ot125||0,o2=e.ot150||0;
       tReg+=reg; t125+=o1; t150+=o2; tGross+=e.gross;
-      const workDays=e.days.filter(d=>!d.sick).length;
       sum.push([e.empNo||'', e.employee, e.dept||'', e.hourRate||r.minWage,
         Math.round(reg*100)/100, Math.round(o1*100)/100, Math.round(o2*100)/100,
-        Math.round((reg+o1+o2)*100)/100,
-        e.vacUsed||0, e.sick||0, e.overAbsence||0, workDays, e.gross,
+        Math.round((reg+o1+o2)*100)/100, e.days.filter(d=>!d.sick).length,
+        e.sick||0, e.vacUsed||0, e.overAbsence||0, e.lateCount||0, e.gross,
         e.days.length?'':'ללא דיווח']);
     });
-    // סיכום לפי מחלקה
-    const byDept={};
-    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0};
-      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
-      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(d=>!d.sick).length; });
-    sum.push([]); sum.push(['סיכום לפי מחלקה']);
-    sum.push(['מחלקה','ימי עבודה','שעות רגילות','125%','150%','ברוטו (₪)']);
-    Object.keys(byDept).sort().forEach(d=>{ const v=byDept[d];
-      sum.push([d, v.days, Math.round(v.reg*100)/100, Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, Math.round(v.gross*100)/100]); });
-    sum.push([]); sum.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','',Math.round(tGross*100)/100]);
+    sum.push([]); sum.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','','',Math.round(tGross*100)/100]);
     const ws1=XLSX.utils.aoa_to_sheet(sum);
-    ws1['!cols']=[{wch:9},{wch:20},{wch:12},{wch:8},{wch:11},{wch:11},{wch:11},{wch:10},{wch:8},{wch:12},{wch:9},{wch:10},{wch:13},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws1, 'ריכוז');
-    // גיליון 2 — פירוט יומי
+    ws1['!cols']=[{wch:9},{wch:20},{wch:12},{wch:8},{wch:11},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:9},{wch:8},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'ריכוז עובדים');
+
+    // ===== גיליון 3: פירוט יומי =====
     const det=[['פירוט יומי — '+fmtMonth(month)],[],
-      ['שם עובד','תאריך','יום','כניסה','יציאה להפסקה','חזרה מהפסקה','סיום משמרת','שעות','מתוכן נוספות','סטטוס']];
-    r.employees.forEach(e=>{
-      e.days.forEach(d=>{
-        const dd=new Date(d.date+'T00:00:00');
-        if(d.sick){ det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳','','','','','','', d.sickApproved?'מחלה מאושרת':'מחלה/היעדרות']); return; }
-        det.push([e.employee, d.date, DAY_LETTERS[dd.getDay()]+'׳',
-          d.inT||'', d.breakT||'', d.backT||'', d.outT||'',
-          Math.round(d.minutes/60*100)/100, d.ot||0,
-          d.complete?(d.travel?'כולל נסיעה':'תקין'):'חסר סיום']);
-      });
-    });
+      ['שם עובד','תאריך','יום','כניסה','יצ\' הפסקה','חזרה','סיום משמרת','שעות','נוספות','סטטוס']];
+    r.employees.forEach(e=>{ e.days.forEach(d=>{
+      const dd=new Date(d.date+'T00:00:00');
+      if(d.sick){ det.push([e.employee,d.date,DAY_LETTERS[dd.getDay()]+'׳','','','','','','',d.sickApproved?'מחלה מאושרת':'מחלה/היעדרות']); return; }
+      det.push([e.employee,d.date,DAY_LETTERS[dd.getDay()]+'׳',d.inT||'',d.breakT||'',d.backT||'',d.outT||'',
+        Math.round(d.minutes/60*100)/100,d.ot||0,d.complete?'תקין':'חסר סיום']);
+    }); });
     const ws2=XLSX.utils.aoa_to_sheet(det);
-    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:13},{wch:13},{wch:11},{wch:8},{wch:11},{wch:13}];
+    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:11},{wch:9},{wch:11},{wch:8},{wch:9},{wch:14}];
     XLSX.utils.book_append_sheet(wb, ws2, 'פירוט יומי');
-    XLSX.writeFile(wb, 'דיווח_נוכחות_'+month+'.xlsx');
-    toast('קובץ האקסל הורד ✓','ok');
+
+    XLSX.writeFile(wb, 'נוכחות_'+month+'.xlsx');
+    toast('אקסל הורד ✓ (3 גיליונות)','ok');
   }catch(e){ toast('שגיאה: '+(e.message||e),'err'); }
   finally{ btn.disabled=false; btn.textContent=prevTxt; }
 });
