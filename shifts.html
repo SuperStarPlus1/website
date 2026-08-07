@@ -281,6 +281,15 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-dropdown button{display:block;width:100%;text-align:right;border:0;background:none;padding:9px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:7px;color:var(--navy)}
 .mgr-dropdown button:hover{background:#f1f5f9}
 .mgr-dropdown hr{border:0;border-top:1px solid var(--line);margin:3px 0}
+
+/* כרטיס עובד */
+#empCard .chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+#empCard .i-name,#empCard .i-user,#empCard .i-pw,#empCard .i-email{
+  width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px 12px;
+  font-family:inherit;font-size:14px;box-sizing:border-box}
+#empCard .lbl{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+#empCard .sec-title{font-weight:800;font-size:13px;color:var(--navy);
+  margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 /* נוכחות */
 .att-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .att-btns button{border:0;border-radius:12px;padding:16px 8px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer}
@@ -554,14 +563,54 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <!-- מודאל ניהול עובדים -->
 <div class="overlay hidden" id="empOverlay">
-  <div class="modal wide">
-    <header><h3>ניהול עובדים</h3><p>שם מלא · שם משתמש (לכניסה) · סיסמה · מחלקות · ימי חופש קבועים</p></header>
-    <div class="mbody"><div class="emp-list" id="empList"></div>
-      <button class="btn plain" id="empAdd" style="margin-top:12px">+ עובד חדש</button>
+  <div class="modal wide" style="max-height:92vh;display:flex;flex-direction:column">
+    <header style="flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">👥 ניהול עובדים</h3>
+        <select id="empSelector" style="flex:1;min-width:180px;border:1.5px solid var(--gold);border-radius:9px;padding:7px 10px;font-family:inherit;font-weight:700;font-size:14px;background:#fffdf0">
+          <option value="">— בחר עובד —</option>
+        </select>
+        <button class="btn plain" id="empAdd" style="background:#dbeafe;color:#1e40af;font-weight:700;white-space:nowrap">+ חדש</button>
+      </div>
+    </header>
+    <div class="mbody" style="flex:1;overflow-y:auto;padding-top:8px">
+      <!-- כרטיס עובד -->
+      <div id="empCard" class="hidden">
+        <!-- תמונה + שם -->
+        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">
+          <div style="position:relative;flex-shrink:0">
+            <div id="empAvatarWrap" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:#e2e8f0;border:3px solid var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center">
+              <img id="empAvatarImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+              <span id="empAvatarInit" style="font-size:28px;font-weight:800;color:var(--navy)"></span>
+            </div>
+            <input type="file" id="empAvatarFile" accept="image/*" style="display:none">
+            <div style="text-align:center;font-size:10px;color:var(--muted);margin-top:3px">לחץ לתמונה</div>
+          </div>
+          <div style="flex:1">
+            <div id="empCardName" style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px"></div>
+            <div id="empCardDept" style="font-size:13px;color:var(--muted);margin-bottom:6px"></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span id="empCardType" class="chip"></span>
+              <span id="empCardActive" class="chip"></span>
+            </div>
+          </div>
+        </div>
+        <!-- שדות -->
+        <div id="empList" style="display:block"></div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn primary" id="empOk" style="flex:1">💾 שמור</button>
+          <button class="btn plain" id="empDelete" style="background:#fee2e2;color:#b91c1c;font-weight:700">🗑 מחק</button>
+        </div>
+      </div>
+      <!-- ריק -->
+      <div id="empCardEmpty" style="text-align:center;padding:40px;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:12px">👥</div>
+        <div>בחר עובד מהרשימה למעלה</div>
+        <div style="font-size:12px;margin-top:6px">או לחץ <b>+ חדש</b> להוספת עובד</div>
+      </div>
     </div>
-    <div class="mfoot">
-      <button class="btn primary" id="empOk">אישור</button>
-      <button class="btn plain" data-close>ביטול</button>
+    <div class="mfoot" style="flex-shrink:0">
+      <button class="btn plain" data-close>סגירה</button>
     </div>
   </div>
 </div>
@@ -1557,27 +1606,39 @@ document.getElementById('rowOk').addEventListener('click',()=>{
 
 /* ============ ניהול עובדים ============ */
 async function openEmpMgr(){
-  // מנהל מחובר — נטען סיסמאות עובדים מהשרת
   if(!state.demo){
     try{
       const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
       if(r.ok){
         r.employees.forEach(se=>{
           const local = empByName(se.name);
-          if(local){ local.password = se.password; local.username = se.username||'';
-            local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; local.email = se.email||'';
-            local.empNo = se.empNo||''; local.vacQuota = se.vacQuota||0; local.hourRate = se.hourRate||0; }
+          if(local){ local.password=se.password; local.username=se.username||'';
+            local.rating=se.rating||2; local.fixedShifts=se.fixedShifts||''; local.email=se.email||'';
+            local.empNo=se.empNo||''; local.vacQuota=se.vacQuota||0; local.hourRate=se.hourRate||0;
+            local.empType=se.empType||'שעתי'; local.monthlyHours=se.monthlyHours||0;
+            local.primaryDept=se.primaryDept||''; local.startDate=se.startDate||'';
+            local.avatar=se.avatar||''; }
           else state.employees.push({ name:se.name, dept:se.dept, depts:parseDepts(se.dept),
             active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
             username:se.username||'', skills:se.skills||'', rating:se.rating||2,
-            fixedShifts:se.fixedShifts||'', email:se.email||'' });
+            fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
+            vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
+            monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'', startDate:se.startDate||'' });
         });
       }
-    }catch(e){ toast('לא נטענו סיסמאות עובדים: '+e.message,'err'); }
+    }catch(e){ toast('לא נטענו נתוני עובדים: '+e.message,'err'); }
   }
-  const list = document.getElementById('empList');
-  list.innerHTML='';
-  state.employees.forEach(e=>list.appendChild(empRow(e)));
+  // מלא selector
+  const sel = document.getElementById('empSelector');
+  sel.innerHTML = '<option value="">— בחר עובד —</option>';
+  state.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach((e,i)=>{
+    const opt = document.createElement('option');
+    opt.value = e.name;
+    opt.textContent = e.name + (e.primaryDept ? ' · ' + e.primaryDept : '');
+    sel.appendChild(opt);
+  });
+  document.getElementById('empCard').classList.add('hidden');
+  document.getElementById('empCardEmpty').classList.remove('hidden');
   show('empOverlay');
 }
 function empRow(e){
@@ -1646,12 +1707,66 @@ function empRow(e){
   }));
   return div;
 }
+/* === ניהול עובדים — כרטיס === */
+let _currentEmp = null;
+
+function loadEmpCard(empName){
+  const e = empName ? state.employees.find(x=>x.name===empName) : null;
+  _currentEmp = e || {name:'',depts:[state.departments[0]||''],offDays:[],password:'',active:true};
+  const card = document.getElementById('empCard');
+  const empty = document.getElementById('empCardEmpty');
+  card.classList.remove('hidden');
+  empty.classList.add('hidden');
+  // עדכן פרטים בכרטיס
+  document.getElementById('empCardName').textContent = e ? e.name : 'עובד חדש';
+  document.getElementById('empCardDept').textContent = e ? (e.primaryDept||e.depts?.[0]||'') : '';
+  document.getElementById('empCardType').textContent = e ? (e.empType||'שעתי') : 'שעתי';
+  document.getElementById('empCardType').className = 'chip ' + (e?.empType==='חודשי'?'ok':'');
+  document.getElementById('empCardActive').textContent = e?.active===false ? '❌ לא פעיל' : '✅ פעיל';
+  // תמונה
+  const img = document.getElementById('empAvatarImg');
+  const init = document.getElementById('empAvatarInit');
+  if(e?.avatar){ img.src=e.avatar; img.style.display='block'; init.style.display='none'; }
+  else{ img.style.display='none'; init.style.display=''; init.textContent=(_currentEmp.name||'?').charAt(0); }
+  // שדות
+  const list = document.getElementById('empList');
+  list.innerHTML='';
+  const row = empRow(_currentEmp);
+  list.appendChild(row);
+}
+
+// selector
+document.getElementById('empSelector').addEventListener('change', e=>{
+  const name = e.target.value;
+  if(!name){ document.getElementById('empCard').classList.add('hidden'); document.getElementById('empCardEmpty').classList.remove('hidden'); return; }
+  loadEmpCard(name);
+});
+
+// כפתור + חדש
 document.getElementById('empAdd').addEventListener('click',()=>{
-  document.getElementById('empList').appendChild(empRow({name:'',depts:[],offDays:[],password:''}));
+  document.getElementById('empSelector').value='';
+  loadEmpCard(null);
+  document.getElementById('empCardName').textContent='עובד חדש';
+});
+
+// תמונה — לחיצה על אווטאר
+document.getElementById('empAvatarWrap').addEventListener('click',()=>document.getElementById('empAvatarFile').click());
+document.getElementById('empAvatarFile').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const src = ev.target.result;
+    document.getElementById('empAvatarImg').src=src;
+    document.getElementById('empAvatarImg').style.display='block';
+    document.getElementById('empAvatarInit').style.display='none';
+    if(_currentEmp) _currentEmp.avatar=src;
+  };
+  reader.readAsDataURL(file);
 });
 document.getElementById('empOk').addEventListener('click',()=>{
   const rows = [...document.querySelectorAll('#empList .emp-item')];
-  state.employees = rows.map(r=>{
+  const updated = rows.map(r=>{
     const depts = [...r.querySelectorAll('.dchip.dept.active')].map(c=>c.dataset.d);
     if(!depts.length) depts.push(state.departments[0]);
     const offDays = [...r.querySelectorAll('.dchip.day')].filter(c=>c.dataset.part)
@@ -1674,8 +1789,33 @@ document.getElementById('empOk').addEventListener('click',()=>{
              hourRate: Number(r.querySelector('.i-rate').value)||0,
              f101: Number(r.querySelector('.i-f101').value)||0 };
   }).filter(e=>e.name);
+  if(updated.length){
+    const upd = updated[0];
+    const existing = state.employees.findIndex(x=>x.name===(_currentEmp?.name||''));
+    if(existing>=0) state.employees[existing]={...state.employees[existing],...upd};
+    else state.employees.push(upd);
+    // עדכן selector
+    const sel=document.getElementById('empSelector');
+    const exists=[...sel.options].find(o=>o.value===upd.name);
+    if(!exists){ const opt=document.createElement('option'); opt.value=upd.name; opt.textContent=upd.name+(upd.primaryDept?' · '+upd.primaryDept:''); sel.appendChild(opt); }
+    sel.value=upd.name;
+    loadEmpCard(upd.name);
+  }
   state.dirtyEmps = true;
-  hide('empOverlay'); render();
+  toast('נשמר ✓','ok'); render();
+});
+
+// מחיקת עובד
+document.getElementById('empDelete').addEventListener('click',()=>{
+  if(!_currentEmp?.name) return;
+  if(!confirm('למחוק את '+_currentEmp.name+'? הפעולה לא ניתנת לביטול.')) return;
+  state.employees = state.employees.filter(e=>e.name!==_currentEmp.name);
+  const sel=document.getElementById('empSelector');
+  [...sel.options].filter(o=>o.value===_currentEmp.name).forEach(o=>sel.removeChild(o));
+  sel.value='';
+  document.getElementById('empCard').classList.add('hidden');
+  document.getElementById('empCardEmpty').classList.remove('hidden');
+  state.dirtyEmps=true; toast('נמחק ✓','ok'); render();
 });
 
 /* ============ ניהול מנהלים (אדמין) ============ */
@@ -1970,6 +2110,21 @@ document.addEventListener('click', ()=>{
 });
 // כפתור Push מהתפריט
 document.getElementById('mgrPushBtn2').addEventListener('click', ()=>document.getElementById('mgrPushBtn').click());
+
+/* --- toggle היסטוריה בחלון בקשות --- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const togBtn = document.getElementById('consToggleHistory');
+  if(togBtn) togBtn.addEventListener('click', ()=>{
+    state._showAllRequests = !state._showAllRequests;
+    togBtn.textContent = state._showAllRequests ? '⏳ ממתינות בלבד' : '📋 היסטוריה';
+    const sub = document.getElementById('consSubtitle');
+    if(sub) sub.textContent = state._showAllRequests
+      ? 'מוצגות כל הבקשות כולל היסטוריה'
+      : 'מוצגות רק בקשות ממתינות לאישור';
+    renderConsOverlay();
+    loadSickReview();
+  });
+});
 
 /* ============ הודעה מרוכזת לעובדים ============ */
 async function openMsg(){
@@ -3492,6 +3647,7 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 });
 
 // --- מנהל ---
+function renderConsOverlay(){ openConsReview(); }
 function openConsReview(){
   const vacs = [...state.vacations].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
   const showAll = state._showAllRequests;
