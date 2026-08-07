@@ -489,6 +489,11 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" name="password" autocomplete="current-password"></div>
         <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
           <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
+        <div style="text-align:left;margin-top:6px">
+          <button id="lgForgot" type="button" style="border:0;background:none;color:#2563eb;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">
+            שכחתי סיסמה
+          </button>
+        </div>
       </div>
       <div class="merr" id="lgErr"></div>
     </div>
@@ -815,6 +820,39 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <span class="spacer"></span>
       <button class="btn plain" data-close>ביטול</button>
     </div>
+  </div>
+</div>
+
+<!-- מודאל איפוס סיסמה -->
+<div class="overlay hidden" id="otpOverlay">
+  <div class="modal">
+    <header><h3>🔑 איפוס סיסמה</h3><p>הזן שם משתמש ותקבל קוד לאימייל שלך</p></header>
+    <div class="mbody">
+      <div id="otpStep1">
+        <div class="mrow"><label>שם משתמש</label>
+          <input type="text" id="otpUser" autocomplete="username" placeholder="שם המשתמש שלך"></div>
+        <button class="btn primary" id="otpSend" style="width:100%">📧 שלח קוד לאימייל</button>
+      </div>
+      <div id="otpStep2" class="hidden">
+        <div class="mrow" style="background:#f0fdf4;border-radius:8px;padding:8px 12px;font-size:13px;color:#166534">
+          ✅ קוד נשלח לאימייל שלך · תקף 15 דקות
+          <div id="otpHint" style="font-size:11px;color:#6b7280;margin-top:2px"></div>
+        </div>
+        <div class="mrow"><label>קוד מהמייל (6 ספרות)</label>
+          <input type="text" id="otpCode" inputmode="numeric" maxlength="6" placeholder="123456"
+            style="font-size:22px;letter-spacing:6px;text-align:center"></div>
+        <div class="mrow"><label>סיסמה חדשה</label>
+          <input type="password" id="otpNewPw" autocomplete="new-password" placeholder="לפחות 4 תווים"></div>
+        <div class="mrow"><label>אישור סיסמה</label>
+          <input type="password" id="otpConfPw" autocomplete="new-password" placeholder="הזן שוב"></div>
+        <button class="btn primary" id="otpVerify" style="width:100%">✅ אפס סיסמה</button>
+        <div style="text-align:center;margin-top:8px">
+          <button id="otpResend" style="border:0;background:none;color:#6b7280;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">לא קיבלתי — שלח שוב</button>
+        </div>
+      </div>
+      <div class="merr" id="otpErr" style="margin-top:8px"></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>ביטול</button></div>
   </div>
 </div>
 
@@ -1157,6 +1195,8 @@ function demoPost(body){
   if(body.action==='requestManualPunch') return { ok:true };
   if(body.action==='reviewManualPunch') return { ok:true };
   if(body.action==='getSettings') return { ok:true, storeLocation:'32.9186,35.2952', radius:150 };
+  if(body.action==='sendOtp') return { ok:true, hint:'te***@gmail.com' };
+  if(body.action==='verifyOtp') return { ok:true };
   if(body.action==='savePushId') return { ok:true }; // push
   if(body.action==='getSickCert') return { ok:false, error:'לא זמין בהדגמה' };
   if(body.action==='attendanceDetailed') return { ok:true, employees:[], minWage:35.40, month:body.month };
@@ -2010,6 +2050,57 @@ document.getElementById('msgWelcome').addEventListener('click', async ()=>{
   hide('msgOverlay');
   toast('נשלחו '+r.sent+' הודעות Welcome ✓','ok');
   if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
+});
+
+/* ============ איפוס סיסמה (OTP) ============ */
+document.getElementById('lgForgot').addEventListener('click', ()=>{
+  const user = document.getElementById('lgEmpUser').value.trim();
+  document.getElementById('otpUser').value = user;
+  document.getElementById('otpStep1').classList.remove('hidden');
+  document.getElementById('otpStep2').classList.add('hidden');
+  document.getElementById('otpErr').textContent = '';
+  document.getElementById('otpCode').value = '';
+  document.getElementById('otpNewPw').value = '';
+  document.getElementById('otpConfPw').value = '';
+  show('otpOverlay');
+});
+
+async function sendOtp(){
+  const err = document.getElementById('otpErr');
+  const user = document.getElementById('otpUser').value.trim();
+  if(!user){ err.textContent = 'הזן שם משתמש'; return; }
+  err.textContent = 'שולח קוד…';
+  const r = await apiPost({ action:'sendOtp', username:user });
+  err.textContent = '';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  document.getElementById('otpHint').textContent = 'נשלח לכתובת: ' + (r.hint||'');
+  document.getElementById('otpStep1').classList.add('hidden');
+  document.getElementById('otpStep2').classList.remove('hidden');
+  document.getElementById('otpCode').focus();
+}
+document.getElementById('otpSend').addEventListener('click', sendOtp);
+document.getElementById('otpResend').addEventListener('click', sendOtp);
+
+document.getElementById('otpVerify').addEventListener('click', async ()=>{
+  const err = document.getElementById('otpErr');
+  const user = document.getElementById('otpUser').value.trim();
+  const code = document.getElementById('otpCode').value.trim();
+  const pw1 = document.getElementById('otpNewPw').value;
+  const pw2 = document.getElementById('otpConfPw').value;
+  if(!code || code.length < 6){ err.textContent = 'הזן קוד 6 ספרות'; return; }
+  if(!pw1 || pw1.length < 4){ err.textContent = 'סיסמה חדשה חייבת להכיל לפחות 4 תווים'; return; }
+  if(pw1 !== pw2){ err.textContent = 'הסיסמאות אינן תואמות'; return; }
+  err.textContent = 'מאמת…';
+  const r = await apiPost({ action:'verifyOtp', username:user, code, newPassword:pw1 });
+  err.textContent = '';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  hide('otpOverlay');
+  toast('✅ הסיסמה אופסה בהצלחה — כנס עם הסיסמה החדשה','ok');
+  // עדכן localStorage אם היה שמור
+  const saved = store.get();
+  if(saved && saved.kind==='emp' && saved.username===user){
+    store.set({...saved, pw:pw1});
+  }
 });
 
 /* ============ החלפת סיסמה כפויה ============ */
@@ -3594,6 +3685,17 @@ document.getElementById('viewerExit').addEventListener('click',()=>{
 
 function setAuthUI(){
   const m = isMgr();
+  // קישור מדריך לפי תפקיד
+  const gBtn = document.getElementById('guideBtn');
+  if(gBtn){
+    if(m){
+      gBtn.href='https://www.superstar-plus.co.il/manager-guide.pdf';
+      gBtn.title='מדריך למנהל';
+    } else {
+      gBtn.href='https://www.superstar-plus.co.il/shifts-guide.pdf';
+      gBtn.title='מדריך לעובד';
+    }
+  }
   document.getElementById('adminTools').classList.toggle('hidden', !m);
   document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.emp);
   document.getElementById('viewerChip').classList.toggle('hidden', !state.emp || m);
