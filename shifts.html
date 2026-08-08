@@ -3177,6 +3177,11 @@ async function loadMgrDetailed(){
       const dd=new Date(d.date+'T00:00:00');
       if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="6" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td></tr>`;
       const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
+      if(!d.inT && d.siteNote) return `<tr class="mgr-att-row" data-emp="${esc(emp.employee)}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לעריכת שעות">
+        <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
+        <td colspan="4" style="text-align:center;color:#1e40af;font-size:11px">📍 ${esc(d.siteNote)}</td>
+        <td><b>${fmtMin(d.minutes)}</b></td>
+        <td>${d.ot?'<b style="color:#9a3412">'+d.ot+'</b>':'—'}</td></tr>`;
       return `<tr class="mgr-att-row" data-emp="${esc(emp.employee)}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לעריכת שעות">
         <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
         <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
@@ -3453,7 +3458,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         const isFriday=dow===5;
         let rowClass=isShabbat?'shabbat':isFriday?'friday':'';
         let note='';
-        let cols={inT:'',brk1:'',back1:'',out:'',reg:'',ot125:'',ot150:'',total:''};
+        let cols={inT:'',brk1:'',back1:'',out:'',reg:'',ot125:'',ot150:'',total:'',siteNote:''};
         if(d){
           if(d.sick){
             note=d.sickApproved?'מחלה בתשלום מלא':'מחלה בתשלום 75%';
@@ -3462,6 +3467,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             cols.brk1=d.breakT||'';
             cols.back1=d.backT||'';
             cols.out=d.outT||'';
+            if(!cols.inT && d.siteNote) cols.siteNote=d.siteNote; // יום שדווח רק כביקור אתר, ללא שעון נוכחות
             const h=d.minutes/60;
             const sp=d.ot?(d.ot):0;
             const reg=Math.min(h,r.regHours);
@@ -3480,6 +3486,15 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
 
       const rowsHtml = dayRows.map(({day,dayName:dn,cols,note,rowClass,isShabbat})=>{
         if(isShabbat) return `<tr class="shabbat-row"><td>${day}</td><td>${dn}</td><td colspan="8" style="text-align:center;color:#9ca3af;font-size:10px">שבת</td></tr>`;
+        if(cols.siteNote) return `<tr class="${rowClass}">
+          <td style="text-align:center">${day}</td>
+          <td style="text-align:center">${dn}</td>
+          <td colspan="4" style="text-align:center;font-size:9px;color:#1e40af">📍 ${esc(cols.siteNote)}</td>
+          <td style="text-align:center">${cols.reg}</td>
+          <td style="text-align:center">${cols.ot125}</td>
+          <td style="text-align:center">${cols.ot150}</td>
+          <td style="text-align:center;font-weight:700">${cols.total}</td>
+        </tr>`;
         return `<tr class="${rowClass}">
           <td style="text-align:center">${day}</td>
           <td style="text-align:center">${dn}</td>
