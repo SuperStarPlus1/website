@@ -3204,35 +3204,88 @@ function openMgrAttEdit(employee, date){
   const labels={'כניסה':'כניסה','הפסקה':'יציאה להפסקה','חזרה':'חזרה מהפסקה','יציאה':'סיום משמרת'};
   const emp = (lastMgrDetailed && lastMgrDetailed.employees||[]).find(e=>e.employee===employee);
   const day = emp && emp.days.find(d=>d.date===date);
-  const cur={};
-  (day && day.events||[]).forEach(e=>{ cur[e.type]=e.time; });
+  const events = ((day && day.events)||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
+
+  const renderRows = () => events.map((e,i)=>`<div class="mgr-ev-row" data-i="${i}" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="width:120px;font-size:13px">${labels[e.type]||e.type}</span>
+      <input type="time" class="mgr-ev-time" value="${e.time}" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
+      <button class="mgr-ev-del" title="מחיקת רישום" style="background:#fee2e2;color:#b91c1c;border:0;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:14px">🗑</button>
+    </div>`).join('') || `<div style="font-size:12.5px;color:#9ca3af;margin-bottom:10px">אין רישומים ביום זה</div>`;
+
   const dlg=document.createElement('div');
   dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
-  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:320px;direction:rtl;font-family:inherit">
+  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:340px;direction:rtl;font-family:inherit">
     <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:4px">✏ עריכת נוכחות</div>
     <div style="font-size:12px;color:#6b7280;margin-bottom:16px">${esc(employee)} · ${date}</div>
-    ${types.map(t=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <label style="width:120px;font-size:13px">${labels[t]}</label>
-      <input type="time" data-type="${t}" value="${cur[t]||''}" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
-    </div>`).join('')}
-    <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">שינוי נשמר מיד — ריק ימחק את הרישום</div>
+    <div id="mgrEvList">${renderRows()}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0;padding-top:10px;border-top:1px solid #e2e8f0">
+      <select id="mgrEvNewType" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:13px">
+        ${types.map(t=>`<option value="${t}">${labels[t]}</option>`).join('')}
+      </select>
+      <input type="time" id="mgrEvNewTime" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
+      <button id="mgrEvAdd" style="background:#166534;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer">+ הוסף</button>
+    </div>
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">שינויים בשעות נשמרים בלחיצת "שמור שינויים" · מחיקה והוספה נשמרות מיידית</div>
     <div style="display:flex;gap:8px">
-      <button id="mgrEditSave" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer">שמור ✓</button>
-      <button id="mgrEditCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">ביטול</button>
+      <button id="mgrEditSave" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer">שמור שינויים ✓</button>
+      <button id="mgrEditCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">סגור</button>
     </div>
     <div id="mgrEditErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
   </div>`;
   document.body.appendChild(dlg);
-  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>dlg.remove());
+  const err = dlg.querySelector('#mgrEditErr');
+  let refreshedList = false; // אם בוצע שינוי — נרענן את הדוח בסגירה
+
+  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); if(refreshedList) loadMgrDetailed(); });
+
+  const bindDelete = () => {
+    dlg.querySelectorAll('.mgr-ev-del').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const i = Number(btn.closest('.mgr-ev-row').dataset.i);
+        const e = events[i];
+        err.textContent='מוחק…';
+        const res = await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:e.type, oldTime:e.time, time:'' });
+        if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
+        events.splice(i,1);
+        dlg.querySelector('#mgrEvList').innerHTML = renderRows();
+        bindDelete();
+        err.textContent='';
+        refreshedList = true;
+        toast('הרישום נמחק ✓','ok');
+      };
+    });
+  };
+  bindDelete();
+
+  dlg.querySelector('#mgrEvAdd').addEventListener('click', async ()=>{
+    const type = dlg.querySelector('#mgrEvNewType').value;
+    const time = dlg.querySelector('#mgrEvNewTime').value;
+    if(!time){ err.textContent='יש לבחור שעה'; return; }
+    err.textContent='מוסיף…';
+    const res = await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type, time });
+    if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
+    events.push({type,time,status:'תקין'});
+    events.sort((a,b)=>a.time.localeCompare(b.time));
+    dlg.querySelector('#mgrEvList').innerHTML = renderRows();
+    bindDelete();
+    dlg.querySelector('#mgrEvNewTime').value='';
+    err.textContent='';
+    refreshedList = true;
+    toast('הרישום נוסף ✓','ok');
+  });
+
   dlg.querySelector('#mgrEditSave').addEventListener('click', async ()=>{
-    const inputs=[...dlg.querySelectorAll('input[data-type]')];
-    const err=dlg.querySelector('#mgrEditErr');
     err.textContent='שולח…';
-    for(const inp of inputs){
-      const t=inp.dataset.type, time=inp.value;
-      if((cur[t]||'')===time) continue; // לא השתנה
-      const res=await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:t, time });
+    const rows=[...dlg.querySelectorAll('.mgr-ev-row')];
+    for(const row of rows){
+      const i = Number(row.dataset.i);
+      const e = events[i];
+      const newTime = row.querySelector('.mgr-ev-time').value;
+      if(!newTime || newTime===e.time) continue; // לא השתנה
+      const res=await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:e.type, oldTime:e.time, time:newTime });
       if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
+      e.time = newTime;
+      refreshedList = true;
     }
     dlg.remove();
     toast('נוכחות עודכנה ✓','ok');
