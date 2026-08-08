@@ -3879,7 +3879,7 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
   try{
     await loadScript(PDFLIB_URL);
     const src = await window.PDFLib.PDFDocument.load(payState.pdfBytes);
-    let done=0, fails=[], notified=0, balOk=[], balFail=[];
+    let done=0, fails=[], notified=0, balOk=[], balFail=[], balDebug=[];
     const doNotify = document.getElementById('payNotify').checked;
     for(const g of groups){
       prog.textContent = 'מעלה '+(done+1)+'/'+groups.length+' — '+g.employee+'…';
@@ -3892,15 +3892,17 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
         if(!r.ok) fails.push(g.employee+': '+(r.error||'שגיאה'));
         else {
           if(r.notified) notified++;
-          if(r.balanceInfo?.extracted) balOk.push(g.employee);
+          if(r.balanceInfo?.extracted) balOk.push(g.employee+' (חופש:'+(r.balanceInfo.vac??'-')+' מחלה:'+(r.balanceInfo.sick??'-')+' הבראה:'+(r.balanceInfo.vacation??'-')+')');
           else balFail.push(g.employee+(r.balanceInfo?.error?' ('+r.balanceInfo.error+')':'')+(r.balanceInfo?.textSample?' | טקסט OCR: '+r.balanceInfo.textSample.slice(0,150):''));
+          if(r.balanceInfo?.debug) balDebug.push(g.employee+' — '+r.balanceInfo.debug);
         }
       }catch(e){ fails.push(g.employee+': '+(e.message||e)); }
       done++;
     }
     prog.innerHTML = 'הועלו '+(groups.length-fails.length)+' תלושים ✓ · נשלחו '+notified+' התראות מייל'+(fails.length?' · נכשלו: '+fails.join(' | '):'')
-      + (balOk.length?'<br>📊 יתרות חולצו אוטומטית: '+balOk.join(', '):'')
-      + (balFail.length?'<br><span style="color:#b91c1c">⚠ יתרות לא חולצו (יש להזין ידנית ב"ניהול עובדים"): '+esc(balFail.join(' | '))+'</span>':'');
+      + (balOk.length?'<br>📊 יתרות חולצו אוטומטית: '+esc(balOk.join(', ')):'')
+      + (balFail.length?'<br><span style="color:#b91c1c">⚠ יתרות לא חולצו (יש להזין ידנית ב"ניהול עובדים"): '+esc(balFail.join(' | '))+'</span>':'')
+      + (balDebug.length?'<br><small dir="rtl" style="color:var(--muted);display:block;overflow-wrap:break-word;white-space:pre-wrap">🔍 טקסט גולמי סביב מילות המפתח (לאבחון): '+esc(balDebug.join(' || '))+'</small>':'');
     if(!fails.length) toast(balFail.length?'התלושים הועלו — חלק מהיתרות דורשות הזנה ידנית':'כל התלושים הועלו ושויכו ✓','ok');
   }finally{ btn.disabled=false; }
 });
