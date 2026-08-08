@@ -2767,7 +2767,7 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   pdfBtn.textContent = '📄 PDF';
   pdfBtn.className = 'btn plain';
   pdfBtn.style.cssText = 'margin-bottom:10px;background:#fee2e2;color:#b91c1c;font-weight:700';
-  pdfBtn.addEventListener('click', ()=>generateEmpPDF(r, month));
+  pdfBtn.addEventListener('click', ()=>generateEmpPDF(r, document.getElementById('attMyMonth').value));
   box.appendChild(pdfBtn);
 
   const tbl = document.createElement('div');
