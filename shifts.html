@@ -3191,7 +3191,7 @@ async function loadMgrDetailed(){
         <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''}${emp.lateCount?' · <span style="color:#fca5a5">'+emp.lateCount+' איחורים</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
       <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
         רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.empType==='חודשי'?'—':emp.hourRate+' ₪'}</div>
-      <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th><th>נוספות</th></tr>${rows}</table>
+      <div style="overflow-x:auto"><table class="att-table" style="min-width:720px;width:100%"><tr><th>יום</th><th>כניסה</th><th>תחילת הפסקה</th><th>סיום הפסקה</th><th>סיום משמרת</th><th>שעות</th><th>נוספות</th></tr>${rows}</table></div>
       <div style="font-size:10.5px;color:var(--muted);padding:5px 10px">לחיצה על שורה — עריכת שעות נוכחות</div>
     </div>`;
   }).join('');
@@ -3277,6 +3277,7 @@ function openMgrAttEdit(employee, date){
   dlg.querySelector('#mgrEditSave').addEventListener('click', async ()=>{
     err.textContent='שולח…';
     const rows=[...dlg.querySelectorAll('.mgr-ev-row')];
+    let changed=false;
     for(const row of rows){
       const i = Number(row.dataset.i);
       const e = events[i];
@@ -3285,11 +3286,12 @@ function openMgrAttEdit(employee, date){
       const res=await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:e.type, oldTime:e.time, time:newTime });
       if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
       e.time = newTime;
-      refreshedList = true;
+      refreshedList = true; changed=true;
     }
-    dlg.remove();
-    toast('נוכחות עודכנה ✓','ok');
-    loadMgrDetailed();
+    // לא סוגר את החלון ולא מרענן את כל הדוח — כדי לאפשר עריכה רציפה של עובדים/ימים נוספים.
+    // הדוח המלא מתרענן רק כשלוחצים "סגור".
+    err.textContent='';
+    toast(changed?'נוכחות עודכנה ✓ — ניתן להמשיך לערוך':'אין שינויים לשמירה','ok');
   });
 }
 
@@ -3530,7 +3532,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <th rowspan="2">סה"כ שעות</th>
             </tr>
             <tr>
-              <th>כניסה</th><th>הפסקה/יציאה</th><th>כניסה 2</th><th>יציאה 2</th>
+              <th>כניסה</th><th>תחילת הפסקה</th><th>סיום הפסקה</th><th>סיום משמרת</th>
               <th>שעות רגילות</th><th>שעות %125</th><th>שעות %150</th>
             </tr>
           </thead>
@@ -3585,6 +3587,61 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
       </div>`;
     }).join('');
 
+    // ===== דף מסכם לכל העובדים יחד =====
+    let sTReg=0, sT125=0, sT150=0, sTTotal=0, sTDays=0, sTVac=0, sTSick=0;
+    const summaryRowsHtml = r.employees.map(emp=>{
+      const workDaysEmp=emp.days.filter(d=>!d.sick&&d.minutes>0).length;
+      const totH=Math.round(((emp.regHours||0)+(emp.ot125||0)+(emp.ot150||0))*100)/100;
+      sTReg+=emp.regHours||0; sT125+=emp.ot125||0; sT150+=emp.ot150||0; sTTotal+=totH;
+      sTDays+=workDaysEmp; sTVac+=emp.vacUsed||0; sTSick+=emp.sick||0;
+      return `<tr>
+        <td style="text-align:center">${esc(emp.empNo||'—')}</td>
+        <td>${esc(emp.employee)}</td>
+        <td style="text-align:center">${fDec(emp.regHours||0)}</td>
+        <td style="text-align:center">${fDec(emp.ot125||0)}</td>
+        <td style="text-align:center">${fDec(emp.ot150||0)}</td>
+        <td style="text-align:center;font-weight:700">${fDec(totH)}</td>
+        <td style="text-align:center">${workDaysEmp}</td>
+        <td style="text-align:center">${emp.vacUsed||0}</td>
+        <td style="text-align:center">${emp.sick||0}</td>
+      </tr>`;
+    }).join('');
+    const summaryPage = `
+      <div class="page">
+        <div class="page-header">
+          <div>
+            <div class="co-name">${COMPANY}</div>
+            <div class="branch">${BRANCH}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="doc-title">דף מסכם — כל העובדים</div>
+          </div>
+          <div style="text-align:left;font-size:10px">
+            <div>חודש: ${fmtMonth(month)}</div>
+            <div>תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}</div>
+          </div>
+        </div>
+        <table class="att-table">
+          <thead><tr>
+            <th>מס' עובד</th><th>שם עובד</th><th>שעות רגילות</th><th>שעות 125%</th><th>שעות 150%</th>
+            <th>סה"כ שעות</th><th>ימי עבודה</th><th>ימי חופשה</th><th>ימי מחלה</th>
+          </tr></thead>
+          <tbody>${summaryRowsHtml}</tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="2" style="text-align:right;font-weight:700">סה"כ (${r.employees.length} עובדים)</td>
+              <td style="text-align:center;font-weight:700">${fDec(sTReg)}</td>
+              <td style="text-align:center;font-weight:700">${fDec(sT125)}</td>
+              <td style="text-align:center;font-weight:700">${fDec(sT150)}</td>
+              <td style="text-align:center;font-weight:700">${fDec(sTTotal)}</td>
+              <td style="text-align:center;font-weight:700">${sTDays}</td>
+              <td style="text-align:center;font-weight:700">${sTVac}</td>
+              <td style="text-align:center;font-weight:700">${sTSick}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>`;
+
     const css=`
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#1b2a4a;background:#fff}
@@ -3617,15 +3674,16 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
       <style>${css}</style></head><body>
       <div class="no-print" style="background:#1b2a4a;color:#fff;padding:12px;text-align:center;margin-bottom:10px">
         <button onclick="window.print()" style="background:#e8a819;color:#1b2a4a;border:0;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:800;cursor:pointer">🖨 הדפס / שמור PDF</button>
-        <span style="margin-right:16px;font-size:13px">${r.employees.length} דפים — עובד אחד לדף</span>
+        <span style="margin-right:16px;font-size:13px">${r.employees.length+1} דפים — דף מסכם + עובד אחד לדף</span>
       </div>
+      ${summaryPage}
       ${pages}
     </body></html>`;
 
     const win=window.open('','_blank');
     win.document.write(fullHtml);
     win.document.close();
-    toast('PDF מוכן — ${r.employees.length} דפים ✓','ok');
+    toast('PDF מוכן — '+(r.employees.length+1)+' דפים ✓','ok');
   }catch(e){ toast('שגיאה: '+(e.message||e),'err'); }
   finally{ btn.disabled=false; btn.textContent='📄 PDF'; }
 });
