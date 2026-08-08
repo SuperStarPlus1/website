@@ -3893,7 +3893,7 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
         else {
           if(r.notified) notified++;
           if(r.balanceInfo?.extracted) balOk.push(g.employee);
-          else balFail.push(g.employee+(r.balanceInfo?.error?' ('+r.balanceInfo.error+')':''));
+          else balFail.push(g.employee+(r.balanceInfo?.error?' ('+r.balanceInfo.error+')':'')+(r.balanceInfo?.textSample?' | טקסט OCR: '+r.balanceInfo.textSample.slice(0,150):''));
         }
       }catch(e){ fails.push(g.employee+': '+(e.message||e)); }
       done++;
