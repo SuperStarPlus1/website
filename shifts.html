@@ -1656,12 +1656,18 @@ document.getElementById('empAvatarWrap').addEventListener('click',()=>document.g
 document.getElementById('empAvatarFile').addEventListener('change', ev=>{
   const file=ev.target.files[0]; if(!file) return;
   if(file.size>614400){ toast('תמונה גדולה מדי — עד 600KB','err'); return; }
+  const empName = _currentEmp?.name || document.querySelector('#empList .i-name')?.value.trim();
+  if(!empName){ toast('יש להזין ולשמור שם עובד לפני העלאת תמונה','err'); return; }
   const reader=new FileReader();
-  reader.onload=re=>{
+  reader.onload=async re=>{
     const src=re.target.result;
     const img=document.getElementById('empAvatarImg'), ini=document.getElementById('empAvatarInit');
     img.src=src; img.style.display='block'; ini.style.display='none';
     if(_currentEmp) _currentEmp.avatar=src;
+    if(state.demo){ toast('מצב הדגמה — לא נשמר בפועל','ok'); return; }
+    const r = await apiPost({ action:'mgrSaveAvatar', ...mgrAuth(), employee:empName, avatar:src });
+    if(r.ok) toast('תמונה נשמרה ✓','ok');
+    else toast('שגיאה בשמירת תמונה: '+(r.error||''),'err');
   };
   reader.readAsDataURL(file);
 });
