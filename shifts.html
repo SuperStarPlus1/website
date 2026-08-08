@@ -3879,7 +3879,7 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
   try{
     await loadScript(PDFLIB_URL);
     const src = await window.PDFLib.PDFDocument.load(payState.pdfBytes);
-    let done=0, fails=[], notified=0;
+    let done=0, fails=[], notified=0, balOk=[], balFail=[];
     const doNotify = document.getElementById('payNotify').checked;
     for(const g of groups){
       prog.textContent = 'מעלה '+(done+1)+'/'+groups.length+' — '+g.employee+'…';
@@ -3890,12 +3890,18 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
         const b64 = await out.saveAsBase64();
         const r = await apiPost({ action:'uploadPayslip', ...mgrAuth(), employee:g.employee, month, data:b64, notify:doNotify });
         if(!r.ok) fails.push(g.employee+': '+(r.error||'שגיאה'));
-        else if(r.notified) notified++;
+        else {
+          if(r.notified) notified++;
+          if(r.balanceInfo?.extracted) balOk.push(g.employee);
+          else balFail.push(g.employee+(r.balanceInfo?.error?' ('+r.balanceInfo.error+')':''));
+        }
       }catch(e){ fails.push(g.employee+': '+(e.message||e)); }
       done++;
     }
-    prog.textContent = 'הועלו '+(groups.length-fails.length)+' תלושים ✓ · נשלחו '+notified+' התראות מייל'+(fails.length?' · נכשלו: '+fails.join(' | '):'');
-    if(!fails.length) toast('כל התלושים הועלו ושויכו ✓','ok');
+    prog.innerHTML = 'הועלו '+(groups.length-fails.length)+' תלושים ✓ · נשלחו '+notified+' התראות מייל'+(fails.length?' · נכשלו: '+fails.join(' | '):'')
+      + (balOk.length?'<br>📊 יתרות חולצו אוטומטית: '+balOk.join(', '):'')
+      + (balFail.length?'<br><span style="color:#b91c1c">⚠ יתרות לא חולצו (יש להזין ידנית ב"ניהול עובדים"): '+esc(balFail.join(' | '))+'</span>':'');
+    if(!fails.length) toast(balFail.length?'התלושים הועלו — חלק מהיתרות דורשות הזנה ידנית':'כל התלושים הועלו ושויכו ✓','ok');
   }finally{ btn.disabled=false; }
 });
 
