@@ -1718,7 +1718,18 @@ function empRow(e){
     <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
       <input type="number" class="i-f101" value="${e.f101||''}" placeholder="—" style="width:90px;border:1.5px solid ${f101Missing(e)?'#ef4444':'var(--line)'};border-radius:8px;padding:6px 9px;text-align:center"
         title="השנה האחרונה שבה מולא טופס 101. אדום = חסר לשנה הנדרשת (${requiredF101Year()})">
-      ${f101Missing(e)?'<span style="color:#b91c1c;font-weight:700;font-size:11.5px">⚠ חסר</span>':'<span style="color:#166534;font-weight:700;font-size:11.5px">✓ תקין</span>'}</div>`;
+      ${f101Missing(e)?'<span style="color:#b91c1c;font-weight:700;font-size:11.5px">⚠ חסר</span>':'<span style="color:#166534;font-weight:700;font-size:11.5px">✓ תקין</span>'}</div>
+    <div class="chiprow" style="margin-top:10px;background:#f0fdf4;border-radius:8px;padding:8px;gap:12px">
+      <span style="font-weight:700;font-size:12px;color:#166534">📊 יתרות נכון לתלוש ${esc(e.lastPayslipMonth||'—')}</span>
+    </div>
+    <div class="chiprow">
+      <span class="lbl">יתרת חופשה (ימים):</span>
+      <input type="number" step="0.01" class="i-vac-bal" value="${e.vacBalance||''}" placeholder="0" style="width:80px;border:1.5px solid #86efac;border-radius:8px;padding:6px 9px;text-align:center">
+      <span class="lbl">יתרת מחלה (ימים):</span>
+      <input type="number" step="0.01" class="i-sick-bal" value="${e.sickBalance||''}" placeholder="0" style="width:80px;border:1.5px solid #93c5fd;border-radius:8px;padding:6px 9px;text-align:center">
+      <span class="lbl">יתרת הבראה:</span>
+      <input type="number" step="0.01" class="i-vac-bonus" value="${e.vacationBalance||''}" placeholder="0" style="width:80px;border:1.5px solid #fcd34d;border-radius:8px;padding:6px 9px;text-align:center">
+    </div>
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
@@ -1757,7 +1768,11 @@ document.getElementById('empOk').addEventListener('click',()=>{
     monthlyHours:Number(r.querySelector('.i-monthly').value)||0,
     hourRate:Number(r.querySelector('.i-rate').value)||0,
     f101:Number(r.querySelector('.i-f101').value)||0,
-    avatar:_currentEmp?.avatar||''
+    avatar:_currentEmp?.avatar||'',
+    vacBalance:Number(r.querySelector('.i-vac-bal')?.value)||0,
+    sickBalance:Number(r.querySelector('.i-sick-bal')?.value)||0,
+    vacationBalance:Number(r.querySelector('.i-vac-bonus')?.value)||0,
+    lastPayslipMonth:_currentEmp?.lastPayslipMonth||''
   };
   const existIdx=state.employees.findIndex(x=>x.name===(_currentEmp?.name||nm));
   if(existIdx>=0) state.employees[existIdx]={...state.employees[existIdx],...updated};
@@ -2319,6 +2334,20 @@ function showEmpHome(){
   document.getElementById('board').classList.add('hidden');
   document.getElementById('backHomeFab').classList.add('hidden');
   document.getElementById('ehF101').classList.toggle('hidden', !f101Missing(empByName(state.emp.name)));
+  // הצג יתרות
+  const meEmp = empByName(state.emp.name);
+  const balDiv = document.getElementById('ehBalances');
+  if(balDiv && meEmp && (meEmp.vacBalance||meEmp.sickBalance||meEmp.lastPayslipMonth)){
+    balDiv.innerHTML = `<div style="background:#f0fdf4;border-radius:10px;padding:10px 14px;margin-top:8px;font-size:12px">
+      <div style="font-weight:700;color:#166534;margin-bottom:6px">📊 יתרות נכון לתלוש ${esc(meEmp.lastPayslipMonth||'')}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        ${meEmp.vacBalance?`<div><span style="color:#6b7280">חופשה:</span> <b>${meEmp.vacBalance} ימים</b></div>`:''}
+        ${meEmp.sickBalance?`<div><span style="color:#6b7280">מחלה:</span> <b>${meEmp.sickBalance} ימים</b></div>`:''}
+        ${meEmp.vacationBalance?`<div><span style="color:#6b7280">הבראה:</span> <b>${meEmp.vacationBalance}</b></div>`:''}
+      </div>
+    </div>`;
+    balDiv.classList.remove('hidden');
+  } else if(balDiv) balDiv.classList.add('hidden');
   const savedAvatar = localStorage.getItem('sp_avatar_'+state.emp.username) || empByName(state.emp.name)?.avatar || '';
   updateSelfAvatar(savedAvatar);
   renderHomePunch();
@@ -3894,6 +3923,21 @@ document.getElementById('vcAdd').addEventListener('click', async ()=>{
   if(to < from){ err.textContent='תאריך הסיום לפני תאריך ההתחלה'; return; }
   if(!reason){ err.textContent='יש לציין סיבת חופשה'; return; }
   err.textContent='שולח…';
+  // בדיקת יתרת חופשה לפני שליחה
+  const meV = empByName(state.emp.name);
+  if(meV && from && to){
+    const days = Math.round((new Date(to)-new Date(from))/(86400000))+1;
+    const bal = meV.vacBalance||0;
+    if(bal > 0 && days > bal){
+      const isMonthly = meV.empType === 'חודשי';
+      const msg = isMonthly
+        ? `⚠ יתרת החופשה שלך היא ${bal} ימים בלבד.\n${days - bal} ימים נוספים יגרמו לניכוי משכר.\nאתה מאשר?`
+        : `⚠ יתרת החופשה שלך היא ${bal} ימים בלבד.\nבקשת ${days} ימים — חריגה של ${days - bal} ימים.\nלהמשיך?`;
+      if(!confirm(msg)) return;
+    } else if(bal > 0 && days === bal){
+      if(!confirm(`⚠ בקשה זו תמצה את כל יתרת החופשה שלך (${bal} ימים).\nלהמשיך?`)) return;
+    }
+  }
   const r = await apiPost({ action:'addVacation', username:state.emp.username, password:state.emp.pw, from, to, reason });
   err.textContent='';
   if(!r.ok){
@@ -4078,6 +4122,17 @@ async function loadSickReview(){
   }));
 }
 document.getElementById('consBtn').addEventListener('click', openConsReview);
+document.getElementById('consToggleHistory').addEventListener('click', ()=>{
+  state._showAllRequests = !state._showAllRequests;
+  const btn = document.getElementById('consToggleHistory');
+  const sub = document.getElementById('consSubtitle');
+  btn.textContent = state._showAllRequests ? '⏳ ממתינות בלבד' : '📋 היסטוריה';
+  if(sub) sub.textContent = state._showAllRequests
+    ? 'מוצגות כל הבקשות כולל היסטוריה'
+    : 'מוצגות רק בקשות ממתינות לאישור';
+  openConsReview();
+  loadSickReview();
+});
 
 /* ============ כניסה ויציאה ============ */
 let loginTab = 'mgr';
