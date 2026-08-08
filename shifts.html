@@ -452,6 +452,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     </div>
     <input type="file" id="empSelfAvatarFile" accept="image/*" capture="user" style="display:none">
     <div class="eh-status" id="ehStatus">—</div>
+    <div id="ehBalances" class="hidden"></div>
     <div class="eh-punch" id="ehPunch"></div>
     <div class="eh-gps" id="ehGps"></div>
     <div class="eh-next hidden" id="ehNext"></div>
@@ -1742,7 +1743,7 @@ function empRow(e){
   return div;
 }
 // שמירת עובד מהכרטיס
-document.getElementById('empOk').addEventListener('click',()=>{
+document.getElementById('empOk').addEventListener('click',async ()=>{
   const rows=[...document.querySelectorAll('#empList .emp-item')];
   if(!rows.length) return;
   const r=rows[0];
@@ -1788,7 +1789,24 @@ document.getElementById('empOk').addEventListener('click',()=>{
   document.getElementById('empCardDept').textContent=updated.primaryDept||depts[0]||'';
   document.getElementById('empCardType').textContent=updated.empType;
   document.getElementById('empCardActive').textContent=updated.active?'✅ פעיל':'❌ לא פעיל';
-  state.dirtyEmps=true; toast('נשמר ✓','ok'); render();
+  render();
+  // שמירה ישירה לשרת
+  if(state.demo){ state.dirtyEmps=true; toast('מצב הדגמה — לא נשמר בפועל','ok'); return; }
+  const btnOk=document.getElementById('empOk'); const prevTxt=btnOk.textContent;
+  btnOk.disabled=true; btnOk.textContent='שומר…';
+  try{
+    const res = await apiPost({ action:'saveEmployees', ...mgrAuth(),
+      employees: state.employees.map(e=>({
+        name:e.name, dept:(e.depts||[]).join(', '), active:e.active!==false,
+        password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
+        skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
+        email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
+        f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
+        monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'' })) });
+    if(!res.ok) throw new Error(res.error||'שגיאה בשמירה');
+    state.dirtyEmps=false; toast('נשמר בשרת ✓','ok');
+  }catch(err){ state.dirtyEmps=true; toast('לא נשמר: '+err.message,'err'); }
+  finally{ btnOk.disabled=false; btnOk.textContent=prevTxt; }
 });
 
 // מחיקת עובד
@@ -3411,11 +3429,10 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             <div><span class="lbl">תפקיד:</span> ${esc(emp.dept||'')}</div>
             <div><span class="lbl">כלל:</span> ימי עבודה</div>
             <div><span class="lbl">עובד:</span> ${esc(emp.employee)}</div>
-            <div><span class="lbl">מחלקה ד-ב:</span> ${esc(emp.dept||'')}</div>
+            <div><span class="lbl">מחלקה:</span> ${esc(emp.dept||'')}</div>
             <div><span class="lbl">מספר לשכר:</span> ${esc(emp.empNo||'—')}</div>
-            <div><span class="lbl">חישוב שבועי/לא:</span> לא</div>
+            <div><span class="lbl">סוג עובד:</span> ${esc(emp.empType||'שעתי')}</div>
             <div><span class="lbl">מספר עובד:</span> ${esc(emp.empNo||'—')}</div>
-            <div><span class="lbl">סוג עבודה:</span> 900</div>
           </div>
         </div>
         <table class="att-table">
@@ -3423,12 +3440,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             <tr>
               <th rowspan="2">תאריך</th>
               <th rowspan="2">יום</th>
-              <th colspan="4">ני/י. ה. ש/עון</th>
+              <th colspan="4">שעון נוכחות</th>
               <th colspan="3">הרכב שעות העבודה</th>
-              <th rowspan="2">שעות מוחדות</th>
+              <th rowspan="2">שעות מוחזרות</th>
             </tr>
             <tr>
-              <th>כניסה</th><th>-2-</th><th>-3-</th><th>כניסה</th>
+              <th>כניסה</th><th>הפסקה/יציאה</th><th>כניסה 2</th><th>יציאה 2</th>
               <th>שעות רגילות</th><th>שעות %125</th><th>שעות %150</th>
             </tr>
           </thead>
@@ -3459,12 +3476,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <tr><td>שעות נוספות %150</td><td>${fDec(emp.ot150||0)}</td></tr>
               <tr><td>שעות נוספות %175</td><td>0</td></tr>
               <tr><td>שעות נוספות %200</td><td>0</td></tr>
-              <tr><td style="font-weight:700">שעות הרלוות</td><td style="font-weight:700">${fDec(totalH)}</td></tr>
+              <tr><td style="font-weight:700">סה"כ שעות</td><td style="font-weight:700">${fDec(totalH)}</td></tr>
             </table>
           </div>
           <div class="sum-mid">
             <table>
-              <tr><td>שעות בניוס</td><td></td></tr>
+              <tr><td>שעות בונוס</td><td></td></tr>
               <tr><td>שעות נוסף</td><td></td></tr>
               <tr><td>הפסקה</td><td></td></tr>
               <tr><td>מילואים</td><td></td></tr>
@@ -3472,13 +3489,13 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
           </div>
           <div class="sum-right">
             <table>
-              <tr><td>יום עבודה חברה</td><td>${workDays}</td></tr>
+              <tr><td>ימי עבודה בפועל</td><td>${workDaysEmp}</td></tr>
               <tr><td>ערב חג</td><td>0</td></tr>
               <tr><td>יום מיוחד</td><td>0</td></tr>
               <tr><td>מחלה בתשלום %37.5</td><td>${emp.sick||0}</td></tr>
               <tr><td>מחלה בתשלום %75</td><td></td></tr>
-              <tr><td>סרל מחלה</td><td>${fDec(6)}</td></tr>
-              <tr><td>סרל חופש</td><td>${fDec(0)}</td></tr>
+              <tr><td>צבירת מחלה</td><td>${fDec(emp.sickBalance||0)}</td></tr>
+              <tr><td>צבירת חופש</td><td>${fDec(emp.vacBalance||0)}</td></tr>
             </table>
           </div>
         </div>
@@ -4232,7 +4249,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0 })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'' })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
