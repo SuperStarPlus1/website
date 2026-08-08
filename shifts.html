@@ -661,6 +661,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mrow" style="margin-top:14px"><label>אי-זמינות שהגשתי בשבוע המוצג</label><div id="ecList"></div></div>
       <div style="border-top:1px solid var(--line);margin:14px 0 12px"></div>
       <div style="font-weight:700;font-size:13.5px;margin-bottom:8px">🏖 בקשת חופשה (טווח תאריכים)</div>
+      <div id="vcBalance" style="font-size:12.5px;color:#166534;font-weight:700;margin-bottom:8px"></div>
       <div class="timegrid">
         <div class="mrow"><label>מתאריך</label><input type="date" id="vcFrom"></div>
         <div class="mrow"><label>עד תאריך</label><input type="date" id="vcTo"></div>
@@ -1672,6 +1673,10 @@ function empRow(e){
       <input type="text" class="i-name" value="${esc(e.name)}" placeholder="שם העובד">
       <input type="text" class="i-user" value="${esc(e.username||'')}" placeholder="שם משתמש" dir="ltr">
       <input type="text" class="i-pw" value="${esc(e.password||'')}" placeholder="סיסמה">
+      <select class="i-active" title="סטטוס עובד" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-weight:700">
+        <option value="1" ${e.active!==false?'selected':''}>✅ פעיל</option>
+        <option value="0" ${e.active===false?'selected':''}>❌ לא פעיל</option>
+      </select>
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${state.departments.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
@@ -1693,11 +1698,6 @@ function empRow(e){
       <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מס' עובד:</span>
       <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
-    <div class="chiprow" style="margin-top:7px">
-      <span class="lbl">תקן חופשה חודשי (ימים):</span>
-      <input type="number" step="0.01" class="i-vacq" value="${e.vacQuota||''}" placeholder="0" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center" title="ימי חופשה שנצברים בחודש. היעדרות עד מכסה זו נספגת כחופשה">
-      <span class="lbl">ערך שעה (₪):</span>
-      <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center" title="ריק = שכר מינימום"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
       <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מחלקה ראשית:</span>
@@ -1707,15 +1707,15 @@ function empRow(e){
       <span class="lbl">תקן חופשה/חודש:</span>
       <input type="number" step="0.01" class="i-vac" value="${e.vacQuota||''}" placeholder="${e.vacMonthly||'אוטומטי'}" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"
         title="ריק = חישוב אוטומטי לפי ותק">
-      <span class="lbl">סוג:</span>
+      <span class="lbl">סוג העסקה (שעתי/חודשי):</span>
       <select class="i-emptype" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px">
         <option ${!e.empType||e.empType==='שעתי'?'selected':''}>שעתי</option>
         <option ${e.empType==='חודשי'?'selected':''}>חודשי</option>
       </select>
-      <span class="lbl" style="${e.empType!=='חודשי'?'display:none':''}">תקן שעות/חודש:</span>
-      <input type="number" class="i-monthly" value="${e.monthlyHours||''}" placeholder="186" style="width:72px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType!=='חודשי'?'display:none':''}" title="תקן שעות חודשי (עובד חודשי בלבד)">
-      <span class="lbl">ערך שעה:</span>
-      <input type="number" step="0.01" class="i-rate" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
+      <span class="lbl mo-only" style="${e.empType!=='חודשי'?'display:none':''}">תקן שעות/חודש:</span>
+      <input type="number" class="i-monthly mo-only" value="${e.monthlyHours||''}" placeholder="186" style="width:72px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType!=='חודשי'?'display:none':''}" title="תקן שעות חודשי (עובד חודשי בלבד)">
+      <span class="lbl hr-only" style="${e.empType==='חודשי'?'display:none':''}">ערך שעה:</span>
+      <input type="number" step="0.01" class="i-rate hr-only" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType==='חודשי'?'display:none':''}" title="ריק = שכר מינימום · לא רלוונטי לעובד חודשי"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
       <input type="number" class="i-f101" value="${e.f101||''}" placeholder="—" style="width:90px;border:1.5px solid ${f101Missing(e)?'#ef4444':'var(--line)'};border-radius:8px;padding:6px 9px;text-align:center"
         title="השנה האחרונה שבה מולא טופס 101. אדום = חסר לשנה הנדרשת (${requiredF101Year()})">
@@ -1740,6 +1740,11 @@ function empRow(e){
     c.classList.toggle('active', !!next);
     c.textContent=DAY_LETTERS[Number(c.dataset.i)]+(next===''?'':next==='מלא'?'':next==='בוקר'?' ☀':' 🌙');
   }));
+  div.querySelector('.i-emptype').addEventListener('change', ev=>{
+    const isMonthly = ev.target.value==='חודשי';
+    div.querySelectorAll('.mo-only').forEach(el=>el.style.display = isMonthly?'':'none');
+    div.querySelectorAll('.hr-only').forEach(el=>el.style.display = isMonthly?'none':'');
+  });
   return div;
 }
 // שמירת עובד מהכרטיס
@@ -1802,7 +1807,8 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
         email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
         f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
-        monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'' })) });
+        monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+        vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0 })) });
     if(!res.ok) throw new Error(res.error||'שגיאה בשמירה');
     state.dirtyEmps=false; toast('נשמר בשרת ✓','ok');
   }catch(err){ state.dirtyEmps=true; toast('לא נשמר: '+err.message,'err'); }
@@ -3158,18 +3164,21 @@ async function fetchDetailed(){
   return await apiPost({ action:'attendanceDetailed', ...mgrAuth(),
     month: document.getElementById('attMgrMonth').value });
 }
-document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
+let lastMgrDetailed = null;
+async function loadMgrDetailed(){
   const box=document.getElementById('attMgrReport'); box.innerHTML='טוען…';
   const r=await fetchDetailed();
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  lastMgrDetailed = r;
   const withData = r.employees.filter(e=>e.days.length);
   if(!withData.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחים בחודש זה</div>'; return; }
   box.innerHTML = withData.map(emp=>{
     const rows = emp.days.map(d=>{
       const dd=new Date(d.date+'T00:00:00');
-      if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="5" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td><td>—</td></tr>`;
+      if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="6" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td></tr>`;
       const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
-      return `<tr><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
+      return `<tr class="mgr-att-row" data-emp="${esc(emp.employee)}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לעריכת שעות">
+        <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
         <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
         <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}</td>
         <td><b>${fmtMin(d.minutes)}</b>${d.travel?' <small style="color:#1e40af">+נסיעה</small>':''}</td>
@@ -3179,13 +3188,57 @@ document.getElementById('attMgrDetailed').addEventListener('click', async ()=>{
       <div style="background:var(--navy);color:#fff;padding:7px 10px;font-weight:800;font-size:13px">
         ${esc(emp.employee)}${emp.empNo?' · מס\' '+esc(emp.empNo):''}${emp.dept?' · '+esc(emp.dept):''}
         <span style="font-size:11px;font-weight:500;opacity:.8"> · ${fmtMonth(r.month)}</span>
-        <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
+        <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''}${emp.lateCount?' · <span style="color:#fca5a5">'+emp.lateCount+' איחורים</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
       <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
-        רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.hourRate} ₪</div>
+        רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.empType==='חודשי'?'—':emp.hourRate+' ₪'}</div>
       <table class="att-table"><tr><th>יום</th><th>כניסה</th><th>יצ\' להפסקה</th><th>חזרה</th><th>סיום</th><th>שעות</th><th>נוספות</th></tr>${rows}</table>
+      <div style="font-size:10.5px;color:var(--muted);padding:5px 10px">לחיצה על שורה — עריכת שעות נוכחות</div>
     </div>`;
   }).join('');
-});
+  box.querySelectorAll('.mgr-att-row').forEach(row=>row.addEventListener('click',()=>openMgrAttEdit(row.dataset.emp, row.dataset.date)));
+}
+document.getElementById('attMgrDetailed').addEventListener('click', loadMgrDetailed);
+
+function openMgrAttEdit(employee, date){
+  const types=['כניסה','הפסקה','חזרה','יציאה'];
+  const labels={'כניסה':'כניסה','הפסקה':'יציאה להפסקה','חזרה':'חזרה מהפסקה','יציאה':'סיום משמרת'};
+  const emp = (lastMgrDetailed && lastMgrDetailed.employees||[]).find(e=>e.employee===employee);
+  const day = emp && emp.days.find(d=>d.date===date);
+  const cur={};
+  (day && day.events||[]).forEach(e=>{ cur[e.type]=e.time; });
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:320px;direction:rtl;font-family:inherit">
+    <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:4px">✏ עריכת נוכחות</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:16px">${esc(employee)} · ${date}</div>
+    ${types.map(t=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <label style="width:120px;font-size:13px">${labels[t]}</label>
+      <input type="time" data-type="${t}" value="${cur[t]||''}" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
+    </div>`).join('')}
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">שינוי נשמר מיד — ריק ימחק את הרישום</div>
+    <div style="display:flex;gap:8px">
+      <button id="mgrEditSave" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer">שמור ✓</button>
+      <button id="mgrEditCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">ביטול</button>
+    </div>
+    <div id="mgrEditErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
+  </div>`;
+  document.body.appendChild(dlg);
+  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>dlg.remove());
+  dlg.querySelector('#mgrEditSave').addEventListener('click', async ()=>{
+    const inputs=[...dlg.querySelectorAll('input[data-type]')];
+    const err=dlg.querySelector('#mgrEditErr');
+    err.textContent='שולח…';
+    for(const inp of inputs){
+      const t=inp.dataset.type, time=inp.value;
+      if((cur[t]||'')===time) continue; // לא השתנה
+      const res=await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:t, time });
+      if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
+    }
+    dlg.remove();
+    toast('נוכחות עודכנה ✓','ok');
+    loadMgrDetailed();
+  });
+}
 
 /* --- הזנות ידניות ממתינות --- */
 document.getElementById('attMgrManual').addEventListener('click', async ()=>{
@@ -3257,68 +3310,53 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     const wb=XLSX.utils.book_new();
     const periodStr='תקופת דיווח: 01/'+month.slice(5,7)+'/'+month.slice(0,4)+' — '+daysInMonth+'/'+month.slice(5,7)+'/'+month.slice(0,4)+' · ימי עבודה בחודש: '+workingDays;
 
-    // ===== גיליון 1: סיכום מחלקות (ראשון!) =====
-    const byDept={};
-    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
-      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
-      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick).length; byDept[d].emps++; });
-
-    const deptSum=[
-      ['סיכום שעות לפי מחלקה — '+fmtMonth(month)],[periodStr],[],
-      ['מחלקה','עובדים','ימי עבודה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ברוטו (₪)',
-       'ימי עבודה (חודש קודם)','שעות רגילות (חודש קודם)','הפרש שעות']
-    ];
-    let tR=0,t1=0,t2=0,tG=0,tD=0;
-    Object.keys(byDept).sort().forEach(d=>{
-      const v=byDept[d], pv=prevByDept[d]||{reg:0,days:0};
-      const tot=Math.round((v.reg+v.o1+v.o2)*100)/100;
-      const diff=Math.round((v.reg-pv.reg)*100)/100;
-      deptSum.push([d, v.emps, v.days, Math.round(v.reg*100)/100,
-        Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, tot,
-        Math.round(v.gross*100)/100, pv.days||'—', Math.round(pv.reg*100)/100||'—',
-        diff>0?'+'+diff:diff]);
-      tR+=v.reg; t1+=v.o1; t2+=v.o2; tG+=v.gross; tD+=v.days;
-    });
-    deptSum.push([]);
-    deptSum.push(['סה"כ','',tD,Math.round(tR*100)/100,Math.round(t1*100)/100,Math.round(t2*100)/100,
-      Math.round((tR+t1+t2)*100)/100,Math.round(tG*100)/100,'','','']);
-    const wsDept=XLSX.utils.aoa_to_sheet(deptSum);
-    wsDept['!cols']=[{wch:18},{wch:8},{wch:12},{wch:13},{wch:11},{wch:11},{wch:11},{wch:12},{wch:18},{wch:20},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, wsDept, 'סיכום מחלקות');
-
-    // ===== גיליון 2: ריכוז עובדים =====
-    const sum=[['ריכוז שעות עבודה — '+fmtMonth(month)],[periodStr],[],
+    // ===== סיכום עובדים =====
+    const sheetRows=[['ריכוז שעות עבודה — '+fmtMonth(month)],[periodStr],[],
       ['מס\' עובד','שם עובד','מחלקה','ערך שעה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ימי עבודה','מחלה','חופשה','היעדרות','איחורים','ברוטו (₪)','הערות']];
     let tReg=0,t125=0,t150=0,tGross=0;
     r.employees.forEach(e=>{
       const reg=e.regHours||0,o1=e.ot125||0,o2=e.ot150||0;
       tReg+=reg; t125+=o1; t150+=o2; tGross+=e.gross;
-      sum.push([e.empNo||'', e.employee, e.dept||'', e.hourRate||r.minWage,
+      const rate=e.empType==='חודשי' ? '' : (e.hourRate||r.minWage);
+      sheetRows.push([e.empNo||'', e.employee, e.dept||'', rate,
         Math.round(reg*100)/100, Math.round(o1*100)/100, Math.round(o2*100)/100,
         Math.round((reg+o1+o2)*100)/100, e.days.filter(d=>!d.sick).length,
         e.sick||0, e.vacUsed||0, e.overAbsence||0, e.lateCount||0, e.gross,
         e.days.length?'':'ללא דיווח']);
     });
-    sum.push([]); sum.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','','',Math.round(tGross*100)/100]);
-    const ws1=XLSX.utils.aoa_to_sheet(sum);
-    ws1['!cols']=[{wch:9},{wch:20},{wch:12},{wch:8},{wch:11},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:9},{wch:8},{wch:12},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws1, 'ריכוז עובדים');
+    sheetRows.push([]); sheetRows.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','','',Math.round(tGross*100)/100]);
 
-    // ===== גיליון 3: פירוט יומי =====
-    const det=[['פירוט יומי — '+fmtMonth(month)],[],
-      ['שם עובד','תאריך','יום','כניסה','יצ\' הפסקה','חזרה','סיום משמרת','שעות','נוספות','סטטוס']];
-    r.employees.forEach(e=>{ e.days.forEach(d=>{
-      const dd=new Date(d.date+'T00:00:00');
-      if(d.sick){ det.push([e.employee,d.date,DAY_LETTERS[dd.getDay()]+'׳','','','','','','',d.sickApproved?'מחלה מאושרת':'מחלה/היעדרות']); return; }
-      det.push([e.employee,d.date,DAY_LETTERS[dd.getDay()]+'׳',d.inT||'',d.breakT||'',d.backT||'',d.outT||'',
-        Math.round(d.minutes/60*100)/100,d.ot||0,d.complete?'תקין':'חסר סיום']);
-    }); });
-    const ws2=XLSX.utils.aoa_to_sheet(det);
-    ws2['!cols']=[{wch:20},{wch:12},{wch:6},{wch:9},{wch:11},{wch:9},{wch:11},{wch:8},{wch:9},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws2, 'פירוט יומי');
+    // ===== סיכום מחלקות — באותו גיליון, מתחת לסיכום העובדים =====
+    const byDept={};
+    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
+      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
+      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick).length; byDept[d].emps++; });
+
+    sheetRows.push([]); sheetRows.push([]);
+    sheetRows.push(['סיכום שעות לפי מחלקה — '+fmtMonth(month)]);
+    sheetRows.push(['מחלקה','עובדים','ימי עבודה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ברוטו (₪)',
+       'ימי עבודה (חודש קודם)','שעות רגילות (חודש קודם)','הפרש שעות']);
+    let tR=0,t1=0,t2=0,tG=0,tD=0;
+    Object.keys(byDept).sort().forEach(d=>{
+      const v=byDept[d], pv=prevByDept[d]||{reg:0,days:0};
+      const tot=Math.round((v.reg+v.o1+v.o2)*100)/100;
+      const diff=Math.round((v.reg-pv.reg)*100)/100;
+      sheetRows.push([d, v.emps, v.days, Math.round(v.reg*100)/100,
+        Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, tot,
+        Math.round(v.gross*100)/100, pv.days||'—', Math.round(pv.reg*100)/100||'—',
+        diff>0?'+'+diff:diff]);
+      tR+=v.reg; t1+=v.o1; t2+=v.o2; tG+=v.gross; tD+=v.days;
+    });
+    sheetRows.push([]);
+    sheetRows.push(['סה"כ','',tD,Math.round(tR*100)/100,Math.round(t1*100)/100,Math.round(t2*100)/100,
+      Math.round((tR+t1+t2)*100)/100,Math.round(tG*100)/100,'','','']);
+
+    const ws1=XLSX.utils.aoa_to_sheet(sheetRows);
+    ws1['!cols']=[{wch:20},{wch:20},{wch:12},{wch:8},{wch:11},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:9},{wch:8},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'סיכום');
 
     XLSX.writeFile(wb, 'נוכחות_'+month+'.xlsx');
-    toast('אקסל הורד ✓ (3 גיליונות)','ok');
+    toast('אקסל הורד ✓','ok');
   }catch(e){ toast('שגיאה: '+(e.message||e),'err'); }
   finally{ btn.disabled=false; btn.textContent=prevTxt; }
 });
@@ -3401,17 +3439,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         </tr>`;
       }).join('');
 
-      const minWage=emp.hourRate||r.minWage;
-      const grossReg=Math.round((emp.regHours||0)*minWage*100)/100;
-      const gross125=Math.round((emp.ot125||0)*1.25*minWage*100)/100;
-      const gross150=Math.round((emp.ot150||0)*1.5*minWage*100)/100;
-
       return `
       <div class="page">
         <div class="page-header">
           <div>
             <div class="co-name">${COMPANY}</div>
-            <div class="branch">מ/משתמש: ${esc(emp.employee)}</div>
+            <div class="branch">שם עובד: ${esc(emp.employee)}</div>
           </div>
           <div style="text-align:center">
             <div class="doc-title">דו"ח סיכום חודשי לעובד</div>
@@ -3426,13 +3459,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
           <div class="info-grid">
             <div><span class="lbl">מתאריך:</span> ${periodFrom}</div>
             <div><span class="lbl">עד תאריך:</span> ${periodTo}</div>
-            <div><span class="lbl">תפקיד:</span> ${esc(emp.dept||'')}</div>
-            <div><span class="lbl">כלל:</span> ימי עבודה</div>
+            <div><span class="lbl">ימי עבודה בפועל:</span> ${workDaysEmp}</div>
             <div><span class="lbl">עובד:</span> ${esc(emp.employee)}</div>
             <div><span class="lbl">מחלקה:</span> ${esc(emp.dept||'')}</div>
-            <div><span class="lbl">מספר לשכר:</span> ${esc(emp.empNo||'—')}</div>
-            <div><span class="lbl">סוג עובד:</span> ${esc(emp.empType||'שעתי')}</div>
             <div><span class="lbl">מספר עובד:</span> ${esc(emp.empNo||'—')}</div>
+            <div><span class="lbl">סוג העסקה:</span> ${esc(emp.empType||'שעתי')}</div>
+            <div><span class="lbl">מספר איחורים:</span> ${emp.lateCount||0}</div>
           </div>
         </div>
         <table class="att-table">
@@ -3442,7 +3474,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <th rowspan="2">יום</th>
               <th colspan="4">שעון נוכחות</th>
               <th colspan="3">הרכב שעות העבודה</th>
-              <th rowspan="2">שעות מוחזרות</th>
+              <th rowspan="2">סה"כ שעות</th>
             </tr>
             <tr>
               <th>כניסה</th><th>הפסקה/יציאה</th><th>כניסה 2</th><th>יציאה 2</th>
@@ -3459,7 +3491,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <td style="text-align:center;font-weight:700">${fDec(totalH)}</td>
             </tr>
             <tr style="background:#fff3cd">
-              <td colspan="9" style="font-size:10px">סה"כ אחרי קיזוז שעות נוספות פחות ההעדרות</td>
+              <td colspan="9" style="font-size:10px">סה"כ אחרי קיזוז שעות נוספות פחות ההיעדרות</td>
               <td style="text-align:center;font-weight:700">${fDec(totalH)}</td>
             </tr>
             <tr>
@@ -3479,14 +3511,6 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <tr><td style="font-weight:700">סה"כ שעות</td><td style="font-weight:700">${fDec(totalH)}</td></tr>
             </table>
           </div>
-          <div class="sum-mid">
-            <table>
-              <tr><td>שעות בונוס</td><td></td></tr>
-              <tr><td>שעות נוסף</td><td></td></tr>
-              <tr><td>הפסקה</td><td></td></tr>
-              <tr><td>מילואים</td><td></td></tr>
-            </table>
-          </div>
           <div class="sum-right">
             <table>
               <tr><td>ימי עבודה בפועל</td><td>${workDaysEmp}</td></tr>
@@ -3503,7 +3527,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <div class="sig-row">
           <div>חתימת העובד ____________</div>
           <div>חתימת המנהל ____________</div>
-          <div>בוצע ע"י ____________ באמצעות "עדכנת" של ס.מ.ד</div>
+          <div>בוצע ע"י ____________ באמצעות מערכת סופרסטאר פלוס</div>
         </div>
       </div>`;
     }).join('');
@@ -3908,6 +3932,10 @@ function openEmpCons(){
   f.min = iso(new Date()); t.min = f.min;
   document.getElementById('ecErr').textContent='';
   document.getElementById('vcErr').textContent='';
+  const meBal = empByName(state.emp.name);
+  document.getElementById('vcBalance').textContent = meBal
+    ? 'יתרת חופשה צבורה לזכותך: ' + (meBal.vacBalance||0) + ' ימים'
+    : '';
   renderEcList();
   renderVcList();
   show('empConsOverlay');
@@ -3946,10 +3974,7 @@ document.getElementById('vcAdd').addEventListener('click', async ()=>{
     const days = Math.round((new Date(to)-new Date(from))/(86400000))+1;
     const bal = meV.vacBalance||0;
     if(bal > 0 && days > bal){
-      const isMonthly = meV.empType === 'חודשי';
-      const msg = isMonthly
-        ? `⚠ יתרת החופשה שלך היא ${bal} ימים בלבד.\n${days - bal} ימים נוספים יגרמו לניכוי משכר.\nאתה מאשר?`
-        : `⚠ יתרת החופשה שלך היא ${bal} ימים בלבד.\nבקשת ${days} ימים — חריגה של ${days - bal} ימים.\nלהמשיך?`;
+      const msg = `⚠ יתרת החופשה שלך היא ${bal} ימים בלבד.\nבקשת ${days} ימים — חריגה של ${days - bal} ימים שתקוזז מהשכר.\nלהמשיך?`;
       if(!confirm(msg)) return;
     } else if(bal > 0 && days === bal){
       if(!confirm(`⚠ בקשה זו תמצה את כל יתרת החופשה שלך (${bal} ימים).\nלהמשיך?`)) return;
@@ -4249,7 +4274,8 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'' })) });
+          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0 })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
