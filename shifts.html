@@ -1729,7 +1729,7 @@ function empRow(e){
       <input type="number" step="0.01" class="i-sick-bal" value="${e.sickBalance||''}" placeholder="0" style="width:80px;border:1.5px solid #93c5fd;border-radius:8px;padding:6px 9px;text-align:center">
       <span class="lbl">יתרת הבראה:</span>
       <input type="number" step="0.01" class="i-vac-bonus" value="${e.vacationBalance||''}" placeholder="0" style="width:80px;border:1.5px solid #fcd34d;border-radius:8px;padding:6px 9px;text-align:center">
-    </div>
+    </div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
