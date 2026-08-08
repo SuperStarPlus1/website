@@ -3485,7 +3485,8 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
       }
 
       const rowsHtml = dayRows.map(({day,dayName:dn,cols,note,rowClass,isShabbat})=>{
-        if(isShabbat) return `<tr class="shabbat-row"><td>${day}</td><td>${dn}</td><td colspan="8" style="text-align:center;color:#9ca3af;font-size:10px">שבת</td></tr>`;
+        // שבת מוצגת כ"שבת" רק אם לא היה בה בפועל דיווח נוכחות (כדי לא להסתיר עובדים שעבדו בשבת)
+        if(isShabbat && !cols.inT && !cols.siteNote && !note) return `<tr class="shabbat-row"><td>${day}</td><td>${dn}</td><td colspan="8" style="text-align:center;color:#9ca3af;font-size:10px">שבת</td></tr>`;
         if(cols.siteNote) return `<tr class="${rowClass}">
           <td style="text-align:center">${day}</td>
           <td style="text-align:center">${dn}</td>
