@@ -9,9 +9,9 @@
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
-        appId: "346517a0-34af-40bf-b7cd-b3f98ad06d8b",
-        serviceWorkerParam: { scope: "/" },
-        serviceWorkerPath: "/sw.js",
+        appId: "346517a0-34af-40bf-b7cd-b3f98ad06d8b", // אותה אפליקציית OneSignal כמו ב-/shifts — לפי בקשת המשתמש
+        serviceWorkerParam: { scope: "/shifts-mb/" },
+        serviceWorkerPath: "/shifts-mb/sw.js",
         autoRegister: false,
         notifyButton: { enable: false },   // כפתור מובנה — מכובה (יש לנו משלנו)
         allowLocalhostAsSecureOrigin: true,
@@ -64,17 +64,17 @@
   </script>
 
   <!-- PWA manifest -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/shifts-mb/manifest.json">
   <meta name="theme-color" content="#1b2a4a">
   <meta name="mobile-web-app-capable" content="yes">
   <!-- iOS Safari -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="סופרסטאר ⭐">
-  <link rel="apple-touch-icon" href="/icon-192.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
-<title>סידור עבודה — סופרסטאר</title>
+  <meta name="apple-mobile-web-app-title" content="סופרסטאר (רב-סניפי) ⭐">
+  <link rel="apple-touch-icon" href="/shifts-mb/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/shifts-mb/icon-152.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/shifts-mb/icon-512.png">
+<title>סידור עבודה — סופרסטאר (רב-סניפי)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
 
@@ -360,6 +360,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button id="nextW" title="שבוע הבא">‹</button>
   </div>
 
+  <select class="hsel hidden" id="branchSel" title="סניף">
+  </select>
   <select class="hsel" id="empFilter" title="סינון לפי עובד">
     <option value="">כל העובדים</option>
   </select>
@@ -419,7 +421,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
     <button class="hbtn gold" id="saveBtn">💾 שמור <span id="dirtyBadge" class="badge-dirty hidden">שינויים</span></button>
-    <span class="whoami"><b id="mgrName"></b> · <span id="mgrRole"></span></span>
+    <span class="whoami"><b id="mgrName"></b> · <span id="mgrRole"></span> · <span id="mgrBranchChip" style="font-weight:700"></span></span>
     <button class="hbtn ghost" id="adminExit">יציאה</button>
   </span>
 </header>
@@ -566,10 +568,21 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <header style="flex-shrink:0">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <h3 style="margin:0">👥 ניהול עובדים</h3>
+        <select id="empBranchFilter" class="hidden" style="border:1.5px solid var(--gold);border-radius:9px;padding:7px 10px;font-family:inherit;font-weight:700;font-size:14px;background:#fffdf0"></select>
         <select id="empSelector" style="flex:1;min-width:180px;border:1.5px solid var(--gold);border-radius:9px;padding:7px 10px;font-family:inherit;font-weight:700;font-size:14px;background:#fffdf0">
           <option value="">— בחר עובד —</option>
         </select>
         <button class="btn plain" id="empAdd" style="background:#dbeafe;color:#1e40af;font-weight:700;white-space:nowrap">+ חדש</button>
+        <button class="btn plain" id="deptMgrBtn" style="white-space:nowrap">⚙ מחלקות</button>
+      </div>
+      <div id="deptMgrPanel" class="hidden" style="margin-top:10px;padding:10px;border:1.5px dashed var(--gold);border-radius:9px">
+        <div style="font-weight:700;margin-bottom:6px;font-size:13px">ניהול מחלקות — <span id="deptMgrBranchName"></span></div>
+        <div id="deptMgrChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="deptMgrNew" placeholder="שם מחלקה חדשה" style="flex:1;border:1px solid #ccc;border-radius:6px;padding:6px 8px">
+          <button class="btn plain" id="deptMgrAdd">+ הוסף</button>
+          <button class="btn primary" id="deptMgrSave">💾 שמירה</button>
+        </div>
       </div>
     </header>
     <div class="mbody" style="flex:1;overflow-y:auto;padding-top:8px">
@@ -807,6 +820,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div class="mbody">
       <div class="mrow"><label>חודש</label>
         <div style="display:flex;gap:6px">
+          <select id="attMgrBranch" class="hidden" style="min-width:120px"></select>
           <select id="attMgrMonth" style="flex:1"></select>
           <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">סיכום</button>
           <button class="btn plain" id="attMgrDetailed" style="padding:8px 16px">📋 מפורט</button>
@@ -956,7 +970,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzEGWUf6fz5U3xpob0sz2YSPDP8N_vDdXzhNhU8uHx8aOU6imVle3PTrmAQvAk4rXYr/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxZ_LkFlfJpWoXMEBL8TxxxlUqAUUo52N2aiyGG0nrCjgrp3G2-2KtOWtaAb57HUx9ZEA/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -976,26 +990,28 @@ function f101Missing(e){ return e && (Number(e.f101)||0) < requiredF101Year(); }
 
 /* ============ מצב ============ */
 const store = {
-  get(){ try{ return JSON.parse(localStorage.getItem('sp_auth') || sessionStorage.getItem('sp_auth') || 'null'); }catch(e){ return null; } },
+  get(){ try{ return JSON.parse(localStorage.getItem('sp_auth_mb') || sessionStorage.getItem('sp_auth_mb') || 'null'); }catch(e){ return null; } },
   set(v, remember){
     try{
-      if(remember === undefined) remember = !!localStorage.getItem('sp_auth') || !sessionStorage.getItem('sp_auth');
-      (remember ? localStorage : sessionStorage).setItem('sp_auth', JSON.stringify(v));
-      (remember ? sessionStorage : localStorage).removeItem('sp_auth');
+      if(remember === undefined) remember = !!localStorage.getItem('sp_auth_mb') || !sessionStorage.getItem('sp_auth_mb');
+      (remember ? localStorage : sessionStorage).setItem('sp_auth_mb', JSON.stringify(v));
+      (remember ? sessionStorage : localStorage).removeItem('sp_auth_mb');
     }catch(e){}
   },
-  clear(){ try{ localStorage.removeItem('sp_auth'); sessionStorage.removeItem('sp_auth'); }catch(e){} }
+  clear(){ try{ localStorage.removeItem('sp_auth_mb'); sessionStorage.removeItem('sp_auth_mb'); }catch(e){} }
 };
 const state = {
   demo: !GAS_URL,
   weekStart: sundayOf(new Date()),
-  employees: [],          // {name, dept, depts:[], active, offDays:[], hasPw}
+  employees: [],          // {name, dept, depts:[], active, offDays:[], hasPw, branch}
   departments: [],
+  branches: [],           // רשימת שמות סניפים (נטענת לאדמין בלבד, מ-getAdminData)
+  branch: '',             // בחירת הסניף הנוכחית של אדמין ('' = כל הסניפים)
   shifts: [],             // {_id, date, employee, dept, start, end} + שורות אי-זמינות
   constraints: [],        // בקשות אילוצים: {date, employee, part, status}
   swaps: [],              // בקשות החלפה: {date, dept, start, end, requester, target, status}
   vacations: [],          // בקשות חופשה: {from, to, employee, reason, status}
-  mgr: null,              // {name, pw, role}
+  mgr: null,              // {name, pw, role, branch}
   emp: null,              // עובד מחובר: {name, username, pw}
   dirtyShifts: false,
   dirtyEmps: false,
@@ -1125,7 +1141,7 @@ function anyAuth(){
 async function apiGet(){
   if(state.demo) return demoData();
   const r = await fetch(GAS_URL,{ method:'POST',
-    body: JSON.stringify({ action:'getData', week: iso(state.weekStart), ...anyAuth() }) });
+    body: JSON.stringify({ action:'getData', week: iso(state.weekStart), branch: effectiveBranch()||undefined, ...anyAuth() }) });
   const j = await r.json();
   if(!j.ok){
     if(j.authRequired){ state.mgr=null; state.emp=null; store.clear(); setAuthUI(); }
@@ -1277,6 +1293,12 @@ function shiftsOf(emp, dept, dateIso){
   return state.shifts.filter(s=>s.employee===emp && s.dept===dept && s.date===dateIso);
 }
 function isMgr(){ return !!state.mgr; }
+/** הסניף שדרכו יש להציג/לסנן נתונים כרגע: מנהל משמרת — תמיד שלו; אדמין — הסניף שבחר ('' = הכל) */
+function effectiveBranch(){
+  if(isMgr() && state.mgr.role!==ROLE_ADMIN) return state.mgr.branch||'';
+  return state.branch||'';
+}
+function isAdmin(){ return isMgr() && state.mgr.role===ROLE_ADMIN; }
 
 /* ============ רינדור ============ */
 function render(){
@@ -1421,7 +1443,19 @@ function render(){
   }
 }
 
+function renderBranchSel(){
+  const bs = document.getElementById('branchSel');
+  if(!isAdmin() || !(state.branches||[]).length){ bs.classList.add('hidden'); return; }
+  bs.classList.remove('hidden');
+  bs.innerHTML = state.branches.map(b=>`<option value="${esc(b)}" ${b===state.branch?'selected':''}>${esc(b)}</option>`).join('');
+}
+document.getElementById('branchSel').addEventListener('change',e=>{
+  state.branch = e.target.value;
+  state.filterEmp=''; state.filterDept='';
+  load();
+});
 function renderFilterOptions(){
+  renderBranchSel();
   const sel = document.getElementById('empFilter');
   const names = [...new Set(state.employees.filter(e=>e.active).map(e=>e.name)
     .concat(state.shifts.filter(s=>s.dept!==UNAVAIL).map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
@@ -1567,7 +1601,7 @@ document.getElementById('rowOk').addEventListener('click',()=>{
       state.dirtyEmps = true;
     }
   } else {
-    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'', rating:2, fixedShifts:'', email:'', f101:0 });
+    state.employees.push({ name, dept:rowDept, depts:[rowDept], active:true, offDays:[], password:'', username:'', skills:'', rating:2, fixedShifts:'', email:'', f101:0, branch:effectiveBranch()||undefined });
     state.dirtyEmps = true;
   }
   state.extraRows.add(rowDept+'||'+name);
@@ -1575,11 +1609,25 @@ document.getElementById('rowOk').addEventListener('click',()=>{
 });
 
 /* ============ ניהול עובדים ============ */
+let _empMgrDepts = []; // מחלקות הסניף הנוכחי במסך זה (למחיקה/הוספה בפאנל "ניהול מחלקות")
 async function openEmpMgr(){
+  const ebf = document.getElementById('empBranchFilter');
+  if(isAdmin() && (state.branches||[]).length){
+    ebf.classList.remove('hidden');
+    ebf.innerHTML = '<option value="">כל הסניפים</option>' +
+      state.branches.map(b=>`<option value="${esc(b)}" ${b===state.branch?'selected':''}>${esc(b)}</option>`).join('');
+  } else {
+    ebf.classList.add('hidden');
+  }
+  document.getElementById('deptMgrBtn').classList.toggle('hidden', !isAdmin() || !effectiveBranch());
+  document.getElementById('deptMgrPanel').classList.add('hidden');
+
   if(!state.demo){
     try{
-      const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+      const r = await apiPost({ action:'getAdminData', ...mgrAuth(), branch: effectiveBranch()||undefined });
       if(r.ok){
+        if(r.branches) state.branches = r.branches;
+        if(r.departments) { _empMgrDepts = r.departments; if(effectiveBranch()) state.departments = r.departments; }
         r.employees.forEach(se=>{
           const local = empByName(se.name);
           if(local){
@@ -1588,7 +1636,7 @@ async function openEmpMgr(){
               fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
               vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
               monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-              startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0
+              startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
             });
           } else {
             state.employees.push({
@@ -1598,17 +1646,19 @@ async function openEmpMgr(){
               fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
               vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
               monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-              startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0
+              startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
             });
           }
         });
       }
     }catch(e){ toast('שגיאה בטעינת עובדים: '+e.message,'err'); }
   }
-  // מלא selector
+  // מלא selector — מוגבל לסניף הנבחר כרגע (או כולם, אם לא נבחר סניף ספציפי)
   const sel = document.getElementById('empSelector');
   sel.innerHTML = '<option value="">— בחר עובד —</option>';
-  [...state.employees].sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach(e=>{
+  const branchNow = effectiveBranch();
+  [...state.employees].filter(e=>!branchNow || e.branch===branchNow)
+    .sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach(e=>{
     const opt=document.createElement('option');
     opt.value=e.name;
     opt.textContent=e.name+(e.primaryDept?' · '+e.primaryDept:'')+(e.active===false?' (לא פעיל)':'');
@@ -1618,12 +1668,51 @@ async function openEmpMgr(){
   document.getElementById('empCardEmpty').classList.remove('hidden');
   show('empOverlay');
 }
+document.getElementById('empBranchFilter').addEventListener('change', async e=>{
+  // קריטי: מרענן את state.employees דרך load() כדי לא לצבור עובדים מסניפים קודמים באותה סשן —
+  // אחרת שמירה לאחר מעבר סניף עלולה לשלוח לשרת גם עובדים "ישנים" מסניף אחר ולגרום לכפילויות.
+  state.branch = e.target.value;
+  state.filterEmp=''; state.filterDept='';
+  await load();
+  openEmpMgr();
+});
+function renderDeptMgrPanel(){
+  document.getElementById('deptMgrBranchName').textContent = effectiveBranch();
+  document.getElementById('deptMgrChips').innerHTML = _empMgrDepts.map((d,i)=>
+    `<span class="chip" style="cursor:pointer" data-i="${i}">${esc(d)} ✕</span>`).join('') || '<span style="color:var(--muted);font-size:12px">אין מחלקות עדיין</span>';
+  [...document.querySelectorAll('#deptMgrChips .chip')].forEach(c=>c.addEventListener('click',()=>{
+    _empMgrDepts.splice(Number(c.dataset.i),1); renderDeptMgrPanel();
+  }));
+}
+document.getElementById('deptMgrBtn').addEventListener('click',()=>{
+  const p = document.getElementById('deptMgrPanel');
+  p.classList.toggle('hidden');
+  if(!p.classList.contains('hidden')) renderDeptMgrPanel();
+});
+document.getElementById('deptMgrAdd').addEventListener('click',()=>{
+  const inp = document.getElementById('deptMgrNew');
+  const v = inp.value.trim();
+  if(v && !_empMgrDepts.includes(v)) _empMgrDepts.push(v);
+  inp.value='';
+  renderDeptMgrPanel();
+});
+document.getElementById('deptMgrSave').addEventListener('click', async ()=>{
+  const branch = effectiveBranch();
+  if(!branch) return;
+  try{
+    const r = await apiPost({ action:'saveDepartments', ...mgrAuth(), branch, departments:_empMgrDepts });
+    if(!r.ok) throw new Error(r.error);
+    state.departments = r.departments || _empMgrDepts;
+    toast('מחלקות '+branch+' נשמרו ✓','ok');
+    document.getElementById('deptMgrPanel').classList.add('hidden');
+  }catch(e){ toast('שגיאה: '+e.message,'err'); }
+});
 
 let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[state.departments[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',avatar:'',f101:0};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[state.departments[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',avatar:'',f101:0,branch:effectiveBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -1808,7 +1897,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
   const btnOk=document.getElementById('empOk'); const prevTxt=btnOk.textContent;
   btnOk.disabled=true; btnOk.textContent='שומר…';
   try{
-    const res = await apiPost({ action:'saveEmployees', ...mgrAuth(),
+    const res = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
       employees: state.employees.map(e=>({
         name:e.name, dept:(e.depts||[]).join(', '), active:e.active!==false,
         password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
@@ -1816,7 +1905,8 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
         f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
-        vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0 })) });
+        vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
+        branch:e.branch||effectiveBranch()||undefined })) });
     if(!res.ok) throw new Error(res.error||'שגיאה בשמירה');
     state.dirtyEmps=false; toast('נשמר בשרת ✓','ok');
   }catch(err){ state.dirtyEmps=true; toast('לא נשמר: '+err.message,'err'); }
@@ -1843,6 +1933,7 @@ async function openMgrs(){
   try{
     const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
     if(!r.ok) throw new Error(r.error);
+    if(r.branches) state.branches = r.branches;
     const list = document.getElementById('mgrList');
     list.innerHTML='';
     (r.managers||[]).forEach(m=>list.appendChild(mgrRowEl(m)));
@@ -1853,36 +1944,45 @@ async function openMgrs(){
 function mgrRowEl(m){
   const div = document.createElement('div');
   div.className='mgr-item';
+  const branchOpts = (state.branches||[]).map(b=>`<option value="${esc(b)}" ${m.branch===b?'selected':''}>${esc(b)}</option>`).join('');
   div.innerHTML = `<input type="text" class="i-name" value="${esc(m.name)}" placeholder="שם מנהל">
     <input type="text" class="i-pw" value="${esc(m.password)}" placeholder="סיסמה">
     <select class="i-role">
       <option ${m.role===ROLE_ADMIN?'selected':''}>${ROLE_ADMIN}</option>
       <option ${m.role!==ROLE_ADMIN?'selected':''}>מנהל משמרת</option>
     </select>
+    <select class="i-branch" title="סניף (מנהל משמרת בלבד)" style="${m.role===ROLE_ADMIN?'display:none':''}">${branchOpts}</select>
     <input type="text" class="i-memail" value="${esc(m.email||'')}" placeholder="אימייל להתראות" dir="ltr">
     <button class="del" title="הסרה">✕</button>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
+  div.querySelector('.i-role').addEventListener('change',e=>{
+    div.querySelector('.i-branch').style.display = e.target.value===ROLE_ADMIN ? 'none' : '';
+  });
   return div;
 }
 document.getElementById('mgrAdd').addEventListener('click',()=>{
-  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:''}));
+  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:'',branch:state.branches[0]||''}));
 });
 document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
     name: r.querySelector('.i-name').value.trim(),
     password: r.querySelector('.i-pw').value.trim(),
     role: r.querySelector('.i-role').value,
-    email: r.querySelector('.i-memail').value.trim()
+    email: r.querySelector('.i-memail').value.trim(),
+    branch: r.querySelector('.i-branch').value
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;
   }
+  if(list.some(m=>m.role!==ROLE_ADMIN && !m.branch)){
+    document.getElementById('mgrErr').textContent='יש לבחור סניף לכל מנהל משמרת'; return;
+  }
   try{
     const r = await apiPost({ action:'saveManagers', ...mgrAuth(), managers:list });
     if(!r.ok) throw new Error(r.error);
-    // אם המנהל הנוכחי שינה את הסיסמה של עצמו — עדכון החיבור
+    // אם המנהל הנוכחי שינה את הסיסמה/סניף של עצמו — עדכון החיבור
     const me = list.find(m=>m.name===state.mgr.name);
-    if(me){ state.mgr.pw = me.password; state.mgr.role = me.role; store.set({kind:'mgr',name:me.name,pw:me.password}); }
+    if(me){ state.mgr.pw = me.password; state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; store.set({kind:'mgr',name:me.name,pw:me.password}); }
     hide('mgrsOverlay');
     toast('המנהלים נשמרו ✓','ok');
   }catch(e){ document.getElementById('mgrErr').textContent = e.message; }
@@ -1974,7 +2074,7 @@ document.getElementById('aaOk').addEventListener('click', async ()=>{
     });
 
     // שמירת התקן לגיליון
-    apiPost({ action:'saveStaffing', ...mgrAuth(), staffing }).catch(()=>{});
+    apiPost({ action:'saveStaffing', ...mgrAuth(), branch: effectiveBranch()||undefined, staffing }).catch(()=>{});
 
     // שליפת השבוע הקודם — לחישוב רצף ימי עבודה חוצה-שבוע
     let prevShifts = [];
@@ -2977,8 +3077,21 @@ document.getElementById('sickSend').addEventListener('click', async ()=>{
 });
 
 /* --- מנהל --- */
+/** הסניף הנבחר כרגע בדוח הנוכחות (עצמאי מהבורד הראשי): אדמין בוחר מהתפריט, מנהל משמרת — קבוע לסניפו */
+function attReportBranch(){
+  if(!isAdmin()) return state.mgr ? state.mgr.branch : '';
+  return document.getElementById('attMgrBranch').value || '';
+}
 document.getElementById('attBtn').addEventListener('click', ()=>{
   monthOptions('attMgrMonth');
+  const bs = document.getElementById('attMgrBranch');
+  if(isAdmin() && (state.branches||[]).length){
+    bs.classList.remove('hidden');
+    bs.innerHTML = '<option value="">כל הסניפים</option>' +
+      state.branches.map(b=>`<option value="${esc(b)}" ${b===state.branch?'selected':''}>${esc(b)}</option>`).join('');
+  } else {
+    bs.classList.add('hidden');
+  }
   document.getElementById('attMgrReport').innerHTML='';
   show('attMgrOverlay');
 });
@@ -2986,7 +3099,7 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
   const box = document.getElementById('attMgrReport');
   box.innerHTML='טוען…';
   const r = await apiPost({ action:'attendanceReport', ...mgrAuth(),
-    month: document.getElementById('attMgrMonth').value });
+    month: document.getElementById('attMgrMonth').value, branch: attReportBranch()||undefined });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.report.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחי נוכחות בחודש זה</div>'; return; }
   let grossAll=0, totReg=0, tot125=0, tot150=0;
@@ -3021,8 +3134,8 @@ async function renderLive(){
   box.innerHTML='טוען…';
   const today=iso(new Date());
   const r=await apiPost({ action:'myAttendance', username:'__mgr__', password:'', month:today.slice(0,7) });
-  // לוגיקת זמן אמת: קוראים דוח של כולם לחודש הנוכחי
-  const r2=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:today.slice(0,7) });
+  // לוגיקת זמן אמת: קוראים דוח של כולם לחודש הנוכחי (מוגבל לסניף הנוכחי, או כל הסניפים לאדמין ללא בחירה)
+  const r2=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:today.slice(0,7), branch: effectiveBranch()||undefined });
   if(!r2.ok){ box.innerHTML=esc(r2.error||'שגיאה'); return; }
   const now=new Date();
   const todayStr=iso(now);
@@ -3044,16 +3157,14 @@ async function renderLive(){
     const lateIn=hasIn&&shift?Math.max(0,toM(d.inT)-toM(shift.start)):null;
     const lateMiss=missedStart?nowM-toM(shift.start):null;
     const dur=hasIn&&!hasOut?Math.round((now-new Date(todayStr+'T'+d.inT))/60000):null;
-    lines.push({name:emp.employee, dept:emp.dept,
+    lines.push({name:emp.employee, dept:emp.dept, branch:emp.branch||'',
       shiftStart:shift?shift.start:'', inT:d?d.inT||'—':'—', outT:d?d.outT||'':'',
       status:!hasIn?'לא הגיע':hasOut?'יצא':breakOn?'בהפסקה':'במשמרת',
       lateIn, lateMiss, dur});
   });
   if(!lines.length){ box.innerHTML='<div style="color:var(--muted)">אין עובדים במשמרת כרגע</div>'; return; }
   const now2=new Date().toTimeString().slice(0,5);
-  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2}</div>`+
-    `<table class="att-table"><tr><th>עובד</th><th>מחלקה</th><th>משמרת</th><th>כניסה בפועל</th><th>מצב</th><th>זמן מ-כניסה</th></tr>`+
-    lines.map(l=>`<tr style="${l.status==='לא הגיע'?'background:#fff5f5':''}">
+  const rowsHtml = ls => ls.map(l=>`<tr style="${l.status==='לא הגיע'?'background:#fff5f5':''}">
       <td style="font-weight:700">${esc(l.name)}</td><td>${esc(l.dept)}</td>
       <td dir="ltr" style="color:var(--muted)">${esc(l.shiftStart||'—')}</td>
       <td dir="ltr">${esc(l.inT)}</td>
@@ -3065,8 +3176,19 @@ async function renderLive(){
         ${l.lateIn&&l.lateIn>=10?` <b style="color:#b91c1c;font-size:11px">איחור ${l.lateIn}ד׳</b>`:''}
         ${l.lateMiss?` <b style="color:#b91c1c;font-size:11px">${l.lateMiss}ד׳ ממתין</b>`:''}
       </td>
-      <td>${l.dur!=null?Math.floor(l.dur/60)+'ש׳ '+(l.dur%60)+'ד׳':'—'}</td></tr>`).join('')+
-    `</table>`;
+      <td>${l.dur!=null?Math.floor(l.dur/60)+'ש׳ '+(l.dur%60)+'ד׳':'—'}</td></tr>`).join('');
+  const tableHdr = `<tr><th>עובד</th><th>מחלקה</th><th>משמרת</th><th>כניסה בפועל</th><th>מצב</th><th>זמן מ-כניסה</th></tr>`;
+  let bodyHtml;
+  if(isAdmin() && !effectiveBranch()){
+    // אדמין ללא סינון סניף: קיבוץ לטבלה נפרדת לכל סניף
+    const byBranch={};
+    lines.forEach(l=>{ (byBranch[l.branch||'—']=byBranch[l.branch||'—']||[]).push(l); });
+    bodyHtml = Object.keys(byBranch).sort().map(b=>
+      `<h4 style="margin:14px 0 6px">${esc(b)}</h4><table class="att-table">${tableHdr}${rowsHtml(byBranch[b])}</table>`).join('');
+  } else {
+    bodyHtml = `<table class="att-table">${tableHdr}${rowsHtml(lines)}</table>`;
+  }
+  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2}</div>`+bodyHtml;
 }
 document.getElementById('liveBtn').addEventListener('click', ()=>{ show('liveOverlay'); renderLive(); });
 
@@ -3170,7 +3292,7 @@ document.getElementById('sickMgrBtn').addEventListener('click', ()=>{ show('sick
 /* --- דוח מפורט יום-ביום (מנהל) --- */
 async function fetchDetailed(){
   return await apiPost({ action:'attendanceDetailed', ...mgrAuth(),
-    month: document.getElementById('attMgrMonth').value });
+    month: document.getElementById('attMgrMonth').value, branch: attReportBranch()||undefined });
 }
 let lastMgrDetailed = null;
 async function loadMgrDetailed(){
@@ -3313,7 +3435,7 @@ document.getElementById('attMgrManual').addEventListener('click', async ()=>{
   const box=document.getElementById('attMgrReport');
   box.innerHTML='טוען…';
   const month=document.getElementById('attMgrMonth').value;
-  const r=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month });
+  const r=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month, branch: attReportBranch()||undefined });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   // סנן רק "ממתין לאישור"
   const pending=[];
@@ -3362,7 +3484,7 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     // חודש קודם להשוואה
     const prevDate=new Date(month.slice(0,4),month.slice(5,7)-2,1);
     const prevMonth=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0');
-    const rPrev=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:prevMonth });
+    const rPrev=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:prevMonth, branch: attReportBranch()||undefined });
     const prevByDept={};
     if(rPrev.ok){ rPrev.employees.forEach(e=>{
       const d=e.dept||'ללא'; prevByDept[d]=prevByDept[d]||{reg:0,o1:0,o2:0,days:0};
@@ -3423,6 +3545,24 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     ws1['!cols']=[{wch:20},{wch:20},{wch:12},{wch:8},{wch:11},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:9},{wch:8},{wch:12},{wch:14}];
     XLSX.utils.book_append_sheet(wb, ws1, 'סיכום');
 
+    // ===== סיכום סניפים — רק כשמוצג "כל הסניפים" (אדמין ללא סינון) =====
+    if(isAdmin() && !attReportBranch()){
+      const byBranch={};
+      r.employees.forEach(e=>{ const b=e.branch||'—'; byBranch[b]=byBranch[b]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
+        byBranch[b].reg+=e.regHours||0; byBranch[b].o1+=e.ot125||0; byBranch[b].o2+=e.ot150||0;
+        byBranch[b].gross+=e.gross; byBranch[b].days+=e.days.filter(dd=>!dd.sick).length; byBranch[b].emps++; });
+      const brRows=[['סיכום שעות לפי סניף — '+fmtMonth(month)],[],
+        ['סניף','עובדים','ימי עבודה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ברוטו (₪)']];
+      Object.keys(byBranch).sort().forEach(b=>{
+        const v=byBranch[b];
+        brRows.push([b, v.emps, v.days, Math.round(v.reg*100)/100, Math.round(v.o1*100)/100,
+          Math.round(v.o2*100)/100, Math.round((v.reg+v.o1+v.o2)*100)/100, Math.round(v.gross*100)/100]);
+      });
+      const ws2=XLSX.utils.aoa_to_sheet(brRows);
+      ws2['!cols']=[{wch:16},{wch:9},{wch:11},{wch:12},{wch:11},{wch:11},{wch:11},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws2, 'סיכום סניפים');
+    }
+
     XLSX.writeFile(wb, 'נוכחות_'+month+'.xlsx');
     toast('אקסל הורד ✓','ok');
   }catch(e){ toast('שגיאה: '+(e.message||e),'err'); }
@@ -3439,7 +3579,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
     if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
 
     const COMPANY='פלוס גולד אנרגיה והשקעות בע"מ';
-    const BRANCH='סופרסטאר פלוס';
+    const BRANCH=attReportBranch()||'כל הסניפים'; // תווית ברירת מחדל; לכל עובד מוצג emp.branch שלו בפועל בדף שלו
     const daysInMonth=new Date(month.slice(0,4),month.slice(5,7),0).getDate();
     let workDays=0;
     for(let i=1;i<=daysInMonth;i++){ const dow=new Date(month.slice(0,4)+'-'+month.slice(5,7)+'-'+String(i).padStart(2,'0')+'T00:00:00').getDay(); if(dow!==6) workDays++; }
@@ -3529,7 +3669,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             <div class="doc-title">דו"ח סיכום חודשי לעובד</div>
           </div>
           <div style="text-align:left;font-size:10px">
-            <div>חברה: ${BRANCH}</div>
+            <div>סניף: ${esc(emp.branch||BRANCH)}</div>
             <div>תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}</div>
             <div>עמוד: 1 / 1</div>
           </div>
@@ -3896,7 +4036,7 @@ document.getElementById('payUpload').addEventListener('click', async ()=>{
         const copied = await out.copyPages(src, g.pages.map(p=>p-1));
         copied.forEach(pg=>out.addPage(pg));
         const b64 = await out.saveAsBase64();
-        const r = await apiPost({ action:'uploadPayslip', ...mgrAuth(), employee:g.employee, month, data:b64, notify:doNotify });
+        const r = await apiPost({ action:'uploadPayslip', ...mgrAuth(), employee:g.employee, empNo:empByName(g.employee)?.empNo||'', month, data:b64, notify:doNotify });
         if(!r.ok) fails.push(g.employee+': '+(r.error||'שגיאה'));
         else {
           if(r.notified) notified++;
@@ -4346,7 +4486,9 @@ async function doLogin(){
       if(!name){ err.textContent='יש להזין שם מנהל'; return; }
       const r = await apiPost({ action:'mlogin', mname:name, password:pw });
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
-      state.mgr = { name:r.name||name, pw, role:r.role };
+      state.mgr = { name:r.name||name, pw, role:r.role, branch:r.branch||'' };
+      state.branches = r.branches || [];
+      if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
       store.set({ kind:'mgr', name:state.mgr.name, pw });
       hide('loginOverlay'); setAuthUI(); load();
       toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
@@ -4389,6 +4531,7 @@ function setAuthUI(){
   if(m){
     document.getElementById('mgrName').textContent = state.mgr.name;
     document.getElementById('mgrRole').textContent = state.mgr.role;
+    document.getElementById('mgrBranchChip').textContent = state.mgr.role===ROLE_ADMIN ? 'כל הסניפים' : (state.mgr.branch||'');
     const admin = state.mgr.role===ROLE_ADMIN;
     document.getElementById('mgrsBtn').classList.toggle('hidden', !admin);
     document.getElementById('logBtn').classList.toggle('hidden', !admin);
@@ -4406,17 +4549,17 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
   try{
     const weekIso = weekDates().map(iso);
     if(state.dirtyShifts){
-      const r = await apiPost({ action:'saveWeek', ...mgrAuth(),
+      const r = await apiPost({ action:'saveWeek', ...mgrAuth(), branch: effectiveBranch()||undefined,
         weekStart: iso(state.weekStart),
         shifts: state.shifts.filter(s=>weekIso.includes(s.date)).map(s=>({date:s.date,employee:s.employee,dept:s.dept,start:s.start,end:s.end})) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת משמרות');
       state.dirtyShifts=false;
     }
     if(state.dirtyEmps){
-      const r = await apiPost({ action:'saveEmployees', ...mgrAuth(),
+      const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
           password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
-          vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0 })) });
+          vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
     }
@@ -4550,7 +4693,7 @@ document.getElementById('empSelfAvatarFile').addEventListener('change', e=>{
 /* ── Service Worker (PWA) ── */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/shifts-mb/sw.js')
       .then(r => console.log('SW:', r.scope))
       .catch(e => console.warn('SW error:', e));
   });
@@ -4584,7 +4727,11 @@ window.addEventListener('beforeinstallprompt', e => {
   const auth = store.get();
   if(auth && auth.kind==='mgr'){
     const r = await apiPost({ action:'mlogin', mname:auth.name, password:auth.pw }).catch(()=>({ok:false}));
-    if(r.ok) state.mgr = { name:r.name||auth.name, pw:auth.pw, role:r.role };
+    if(r.ok){
+      state.mgr = { name:r.name||auth.name, pw:auth.pw, role:r.role, branch:r.branch||'' };
+      state.branches = r.branches || [];
+      if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
+    }
     else store.clear();
   } else if(auth && auth.kind==='emp' && auth.username){
     const r = await apiPost({ action:'elogin', username:auth.username, password:auth.pw }).catch(()=>({ok:false}));
