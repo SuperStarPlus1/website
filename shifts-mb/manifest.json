@@ -1,8 +1,8 @@
 {
-  "name": "סופרסטאר — סידור עבודה (רב-סניפי)",
-  "short_name": "סופרסטאר רב-סניפי",
+  "name": "סידור עבודה פלוס גולד)",
+  "short_name": "פלוס גולד",
   "description": "מערכת סידור עבודה ונוכחות — רב-סניפי (סופרסטאר / יעד / תדלוקס)",
-  "start_url": "/shifts-mb/shifts",
+  "start_url": "/shifts-mb/shifts.html",
   "scope": "/shifts-mb/",
   "display": "standalone",
   "orientation": "portrait-primary",
