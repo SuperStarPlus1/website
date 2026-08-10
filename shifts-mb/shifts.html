@@ -48,7 +48,10 @@
         }
       });
 
-      // בדוק ID קיים בכל פתיחה
+      // בדוק ID קיים בכל פתיחה — ואם הוא עדיין לא אושר כשמור בשרת, שמור אותו עכשיו.
+      // סוגר פער אמיתי: אם ה-timeout הראשוני בכפתור "הפעל התראות" (8 שניות) פספס את
+      // קבלת ה-ID (למשל ברשת סלולרית איטית), לא נוצר sp_push_pending בכלל בזמנו,
+      // ולכן retryPushSave() לא תפס את זה — הבדיקה הזו רצה בכל טעינת עמוד ומתקנת זאת בדיעבד.
       setTimeout(async ()=>{
         try{
           const id = OneSignal.User.PushSubscription.id;
@@ -57,6 +60,18 @@
             localStorage.setItem('sp_onesignal_id', id);
             const pending = localStorage.getItem('sp_push_pending');
             if(pending && pending !== id) localStorage.setItem('sp_push_pending', id);
+            const savedId = localStorage.getItem('sp_push_saved_id');
+            const who = window.state?.emp || window.state?.mgr;
+            if(id !== savedId && who && window.apiPost){
+              apiPost({ action:'savePushId',
+                username: state.emp?.username || state.mgr?.name || '',
+                password: state.emp?.pw || state.mgr?.pw || '',
+                empName: state.emp?.name || state.mgr?.name || '',
+                pushId: id }).then(r=>{
+                  if(r && r.ok){ localStorage.setItem('sp_push_saved_id', id); localStorage.removeItem('sp_push_pending'); }
+                  console.log('Push ID save check on load:', r);
+                }).catch(()=>{});
+            }
           }
         }catch(e){}
       }, 3000);
@@ -1609,25 +1624,34 @@ document.getElementById('rowOk').addEventListener('click',()=>{
 });
 
 /* ============ ניהול עובדים ============ */
+// הסניף הנבחר במסך זה מנוהל בנפרד לגמרי מ-state.branch (סניף הלוח הראשי) —
+// קריטי: שינוי סניף כאן לא אמור לגעת בלוח הראשי (לא לרענן אותו, לא לאט, לא לשנות מה שמוצג ברקע).
 let _empMgrDepts = []; // מחלקות הסניף הנוכחי במסך זה (למחיקה/הוספה בפאנל "ניהול מחלקות")
+let _empMgrBranch = ''; // סניף נוכחי במסך ניהול עובדים בלבד
+function empMgrBranch(){
+  if(isMgr() && !isAdmin()) return state.mgr.branch||'';
+  return _empMgrBranch;
+}
 async function openEmpMgr(){
   const ebf = document.getElementById('empBranchFilter');
   if(isAdmin() && (state.branches||[]).length){
     ebf.classList.remove('hidden');
     ebf.innerHTML = '<option value="">כל הסניפים</option>' +
-      state.branches.map(b=>`<option value="${esc(b)}" ${b===state.branch?'selected':''}>${esc(b)}</option>`).join('');
+      state.branches.map(b=>`<option value="${esc(b)}" ${b===_empMgrBranch?'selected':''}>${esc(b)}</option>`).join('');
   } else {
     ebf.classList.add('hidden');
   }
-  document.getElementById('deptMgrBtn').classList.toggle('hidden', !isAdmin() || !effectiveBranch());
+  document.getElementById('deptMgrBtn').classList.toggle('hidden', !isAdmin() || !empMgrBranch());
   document.getElementById('deptMgrPanel').classList.add('hidden');
 
   if(!state.demo){
     try{
-      const r = await apiPost({ action:'getAdminData', ...mgrAuth(), branch: effectiveBranch()||undefined });
+      const r = await apiPost({ action:'getAdminData', ...mgrAuth(), branch: empMgrBranch()||undefined });
       if(r.ok){
         if(r.branches) state.branches = r.branches;
-        if(r.departments) { _empMgrDepts = r.departments; if(effectiveBranch()) state.departments = r.departments; }
+        // מעדכן את state.departments (המשפיע על הלוח הראשי) רק כשהסניף כאן זהה לסניף המוצג בלוח —
+        // אחרת צפייה במחלקות של סניף אחר במסך הזה הייתה "מדביקה" אותן על הלוח ברקע.
+        if(r.departments) { _empMgrDepts = r.departments; if(empMgrBranch() && empMgrBranch()===state.branch) state.departments = r.departments; }
         r.employees.forEach(se=>{
           const local = empByName(se.name);
           if(local){
@@ -1656,7 +1680,7 @@ async function openEmpMgr(){
   // מלא selector — מוגבל לסניף הנבחר כרגע (או כולם, אם לא נבחר סניף ספציפי)
   const sel = document.getElementById('empSelector');
   sel.innerHTML = '<option value="">— בחר עובד —</option>';
-  const branchNow = effectiveBranch();
+  const branchNow = empMgrBranch();
   [...state.employees].filter(e=>!branchNow || e.branch===branchNow)
     .sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach(e=>{
     const opt=document.createElement('option');
@@ -1670,21 +1694,18 @@ async function openEmpMgr(){
 }
 let _empBranchSwitching = false;
 document.getElementById('empBranchFilter').addEventListener('change', async e=>{
-  // קריטי: מרענן את state.employees דרך load() כדי לא לצבור עובדים מסניפים קודמים באותה סשן —
-  // אחרת שמירה לאחר מעבר סניף עלולה לשלוח לשרת גם עובדים "ישנים" מסניף אחר ולגרום לכפילויות.
-  // מגן מפני מעברי סניף מהירים ברצף: openEmpMgr הקודם (כולל קריאת הרשת שלו) חייב להסתיים
-  // לפני שמתחילים את הבא, אחרת קריאה איטית יותר שמסתיימת מאוחר עלולה לדרוס תוצאה טרייה יותר.
+  // מכוון רק את _empMgrBranch (מקומי למסך הזה) — לא נוגע ב-state.branch/לוח הראשי בכלל,
+  // ולא קורא ל-load(): כל מה שהמסך הזה צריך כבר מגיע מ-getAdminData בתוך openEmpMgr.
+  // המגן מונע מעבר סניף שני לפני שהראשון (כולל קריאת הרשת שלו) הסתיים.
   if(_empBranchSwitching) return;
   _empBranchSwitching = true;
   try{
-    state.branch = e.target.value;
-    state.filterEmp=''; state.filterDept='';
-    await load();
+    _empMgrBranch = e.target.value;
     await openEmpMgr();
   } finally { _empBranchSwitching = false; }
 });
 function renderDeptMgrPanel(){
-  document.getElementById('deptMgrBranchName').textContent = effectiveBranch();
+  document.getElementById('deptMgrBranchName').textContent = empMgrBranch();
   document.getElementById('deptMgrChips').innerHTML = _empMgrDepts.map((d,i)=>
     `<span class="chip" style="cursor:pointer" data-i="${i}">${esc(d)} ✕</span>`).join('') || '<span style="color:var(--muted);font-size:12px">אין מחלקות עדיין</span>';
   [...document.querySelectorAll('#deptMgrChips .chip')].forEach(c=>c.addEventListener('click',()=>{
@@ -1704,12 +1725,13 @@ document.getElementById('deptMgrAdd').addEventListener('click',()=>{
   renderDeptMgrPanel();
 });
 document.getElementById('deptMgrSave').addEventListener('click', async ()=>{
-  const branch = effectiveBranch();
+  const branch = empMgrBranch();
   if(!branch) return;
   try{
     const r = await apiPost({ action:'saveDepartments', ...mgrAuth(), branch, departments:_empMgrDepts });
     if(!r.ok) throw new Error(r.error);
-    state.departments = r.departments || _empMgrDepts;
+    // מעדכן את state.departments (המשפיע על הלוח הראשי) רק אם זה אותו סניף שהלוח מציג כרגע
+    if(branch===state.branch) state.departments = r.departments || _empMgrDepts;
     toast('מחלקות '+branch+' נשמרו ✓','ok');
     document.getElementById('deptMgrPanel').classList.add('hidden');
   }catch(e){ toast('שגיאה: '+e.message,'err'); }
@@ -1719,7 +1741,7 @@ let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[state.departments[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',avatar:'',f101:0,branch:effectiveBranch()||undefined};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -1782,7 +1804,7 @@ function empRow(e){
         <option value="0" ${e.active===false?'selected':''}>❌ לא פעיל</option>
       </select>
       <button class="del" title="הסרה">✕</button></div>
-    <div class="chiprow"><span class="lbl">מחלקות:</span>${state.departments.map(d=>
+    <div class="chiprow"><span class="lbl">מחלקות:</span>${_empMgrDepts.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
     <div class="chiprow"><span class="lbl">חופש/חסימה קבועה (לחיצות: יום מלא → לא פנוי בוקר → לא פנוי ערב → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
       const fo=((e.offDays)||[]).find(x=>x.day===i);
@@ -1857,7 +1879,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
   if(!rows.length) return;
   const r=rows[0];
   const depts=[...r.querySelectorAll('.dchip.dept.active')].map(c=>c.dataset.d);
-  if(!depts.length) depts.push(state.departments[0]);
+  if(!depts.length) depts.push(_empMgrDepts[0]);
   const offDays=[...r.querySelectorAll('.dchip.day')].filter(c=>c.dataset.part)
     .map(c=>({day:Number(c.dataset.i),part:c.dataset.part}));
   const nm=r.querySelector('.i-name').value.trim();
@@ -1882,7 +1904,8 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     vacBalance:Number(r.querySelector('.i-vac-bal')?.value)||0,
     sickBalance:Number(r.querySelector('.i-sick-bal')?.value)||0,
     vacationBalance:Number(r.querySelector('.i-vac-bonus')?.value)||0,
-    lastPayslipMonth:_currentEmp?.lastPayslipMonth||''
+    lastPayslipMonth:_currentEmp?.lastPayslipMonth||'',
+    branch:_currentEmp?.branch||empMgrBranch()||undefined
   };
   const existIdx=state.employees.findIndex(x=>x.name===(_currentEmp?.name||nm));
   if(existIdx>=0) state.employees[existIdx]={...state.employees[existIdx],...updated};
@@ -1904,8 +1927,11 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
   const btnOk=document.getElementById('empOk'); const prevTxt=btnOk.textContent;
   btnOk.disabled=true; btnOk.textContent='שומר…';
   try{
-    const res = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
-      employees: state.employees.map(e=>({
+    const scopeBranch = empMgrBranch();
+    // שולח רק עובדים בתחום הסניף המוצג כרגע במסך הזה — לא את כל state.employees הגלובלי,
+    // שעלול להכיל עובדים "ישנים" מסניף אחר שנצברו בטעינות קודמות של המסך (ראו הערה למעלה).
+    const res = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: scopeBranch||undefined,
+      employees: state.employees.filter(e=>!scopeBranch || e.branch===scopeBranch).map(e=>({
         name:e.name, dept:(e.depts||[]).join(', '), active:e.active!==false,
         password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
@@ -1913,7 +1939,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
         vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
-        branch:e.branch||effectiveBranch()||undefined })) });
+        branch:e.branch||scopeBranch||undefined })) });
     if(!res.ok) throw new Error(res.error||'שגיאה בשמירה');
     state.dirtyEmps=false; toast('נשמר בשרת ✓','ok');
   }catch(err){ state.dirtyEmps=true; toast('לא נשמר: '+err.message,'err'); }
@@ -2590,7 +2616,7 @@ async function initPushButton(){
       let osId = null;
       if(window.OneSignalDeferred){
         osId = await new Promise(resolve=>{
-          const t = setTimeout(()=>resolve(null), 8000); // 8 שניות timeout
+          const t = setTimeout(()=>resolve(null), 15000); // 15 שניות timeout — ברשת סלולרית איטית 8 שניות לא תמיד מספיקות
           OneSignalDeferred.push(async (OneSignal)=>{
             try{
               // נסה לקבל ID קיים
@@ -4635,7 +4661,10 @@ document.getElementById('prevW').addEventListener('click',()=>moveWeek(-7));
 document.getElementById('nextW').addEventListener('click',()=>moveWeek(7));
 document.getElementById('empFilter').addEventListener('change',e=>{ state.filterEmp=e.target.value; render(); });
 document.getElementById('deptFilter').addEventListener('change',e=>{ state.filterDept=e.target.value; render(); });
-document.getElementById('empMgr').addEventListener('click',openEmpMgr);
+document.getElementById('empMgr').addEventListener('click',()=>{
+  _empMgrBranch = state.branch||''; // ברירת מחדל בכל פתיחה: אותו סניף שהלוח הראשי מציג כרגע
+  openEmpMgr();
+});
 document.getElementById('mgrsBtn').addEventListener('click',openMgrs);
 document.getElementById('logBtn').addEventListener('click',openLog);
 
