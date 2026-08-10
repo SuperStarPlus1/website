@@ -1668,13 +1668,20 @@ async function openEmpMgr(){
   document.getElementById('empCardEmpty').classList.remove('hidden');
   show('empOverlay');
 }
+let _empBranchSwitching = false;
 document.getElementById('empBranchFilter').addEventListener('change', async e=>{
   // קריטי: מרענן את state.employees דרך load() כדי לא לצבור עובדים מסניפים קודמים באותה סשן —
   // אחרת שמירה לאחר מעבר סניף עלולה לשלוח לשרת גם עובדים "ישנים" מסניף אחר ולגרום לכפילויות.
-  state.branch = e.target.value;
-  state.filterEmp=''; state.filterDept='';
-  await load();
-  openEmpMgr();
+  // מגן מפני מעברי סניף מהירים ברצף: openEmpMgr הקודם (כולל קריאת הרשת שלו) חייב להסתיים
+  // לפני שמתחילים את הבא, אחרת קריאה איטית יותר שמסתיימת מאוחר עלולה לדרוס תוצאה טרייה יותר.
+  if(_empBranchSwitching) return;
+  _empBranchSwitching = true;
+  try{
+    state.branch = e.target.value;
+    state.filterEmp=''; state.filterDept='';
+    await load();
+    await openEmpMgr();
+  } finally { _empBranchSwitching = false; }
 });
 function renderDeptMgrPanel(){
   document.getElementById('deptMgrBranchName').textContent = effectiveBranch();

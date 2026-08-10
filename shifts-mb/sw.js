@@ -4,8 +4,8 @@
  */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE  = 'superstar-mb-v1';
-const ASSETS = ['/shifts-mb', '/shifts-mb/icon-192.png', '/shifts-mb/icon-512.png', '/shifts-mb/manifest.json'];
+const CACHE  = 'superstar-mb-v2';
+const ASSETS = ['/shifts-mb/shifts', '/shifts-mb/icon-192.png', '/shifts-mb/icon-512.png', '/shifts-mb/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -36,7 +36,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, res.clone()));
         }
         return res;
-      }).catch(() => caches.match('/shifts-mb'));
+      }).catch(() => caches.match('/shifts-mb/shifts'));
     })
   );
 });

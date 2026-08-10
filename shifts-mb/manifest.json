@@ -2,7 +2,7 @@
   "name": "סופרסטאר — סידור עבודה (רב-סניפי)",
   "short_name": "סופרסטאר רב-סניפי",
   "description": "מערכת סידור עבודה ונוכחות — רב-סניפי (סופרסטאר / יעד / תדלוקס)",
-  "start_url": "/shifts-mb",
+  "start_url": "/shifts-mb/shifts",
   "scope": "/shifts-mb/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -81,7 +81,7 @@
       "name": "דיווח נוכחות",
       "short_name": "נוכחות",
       "description": "פתיחת מסך דיווח נוכחות",
-      "url": "/shifts-mb#att",
+      "url": "/shifts-mb/shifts#att",
       "icons": [
         {
           "src": "/shifts-mb/icon-96.png",
@@ -93,7 +93,7 @@
       "name": "הסידור השבועי",
       "short_name": "סידור",
       "description": "צפייה בסידור העבודה",
-      "url": "/shifts-mb#board",
+      "url": "/shifts-mb/shifts#board",
       "icons": [
         {
           "src": "/shifts-mb/icon-96.png",
