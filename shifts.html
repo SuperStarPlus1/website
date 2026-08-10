@@ -1003,6 +1003,7 @@ const state = {
   filterEmp: '',
   filterDept: ''
 };
+window.state = state; // נגיש גם מ-<script> המוקדם של OneSignal ב-<head> (scope נפרד)
 let SID = 1;
 
 /* ============ עזרים ============ */
@@ -1137,6 +1138,7 @@ async function apiPost(body){
   const r = await fetch(GAS_URL,{ method:'POST', body: JSON.stringify(body) });
   return await r.json();
 }
+window.apiPost = apiPost; // נגיש גם מ-<script> המוקדם של OneSignal ב-<head> (scope נפרד)
 
 /* --- מצב הדגמה --- */
 function demoData(){
