@@ -1155,9 +1155,19 @@ function anyAuth(){
 }
 async function apiGet(){
   if(state.demo) return demoData();
-  const r = await fetch(GAS_URL,{ method:'POST',
-    body: JSON.stringify({ action:'getData', week: iso(state.weekStart), branch: effectiveBranch()||undefined, ...anyAuth() }) });
-  const j = await r.json();
+  const body = JSON.stringify({ action:'getData', week: iso(state.weekStart), branch: effectiveBranch()||undefined, ...anyAuth() });
+  let j;
+  for(let attempt=0; ; attempt++){
+    try{
+      const r = await fetch(GAS_URL,{ method:'POST', body });
+      j = await r.json();
+      break;
+    }catch(e){
+      // Google Apps Script לפעמים מחזיר דף HTML זמני (לא JSON) תחת עומס בקשות מקבילות — ננסה שוב לפני שנציג שגיאה
+      if(attempt >= 2) throw e;
+      await new Promise(res=>setTimeout(res, 400*(attempt+1)));
+    }
+  }
   if(!j.ok){
     if(j.authRequired){ state.mgr=null; state.emp=null; store.clear(); setAuthUI(); }
     throw new Error(j.error||'שגיאת שרת');
