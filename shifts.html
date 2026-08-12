@@ -985,7 +985,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxymjufV9YfBZV6hIMrgmvxxErXD_iGYDHetwUujHOTtVx8VPVm3dBKqGe5Q3Mz3MJr/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyDxFn3mwH8UVh_98GLzXnx6PcAgoOvg-5aRnK9iGaK8jrugQKl9EFxYB54FQjHb56Y/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -2560,8 +2560,8 @@ function showEmpHome(){
   const savedAvatar = localStorage.getItem('sp_avatar_'+state.emp.username) || empByName(state.emp.name)?.avatar || '';
   updateSelfAvatar(savedAvatar);
   renderHomePunch();
-  refreshAttToday().then(()=>{ renderHomePunch(); });
-  loadNextShift();
+  // מרצפים את שתי הקריאות במקום להריץ אותן בו-זמנית — מצמצם התנגשויות בקשות מקבילות מול GAS
+  refreshAttToday().then(()=>{ renderHomePunch(); loadNextShift(); });
   /* sites removed */
   initPushButton();
   attGetPos().then(p=>{
