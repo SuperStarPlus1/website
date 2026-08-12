@@ -1286,12 +1286,15 @@ function renderGate(){
 }
 function gateOrLoad(){ if(authed()) load(); else renderGate(); }
 
+let _loadSeq = 0;
 async function load(){
   if(!authed()){ renderGate(); return; }
+  const mySeq = ++_loadSeq;
   document.getElementById('board').innerHTML = '<div class="loading"><div class="spin"></div>טוען סידור…</div>';
   hideErr();
   try{
     const d = await apiGet();
+    if(mySeq !== _loadSeq) return; // בינתיים בוצעה קריאה חדשה יותר (למשל ניווט מהיר בין שבועות) — מתעלמים מתוצאה מיושנת
     state.employees = d.employees; state.departments = d.departments;
     state.employees.forEach(e=>{
       e.depts = parseDepts(e.dept); if(!e.depts.length) e.depts=[state.departments[0]];
@@ -1308,6 +1311,7 @@ async function load(){
     if(state.emp && !state._homeShown){ state._homeShown = true; showEmpHome(); }
     if(state.emp) retryPushSave();
   }catch(e){
+    if(mySeq !== _loadSeq) return; // שגיאה מיושנת מקריאה שכבר הוחלפה — לא מציגים
     document.getElementById('board').innerHTML='';
     showErr('לא ניתן לטעון את הסידור: '+e.message+' — בדוק את כתובת GAS_URL ואת הרשאות הפריסה.');
   }
@@ -4681,10 +4685,14 @@ document.getElementById('pdfBtn').addEventListener('click',async ()=>{
 });
 
 /* ============ ניווט ושונות ============ */
+let _moveWeekTimer = null;
 function moveWeek(days){
   if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לעבור שבוע בכל זאת?')) return;
   state.weekStart = new Date(state.weekStart.getTime()+days*86400000);
-  load();
+  // דחיסת קליקים מהירים לקריאת שרת אחת בלבד — לחיצות חוזרות-ומהירות על ניווט השבועות
+  // יצרו כמה בקשות מקבילות ל-GAS, שחלקן חוזרות עם 404/HTML זמני תחת עומס
+  clearTimeout(_moveWeekTimer);
+  _moveWeekTimer = setTimeout(load, 250);
 }
 document.getElementById('prevW').addEventListener('click',()=>moveWeek(-7));
 document.getElementById('nextW').addEventListener('click',()=>moveWeek(7));
