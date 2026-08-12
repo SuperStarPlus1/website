@@ -2005,7 +2005,7 @@ document.getElementById('empDelete').addEventListener('click',()=>{
 /* ============ ניהול מנהלים (אדמין) ============ */
 async function openMgrs(){
   try{
-    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    const r = await apiPost({ action:'getAdminData', full:true, ...mgrAuth() });
     if(!r.ok) throw new Error(r.error);
     if(r.branches) state.branches = r.branches;
     const list = document.getElementById('mgrList');
@@ -2065,7 +2065,7 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
 /* ============ לוג (אדמין) ============ */
 async function openLog(){
   try{
-    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    const r = await apiPost({ action:'getAdminData', full:true, ...mgrAuth() });
     if(!r.ok) throw new Error(r.error);
     document.getElementById('logBody').innerHTML = (r.log||[]).map(l=>
       `<tr><td>${esc(l.time)}</td><td>${esc(l.manager)}</td><td>${esc(l.action)}</td><td>${esc(l.detail)}</td></tr>`
@@ -2453,7 +2453,7 @@ document.getElementById('pubWa').addEventListener('click', ()=>{
 });
 
 /* ============ בקשות החלפת משמרת — עובד ============ */
-function openEmpSwap(){
+async function openEmpSwap(){
   const mine = state.shifts.filter(s=>s.employee===state.emp.name && s.dept!==UNAVAIL)
     .sort((a,b)=>a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
   const sel = document.getElementById('swShift');
@@ -2465,6 +2465,8 @@ function openEmpSwap(){
   document.getElementById('swErr').textContent='';
   renderSwList();
   show('empSwapOverlay');
+  await fetchMyRequests();
+  renderSwList();
 }
 function fillSwapTargets(){
   const sid = Number(document.getElementById('swShift').value);
@@ -2494,7 +2496,7 @@ document.getElementById('swShift').addEventListener('change', fillSwapTargets);
 document.getElementById('mySwapBtn').addEventListener('click', openEmpSwap);
 
 function renderSwList(){
-  const mine = state.swaps.filter(s=>s.requester===state.emp.name || s.target===state.emp.name);
+  const mine = [..._mySwaps].sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById('swList').innerHTML = mine.length ? mine.map(s=>{
     const d = new Date(s.date+'T00:00:00');
     const del = (s.requester===state.emp.name && s.status==='ממתין')
@@ -2503,12 +2505,12 @@ function renderSwList(){
       <span>${DAY_NAMES[d.getDay()]} ${ddmm(d)} · ${esc(s.dept)} · ${esc(s.requester)} ⇄ ${esc(s.target)}
         <span class="st ${s.status==='ממתין'?'wait':'ok'}">${esc(s.status)}</span></span>
       <span class="acts">${del}</span></div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות החלפה בשבוע המוצג</div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין בקשות החלפה</div>';
   document.querySelectorAll('#swList .dl2').forEach(b=>b.addEventListener('click', async ()=>{
     const r = await apiPost({ action:'deleteSwap', username:state.emp.username, password:state.emp.pw,
       date:b.dataset.date, dept:b.dataset.dept, start:b.dataset.start,
       requester:state.emp.name, target:b.dataset.target });
-    if(r.ok){ toast('הבקשה בוטלה','ok'); await load(); renderSwList(); }
+    if(r.ok){ toast('הבקשה בוטלה','ok'); await load(); await fetchMyRequests(); renderSwList(); }
     else toast(r.error||'שגיאה','err');
   }));
 }
@@ -2526,6 +2528,7 @@ document.getElementById('swAdd').addEventListener('click', async ()=>{
   if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
   alert('הבקשה נשלחה לאישור מנהל. תקבל עדכון כשתאושר או תידחה.');
   await load();
+  await fetchMyRequests();
   renderSwList();
 });
 
@@ -4278,7 +4281,15 @@ function renderFixedInfo(){
     <div class="fb-note">לא ניתן לשנות הגדרות אלו מכאן — לשינוי יש לפנות למנהל. אין צורך להגיש אילוץ על ימי חופש קבועים.</div>`;
 }
 
-function openEmpCons(){
+// כל בקשות ההחלפה/האילוצים של העובד המחובר, ללא הגבלה לשבוע המוצג בלוח (state.constraints/state.swaps
+// מגיעים מ-getData ומוגבלים תמיד לשבוע הנוכחי בלבד) — נשלף בנפרד דרך myRequests בכל פתיחת מודאל.
+let _myCons = [], _mySwaps = [];
+async function fetchMyRequests(){
+  if(!state.emp) return;
+  const r = await apiPost({ action:'myRequests', username:state.emp.username, password:state.emp.pw });
+  if(r.ok){ _myCons = r.constraints||[]; _mySwaps = r.swaps||[]; }
+}
+async function openEmpCons(){
   renderFixedInfo();
   const d = document.getElementById('ecDate');
   d.min = iso(new Date());
@@ -4294,6 +4305,8 @@ function openEmpCons(){
   renderEcList();
   renderVcList();
   show('empConsOverlay');
+  await fetchMyRequests();
+  renderEcList();
 }
 function renderVcList(){
   const mine = state.vacations.filter(v=>v.employee===state.emp.name)
@@ -4349,8 +4362,7 @@ document.getElementById('vcAdd').addEventListener('click', async ()=>{
   renderVcList();
 });
 function renderEcList(){
-  const mine = state.constraints.filter(c=>c.employee===state.emp.name)
-    .sort((a,b)=>a.date.localeCompare(b.date));
+  const mine = [..._myCons].sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById('ecList').innerHTML = mine.length ? mine.map(c=>{
     const d = new Date(c.date+'T00:00:00');
     return `<div class="cons-item">
@@ -4358,11 +4370,11 @@ function renderEcList(){
         <span class="st ${c.status==='ממתין'?'wait':'ok'}">${esc(c.status)}</span></span>
       <span class="acts"><button class="dl2" data-date="${c.date}" data-part="${esc(c.part)}">מחיקה</button></span>
     </div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים בשבוע המוצג</div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12.5px">אין אילוצים</div>';
   document.querySelectorAll('#ecList .dl2').forEach(b=>b.addEventListener('click', async ()=>{
     const r = await apiPost({ action:'deleteConstraint', username:state.emp.username, password:state.emp.pw,
       date:b.dataset.date, part:b.dataset.part });
-    if(r.ok){ toast('האילוץ נמחק','ok'); await load(); renderEcList(); }
+    if(r.ok){ toast('האילוץ נמחק','ok'); await load(); await fetchMyRequests(); renderEcList(); }
     else toast(r.error||'שגיאה','err');
   }));
 }
@@ -4389,6 +4401,7 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
     toast('האילוץ נרשם ואושר ✓','ok');
   }
   await load();
+  await fetchMyRequests();
   renderEcList();
 });
 
