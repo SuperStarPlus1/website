@@ -428,6 +428,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="mgr-dropdown" id="menuAdminDrop">
         <button id="empMgr">👥 עובדים</button>
         <button id="msgBtn">✉ הודעה</button>
+        <button id="annBtn">📢 לוח הודעות</button>
         <button id="payBtn">🧾 תלושים</button>
         <button id="mgrPushBtn2" style="color:#166534">🔔 Push</button>
       </div>
@@ -448,6 +449,11 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <button id="f101Link" class="btn plain" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #fdba74;color:#9a3412;font-weight:800">📋 למילוי הטופס לחץ כאן</button>
   <span class="spacer"></span>
   <button class="btn plain" id="f101Done" style="padding:6px 12px;font-size:12px;background:#dcfce7;color:#166534">✓ סיימתי למלא</button>
+</div>
+<div class="notice hidden" id="annNotice" style="background:#eff6ff;color:#1e3a8a;border-bottom:1px solid #93c5fd;font-weight:600">
+  <span>📢 <b id="annTitle"></b> — <span id="annText"></span></span>
+  <span class="spacer"></span>
+  <button class="btn plain" id="annDismiss" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #93c5fd;color:#1e3a8a">✕ סגירה</button>
 </div>
 
 <main>
@@ -499,6 +505,41 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div id="board"><div class="loading"><div class="spin"></div>טוען סידור…</div></div>
 </main>
 
+<!-- מסך קיוסק: שעון נוכחות בטאבלט משותף, אימות בקוד PIN -->
+<div id="kioskView" class="hidden" style="position:fixed;inset:0;background:#1b2a4a;color:#fff;z-index:20000;display:flex;flex-direction:column;font-family:inherit;overflow-y:auto">
+  <div style="padding:14px 18px;display:flex;align-items:center;gap:10px;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0">
+    <div style="font-weight:800;font-size:17px">⏱ קיוסק נוכחות — <span id="kioskBranchLabel"></span></div>
+    <div style="display:flex;gap:8px">
+      <button id="kioskChangeBranch" style="background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer;font-size:12px">שינוי סניף</button>
+      <button id="kioskExit" style="background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer;font-size:12px">✕ יציאה</button>
+    </div>
+  </div>
+
+  <div id="kioskStepBranch" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">באיזה סניף נמצא המכשיר?</div>
+    <div id="kioskBranchList" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px"></div>
+  </div>
+
+  <div id="kioskStepNames" class="hidden" style="flex:1;padding:18px;display:flex;flex-direction:column">
+    <div style="font-size:18px;font-weight:800;margin-bottom:14px;text-align:center">הקישו על שמכם</div>
+    <div id="kioskNameGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+  </div>
+
+  <div id="kioskStepPin" class="hidden" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:16px">
+    <button id="kioskBackToNames" style="align-self:flex-start;background:none;border:0;color:#e8a819;font-family:inherit;font-size:14px;cursor:pointer">→ חזרה לרשימת שמות</button>
+    <div style="font-size:22px;font-weight:800" id="kioskSelName"></div>
+    <div style="display:flex;gap:14px" id="kioskPinDots"></div>
+    <div id="kioskPinErr" style="color:#fca5a5;font-weight:700;min-height:20px"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,72px);gap:10px" id="kioskKeypad"></div>
+    <div id="kioskTypeRow" class="hidden" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:340px;margin-top:6px"></div>
+  </div>
+
+  <div id="kioskStepDone" class="hidden" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+    <div style="font-size:60px">✅</div>
+    <div style="font-size:22px;font-weight:800;text-align:center" id="kioskDoneMsg"></div>
+  </div>
+</div>
+
 <div id="pdfStage"></div>
 
 <!-- מודאל כניסה -->
@@ -525,6 +566,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div class="mfoot">
       <button class="btn primary" id="lgOk">כניסה</button>
       <button class="btn plain" data-close>ביטול</button>
+      <span class="spacer"></span>
+      <button class="btn plain" id="lgKioskLink" style="color:#6b7280;font-size:12px">🖥 מסך קיוסק (טאבלט משותף)</button>
     </div>
   </div>
 </div>
@@ -900,6 +943,32 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
+<!-- מודאל לוח הודעות -->
+<div class="overlay hidden" id="annOverlay">
+  <div class="modal wide">
+    <header><h3>📢 לוח הודעות</h3><p>פרסום הודעה שולח מיד Push+מייל לכל העובדים הרלוונטיים, ומוצגת להם כבאנר עד שתוסתר או שיפוג תוקפה</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>כותרת</label><input type="text" id="annNewTitle" placeholder="לדוגמה: שינוי בשעות הפתיחה"></div>
+      <div class="mrow"><label>טקסט ההודעה</label>
+        <textarea id="annNewText" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px;font-family:inherit;font-size:13.5px;min-height:90px;resize:vertical" placeholder="פרטי ההודעה..."></textarea>
+      </div>
+      <div class="mrow" id="annBranchRow" style="display:none">
+        <label>סניף יעד</label>
+        <select id="annNewBranch"><option value="">כל הסניפים</option></select>
+      </div>
+      <div class="mrow"><label>תוקף עד (אופציונלי)</label><input type="date" id="annNewExpiry"></div>
+      <div class="merr" id="annErr"></div>
+      <hr style="margin:14px 0;border:0;border-top:1px solid var(--line)">
+      <div id="annList"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="annPost">📢 פרסום הודעה</button>
+      <span class="spacer"></span>
+      <button class="btn plain" data-close>סגירה</button>
+    </div>
+  </div>
+</div>
+
 <!-- מודאל החלפת סיסמה (כניסה ראשונה) -->
 <div class="overlay hidden" id="pwcOverlay">
   <div class="modal">
@@ -985,7 +1054,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxafYefGaegkhBmeaM7Z04TN_bgM_uSR5ugkl_olom3itcpQhu7eZ9P2-PBF5or1xdd/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxuNyxH16O-OtnyrHhERoflr2XGDIdjfbDfsPs_325W0ODGPF7tGDxAOByDZFerhW9L/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1026,6 +1095,8 @@ const state = {
   constraints: [],        // בקשות אילוצים: {date, employee, part, status}
   swaps: [],              // בקשות החלפה: {date, dept, start, end, requester, target, status}
   vacations: [],          // בקשות חופשה: {from, to, employee, reason, status}
+  staffing: {},           // תקן משמרות של הסניף הנוכחי: { [dept]: {days, ms, es, budget} } — רק למנהל
+  announcements: [],      // הודעות לוח פנימי פעילות: {row, publishedAt, manager, branch, title, text, active, expiry}
   mgr: null,              // {name, pw, role, branch}
   emp: null,              // עובד מחובר: {name, username, pw}
   dirtyShifts: false,
@@ -1044,6 +1115,25 @@ function weekDates(){ return Array.from({length:7},(_,i)=>{ const x=new Date(sta
 function ddmm(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
 function toMin(t){ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+(m||0); }
 function shiftMin(s){ let m=toMin(s.end)-toMin(s.start); if(m<0) m+=1440; return m; }
+/** עלות שכר משוערת לשבוע המוצג מול תקן המחלקה — רק למנהל, ורק אם הוגדר תקציב > 0 */
+function deptBudgetInfo(dept, dates){
+  if(!isMgr()) return null;
+  const st = state.staffing && state.staffing[dept];
+  if(!st || !st.budget) return null;
+  let cost = 0;
+  dates.forEach(d=>{
+    const di = iso(d);
+    state.shifts.forEach(s=>{
+      if(s.dept!==dept || s.date!==di) return;
+      const e = empByName(s.employee);
+      if(!e || e.empType==='חודשי' || !e.hourRate) return;
+      cost += shiftMin(s)/60 * e.hourRate;
+    });
+  });
+  const pct = Math.round(cost/st.budget*100);
+  const color = pct>=100 ? '#dc2626' : pct>=85 ? '#d97706' : '#16a34a';
+  return { cost, budget: st.budget, pct, color };
+}
 function fmtMin(m){ return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
 function deptColor(dept){ const i=state.departments.indexOf(dept); return DEPT_COLORS[(i>=0?i:hashStr(dept))%DEPT_COLORS.length]; }
 function hashStr(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0; return h; }
@@ -1233,7 +1323,7 @@ function demoData(){
     { from: ds[1], to: ds[2], employee:'סהאם אסדי', reason:'חתונה משפחתית', status:'מאושר' },
     { from: ds[4], to: ds[5], employee:'גדיר סואעד', reason:'נסיעה', status:'ממתין' }
   ];
-  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons, swaps:swp, vacations:vacs };
+  return { ok:true, employees:emps, departments:deps, shifts:sh, constraints:cons, swaps:swp, vacations:vacs, staffing:{}, announcements:[] };
 }
 function demoPost(body){
   if(body.action==='elogin') return { ok:false, error:'במצב הדגמה אין סיסמאות עובדים' };
@@ -1243,6 +1333,10 @@ function demoPost(body){
   if(body.action==='addVacation'||body.action==='deleteVacation'||body.action==='reviewVacation') return { ok:true };
   if(body.action==='changePassword') return { ok:true };
   if(body.action==='sendMessage') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
+  if(body.action==='postAnnouncement') return { ok:true, sent:0 };
+  if(body.action==='deactivateAnnouncement') return { ok:true };
+  if(body.action==='kioskEmployees') return { ok:true, branches:['סופרסטאר'], employees: body.branch ? state.employees.filter(e=>e.active).map(e=>({name:e.name})) : [] };
+  if(body.action==='kioskPunch') return { ok:false, error:'לא זמין במצב הדגמה' };
   if(body.action==='sendWelcome') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
   if(body.action==='mark101') return { ok:true, year: requiredF101Year() };
   if(body.action==='myPayslips'||body.action==='listPayslips') return { ok:true, payslips:[] };
@@ -1275,6 +1369,7 @@ function demoPost(body){
     employees: state.employees.map(e=>({name:e.name,dept:e.dept,active:e.active,password:'',username:'',offDays:offDaysToStr(e.offDays),skills:e.skills||'',rating:e.rating||2,fixedShifts:e.fixedShifts||'',email:e.email||''})),
     managers: [{name:'מנהל ראשי',password:'1234',role:ROLE_ADMIN,email:''}],
     staffing: {},
+    announcements: [],
     log: [{time:'—',manager:'מצב הדגמה',action:'—',detail:'הלוג יופיע לאחר חיבור לשרת'}] };
   return { ok:true };
 }
@@ -1314,6 +1409,8 @@ async function load(){
     state.swaps = d.swaps || [];
     state.swapsPending = d.swapsPending || state.swaps.filter(s=>s.status==='ממתין');
     state.vacations = d.vacations || [];
+    state.staffing = d.staffing || {};
+    state.announcements = d.announcements || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
     checkMyUpdates();
@@ -1348,6 +1445,7 @@ function render(){
   updateDirtyBadge();
   updateConsBadge();
   updateF101Banner();
+  updateAnnouncementBanner();
   document.getElementById('demoNotice').classList.toggle('hidden', !state.demo);
 
   const board = document.getElementById('board');
@@ -1379,9 +1477,10 @@ function render(){
       return { min: ss.reduce((a,s)=>a+shiftMin(s),0), ppl: new Set(ss.map(s=>s.employee)).size };
     });
     const weekMin = dayTotals.reduce((a,t)=>a+t.min,0);
+    const budgetInfo = deptBudgetInfo(dept, dates);
 
     let html = `<div class="dept-head"><span class="dot"></span><h2>${esc(dept)}</h2>
-      <span class="dsum">${fmtMin(weekMin)} שעות · שבוע</span></div><div class="tblwrap"><table><thead><tr>
+      <span class="dsum">${fmtMin(weekMin)} שעות · שבוע${budgetInfo?` · <span style="color:${budgetInfo.color};font-weight:800" title="עלות שכר משוערת מול תקן — לא כולל עובדים חודשיים או ללא ערך שעה מוגדר">≈₪${Math.round(budgetInfo.cost).toLocaleString()} / ₪${budgetInfo.budget.toLocaleString()} (${budgetInfo.pct}%)</span>`:''}</span></div><div class="tblwrap"><table><thead><tr>
       <th class="namecol">עובד</th>`;
     dates.forEach(d=>{
       html += `<th class="${iso(d)===todayIso?'today':''}">${DAY_NAMES[d.getDay()]}<br>${ddmm(d)}</th>`;
@@ -1692,7 +1791,7 @@ async function openEmpMgr(){
             const local = empByName(se.name);
             if(local){
               Object.assign(local, {
-                password:se.password, username:se.username||'', rating:se.rating||2,
+                password:se.password, pin:se.pin||'', username:se.username||'', rating:se.rating||2,
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
@@ -1701,7 +1800,7 @@ async function openEmpMgr(){
             } else {
               state.employees.push({
                 name:se.name, dept:se.dept, depts:parseDepts(se.dept),
-                active:se.active, offDays:parseOffDays(se.offDays), password:se.password,
+                active:se.active, offDays:parseOffDays(se.offDays), password:se.password, pin:se.pin||'',
                 username:se.username||'', skills:se.skills||'', rating:se.rating||2,
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
@@ -1838,6 +1937,7 @@ function empRow(e){
       <input type="text" class="i-name" value="${esc(e.name)}" placeholder="שם העובד">
       <input type="text" class="i-user" value="${esc(e.username||'')}" placeholder="שם משתמש" dir="ltr">
       <input type="text" class="i-pw" value="${esc(e.password||'')}" placeholder="סיסמה">
+      <input type="text" class="i-pin" value="${esc(e.pin||'')}" placeholder="PIN קיוסק" maxlength="4" pattern="\\d{4}" title="קוד בן 4 ספרות לכניסה למסך הקיוסק" style="width:80px" dir="ltr">
       <select class="i-active" title="סטטוס עובד" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-weight:700">
         <option value="1" ${e.active!==false?'selected':''}>✅ פעיל</option>
         <option value="0" ${e.active===false?'selected':''}>❌ לא פעיל</option>
@@ -1926,6 +2026,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
   const updated={
     name:nm, dept:depts.join(', '), depts, active:r.querySelector('.i-active').value!=='0',
     offDays, password:r.querySelector('.i-pw').value.trim(),
+    pin:r.querySelector('.i-pin').value.trim(),
     username:r.querySelector('.i-user').value.trim(),
     skills:r.querySelector('.i-skills').value.trim(),
     rating:Number(r.querySelector('.i-rating').value)||2,
@@ -1972,7 +2073,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     const res = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: scopeBranch||undefined,
       employees: state.employees.filter(e=>!scopeBranch || e.branch===scopeBranch).map(e=>({
         name:e.name, dept:(e.depts||[]).join(', '), active:e.active!==false,
-        password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
+        password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
         email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
         f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
@@ -2105,8 +2206,8 @@ async function openAutoAssign(){
   }catch(e){}
   document.getElementById('aaDepts').innerHTML = state.departments.map(d=>{
     let st = staffing[d];
-    if(Array.isArray(st)) st = { days: st, ms:'', es:'' };            // תאימות לפורמט ישן
-    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '' };
+    if(Array.isArray(st)) st = { days: st, ms:'', es:'', budget:0 };            // תאימות לפורמט ישן
+    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '', budget:0 };
     if(d==='קופאיות' && !st.es) st.es = 'טביעת אצבע';                 // ברירת מחדל: טביעת אצבע בערב קופאיות
     const days = st.days;
     return `<div class="aa-dept" data-dept="${esc(d)}">
@@ -2114,6 +2215,7 @@ async function openAutoAssign(){
         <label><input type="checkbox" class="a-on" checked><b>${esc(d)}</b></label>
         <input type="text" class="a-ms" value="${esc(st.ms)}" placeholder="כישור חובה בבוקר">
         <input type="text" class="a-es" value="${esc(st.es)}" placeholder="כישור חובה בערב">
+        <input type="number" class="a-budget" min="0" step="50" value="${st.budget||''}" placeholder="תקציב שבועי ₪" title="תקציב שכר שבועי למחלקה (₪) — ריק/0 = ללא הגבלה" style="width:120px">
       </div>
       <div class="aa-grid">${DAY_LETTERS.map((l,i)=>`
         <div class="aa-day"><div class="dl">${l}</div>
@@ -2142,12 +2244,14 @@ document.getElementById('aaOk').addEventListener('click', async ()=>{
       ]);
       const ms = r.querySelector('.a-ms').value.trim();
       const es = r.querySelector('.a-es').value.trim();
-      staffing[dept] = { days, ms, es }; // התקן נשמר גם עבור מחלקות מוחרגות
+      const budget = Number(r.querySelector('.a-budget').value)||0;
+      staffing[dept] = { days, ms, es, budget }; // התקן נשמר גם עבור מחלקות מוחרגות
       if(!r.querySelector('.a-on').checked) return;
-      cfg[dept] = { days, ms, es };
+      cfg[dept] = { days, ms, es, budget };
     });
 
     // שמירת התקן לגיליון
+    if(effectiveBranch()) state.staffing = staffing; // עדכון מיידי בצד לקוח כדי שבאנר התקציב יתעדכן בלי לחכות לרענון
     apiPost({ action:'saveStaffing', ...mgrAuth(), branch: effectiveBranch()||undefined, staffing }).catch(()=>{});
 
     // שליפת השבוע הקודם — לחישוב רצף ימי עבודה חוצה-שבוע
@@ -2386,6 +2490,69 @@ document.getElementById('msgWelcome').addEventListener('click', async ()=>{
   if(r.noMail && r.noMail.length) alert('לא נשלח לעובדים ללא אימייל:\n• '+r.noMail.join('\n• '));
 });
 
+/* ============ לוח הודעות (ניהול) ============ */
+async function refreshAnnList(){
+  const list = document.getElementById('annList');
+  list.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spin"></div></div>';
+  try{
+    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    const anns = r.announcements || [];
+    if(!anns.length){ list.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:14px">אין הודעות עדיין</div>'; return; }
+    list.innerHTML = anns.map(a=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);${a.active?'':'opacity:.45'}">
+        <div style="flex:1">
+          <div style="font-weight:700">${esc(a.title)} <span style="font-weight:400;color:#6b7280;font-size:11px">(${esc(a.branch||'כל הסניפים')})</span></div>
+          <div style="font-size:12.5px;color:#4b5563;margin-top:2px">${esc(a.text)}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:4px">${esc(a.publishedAt)} · ${esc(a.manager)}${a.expiry?' · בתוקף עד '+esc(a.expiry):''}</div>
+        </div>
+        ${a.active?`<button class="btn plain ann-hide" data-row="${a.row}" style="padding:5px 10px;font-size:11px;flex-shrink:0">הסתר</button>`:'<span style="font-size:11px;color:#9ca3af;flex-shrink:0">הוסתרה</span>'}
+      </div>`).join('');
+    list.querySelectorAll('.ann-hide').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('להסתיר את ההודעה? היא לא תופיע יותר לעובדים.')) return;
+      b.disabled = true;
+      const rr = await apiPost({ action:'deactivateAnnouncement', ...mgrAuth(), row:Number(b.dataset.row) });
+      if(!rr.ok){ alert(rr.error||'שגיאה'); b.disabled=false; return; }
+      refreshAnnList();
+    }));
+  }catch(e){ list.innerHTML = '<div class="merr">שגיאת טעינה</div>'; }
+}
+async function openAnnouncements(){
+  document.getElementById('annErr').textContent='';
+  document.getElementById('annNewTitle').value='';
+  document.getElementById('annNewText').value='';
+  document.getElementById('annNewExpiry').value='';
+  const branchRow = document.getElementById('annBranchRow');
+  if(isAdmin() && (state.branches||[]).length){
+    branchRow.style.display='';
+    document.getElementById('annNewBranch').innerHTML = '<option value="">כל הסניפים</option>' +
+      state.branches.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  } else branchRow.style.display='none';
+  show('annOverlay');
+  refreshAnnList();
+}
+document.getElementById('annBtn').addEventListener('click', openAnnouncements);
+document.getElementById('annPost').addEventListener('click', async ()=>{
+  const err = document.getElementById('annErr');
+  const title = document.getElementById('annNewTitle').value.trim();
+  const text = document.getElementById('annNewText').value.trim();
+  const branch = document.getElementById('annNewBranch').value;
+  const expiry = document.getElementById('annNewExpiry').value;
+  if(!title || !text){ err.textContent='יש למלא כותרת וטקסט'; return; }
+  const scopeLabel = isAdmin() ? (branch || 'כל הסניפים') : ('סניף '+(state.mgr.branch||''));
+  if(!confirm('לפרסם הודעה ל'+scopeLabel+'?\n\nההודעה תישלח מיד כ-Push והתראת מייל לכל העובדים הרלוונטיים.')) return;
+  const btn = document.getElementById('annPost'); btn.disabled=true;
+  err.textContent='מפרסם ושולח…';
+  const r = await apiPost({ action:'postAnnouncement', ...mgrAuth(), title, text, branch, expiry });
+  btn.disabled=false; err.textContent='';
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  toast('ההודעה פורסמה ונשלחה ל-'+r.sent+' עובדים ✓','ok');
+  document.getElementById('annNewTitle').value='';
+  document.getElementById('annNewText').value='';
+  document.getElementById('annNewExpiry').value='';
+  refreshAnnList();
+  load(); // לרענן את state.announcements כדי שהבאנר יתעדכן מיד גם למנהל עצמו
+});
+
 /* ============ החלפת סיסמה כפויה ============ */
 function openPwChange(){
   document.getElementById('pwcNew').value='';
@@ -2429,6 +2596,13 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 
 document.getElementById('publishBtn').addEventListener('click', async ()=>{
   if(hasDirty()){ toast('יש לשמור את הסידור לפני פרסום','err'); return; }
+  const overBudget = state.departments
+    .map(d=>({ dept:d, info: deptBudgetInfo(d, weekDates()) }))
+    .filter(x=>x.info && x.info.pct>=100);
+  if(overBudget.length){
+    const lines = overBudget.map(x=>`• ${x.dept}: ≈₪${Math.round(x.info.cost).toLocaleString()} מתוך תקציב ₪${x.info.budget.toLocaleString()} (${x.info.pct}%)`).join('\n');
+    if(!confirm('⚠ חריגת תקציב שכר משוער במחלקות הבאות:\n\n'+lines+'\n\nלפרסם בכל זאת?')) return;
+  }
   if(!confirm('לפרסם את הסידור? תישלח התראה במייל לעובדים עם אימייל, ותקבל הודעה מוכנה לקבוצת הוואטסאפ.')) return;
   const r = await apiPost({ action:'publish', ...mgrAuth(), week: iso(state.weekStart) });
   if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
@@ -4178,6 +4352,21 @@ document.getElementById('myPayBtn').addEventListener('click', async ()=>{
 });
 
 /* ============ טופס 101 ============ */
+let _annShownRow = null;
+function updateAnnouncementBanner(){
+  const n = document.getElementById('annNotice');
+  const list = state.announcements || [];
+  const next = list.find(a => a.active && !localStorage.getItem('sp_ann_seen_'+a.row));
+  if(!next){ n.classList.add('hidden'); _annShownRow = null; return; }
+  _annShownRow = next.row;
+  document.getElementById('annTitle').textContent = next.title;
+  document.getElementById('annText').textContent = next.text.length>140 ? next.text.slice(0,140)+'…' : next.text;
+  n.classList.remove('hidden');
+}
+document.getElementById('annDismiss').addEventListener('click', ()=>{
+  if(_annShownRow) localStorage.setItem('sp_ann_seen_'+_annShownRow, '1');
+  updateAnnouncementBanner();
+});
 function updateF101Banner(){
   const n = document.getElementById('f101Notice');
   const me = state.emp ? empByName(state.emp.name) : null;
@@ -4645,7 +4834,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
           vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
@@ -4838,8 +5027,118 @@ window.addEventListener('beforeinstallprompt', e => {
   setTimeout(() => btn.parentNode && btn.remove(), 25000);
 });
 
+/* ============ מסך קיוסק (שעון נוכחות בטאבלט משותף) ============ */
+let _kioskBranch = localStorage.getItem('sp_kiosk_branch') || '';
+let _kioskEmps = [];
+let _kioskSelName = '';
+let _kioskPin = '';
+
+function kioskShow(step){
+  ['Branch','Names','Pin','Done'].forEach(s=>document.getElementById('kioskStep'+s).classList.toggle('hidden', s!==step));
+}
+async function kioskShowBranchPicker(){
+  kioskShow('Branch');
+  document.getElementById('kioskBranchLabel').textContent = '';
+  try{
+    const r = await apiPost({ action:'kioskEmployees', branch:'' });
+    const branches = r.branches||[];
+    document.getElementById('kioskBranchList').innerHTML = branches.map(b=>
+      `<button class="kiosk-branch-btn" data-b="${esc(b)}" style="background:#e8a819;color:#1b2a4a;font-weight:800;font-size:16px;border:0;border-radius:12px;padding:16px;cursor:pointer;font-family:inherit">${esc(b)}</button>`).join('') ||
+      '<div style="text-align:center;opacity:.7">לא הוגדרו סניפים</div>';
+    document.querySelectorAll('.kiosk-branch-btn').forEach(btn=>btn.addEventListener('click', ()=>{
+      _kioskBranch = btn.dataset.b;
+      localStorage.setItem('sp_kiosk_branch', _kioskBranch);
+      kioskLoadNames();
+    }));
+  }catch(e){ document.getElementById('kioskBranchList').innerHTML = '<div style="text-align:center">שגיאת טעינה — בדקו חיבור לאינטרנט</div>'; }
+}
+async function kioskLoadNames(){
+  document.getElementById('kioskBranchLabel').textContent = _kioskBranch;
+  kioskShow('Names');
+  document.getElementById('kioskNameGrid').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r = await apiPost({ action:'kioskEmployees', branch:_kioskBranch });
+    _kioskEmps = r.employees||[];
+    document.getElementById('kioskNameGrid').innerHTML = _kioskEmps.map(e=>
+      `<button class="kiosk-name-btn" data-n="${esc(e.name)}" style="background:#243b6b;color:#fff;font-weight:700;font-size:15px;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:22px 10px;cursor:pointer;font-family:inherit">${esc(e.name)}</button>`).join('') ||
+      '<div style="grid-column:1/-1;text-align:center;opacity:.7">אין עובדים פעילים בסניף זה</div>';
+    document.querySelectorAll('.kiosk-name-btn').forEach(btn=>btn.addEventListener('click',()=>kioskSelectName(btn.dataset.n)));
+  }catch(e){ document.getElementById('kioskNameGrid').innerHTML = '<div style="text-align:center">שגיאת טעינה</div>'; }
+}
+function kioskRenderPinDots(){
+  document.getElementById('kioskPinDots').innerHTML = Array.from({length:4},(_,i)=>
+    `<div style="width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:${i<_kioskPin.length?'#e8a819':'transparent'}"></div>`).join('');
+}
+function kioskSelectName(name){
+  _kioskSelName = name; _kioskPin='';
+  document.getElementById('kioskSelName').textContent = name;
+  document.getElementById('kioskPinErr').textContent='';
+  document.getElementById('kioskTypeRow').classList.add('hidden');
+  kioskRenderPinDots();
+  kioskShow('Pin');
+}
+function kioskKeyTap(k){
+  document.getElementById('kioskPinErr').textContent='';
+  if(k==='del') _kioskPin = _kioskPin.slice(0,-1);
+  else if(_kioskPin.length<4) _kioskPin += k;
+  kioskRenderPinDots();
+  const typeRow = document.getElementById('kioskTypeRow');
+  if(_kioskPin.length===4){
+    typeRow.classList.remove('hidden');
+    typeRow.innerHTML = ATT_TYPES.map(t=>
+      `<button class="kiosk-type-btn" data-t="${esc(t)}" style="background:#16a34a;color:#fff;font-weight:800;font-size:15px;border:0;border-radius:12px;padding:16px;cursor:pointer;font-family:inherit">${esc(t)}</button>`).join('');
+    document.querySelectorAll('.kiosk-type-btn').forEach(btn=>btn.addEventListener('click',()=>kioskSubmit(btn.dataset.t)));
+  } else {
+    typeRow.classList.add('hidden');
+  }
+}
+async function kioskSubmit(type){
+  document.querySelectorAll('.kiosk-type-btn').forEach(b=>b.disabled=true);
+  let r;
+  try{
+    r = await apiPost({ action:'kioskPunch', branch:_kioskBranch, name:_kioskSelName, pin:_kioskPin, type });
+  }catch(e){ r = { ok:false, error:'שגיאת תקשורת' }; }
+  if(!r.ok){
+    document.getElementById('kioskPinErr').textContent = r.error||'שגיאה';
+    document.querySelectorAll('.kiosk-type-btn').forEach(b=>b.disabled=false);
+    _kioskPin=''; kioskRenderPinDots();
+    document.getElementById('kioskTypeRow').classList.add('hidden');
+    return;
+  }
+  document.getElementById('kioskDoneMsg').textContent = _kioskSelName+' · '+type+' נרשמה בהצלחה בשעה '+r.time;
+  kioskShow('Done');
+  setTimeout(kioskLoadNames, 3500);
+}
+document.getElementById('kioskKeypad').innerHTML = ['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k=>
+  k===''? '<div></div>' : `<button class="kiosk-key" data-k="${k==='⌫'?'del':k}" style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:24px;font-weight:800;border:0;cursor:pointer;font-family:inherit">${k}</button>`
+).join('');
+document.querySelectorAll('.kiosk-key').forEach(btn=>btn.addEventListener('click',()=>kioskKeyTap(btn.dataset.k)));
+document.getElementById('kioskChangeBranch').addEventListener('click', ()=>{
+  _kioskBranch=''; localStorage.removeItem('sp_kiosk_branch'); kioskShowBranchPicker();
+});
+document.getElementById('kioskBackToNames').addEventListener('click', kioskLoadNames);
+document.getElementById('kioskExit').addEventListener('click', ()=>{
+  if(!confirm('לצאת ממסך הקיוסק?')) return;
+  document.getElementById('kioskView').classList.add('hidden');
+  document.body.style.overflow='';
+  location.hash='';
+  gateOrLoad();
+});
+async function initKiosk(){
+  document.getElementById('kioskView').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  if(_kioskBranch) kioskLoadNames();
+  else kioskShowBranchPicker();
+}
+document.getElementById('lgKioskLink').addEventListener('click', ()=>{
+  hide('loginOverlay');
+  location.hash = '#kiosk';
+  initKiosk();
+});
+
 /* ============ אתחול ============ */
 (async function init(){
+  if(location.hash==='#kiosk'){ initKiosk(); return; }
   const auth = store.get();
   if(auth && auth.kind==='mgr'){
     const r = await apiPost({ action:'mlogin', mname:auth.name, password:auth.pw }).catch(()=>({ok:false}));
