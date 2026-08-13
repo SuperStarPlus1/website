@@ -5085,7 +5085,7 @@ function kioskKeyTap(k){
   const typeRow = document.getElementById('kioskTypeRow');
   if(_kioskPin.length===4){
     typeRow.classList.remove('hidden');
-    typeRow.innerHTML = ATT_TYPES.map(t=>
+    typeRow.innerHTML = ['כניסה','הפסקה','חזרה','יציאה'].map(t=>
       `<button class="kiosk-type-btn" data-t="${esc(t)}" style="background:#16a34a;color:#fff;font-weight:800;font-size:15px;border:0;border-radius:12px;padding:16px;cursor:pointer;font-family:inherit">${esc(t)}</button>`).join('');
     document.querySelectorAll('.kiosk-type-btn').forEach(btn=>btn.addEventListener('click',()=>kioskSubmit(btn.dataset.t)));
   } else {
