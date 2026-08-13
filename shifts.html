@@ -4785,11 +4785,32 @@ document.getElementById('empSelfAvatarFile').addEventListener('change', e=>{
   reader.readAsDataURL(file);
 });
 
-/* ── Service Worker (PWA) ── */
+/* ── Service Worker (PWA) — עדכון אוטומטי ── */
 if ('serviceWorker' in navigator) {
+  // כשגרסת SW חדשה משתלטת (אחרי skipWaiting+clients.claim בתוך sw.js), מרעננים את הדף פעם אחת
+  // כדי שכל מכשיר יעבור לגרסה העדכנית לבד — בלי להסתמך על שהעובד יסגור/יתקין מחדש את האפליקציה ידנית.
+  // אם יש עריכות לא-שמורות (מנהל באמצע עריכת סידור/עובדים) — לא קוטעים אותו, בודקים שוב כל 30 שנ'.
+  let _swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swRefreshing) return;
+    const tryReload = () => {
+      if (typeof hasDirty === 'function' && hasDirty()) { setTimeout(tryReload, 30000); return; }
+      _swRefreshing = true;
+      window.location.reload();
+    };
+    tryReload();
+  });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(r => console.log('SW:', r.scope))
+      .then(r => {
+        console.log('SW:', r.scope);
+        // בדיקת עדכון יזומה — לא מסתמכים רק על הבדיקה האוטומטית של הדפדפן בניווט,
+        // חשוב במיוחד לאפליקציה מותקנת (PWA) שנשארת פתוחה זמן רב בלי ניווט מחדש
+        setInterval(() => r.update().catch(()=>{}), 5 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') r.update().catch(()=>{});
+        });
+      })
       .catch(e => console.warn('SW error:', e));
   });
 }
