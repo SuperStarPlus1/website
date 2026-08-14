@@ -1075,7 +1075,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxk8zf4D8GVMK_ZIu0-M6Ew3RveOYrX2ob_H0F8EbgeYX34laR0BabsxC8YceoJBpHa/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwcXo-NH3dRVKqrxDrdJgRM9iRasvSLi6vbb7BAl0Gvt4gKTFl2Y_fPBdzz-qAmOqW5/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1817,7 +1817,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             } else {
               state.employees.push({
@@ -1827,7 +1827,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             }
           });
@@ -1901,7 +1901,7 @@ let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -1987,6 +1987,8 @@ function empRow(e){
       <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
       <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <span class="lbl">🎂 תאריך לידה:</span>
+      <input type="date" class="i-birth" value="${esc(e.birthDate||'')}" title="לברכת יום הולדת אוטומטית ב-8:00 בבוקר" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מחלקה ראשית:</span>
       <select class="i-primary" style="border:2px solid var(--gold);border-radius:8px;padding:6px 10px;font-weight:700;background:#fffdf0">
         ${e.depts.map(d=>`<option value="${esc(d)}" ${d===(e.primaryDept||e.depts[0])?'selected':''}>${esc(d)}</option>`).join('')}
@@ -2057,6 +2059,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     email:r.querySelector('.i-email').value.trim(),
     empNo:r.querySelector('.i-empno').value.trim(),
     startDate:r.querySelector('.i-start').value,
+    birthDate:r.querySelector('.i-birth').value,
     vacQuota:Number(r.querySelector('.i-vac').value)||0,
     empType:r.querySelector('.i-emptype').value||'שעתי',
     monthlyHours:Number(r.querySelector('.i-monthly').value)||0,
@@ -2098,7 +2101,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
         email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
-        f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי',
+        f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
         vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
         branch:e.branch||scopeBranch||undefined })) });
@@ -4858,7 +4861,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
           vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
