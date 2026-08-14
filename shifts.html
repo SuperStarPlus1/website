@@ -1054,7 +1054,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxuNyxH16O-OtnyrHhERoflr2XGDIdjfbDfsPs_325W0ODGPF7tGDxAOByDZFerhW9L/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwPLv2KAc2vSZG6xH4imlc9kuJYtDFj8eTHylpAH1Se7M_F-hhgAkhyL1_HPBsbIYCQ/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -2206,8 +2206,8 @@ async function openAutoAssign(){
   }catch(e){}
   document.getElementById('aaDepts').innerHTML = state.departments.map(d=>{
     let st = staffing[d];
-    if(Array.isArray(st)) st = { days: st, ms:'', es:'', budget:0 };            // תאימות לפורמט ישן
-    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '', budget:0 };
+    if(Array.isArray(st)) st = { days: st, ms:'', es:'', budget:0, hoursQuota:0 };            // תאימות לפורמט ישן
+    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '', budget:0, hoursQuota:0 };
     if(d==='קופאיות' && !st.es) st.es = 'טביעת אצבע';                 // ברירת מחדל: טביעת אצבע בערב קופאיות
     const days = st.days;
     return `<div class="aa-dept" data-dept="${esc(d)}">
@@ -2216,6 +2216,7 @@ async function openAutoAssign(){
         <input type="text" class="a-ms" value="${esc(st.ms)}" placeholder="כישור חובה בבוקר">
         <input type="text" class="a-es" value="${esc(st.es)}" placeholder="כישור חובה בערב">
         <input type="number" class="a-budget" min="0" step="50" value="${st.budget||''}" placeholder="תקציב שבועי ₪" title="תקציב שכר שבועי למחלקה (₪) — ריק/0 = ללא הגבלה" style="width:120px">
+        <input type="number" class="a-hours" min="0" step="5" value="${st.hoursQuota||''}" placeholder="תקן שעות שבועי" title="תקן שעות עבודה שבועי למחלקה — התראה+דוח יומי לאדמין לפי נוכחות בפועל. ריק/0 = ללא מעקב" style="width:120px">
       </div>
       <div class="aa-grid">${DAY_LETTERS.map((l,i)=>`
         <div class="aa-day"><div class="dl">${l}</div>
@@ -2245,9 +2246,10 @@ document.getElementById('aaOk').addEventListener('click', async ()=>{
       const ms = r.querySelector('.a-ms').value.trim();
       const es = r.querySelector('.a-es').value.trim();
       const budget = Number(r.querySelector('.a-budget').value)||0;
-      staffing[dept] = { days, ms, es, budget }; // התקן נשמר גם עבור מחלקות מוחרגות
+      const hoursQuota = Number(r.querySelector('.a-hours').value)||0;
+      staffing[dept] = { days, ms, es, budget, hoursQuota }; // התקן נשמר גם עבור מחלקות מוחרגות
       if(!r.querySelector('.a-on').checked) return;
-      cfg[dept] = { days, ms, es, budget };
+      cfg[dept] = { days, ms, es, budget, hoursQuota };
     });
 
     // שמירת התקן לגיליון
