@@ -546,6 +546,19 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div style="font-size:60px">✅</div>
     <div style="font-size:22px;font-weight:800;text-align:center" id="kioskDoneMsg"></div>
   </div>
+
+  <!-- אימות סיסמת קיוסק לפני שינוי סניף/יציאה — מונע מעובד לצאת/לשנות סניף בטעות או במכוון בלי אישור מנהל -->
+  <div id="kioskPassPrompt" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20050;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#1b2a4a;border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:28px;max-width:340px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff">
+      <div style="font-size:17px;font-weight:800;text-align:center" id="kioskPassPromptTitle">נדרשת סיסמת הפעלה</div>
+      <input type="password" id="kioskPassPromptInput" autocomplete="off" placeholder="סיסמת הפעלה" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;font-size:16px;text-align:center;font-family:inherit">
+      <div id="kioskPassPromptErr" style="color:#fca5a5;font-weight:700;min-height:18px;font-size:13px"></div>
+      <div style="display:flex;gap:10px;width:100%">
+        <button id="kioskPassPromptCancel" style="flex:1;background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;padding:10px 6px;cursor:pointer;font-family:inherit">ביטול</button>
+        <button id="kioskPassPromptOk" style="flex:1;background:#e8a819;color:#1b2a4a;font-weight:800;border:0;border-radius:10px;padding:10px 6px;cursor:pointer;font-family:inherit">אישור</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="pdfStage"></div>
@@ -5146,12 +5159,49 @@ document.getElementById('kioskKeypad').innerHTML = ['1','2','3','4','5','6','7',
 document.querySelectorAll('.kiosk-key').forEach(btn=>btn.addEventListener('click',()=>kioskKeyTap(btn.dataset.k)));
 document.getElementById('kioskAuthBtn').addEventListener('click', kioskSubmitAuth);
 document.getElementById('kioskAuthPass').addEventListener('keydown', e=>{ if(e.key==='Enter') kioskSubmitAuth(); });
-document.getElementById('kioskChangeBranch').addEventListener('click', ()=>{
+let _kioskPassResolve = null;
+function kioskAskPassword(title){
+  return new Promise(resolve=>{
+    _kioskPassResolve = resolve;
+    document.getElementById('kioskPassPromptTitle').textContent = title;
+    document.getElementById('kioskPassPromptInput').value = '';
+    document.getElementById('kioskPassPromptErr').textContent = '';
+    document.getElementById('kioskPassPrompt').classList.remove('hidden');
+    setTimeout(()=>document.getElementById('kioskPassPromptInput').focus(), 50);
+  });
+}
+async function kioskPassPromptSubmit(){
+  const pass = document.getElementById('kioskPassPromptInput').value.trim();
+  if(!pass){ document.getElementById('kioskPassPromptErr').textContent='יש להזין סיסמה'; return; }
+  const btn = document.getElementById('kioskPassPromptOk');
+  btn.disabled = true;
+  let r;
+  try{ r = await apiPost({ action:'kioskAuth', password: pass }); }
+  catch(e){ r = { ok:false, error:'שגיאת תקשורת' }; }
+  btn.disabled = false;
+  if(!r.ok){ document.getElementById('kioskPassPromptErr').textContent = r.error||'שגיאה'; return; }
+  document.getElementById('kioskPassPrompt').classList.add('hidden');
+  const resolve = _kioskPassResolve; _kioskPassResolve = null;
+  if(resolve) resolve(true);
+}
+function kioskPassPromptCancel(){
+  document.getElementById('kioskPassPrompt').classList.add('hidden');
+  const resolve = _kioskPassResolve; _kioskPassResolve = null;
+  if(resolve) resolve(false);
+}
+document.getElementById('kioskPassPromptOk').addEventListener('click', kioskPassPromptSubmit);
+document.getElementById('kioskPassPromptInput').addEventListener('keydown', e=>{ if(e.key==='Enter') kioskPassPromptSubmit(); });
+document.getElementById('kioskPassPromptCancel').addEventListener('click', kioskPassPromptCancel);
+
+document.getElementById('kioskChangeBranch').addEventListener('click', async ()=>{
+  const ok = await kioskAskPassword('סיסמת הפעלה נדרשת לשינוי סניף');
+  if(!ok) return;
   _kioskBranch=''; localStorage.removeItem('sp_kiosk_branch'); kioskShowBranchPicker();
 });
 document.getElementById('kioskBackToNames').addEventListener('click', kioskLoadNames);
-document.getElementById('kioskExit').addEventListener('click', ()=>{
-  if(!confirm('לצאת ממסך הקיוסק?')) return;
+document.getElementById('kioskExit').addEventListener('click', async ()=>{
+  const ok = await kioskAskPassword('סיסמת הפעלה נדרשת ליציאה ממצב קיוסק');
+  if(!ok) return;
   document.getElementById('kioskView').classList.add('hidden');
   document.body.style.overflow='';
   location.hash='';
