@@ -2197,7 +2197,7 @@ async function openAutoAssign(){
   // טעינת התקן השמור
   let staffing = {};
   try{
-    const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
+    const r = await apiPost({ action:'getAdminData', ...mgrAuth(), branch: effectiveBranch()||undefined });
     if(r.ok && r.staffing) staffing = r.staffing;
     if(r.ok && r.employees) r.employees.forEach(se=>{
       const local = empByName(se.name);
