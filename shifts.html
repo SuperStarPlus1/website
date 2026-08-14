@@ -510,12 +510,20 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div style="padding:14px 18px;display:flex;align-items:center;gap:10px;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0">
     <div style="font-weight:800;font-size:17px">⏱ קיוסק נוכחות — <span id="kioskBranchLabel"></span></div>
     <div style="display:flex;gap:8px">
-      <button id="kioskChangeBranch" style="background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer;font-size:12px">שינוי סניף</button>
+      <button id="kioskChangeBranch" class="hidden" style="background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer;font-size:12px">שינוי סניף</button>
       <button id="kioskExit" style="background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;cursor:pointer;font-size:12px">✕ יציאה</button>
     </div>
   </div>
 
-  <div id="kioskStepBranch" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px">
+  <div id="kioskStepAuth" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">הפעלת מצב קיוסק במכשיר זה</div>
+    <div style="opacity:.8;font-size:14px;text-align:center;max-width:320px">נדרשת סיסמת הפעלה ייעודית מהמנהל — פעם אחת בלבד לכל מכשיר</div>
+    <input type="password" id="kioskAuthPass" placeholder="סיסמת הפעלה" autocomplete="off" style="width:100%;max-width:280px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;font-size:18px;text-align:center;font-family:inherit">
+    <div id="kioskAuthErr" style="color:#fca5a5;font-weight:700;min-height:20px"></div>
+    <button id="kioskAuthBtn" style="background:#e8a819;color:#1b2a4a;font-weight:800;font-size:16px;border:0;border-radius:12px;padding:14px 32px;cursor:pointer;font-family:inherit">הפעלה</button>
+  </div>
+
+  <div id="kioskStepBranch" class="hidden" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px">
     <div style="font-size:20px;font-weight:800;margin-bottom:6px">באיזה סניף נמצא המכשיר?</div>
     <div id="kioskBranchList" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px"></div>
   </div>
@@ -1054,7 +1062,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwPLv2KAc2vSZG6xH4imlc9kuJYtDFj8eTHylpAH1Se7M_F-hhgAkhyL1_HPBsbIYCQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxk8zf4D8GVMK_ZIu0-M6Ew3RveOYrX2ob_H0F8EbgeYX34laR0BabsxC8YceoJBpHa/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1335,6 +1343,7 @@ function demoPost(body){
   if(body.action==='sendMessage') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
   if(body.action==='postAnnouncement') return { ok:true, sent:0 };
   if(body.action==='deactivateAnnouncement') return { ok:true };
+  if(body.action==='kioskAuth') return { ok:true };
   if(body.action==='kioskEmployees') return { ok:true, branches:['סופרסטאר'], employees: body.branch ? state.employees.filter(e=>e.active).map(e=>({name:e.name})) : [] };
   if(body.action==='kioskPunch') return { ok:false, error:'לא זמין במצב הדגמה' };
   if(body.action==='sendWelcome') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
@@ -5036,7 +5045,27 @@ let _kioskSelName = '';
 let _kioskPin = '';
 
 function kioskShow(step){
-  ['Branch','Names','Pin','Done'].forEach(s=>document.getElementById('kioskStep'+s).classList.toggle('hidden', s!==step));
+  ['Auth','Branch','Names','Pin','Done'].forEach(s=>document.getElementById('kioskStep'+s).classList.toggle('hidden', s!==step));
+  document.getElementById('kioskChangeBranch').classList.toggle('hidden', step==='Auth');
+}
+function kioskShowAuth(){
+  kioskShow('Auth');
+  document.getElementById('kioskAuthErr').textContent='';
+  document.getElementById('kioskAuthPass').value='';
+  setTimeout(()=>document.getElementById('kioskAuthPass').focus(), 50);
+}
+async function kioskSubmitAuth(){
+  const pass = document.getElementById('kioskAuthPass').value.trim();
+  if(!pass){ document.getElementById('kioskAuthErr').textContent='יש להזין סיסמה'; return; }
+  const btn = document.getElementById('kioskAuthBtn');
+  btn.disabled = true;
+  let r;
+  try{ r = await apiPost({ action:'kioskAuth', password: pass }); }
+  catch(e){ r = { ok:false, error:'שגיאת תקשורת' }; }
+  btn.disabled = false;
+  if(!r.ok){ document.getElementById('kioskAuthErr').textContent = r.error||'שגיאה'; return; }
+  localStorage.setItem('sp_kiosk_unlocked','1');
+  if(_kioskBranch) kioskLoadNames(); else kioskShowBranchPicker();
 }
 async function kioskShowBranchPicker(){
   kioskShow('Branch');
@@ -5115,6 +5144,8 @@ document.getElementById('kioskKeypad').innerHTML = ['1','2','3','4','5','6','7',
   k===''? '<div></div>' : `<button class="kiosk-key" data-k="${k==='⌫'?'del':k}" style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:24px;font-weight:800;border:0;cursor:pointer;font-family:inherit">${k}</button>`
 ).join('');
 document.querySelectorAll('.kiosk-key').forEach(btn=>btn.addEventListener('click',()=>kioskKeyTap(btn.dataset.k)));
+document.getElementById('kioskAuthBtn').addEventListener('click', kioskSubmitAuth);
+document.getElementById('kioskAuthPass').addEventListener('keydown', e=>{ if(e.key==='Enter') kioskSubmitAuth(); });
 document.getElementById('kioskChangeBranch').addEventListener('click', ()=>{
   _kioskBranch=''; localStorage.removeItem('sp_kiosk_branch'); kioskShowBranchPicker();
 });
@@ -5129,6 +5160,7 @@ document.getElementById('kioskExit').addEventListener('click', ()=>{
 async function initKiosk(){
   document.getElementById('kioskView').classList.remove('hidden');
   document.body.style.overflow='hidden';
+  if(localStorage.getItem('sp_kiosk_unlocked')!=='1'){ kioskShowAuth(); return; }
   if(_kioskBranch) kioskLoadNames();
   else kioskShowBranchPicker();
 }
