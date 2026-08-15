@@ -404,14 +404,14 @@
         </div>
         <nav aria-label="ניווט ראשי" role="navigation">
             <ul class="nav-links">
-                <li class="active" onclick="nav('home', this)" tabindex="0" role="menuitem" data-i18n="nav_home">דף הבית</li>
-                <li onclick="nav('catalog-page', this)" tabindex="0" role="menuitem" data-i18n="nav_catalog">קטלוג</li>
-                <li onclick="nav('promos-page', this)" tabindex="0" role="menuitem" data-i18n="nav_promos">מבצעים</li>
-                <li onclick="nav('new-page', this)" tabindex="0" role="menuitem" data-i18n="nav_new">חדש על המדף</li>
-                <li onclick="nav('about-page', this)" tabindex="0" role="menuitem" data-i18n="nav_about">אודות</li>
-                <li onclick="nav('career-page', this)" tabindex="0" role="menuitem" data-i18n="nav_career">קריירה</li>
-                <li onclick="nav('directions-page', this)" tabindex="0" role="menuitem" data-i18n="nav_contact">צור קשר</li>
-                <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);" tabindex="0" role="menuitem" data-i18n="nav_club">⭐ מועדון לקוחות</li>
+                <li class="active" onclick="nav('home', this)" tabindex="0" role="link" data-i18n="nav_home">דף הבית</li>
+                <li onclick="nav('catalog-page', this)" tabindex="0" role="link" data-i18n="nav_catalog">קטלוג</li>
+                <li onclick="nav('promos-page', this)" tabindex="0" role="link" data-i18n="nav_promos">מבצעים</li>
+                <li onclick="nav('new-page', this)" tabindex="0" role="link" data-i18n="nav_new">חדש על המדף</li>
+                <li onclick="nav('about-page', this)" tabindex="0" role="link" data-i18n="nav_about">אודות</li>
+                <li onclick="nav('career-page', this)" tabindex="0" role="link" data-i18n="nav_career">קריירה</li>
+                <li onclick="nav('directions-page', this)" tabindex="0" role="link" data-i18n="nav_contact">צור קשר</li>
+                <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);" tabindex="0" role="link" data-i18n="nav_club">⭐ מועדון לקוחות</li>
 
                 <!-- Language switcher -->
                 <li style="background:transparent; padding:4px 8px;" role="none">
@@ -832,6 +832,13 @@
         }
     });
 
+    // "מוגבל ל-99999 ק"ג" וכד' הוא ערך placeholder בגיליון שמסמן "אין הגבלה" —
+    // מציגים אותו כטקסט אנושי במקום את המספר הגולמי
+    function formatPromoNote(note) {
+        if (!note) return note;
+        return note.replace(/מוגבל\s*ל[־-]?\s*\d{5,}\s*(ק"ג|יח['׳]?|יחידות|ליטר)?/g, 'ללא הגבלה');
+    }
+
     function isFresh(pid) {
         const m = pid.match(/(\d{2})-(\d{2})-(\d{4})/);
         if (!m) return true;
@@ -893,6 +900,33 @@
             const target = document.getElementById(divId);
             if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
         } catch (e) { console.error("Cloudinary error:", e); }
+    }
+
+    // כרטיסי משרה — ללא לוגיקת ברקוד/מחיר/קטגוריה של מוצרים (loadCloud), רק תמונה + שם המשרה.
+    // שם המשרה נלקח משם קובץ התמונה בקלאודינרי (תיקיית "jobs") — יש להעלות כל תמונה עם public_id
+    // שהוא שם המשרה בפועל (למשל "קופאי"), לא מזהה אקראי, כדי שהכרטיס יציג טקסט קריא.
+    async function loadJobs(divId) {
+        try {
+            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/jobs.json`);
+            const d = await r.json();
+            const files = d.resources || [];
+
+            const html = files.map(f => {
+                const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+                const rawName = f.public_id.split('/').pop();
+                const title = rawName.replace(/_\d+$/, '').replace(/[_-]+/g, ' ').trim();
+                return `
+                <div class="card" role="listitem" tabindex="0"
+                    onclick="zoom('${url}')"
+                    onkeypress="if(event.key==='Enter') zoom('${url}')">
+                    <img src="${url}" alt="${title || 'משרה פתוחה'}" loading="lazy">
+                    ${title ? `<h3>${title}</h3>` : ''}
+                </div>`;
+            }).join('');
+
+            const target = document.getElementById(divId);
+            if (target) target.innerHTML = html;
+        } catch (e) { console.error("Cloudinary jobs error:", e); }
     }
 
     function render(data) {
@@ -1032,7 +1066,7 @@
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             if (!window._promoData) window._promoData = [];
-            const promoNote = o.PromoNote || '';
+            const promoNote = formatPromoNote(o.PromoNote || '');
             // פריטים שנמכרים בקג — הצג בקג לא יחידות
             const isWeight = qty === 0.01;
             const sIdx = window._promoData.length;
@@ -1089,7 +1123,7 @@
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
-            const promoNote = (o.PromoNote || '');
+            const promoNote = formatPromoNote(o.PromoNote || '');
             const safeDesc = desc.replace(/'/g, '');
             let allBcs = [];
             try { allBcs = JSON.parse(o.AllBarcodes || '[]'); } catch(e) { allBcs = [o.Barcode || barcode]; }
@@ -1122,7 +1156,7 @@
     async function start() {
         loadCloud('newproducts', 'new-home', 'grid', false);
         loadCloud('newproducts', 'new-full', 'grid', false);
-        loadCloud('jobs', 'jobs-grid', 'grid', false);
+        loadJobs('jobs-grid');
 
         Papa.parse(getCsvUrl('he'), {
             download: true, header: true, complete: r => {
