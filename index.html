@@ -604,6 +604,10 @@
                     <strong data-i18n="contact_address_label">כתובת</strong><span data-i18n="contact_address">מג'ד אל כרום, כביש ראשי</span>
                 </div>
             </div>
+            <div style="text-align:center; margin-top:30px;">
+                <p data-i18n="contact_whatsapp_cta">מעדיפים לכתוב לנו? שלחו הודעה בוואטסאפ ונחזור אליכם בהקדם:</p>
+                <a href="#" onclick="openContactWhatsapp(); return false;" class="f-btn whatsapp" style="position: static; display: inline-flex; margin: 10px auto 0;" aria-label="שליחת הודעה בוואטסאפ"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+            </div>
             <div class="map-wrapper" style="margin-top: 30px; display: flex; justify-content: center;">
                 <div class="map-container">
                     <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3358.3705001334915!2d35.2610968758066!3d32.91986077360408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151c3301fdace701%3A0x8cd5dc779c00b884!2z16HXldeX16jXodeY16DXqCDXpNeo16XXodeo!5e0!3m2!1siw!2sil!4v1708170000000!5m2!1siw!2sil" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" title="מיקום סופרסטאר פלוס על המפה"></iframe>
@@ -1576,6 +1580,9 @@ const TRANSLATIONS = {
         contact_details_title: "פרטי התקשרות", contact_phone: "טלפון",
         contact_email_label: 'דוא"ל', contact_address_label: "כתובת",
         contact_address: "מג'ד אל כרום, כביש ראשי",
+        contact_whatsapp_cta: "מעדיפים לכתוב לנו? שלחו הודעה בוואטסאפ ונחזור אליכם בהקדם:",
+        contact_whatsapp_btn: "שליחת הודעה בוואטסאפ",
+        contact_whatsapp_msg: "שלום, פניתי אליכם דרך האתר ואשמח לעזרה בנושא: ",
         club_h1: "⭐ מועדון לקוחות סופרסטאר",
         club_sub: "הצטרפו לאלפי לקוחות מרוצים ותיהנו מהטבות בלעדיות כל השנה",
         club_badge: "🎁 סל קניות 41 מתנה לכל חברי המועדון!",
@@ -1639,6 +1646,9 @@ const TRANSLATIONS = {
         contact_details_title: "معلومات التواصل", contact_phone: "هاتف",
         contact_email_label: "البريد الإلكتروني", contact_address_label: "العنوان",
         contact_address: "مجد الكروم، الطريق الرئيسي",
+        contact_whatsapp_cta: "تفضلون الكتابة لنا؟ أرسلوا رسالة واتساب وسنعاود التواصل معكم قريباً:",
+        contact_whatsapp_btn: "إرسال رسالة واتساب",
+        contact_whatsapp_msg: "مرحباً، تواصلت معكم من خلال الموقع وأحتاج مساعدة بخصوص: ",
         club_h1: "⭐ نادي عملاء سوبر ستار",
         club_sub: "انضم إلى آلاف العملاء الراضين واستمتع بمزايا حصرية طوال العام",
         club_badge: "🎁 سلة تسوق بـ₪41 هدية لجميع أعضاء النادي!",
@@ -1702,6 +1712,9 @@ const TRANSLATIONS = {
         contact_details_title: "Contact Information", contact_phone: "Phone",
         contact_email_label: "Email", contact_address_label: "Address",
         contact_address: "Majd Al-Krum, Main Road",
+        contact_whatsapp_cta: "Prefer to write to us? Send a WhatsApp message and we'll get back to you shortly:",
+        contact_whatsapp_btn: "Send a WhatsApp message",
+        contact_whatsapp_msg: "Hi, I'm reaching out through the website and would like help with: ",
         club_h1: "⭐ Super Star Loyalty Club",
         club_sub: "Join thousands of satisfied customers and enjoy exclusive benefits all year round",
         club_badge: "🎁 Free ₪41 shopping basket for all club members!",
@@ -1822,6 +1835,13 @@ async function setLang(lang) {
         },
         error: () => { hideTranslateSpinner(); }
     });
+}
+
+// עמוד "צור קשר" — פותח וואטסאפ עם הודעה מוכנה מראש בשפת התצוגה הנוכחית
+function openContactWhatsapp() {
+    const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
+    const msg = encodeURIComponent(t.contact_whatsapp_msg || '');
+    window.open(`https://wa.me/97249076772?text=${msg}`, '_blank', 'noopener');
 }
 
 </script>
