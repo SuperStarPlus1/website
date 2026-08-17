@@ -1075,7 +1075,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwpCnVdEt60NpgaYaimdTlP5t_0rYJHVELD_qwnXBgwbeH_siruhMDyYzCbuTJ5wEzZ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxI4zdsjgf_yXepFTyG4msAO2v010ngfgJZmYwDFbWUHqq7qQZWF2EQKWcR0mgYotkV/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1415,6 +1415,15 @@ function gateOrLoad(){ if(authed()) load(); else renderGate(); }
 let _loadSeq = 0;
 async function load(){
   if(!authed()){ renderGate(); return; }
+  if(state.emp && state.emp.active===false){
+    hideEmpHome();
+    document.getElementById('backHomeFab').classList.add('hidden');
+    document.getElementById('board').innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--muted)">'+
+      '<div style="font-size:40px;margin-bottom:10px">🧾</div>'+
+      '<div style="font-size:15px;font-weight:700;margin-bottom:6px;color:var(--ink)">גישה מוגבלת</div>'+
+      '<div style="font-size:13px;max-width:340px;margin:0 auto">חשבונך אינו פעיל יותר במערכת — ניתן לצפות בתלושי השכר שלך בלבד, דרך הכפתור "🧾 תלושים" למעלה.</div></div>';
+    return;
+  }
   const mySeq = ++_loadSeq;
   document.getElementById('board').innerHTML = '<div class="loading"><div class="spin"></div>טוען סידור…</div>';
   hideErr();
@@ -4801,12 +4810,15 @@ async function doLogin(){
       if(!username){ err.textContent='יש להזין שם משתמש'; return; }
       const r = await apiPost({ action:'elogin', username, password:pw });
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
-      state.emp = { name:r.name, username, pw };
+      state.emp = { name:r.name, username, pw, active:r.active!==false };
       store.set({ kind:'emp', name:r.name, username, pw }, document.getElementById('lgRemember').checked);
       state.filterEmp = r.name;
       hide('loginOverlay'); setAuthUI();
       if(r.mustChange){ openPwChange(); }
-      else { load(); toast('שלום '+r.name,'ok'); }
+      else {
+        load();
+        toast(state.emp.active ? 'שלום '+r.name : 'שלום '+r.name+' · גישה מוגבלת לתלושי שכר בלבד','ok');
+      }
     }
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
 }
@@ -4828,9 +4840,17 @@ document.getElementById('viewerExit').addEventListener('click',()=>{
 
 function setAuthUI(){
   const m = isMgr();
+  const restricted = !!state.emp && state.emp.active===false;
   document.getElementById('adminTools').classList.toggle('hidden', !m);
   document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.emp);
   document.getElementById('viewerChip').classList.toggle('hidden', !state.emp || m);
+  document.getElementById('myConsBtn').classList.toggle('hidden', restricted);
+  document.getElementById('mySwapBtn').classList.toggle('hidden', restricted);
+  document.getElementById('myAttBtn').classList.toggle('hidden', restricted);
+  document.getElementById('manualPunchBtn').classList.toggle('hidden', restricted);
+  document.getElementById('pdfBtn').classList.toggle('hidden', restricted);
+  document.getElementById('empFilter').classList.toggle('hidden', restricted);
+  document.getElementById('deptFilter').classList.toggle('hidden', restricted);
   if(m){
     document.getElementById('mgrName').textContent = state.mgr.name;
     document.getElementById('mgrRole').textContent = state.mgr.role;
@@ -5237,7 +5257,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
     else store.clear();
   } else if(auth && auth.kind==='emp' && auth.username){
     const r = await apiPost({ action:'elogin', username:auth.username, password:auth.pw }).catch(()=>({ok:false}));
-    if(r.ok){ state.emp = { name:r.name, username:auth.username, pw:auth.pw }; state.filterEmp = r.name; }
+    if(r.ok){ state.emp = { name:r.name, username:auth.username, pw:auth.pw, active:r.active!==false }; state.filterEmp = r.name; }
     else store.clear();
   }
   setAuthUI();
