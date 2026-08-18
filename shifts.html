@@ -448,7 +448,6 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <span>📋 עליך למלא טופס 101 לשנת <b id="f101Year"></b> —</span>
   <button id="f101Link" class="btn plain" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #fdba74;color:#9a3412;font-weight:800">📋 למילוי הטופס לחץ כאן</button>
   <span class="spacer"></span>
-  <button class="btn plain" id="f101Done" style="padding:6px 12px;font-size:12px;background:#dcfce7;color:#166534">✓ סיימתי למלא</button>
 </div>
 <div class="notice hidden" id="annNotice" style="background:#eff6ff;color:#1e3a8a;border-bottom:1px solid #93c5fd;font-weight:600">
   <span>📢 <b id="annTitle"></b> — <span id="annText"></span></span>
@@ -923,17 +922,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   </div>
 </div>
 
-<!-- מודאל טופס 101 מוטמע -->
+<!-- מודאל טופס 101 פנימי -->
 <div class="overlay hidden" id="f101Overlay">
-  <div class="modal" style="max-width:920px;height:92vh">
-    <header><h3>📋 מילוי טופס 101</h3><p>הטופס ממולא ונחתם בשירות המאובטח — בסיום לחץ "סיימתי למלא" למטה</p></header>
-    <div class="mbody" style="padding:8px;display:flex;flex-direction:column;flex:1">
-      <div style="font-size:12px;color:var(--muted);margin:0 8px 6px">אם הטופס לא נטען כאן — לחץ "פתיחה בחלון נפרד"</div>
-      <iframe id="f101Frame" style="width:100%;flex:1;min-height:55vh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
-    </div>
+  <div class="modal" style="max-width:820px;height:92vh">
+    <header><h3>📋 טופס 101 — כרטיס עובד</h3><p>מולא ונשלח ישירות דרך המערכת — נשמר כ-PDF וזמין לצפייה בכל עת</p></header>
+    <div class="mbody" id="f101Body" style="padding:14px;overflow-y:auto"></div>
     <div class="mfoot">
-      <button class="btn primary" id="f101MarkDone">✓ סיימתי למלא</button>
-      <button class="btn plain" id="f101External">↗ פתיחה בחלון נפרד</button>
+      <button class="btn primary" id="f101Submit">📨 שליחת הטופס</button>
       <span class="spacer"></span>
       <button class="btn plain" id="f101Close">סגירה</button>
     </div>
@@ -1075,7 +1070,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzq0Ik0_OcojjrN9kFF2zFMZgZNW5K2AMqEu5P9PCcf7Ch6VnxzvkyRYbbr4XHeZyXO/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFI3T0WpRp78WsnR_wUe7faGrUosTL1VK3gIOCh6aKovkmRcBj1fI9hfmUUPz-vcoD/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1083,7 +1078,6 @@ const DEPT_COLORS = ['#2563eb','#0d9488','#7c3aed','#b45309','#0891b2','#16a34a'
 const UNAVAIL = 'אי-זמינות';   // בגיליון המשמרות: מחלקה="אי-זמינות", התחלה="בוקר"/"ערב"
 const EVENING_FROM = 15 * 60;  // משמרת שמתחילה מ-15:00 נחשבת ערב
 const ROLE_ADMIN = 'אדמין';
-const FORM101_URL = 'https://forms.tofes101.co.il/c/65f09cd2818640ddf5c7afca/run/';
 const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const PDFLIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
@@ -1360,7 +1354,10 @@ function demoPost(body){
   if(body.action==='kioskEmployees') return { ok:true, branches:['סופרסטאר'], employees: body.branch ? state.employees.filter(e=>e.active).map(e=>({name:e.name})) : [] };
   if(body.action==='kioskPunch') return { ok:false, error:'לא זמין במצב הדגמה' };
   if(body.action==='sendWelcome') return { ok:true, sent:(body.recipients||[]).length, noMail:[] };
-  if(body.action==='mark101') return { ok:true, year: requiredF101Year() };
+  if(body.action==='getMyF101Data') return { ok:true, data:{}, employer:{name:'',address:'',phone:'',taxFileNo:''}, lastYear:0 };
+  if(body.action==='submitF101') return { ok:false, error:'לא זמין במצב הדגמה' };
+  if(body.action==='myF101'||body.action==='listF101') return { ok:true, forms:[] };
+  if(body.action==='getF101File') return { ok:false, error:'לא זמין במצב הדגמה' };
   if(body.action==='myPayslips'||body.action==='listPayslips') return { ok:true, payslips:[] };
   if(body.action==='uploadPayslip') return { ok:true, fileId:'demo' };
   if(body.action==='getPayslip') return { ok:false, error:'לא זמין במצב הדגמה' };
@@ -4417,30 +4414,222 @@ function updateF101Banner(){
   n.classList.toggle('hidden', !showMe);
   if(showMe) document.getElementById('f101Year').textContent = requiredF101Year();
 }
-function openF101(){
-  document.getElementById('f101Frame').src = FORM101_URL;   // נטען רק בפתיחה
+
+const F101_CREDIT_OPTIONS = [
+  { key:'c1', label:'1. אני תושב/ת ישראל' },
+  { key:'c2', label:'2. אני נכה 100% / עיוור/ת לצמיתות' },
+  { key:'c3', label:'3. אני תושב/ת קבוע/ה בישוב מזכה. אני ובני משפחתי מדרגה ראשונה, מתגוררים ביישוב ואין לי "מרכז חיים" נוסף.' },
+  { key:'c4', label:'4. אני עולה חדש/ה' },
+  { key:'c5', label:'5. בגין בן/בת זוגי המתגורר/ת עימי ואין לו/לה הכנסות בשנת המס (רק אם העובד/ת או בן/בת הזוג הגיע/ה לגיל פרישה או שהוא/היא נכה או עיוור/ת עפ"י סעיף 9(5) לפקודה)' },
+  { key:'c6', label:'6. אני הורה במשפחה חד הורית החי בנפרד' },
+  { key:'c7', label:'7. בגין ילדי שבחזקתי המפורטים בחלק ג' },
+  { key:'c8', label:'8. בגין ילדי (ימולא ע"י הורה שלא סימן 7, אשה לא נשואה שילדיה אינם בחזקתה, הורה יחיד)' },
+  { key:'c9', label:'9. אני הורה יחיד לילדי שבחזקתי (המפורטים בסעיפים 7-8)' },
+  { key:'c10', label:'10. בגין ילדי שאינם בחזקתי המפורטים בחלק ג ואני משתתף/ת בכלכלתם' },
+  { key:'c11', label:'11. אני הורה לילדים עם מוגבלות שטרם מלאו להם 19 שנים, בגינם אני מקבל/ת גמלת ילד נכה מהמוסד לביטוח לאומי' },
+  { key:'c12', label:'12. בגין מזונות לבן/בת זוגי לשעבר (ימולא ע"י מי שנישא בשנית)' },
+  { key:'c13', label:'13. מלאו לי או לבן/בת זוגי 16 שנים וטרם מלאו לי או לבן/בת זוגי 18 שנים בשנת המס' },
+  { key:'c14', label:'14. אני חייל/ת משוחרר/ת / שרתתי בשירות לאומי' },
+  { key:'c15', label:'15. בגין סיום לימודים לתואר אקדמי, סיום התמחות או סיום לימודי מקצוע' },
+  { key:'c16', label:'16. שירתתי כלוחם/לוחמת מילואים בשנת המס הקודמת' }
+];
+
+let _f101Kids = [];
+function f101KidsHtml(){
+  return _f101Kids.map((k,i)=>`
+    <div class="chiprow" style="margin-bottom:6px">
+      <input type="text" class="i-kid-name" value="${esc(k.name||'')}" placeholder="שם הילד" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-kid-id" value="${esc(k.id||'')}" placeholder="ת.ז" dir="ltr" style="width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="date" class="i-kid-birth" value="${esc(k.birth||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <button class="btn plain kid-del" data-i="${i}" style="padding:6px 10px">✕</button>
+    </div>`).join('');
+}
+function bindF101KidRows(){
+  document.querySelectorAll('.kid-del').forEach(b=>b.addEventListener('click', ()=>{
+    _f101Kids.splice(Number(b.dataset.i),1);
+    document.getElementById('f101KidsList').innerHTML = f101KidsHtml();
+    bindF101KidRows();
+  }));
+}
+
+function renderF101Body(data, employer){
+  data = data || {};
+  const d = k => esc(data[k]||'');
+  const chk = k => data[k] ? 'checked' : '';
+  _f101Kids = (data.kids||[]).slice();
+  const credits = data.credits || {};
+  const creditsHtml = F101_CREDIT_OPTIONS.map(o=>`
+    <label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:12.5px;cursor:pointer">
+      <input type="checkbox" class="i-credit" data-key="${o.key}" ${credits[o.key]?'checked':''} style="margin-top:2px">
+      <span>${esc(o.label)}</span>
+    </label>`).join('');
+  document.getElementById('f101Body').innerHTML = `
+    <style>#f101Body h4{font-size:13px;background:#f5f5f5;padding:5px 10px;margin:18px 0 8px;border-radius:6px}
+    #f101Body .lbl{font-size:12.5px;color:var(--muted)}</style>
+    <h4 style="margin-top:0">א. פרטי המעסיק</h4>
+    <div class="chiprow" style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
+      ${esc(employer.name)||'—'} · ${esc(employer.address)||'—'} · ${esc(employer.phone)||'—'} · תיק ניכויים: ${esc(employer.taxFileNo)||'—'}
+    </div>
+
+    <h4>ב. פרטי העובד/ת</h4>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <input type="text" id="f-firstName" value="${d('firstName')}" placeholder="שם פרטי *" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-lastName" value="${d('lastName')}" placeholder="שם משפחה *" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <select id="f-idType" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <option ${data.idType==='דרכון'?'':'selected'}>תעודת זהות</option>
+        <option ${data.idType==='דרכון'?'selected':''}>דרכון</option>
+      </select>
+      <input type="text" id="f-idNumber" value="${d('idNumber')}" placeholder="מספר זהות *" dir="ltr" style="width:130px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    </div>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <span class="lbl">תאריך לידה:</span><input type="date" id="f-birthDate" value="${d('birthDate')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <span class="lbl">תאריך עליה:</span><input type="date" id="f-aliyaDate" value="${d('aliyaDate')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    </div>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <input type="text" id="f-city" value="${d('city')}" placeholder="ישוב" style="flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-street" value="${d('street')}" placeholder="רחוב" style="flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-houseNo" value="${d('houseNo')}" placeholder="מס' בית" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-zip" value="${d('zip')}" placeholder="מיקוד" dir="ltr" style="width:100px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    </div>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <input type="text" id="f-mobile" value="${d('mobile')}" placeholder="טלפון נייד" dir="ltr" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-phone" value="${d('phone')}" placeholder="טלפון נוסף" dir="ltr" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-email" value="${d('email')}" placeholder="דוא&quot;ל" dir="ltr" style="flex:1;min-width:160px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    </div>
+    <div class="chiprow" style="flex-wrap:wrap;gap:14px;margin-bottom:8px">
+      <select id="f-gender" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <option ${data.gender==='נקבה'?'':'selected'}>זכר</option>
+        <option ${data.gender==='נקבה'?'selected':''}>נקבה</option>
+      </select>
+      <select id="f-marital" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        ${['רווק/ה','נשוי/אה','גרוש/ה','אלמן/ה','פרוד/ה'].map(m=>`<option ${data.marital===m?'selected':''}>${m}</option>`).join('')}
+      </select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-israeliResident" ${chk('israeliResident')}> תושב ישראל</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-kibbutz" ${chk('kibbutz')}> חבר קיבוץ/מושב שיתופי</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-healthFund" ${chk('healthFund')}> חבר בקופת חולים</label>
+    </div>
+
+    <h4>ג. ילדים שבשנת המס טרם מלאו להם 19 שנה</h4>
+    <div id="f101KidsList" style="margin-bottom:6px">${f101KidsHtml()}</div>
+    <button class="btn plain" id="f101AddKid">+ הוספת ילד</button>
+
+    <h4>ד. הכנסות ממעסיק זה</h4>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <select id="f-incomeType" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        ${['משכורת חודש','משכורת בעד משרה נוספת','משכורת חלקית','שכר עבודה (עובד יומי)','קצבה','מלגה'].map(t=>`<option ${data.incomeType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <span class="lbl">תאריך תחילת עבודה בשנת המס:</span>
+      <input type="date" id="f-workStartInTaxYear" value="${d('workStartInTaxYear')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    </div>
+
+    <h4>ה. הכנסות אחרות</h4>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;margin-bottom:8px"><input type="checkbox" id="f-otherIncome" ${chk('otherIncome')}> יש לי הכנסות נוספות (מלבד ממעסיק זה)</label>
+    <input type="text" id="f-otherIncomeDetails" value="${d('otherIncomeDetails')}" placeholder="פירוט ההכנסות הנוספות" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+
+    <div id="f101SpouseSection" style="${data.marital==='נשוי/אה'?'':'display:none'}">
+      <h4>ו. פרטי בן/בת הזוג</h4>
+      <div class="chiprow" style="flex-wrap:wrap;gap:8px">
+        <input type="text" id="f-spouseName" value="${d('spouseName')}" placeholder="שם בן/בת הזוג" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <input type="text" id="f-spouseId" value="${d('spouseId')}" placeholder="ת.ז" dir="ltr" style="width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <input type="text" id="f-spouseIncome" value="${d('spouseIncome')}" placeholder="מצב הכנסות" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      </div>
+    </div>
+
+    <h4>ח. אני מבקש/ת פטור או זיכוי ממס מהסיבות הבאות</h4>
+    <div>${creditsHtml}</div>
+
+    <h4>ט. תיאום מס</h4>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-taxCoordinationAttached" ${chk('taxCoordinationAttached')}> יש לי אישור תיאום מס בתוקף (מוגש בנפרד למעסיק)</label>
+
+    <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-top:18px">
+      <b>י. הצהרה</b>
+      <p style="font-size:12px;color:#444;margin:8px 0">אני מצהיר/ה כי הפרטים שמסרתי בטופס זה הינם מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הינה עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי שיחול בפרטיי האישיים תוך שבוע ימים מתאריך השינוי.</p>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;cursor:pointer"><input type="checkbox" id="f-declarationConfirmed"> אני מאשר/ת את נכונות הפרטים לעיל *</label>
+      <div style="font-size:11.5px;color:#166534;margin-top:6px">מזוהה כ: <b>${esc(state.emp?state.emp.name:'')}</b> (אומת באמצעות התחברות למערכת)</div>
+    </div>
+    <div class="merr" id="f101Err" style="margin-top:8px"></div>`;
+  document.getElementById('f-marital').addEventListener('change', ev=>{
+    document.getElementById('f101SpouseSection').style.display = ev.target.value==='נשוי/אה' ? '' : 'none';
+  });
+  document.getElementById('f101AddKid').addEventListener('click', ()=>{
+    _f101Kids.push({name:'',id:'',birth:''});
+    document.getElementById('f101KidsList').innerHTML = f101KidsHtml();
+    bindF101KidRows();
+  });
+  bindF101KidRows();
+}
+
+async function openF101(){
   show('f101Overlay');
+  document.getElementById('f101Body').innerHTML = '<div class="loading"><div class="spin"></div>טוען…</div>';
+  const r = await apiPost({ action:'getMyF101Data', username:state.emp.username, password:state.emp.pw });
+  if(!r.ok){ document.getElementById('f101Body').innerHTML = '<div class="merr">'+esc(r.error||'שגיאה בטעינה')+'</div>'; return; }
+  renderF101Body(r.data, r.employer||{});
 }
-function closeF101(){
-  hide('f101Overlay');
-  document.getElementById('f101Frame').src = 'about:blank'; // שחרור זיכרון
-}
+function closeF101(){ hide('f101Overlay'); }
 document.getElementById('f101Link').addEventListener('click', openF101);
 document.getElementById('f101Close').addEventListener('click', closeF101);
-document.getElementById('f101External').addEventListener('click', ()=>window.open(FORM101_URL,'_blank'));
 
-async function mark101Flow(){
-  if(!confirm('לאשר שסיימת למלא ולחתום על טופס 101? המנהל יקבל עדכון ויוודא שהטופס התקבל.')) return;
-  const r = await apiPost({ action:'mark101', username:state.emp.username, password:state.emp.pw });
-  if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+async function submitF101Flow(){
+  const err = document.getElementById('f101Err');
+  err.textContent = '';
+  const kidsRows = Array.from(document.querySelectorAll('#f101KidsList .chiprow'));
+  const kids = kidsRows.map(r=>({
+    name: r.querySelector('.i-kid-name').value.trim(),
+    id: r.querySelector('.i-kid-id').value.trim(),
+    birth: r.querySelector('.i-kid-birth').value
+  })).filter(k=>k.name||k.id||k.birth);
+  const credits = {};
+  document.querySelectorAll('.i-credit').forEach(c=>{ credits[c.dataset.key] = c.checked; });
+  const fields = {
+    firstName: document.getElementById('f-firstName').value.trim(),
+    lastName: document.getElementById('f-lastName').value.trim(),
+    idType: document.getElementById('f-idType').value,
+    idNumber: document.getElementById('f-idNumber').value.trim(),
+    birthDate: document.getElementById('f-birthDate').value,
+    aliyaDate: document.getElementById('f-aliyaDate').value,
+    city: document.getElementById('f-city').value.trim(),
+    street: document.getElementById('f-street').value.trim(),
+    houseNo: document.getElementById('f-houseNo').value.trim(),
+    zip: document.getElementById('f-zip').value.trim(),
+    mobile: document.getElementById('f-mobile').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    gender: document.getElementById('f-gender').value,
+    marital: document.getElementById('f-marital').value,
+    israeliResident: document.getElementById('f-israeliResident').checked,
+    kibbutz: document.getElementById('f-kibbutz').checked,
+    healthFund: document.getElementById('f-healthFund').checked,
+    kids,
+    incomeType: document.getElementById('f-incomeType').value,
+    workStartInTaxYear: document.getElementById('f-workStartInTaxYear').value,
+    otherIncome: document.getElementById('f-otherIncome').checked,
+    otherIncomeDetails: document.getElementById('f-otherIncomeDetails').value.trim(),
+    spouseName: document.getElementById('f-spouseName').value.trim(),
+    spouseId: document.getElementById('f-spouseId').value.trim(),
+    spouseIncome: document.getElementById('f-spouseIncome').value.trim(),
+    credits,
+    taxCoordinationAttached: document.getElementById('f-taxCoordinationAttached').checked,
+    declarationConfirmed: document.getElementById('f-declarationConfirmed').checked
+  };
+  if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
+  if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
+  if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
+  const btn = document.getElementById('f101Submit');
+  btn.disabled = true; btn.textContent = 'שולח…';
+  let clientIp = '';
+  try{ const ipr = await fetch('https://api.ipify.org?format=json').then(r=>r.json()); clientIp = ipr.ip||''; }catch(e){}
+  const r = await apiPost({ action:'submitF101', username:state.emp.username, password:state.emp.pw, fields, clientIp });
+  btn.disabled = false; btn.textContent = '📨 שליחת הטופס';
+  if(!r.ok){ err.textContent = r.error||'שגיאה בשליחה'; return; }
   const me = empByName(state.emp.name);
   if(me) me.f101 = r.year;
   closeF101();
   updateF101Banner();
-  toast('תודה! הסטטוס עודכן לשנת '+r.year+' ✓','ok');
+  toast('הטופס נשלח ונשמר לשנת '+r.year+' ✓','ok');
+  if(r.data) openBlobPdf(r.data, r.filename);
 }
-document.getElementById('f101Done').addEventListener('click', mark101Flow);
-document.getElementById('f101MarkDone').addEventListener('click', mark101Flow);
+document.getElementById('f101Submit').addEventListener('click', submitF101Flow);
 
 /* ============ עדכונים אישיים לעובד ============ */
 function checkMyUpdates(){
