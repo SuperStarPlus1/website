@@ -1075,7 +1075,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxI4zdsjgf_yXepFTyG4msAO2v010ngfgJZmYwDFbWUHqq7qQZWF2EQKWcR0mgYotkV/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzq0Ik0_OcojjrN9kFF2zFMZgZNW5K2AMqEu5P9PCcf7Ch6VnxzvkyRYbbr4XHeZyXO/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1826,7 +1826,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', birthDate:se.birthDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             } else {
               state.employees.push({
@@ -1836,7 +1836,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', birthDate:se.birthDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             }
           });
@@ -1910,7 +1910,7 @@ let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',endDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -1973,6 +1973,8 @@ function empRow(e){
         <option value="1" ${e.active!==false?'selected':''}>✅ פעיל</option>
         <option value="0" ${e.active===false?'selected':''}>❌ לא פעיל</option>
       </select>
+      <span class="lbl end-only" style="${e.active===false?'':'display:none'}">תאריך סיום עבודה:</span>
+      <input type="date" class="i-end end-only" value="${esc(e.endDate||'')}" style="${e.active===false?'':'display:none'};border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${_empMgrDepts.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
@@ -2043,6 +2045,10 @@ function empRow(e){
     div.querySelectorAll('.mo-only').forEach(el=>el.style.display = isMonthly?'':'none');
     div.querySelectorAll('.hr-only').forEach(el=>el.style.display = isMonthly?'none':'');
   });
+  div.querySelector('.i-active').addEventListener('change', ev=>{
+    const isInactive = ev.target.value==='0';
+    div.querySelectorAll('.end-only').forEach(el=>el.style.display = isInactive?'':'none');
+  });
   return div;
 }
 // שמירת עובד מהכרטיס
@@ -2069,6 +2075,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     empNo:r.querySelector('.i-empno').value.trim(),
     startDate:r.querySelector('.i-start').value,
     birthDate:r.querySelector('.i-birth').value,
+    endDate:r.querySelector('.i-end').value,
     vacQuota:Number(r.querySelector('.i-vac').value)||0,
     empType:r.querySelector('.i-emptype').value||'שעתי',
     monthlyHours:Number(r.querySelector('.i-monthly').value)||0,
@@ -2110,7 +2117,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
         email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
-        f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', empType:e.empType||'שעתי',
+        f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
         vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
         branch:e.branch||scopeBranch||undefined })) });
@@ -4881,7 +4888,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
           vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
