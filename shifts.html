@@ -395,6 +395,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <button class="hbtn gold" id="myConsBtn" style="padding:6px 10px;font-size:12px">🖐 אילוצים</button>
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
+    <button class="hbtn gold" id="myF101Btn" style="padding:6px 10px;font-size:12px">📋 הטפסים שלי</button>
     <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
     <button class="hbtn gold" id="manualPunchBtn" style="padding:6px 10px;font-size:12px">✏ הזנה</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
@@ -430,6 +431,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <button id="msgBtn">✉ הודעה</button>
         <button id="annBtn">📢 לוח הודעות</button>
         <button id="payBtn">🧾 תלושים</button>
+        <button id="f101AdminBtn">📋 טפסי 101</button>
         <button id="mgrPushBtn2" style="color:#166534">🔔 Push</button>
       </div>
     </div>
@@ -918,6 +920,28 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3>🧾 התלושים שלי</h3><p>לחיצה על תלוש פותחת אותו לצפייה והורדה</p></header>
     <div class="mbody"><div id="myPayList">טוען…</div></div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל טפסי 101 — עובד -->
+<div class="overlay hidden" id="myF101Overlay">
+  <div class="modal">
+    <header><h3>📋 הטפסים שלי</h3><p>לחיצה על טופס פותחת אותו לצפייה והורדה</p></header>
+    <div class="mbody"><div id="myF101List">טוען…</div></div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל טפסי 101 — מנהל -->
+<div class="overlay hidden" id="f101AdminOverlay">
+  <div class="modal">
+    <header><h3>📋 טפסי 101</h3><p>הטפסים נוצרים ונשמרים אוטומטית כשעובד מגיש דרך המערכת</p></header>
+    <div class="mbody">
+      <div class="mrow"><label>צפייה בטפסים של עובד</label>
+        <select id="f101ViewEmp"></select></div>
+      <div id="f101ViewList"></div>
+    </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
 </div>
@@ -4391,6 +4415,51 @@ document.getElementById('myPayBtn').addEventListener('click', async ()=>{
   }));
 });
 
+document.getElementById('myF101Btn').addEventListener('click', async ()=>{
+  show('myF101Overlay');
+  const box = document.getElementById('myF101List');
+  box.innerHTML='טוען…';
+  const r = await apiPost({ action:'myF101', username:state.emp.username, password:state.emp.pw });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  box.innerHTML = r.forms.length ? r.forms.map(f=>`
+    <div class="cons-item">
+      <span>📋 טופס 101 · ${esc(f.year)}</span>
+      <span class="acts"><button class="ap my-f101-open" data-fid="${esc(f.fileId)}" data-fn="${esc(f.filename)}">פתיחה</button></span>
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12.5px">עדיין לא הגשת טופס 101 דרך המערכת</div>';
+  box.querySelectorAll('.my-f101-open').forEach(b=>b.addEventListener('click', async ()=>{
+    b.textContent='טוען…';
+    const r2 = await apiPost({ action:'getF101File', username:state.emp.username, password:state.emp.pw, fileId:b.dataset.fid });
+    b.textContent='פתיחה';
+    if(r2.ok) openBlobPdf(r2.data, r2.filename); else toast(r2.error||'שגיאה','err');
+  }));
+});
+
+/* --- מנהל --- */
+async function openF101Admin(){
+  const opts = state.employees.map(e=>`<option value="${esc(e.name)}">${esc(e.name)}${e.active===false?' (לא פעיל)':''}</option>`).join('');
+  document.getElementById('f101ViewEmp').innerHTML = '<option value="">— בחר עובד —</option>'+opts;
+  document.getElementById('f101ViewList').innerHTML='';
+  show('f101AdminOverlay');
+}
+document.getElementById('f101AdminBtn').addEventListener('click', openF101Admin);
+document.getElementById('f101ViewEmp').addEventListener('change', async ()=>{
+  const emp = document.getElementById('f101ViewEmp').value;
+  const box = document.getElementById('f101ViewList');
+  if(!emp){ box.innerHTML=''; return; }
+  box.innerHTML='טוען…';
+  const r = await apiPost({ action:'listF101', ...mgrAuth(), employee:emp });
+  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  box.innerHTML = r.forms.length ? r.forms.map(f=>`
+    <div class="cons-item">
+      <span>📋 ${esc(f.year)}</span>
+      <span class="acts"><button class="ap f101-open" data-fid="${esc(f.fileId)}" data-fn="${esc(f.filename)}">צפייה</button></span>
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12.5px">אין טפסים לעובד זה</div>';
+  box.querySelectorAll('.f101-open').forEach(b=>b.addEventListener('click', async ()=>{
+    const r2 = await apiPost({ action:'getF101File', ...mgrAuth(), fileId:b.dataset.fid });
+    if(r2.ok) openBlobPdf(r2.data, b.dataset.fn); else toast(r2.error||'שגיאה','err');
+  }));
+});
+
 /* ============ טופס 101 ============ */
 let _annShownRow = null;
 function updateAnnouncementBanner(){
@@ -5055,6 +5124,7 @@ function setAuthUI(){
     document.getElementById('mgrsBtn').classList.toggle('hidden', !admin);
     document.getElementById('logBtn').classList.toggle('hidden', !admin);
     document.getElementById('payBtn').classList.toggle('hidden', !admin);
+    document.getElementById('f101AdminBtn').classList.toggle('hidden', !admin);
   }
   if(state.emp) document.getElementById('viewerName').textContent = state.emp.name;
 }
