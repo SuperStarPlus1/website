@@ -3633,9 +3633,22 @@ async function fetchDetailed(){
 }
 let lastMgrDetailed = null;
 async function loadMgrDetailed(){
-  const box=document.getElementById('attMgrReport'); box.innerHTML='טוען…';
-  const r=await fetchDetailed();
-  if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
+  const box=document.getElementById('attMgrReport');
+  // אם כבר יש דוח מוצג (למשל סגירת חלון עריכה שמרעננת ברקע) — לא מוחקים אותו מיד ל"טוען…",
+  // כדי שרענון שנכשל/מתעכב (כולל נעילת Sheet רגעית מיד אחרי שמירה) לא ייראה כאילו "הכל נסגר".
+  const hadContent = box.innerHTML.trim() && !box.innerHTML.includes('טוען…');
+  if(!hadContent) box.innerHTML='טוען…';
+  let r=await fetchDetailed();
+  if(!r.ok && r.busy){
+    // נעילת Sheet זמנית — קורה בעיקר מיד אחרי כמה שמירות רצופות; ננסה שוב פעם אחת אחרי השהיה קצרה
+    await new Promise(res=>setTimeout(res,1500));
+    r=await fetchDetailed();
+  }
+  if(!r.ok){
+    if(hadContent) toast(r.error||'שגיאה ברענון הדוח — הנתונים המוצגים עשויים להיות לא מעודכנים','err');
+    else box.innerHTML=esc(r.error||'שגיאה');
+    return;
+  }
   lastMgrDetailed = r;
   const withData = r.employees.filter(e=>e.days.length);
   if(!withData.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחים בחודש זה</div>'; return; }
