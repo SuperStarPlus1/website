@@ -907,9 +907,23 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
           <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
           <button class="btn plain" id="attMgrPDF" style="padding:8px 16px;background:#fee2e2;color:#b91c1c;font-weight:700">📄 PDF</button>
           <button class="btn plain" id="attMgrManual" style="padding:8px 16px;background:#fef3c7;color:#92400e;font-weight:700">✏ ממתינות</button>
+          <button class="btn plain" id="attMgrDatImport" style="padding:8px 16px;background:#dbeafe;color:#1d4ed8;font-weight:700">📥 ייבוא משעון</button>
         </div>
       </div>
       <div id="attMgrReport"></div>
+    </div>
+    <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
+  </div>
+</div>
+
+<!-- מודאל ייבוא נוכחות מקובץ DAT (שעון פיזי) — מנהל -->
+<div class="overlay hidden" id="attDatOverlay">
+  <div class="modal">
+    <header><h3>📥 ייבוא נוכחות משעון</h3><p>קובץ DAT מהשעון הפיזי — לכל עובד חייב להיות "מס' עובד בשעון נוכחות" מוגדר בכרטיס העובד</p></header>
+    <div class="mbody">
+      <input type="file" id="attDatFile" accept=".dat,.txt" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:8px">
+      <button class="btn primary" id="attDatUpload" style="width:100%;margin-top:10px">העלאה וייבוא</button>
+      <div id="attDatResult" style="margin-top:12px;font-size:13px"></div>
     </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
@@ -1097,7 +1111,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_N7daSPqnMAeMv7kklOOO7bBUM6vWGq6Qk9WhIePAVt80hoxE9LVeUE0x-d05WHhW/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhYRMLK_XoR33WT9ITH66IrSGf6K8cfCtaqNZA3qw6NbpPQ0gxGIa8robmyAL4MT5L/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1850,7 +1864,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', clockEmpNo:se.clockEmpNo||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             } else {
               state.employees.push({
@@ -1860,7 +1874,7 @@ async function openEmpMgr(){
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
                 vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
-                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
+                startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', clockEmpNo:se.clockEmpNo||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
             }
           });
@@ -1934,7 +1948,7 @@ let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',endDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',clockEmpNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',endDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -2019,7 +2033,9 @@ function empRow(e){
     <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
       <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מס' עובד:</span>
-      <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
+      <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center">
+      <span class="lbl">מס' עובד בשעון נוכחות:</span>
+      <input type="text" class="i-clockempno" value="${esc(e.clockEmpNo||'')}" placeholder="לייבוא DAT" dir="ltr" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
       <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">🎂 תאריך לידה:</span>
@@ -2097,6 +2113,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     fixedShifts:r.querySelector('.i-fixed').value.trim(),
     email:r.querySelector('.i-email').value.trim(),
     empNo:r.querySelector('.i-empno').value.trim(),
+    clockEmpNo:r.querySelector('.i-clockempno').value.trim(),
     startDate:r.querySelector('.i-start').value,
     birthDate:r.querySelector('.i-birth').value,
     endDate:r.querySelector('.i-end').value,
@@ -2140,7 +2157,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         name:e.name, dept:(e.depts||[]).join(', '), active:e.active!==false,
         password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
-        email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
+        email:e.email||'', empNo:e.empNo||'', clockEmpNo:e.clockEmpNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
         f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
         vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
@@ -3790,6 +3807,34 @@ document.getElementById('attMgrManual').addEventListener('click', async ()=>{
   box.querySelectorAll('.man-no').forEach(b=>b.addEventListener('click',()=>review(b,false)));
 });
 
+document.getElementById('attMgrDatImport').addEventListener('click', ()=>{
+  document.getElementById('attDatFile').value='';
+  document.getElementById('attDatResult').innerHTML='';
+  show('attDatOverlay');
+});
+document.getElementById('attDatUpload').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('attDatFile');
+  const resultBox = document.getElementById('attDatResult');
+  const file = fileInput.files[0];
+  if(!file){ resultBox.innerHTML='<span style="color:#b91c1c">יש לבחור קובץ</span>'; return; }
+  const btn = document.getElementById('attDatUpload');
+  btn.disabled = true; btn.textContent = 'מייבא…';
+  try{
+    const text = await file.text();
+    const r = await apiPost({ action:'importAttendanceDat', ...mgrAuth(), text });
+    if(!r.ok){ resultBox.innerHTML = '<span style="color:#b91c1c">'+esc(r.error||'שגיאה')+'</span>'; return; }
+    let html = `<div style="color:#166534;font-weight:700">יובאו ${r.imported} רשומות · דולגו ${r.skippedDuplicate} כפילויות</div>`;
+    if(r.invalidLines) html += `<div style="color:#92400e;margin-top:4px">${r.invalidLines} שורות לא תקינות בקובץ</div>`;
+    if(r.unmapped && r.unmapped.length){
+      html += `<div style="color:#b91c1c;margin-top:6px">מספרי עובד בשעון שלא זוהו במערכת:<br>` +
+        r.unmapped.map(u=>`• ${esc(u.clockEmpNo)} (${u.count} רשומות)`).join('<br>') + `</div>`;
+    }
+    resultBox.innerHTML = html;
+    toast('הייבוא הושלם','ok');
+  }catch(e){ resultBox.innerHTML = '<span style="color:#b91c1c">שגיאה: '+esc(e.message)+'</span>'; }
+  btn.disabled = false; btn.textContent = 'העלאה וייבוא';
+});
+
 document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
   const btn=document.getElementById('attMgrExcel'); btn.disabled=true;
   const prevTxt=btn.textContent; btn.textContent='מכין…';
@@ -5297,7 +5342,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', clockEmpNo:e.clockEmpNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
           vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
