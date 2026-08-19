@@ -928,7 +928,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <div class="overlay hidden" id="myF101Overlay">
   <div class="modal">
     <header><h3>📋 הטפסים שלי</h3><p>לחיצה על טופס פותחת אותו לצפייה והורדה</p></header>
-    <div class="mbody"><div id="myF101List">טוען…</div></div>
+    <div class="mbody">
+      <button class="btn primary" id="myF101NewBtn" style="width:100%;margin-bottom:12px">📝 מילוי / עדכון טופס 101</button>
+      <div id="myF101List">טוען…</div>
+    </div>
     <div class="mfoot"><button class="btn plain" data-close>סגירה</button></div>
   </div>
 </div>
@@ -4637,6 +4640,7 @@ async function openF101(){
 }
 function closeF101(){ hide('f101Overlay'); }
 document.getElementById('f101Link').addEventListener('click', openF101);
+document.getElementById('myF101NewBtn').addEventListener('click', ()=>{ hide('myF101Overlay'); openF101(); });
 document.getElementById('f101Close').addEventListener('click', closeF101);
 
 async function submitF101Flow(){
