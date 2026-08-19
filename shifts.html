@@ -1111,7 +1111,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwLe4NiY5c23booYwY0Y_AuFOeRY-_rZEcLcJMs7pVBGxg-ltSMhtPlW1U8wz2kc_Jh/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvbZgbfANo6xw4W2C-RsN9BVNfPKT5lU8fiEiysBq76egu4sxJUML6nU_vyxC-M3GX/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1475,9 +1475,11 @@ async function load(){
     });
     state.shifts = d.shifts.map(s=>({ ...s, _id:SID++ }));
     state.constraints = d.constraints || [];
+    state.constraintsPending = d.constraintsPending || state.constraints.filter(c=>c.status==='ממתין');
     state.swaps = d.swaps || [];
     state.swapsPending = d.swapsPending || state.swaps.filter(s=>s.status==='ממתין');
     state.vacations = d.vacations || [];
+    state.vacationsPending = d.vacationsPending || state.vacations.filter(v=>v.status==='ממתין');
     state.staffing = d.staffing || {};
     state.announcements = d.announcements || [];
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
@@ -5103,11 +5105,15 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
 
 // --- מנהל ---
 function openConsReview(){
-  const vacs = [...state.vacations].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
   const showAll = state._showAllRequests;
+  // מצב "ממתינות" (ברירת מחדל): משתמשים ב-vacationsPending/constraintsPending — ללא הגבלת שבוע, בדיוק כמו swapsPending —
+  // כדי שבקשות ממתינות משבועות אחרים (עבר/עתיד) יופיעו גם הן, לא רק אלו של השבוע המוצג כרגע בלוח.
+  // מצב "היסטוריה": ממשיך להשתמש ברשימות המוגבלות לשבוע המוצג (state.vacations/constraints), כמו קודם.
+  const vacs = [...(showAll ? state.vacations : state.vacationsPending)]
+    .sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.from.localeCompare(b.from));
   const fmtR = v => ddmm(new Date(v.from+'T00:00:00'))+' – '+ddmm(new Date(v.to+'T00:00:00'));
-  // חופשות: רק ממתינות (או הכל בהיסטוריה)
-  const vacsFiltered = showAll ? vacs : vacs.filter(v=>v.status==='ממתין');
+  // חופשות: vacs כבר מכיל את הרשימה הנכונה (ממתינות-בלבד-מכל-שבוע, או הכל-בשבוע-המוצג בהיסטוריה)
+  const vacsFiltered = vacs;
   const vacsHtml = '<div style="font-weight:700;font-size:13px;margin:4px 0 6px">🏖 בקשות חופשה</div>' +
     (vacsFiltered.length ? vacsFiltered.map(v=>{
       const acts = v.status==='ממתין'
@@ -5140,9 +5146,10 @@ function openConsReview(){
         <span class="acts">${acts}</span></div>`;
     }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות החלפה ממתינות</div>');
 
-  // אילוצים: רק ממתינות (או הכל בהיסטוריה)
-  const allCons = [...state.constraints].sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
-  const list = showAll ? allCons : allCons.filter(c=>c.status==='ממתין');
+  // אילוצים: רק ממתינות מכל השבועות (state.constraintsPending), או הכל בשבוע המוצג בהיסטוריה
+  const allCons = [...(showAll ? state.constraints : state.constraintsPending)]
+    .sort((a,b)=>(a.status==='ממתין'?0:1)-(b.status==='ממתין'?0:1) || a.date.localeCompare(b.date));
+  const list = allCons;
   const consHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🖐 אילוצים</div>' +
     (list.length ? list.map(c=>{
     const d = new Date(c.date+'T00:00:00');
