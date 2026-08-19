@@ -1111,7 +1111,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhYRMLK_XoR33WT9ITH66IrSGf6K8cfCtaqNZA3qw6NbpPQ0gxGIa8robmyAL4MT5L/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzPocp7FUV6Q3rigw4-6yaz6Jq7V6AHrsT5Y514ztvw0xmuXZPrkv-DJvcGJb0cIttl/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -3823,7 +3823,7 @@ document.getElementById('attDatUpload').addEventListener('click', async ()=>{
     const text = await file.text();
     const r = await apiPost({ action:'importAttendanceDat', ...mgrAuth(), text });
     if(!r.ok){ resultBox.innerHTML = '<span style="color:#b91c1c">'+esc(r.error||'שגיאה')+'</span>'; return; }
-    let html = `<div style="color:#166534;font-weight:700">יובאו ${r.imported} רשומות · דולגו ${r.skippedDuplicate} כפילויות</div>`;
+    let html = `<div style="color:#166534;font-weight:700">עודכנו ${r.updatedEmployeeDays} ימי-עובד · ${r.rowsWritten} רשומות נכתבו${r.rowsDeleted?` (הוחלפו ${r.rowsDeleted} ישנות)`:''}</div>`;
     if(r.invalidLines) html += `<div style="color:#92400e;margin-top:4px">${r.invalidLines} שורות לא תקינות בקובץ</div>`;
     if(r.unmapped && r.unmapped.length){
       html += `<div style="color:#b91c1c;margin-top:6px">מספרי עובד בשעון שלא זוהו במערכת:<br>` +
