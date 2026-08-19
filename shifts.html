@@ -1097,7 +1097,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxEbvVqc7W29j_FWtBbfrBzeYjfbP6B1l-HMPe3xaCviLvJBoS3HHsF5qSSVyQit4g/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyJkfaZuanGCBIwCYiyJgY5_k8jL2-xcwJS20-flQbvmZGMxn8kCPOT0T82sWPXw7Dz/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -4487,32 +4487,65 @@ function updateF101Banner(){
   if(showMe) document.getElementById('f101Year').textContent = requiredF101Year();
 }
 
+const F101_INCOME_TYPES = [
+  { key:'monthSalary', label:'משכורת חודש' },
+  { key:'extraJob', label:'משכורת בעד משרה נוספת' },
+  { key:'partial', label:'משכורת חלקית' },
+  { key:'dailyWage', label:'שכר עבודה (עובד יומי)' },
+  { key:'pension', label:'קצבה' },
+  { key:'scholarship', label:'מלגה' }
+];
+
 const F101_CREDIT_OPTIONS = [
   { key:'c1', label:'1. אני תושב/ת ישראל' },
-  { key:'c2', label:'2. אני נכה 100% / עיוור/ת לצמיתות' },
-  { key:'c3', label:'3. אני תושב/ת קבוע/ה בישוב מזכה. אני ובני משפחתי מדרגה ראשונה, מתגוררים ביישוב ואין לי "מרכז חיים" נוסף.' },
-  { key:'c4', label:'4. אני עולה חדש/ה' },
+  { key:'c2a', label:'2א. אני נכה 100% / עיוור/ת לצמיתות' },
+  { key:'c2b', label:'2ב. בנוסף, אני מקבל/ת תגמול חודשי לפי חוק הנכים (תגמולים ושיקום) או לפי חוק התגמולים לנפגעי פעולות איבה' },
+  { key:'c3', label:'3. אני תושב/ת קבוע/ה בישוב מזכה. אני ובני משפחתי מדרגה ראשונה, מתגוררים ביישוב ואין לי "מרכז חיים" נוסף.',
+    extraFields:[{key:'c3Date',label:'מתאריך',type:'date'}] },
+  { key:'c4', label:'4. אני עולה חדש/ה',
+    extraFields:[{key:'c4AliyaDate',label:'מתאריך',type:'date'},{key:'c4NoIncomeUntil',label:'לא היתה לי הכנסה בישראל מתחילת שנת המס הנוכחית עד תאריך',type:'date'}] },
   { key:'c5', label:'5. בגין בן/בת זוגי המתגורר/ת עימי ואין לו/לה הכנסות בשנת המס (רק אם העובד/ת או בן/בת הזוג הגיע/ה לגיל פרישה או שהוא/היא נכה או עיוור/ת עפ"י סעיף 9(5) לפקודה)' },
   { key:'c6', label:'6. אני הורה במשפחה חד הורית החי בנפרד' },
-  { key:'c7', label:'7. בגין ילדי שבחזקתי המפורטים בחלק ג' },
-  { key:'c8', label:'8. בגין ילדי (ימולא ע"י הורה שלא סימן 7, אשה לא נשואה שילדיה אינם בחזקתה, הורה יחיד)' },
+  { key:'c7', label:'7. בגין ילדי שבחזקתי המפורטים בחלק ג',
+    extraFields:[
+      {key:'c7Born',label:'מספר ילדים שנולדו בשנת המס',type:'number'},
+      {key:'c7Age1to2',label:'מספר ילדים שימלאו להם שנה עד שנתיים בשנת המס',type:'number'},
+      {key:'c7Age3',label:'מספר ילדים שימלאו להם 3 שנים בשנת המס',type:'number'},
+      {key:'c7Age4to5',label:'מספר ילדים שימלאו להם 4 עד 5 שנים בשנת המס',type:'number'},
+      {key:'c7Age6to17',label:'מספר ילדים שימלאו להם 6 עד 17 שנים בשנת המס',type:'number'},
+      {key:'c7Age18',label:'מספר ילדים שימלאו להם 18 שנים בשנת המס',type:'number'}
+    ] },
+  { key:'c8', label:'8. בגין ילדי (ימולא ע"י הורה שלא סימן 7, אשה לא נשואה שילדיה אינם בחזקתה, הורה יחיד)',
+    extraFields:[
+      {key:'c8Born',label:'מספר ילדים שנולדו בשנת המס',type:'number'},
+      {key:'c8Age1to2',label:'מספר ילדים שימלאו להם שנה עד שנתיים בשנת המס',type:'number'},
+      {key:'c8Age3',label:'מספר ילדים שימלאו להם 3 שנים בשנת המס',type:'number'},
+      {key:'c8Age4to5',label:'מספר ילדים שימלאו להם 4 עד 5 שנים בשנת המס',type:'number'},
+      {key:'c8Age6to17',label:'מספר ילדים שימלאו להם 6 עד 17 שנים בשנת המס',type:'number'},
+      {key:'c8Age18',label:'מספר ילדים שימלאו להם 18 שנים בשנת המס',type:'number'}
+    ] },
   { key:'c9', label:'9. אני הורה יחיד לילדי שבחזקתי (המפורטים בסעיפים 7-8)' },
   { key:'c10', label:'10. בגין ילדי שאינם בחזקתי המפורטים בחלק ג ואני משתתף/ת בכלכלתם' },
-  { key:'c11', label:'11. אני הורה לילדים עם מוגבלות שטרם מלאו להם 19 שנים, בגינם אני מקבל/ת גמלת ילד נכה מהמוסד לביטוח לאומי' },
+  { key:'c11', label:'11. אני הורה לילדים עם מוגבלות שטרם מלאו להם 19 שנים, בגינם אני מקבל/ת גמלת ילד נכה מהמוסד לביטוח לאומי',
+    extraFields:[{key:'c11Count',label:'מספר ילדים',type:'number'}] },
   { key:'c12', label:'12. בגין מזונות לבן/בת זוגי לשעבר (ימולא ע"י מי שנישא בשנית)' },
   { key:'c13', label:'13. מלאו לי או לבן/בת זוגי 16 שנים וטרם מלאו לי או לבן/בת זוגי 18 שנים בשנת המס' },
-  { key:'c14', label:'14. אני חייל/ת משוחרר/ת / שרתתי בשירות לאומי' },
+  { key:'c14', label:'14. אני חייל/ת משוחרר/ת / שרתתי בשירות לאומי',
+    extraFields:[{key:'c14ServiceStart',label:'תאריך תחילת השירות',type:'date'},{key:'c14ServiceEnd',label:'תאריך סיום השירות',type:'date'}] },
   { key:'c15', label:'15. בגין סיום לימודים לתואר אקדמי, סיום התמחות או סיום לימודי מקצוע' },
-  { key:'c16', label:'16. שירתתי כלוחם/לוחמת מילואים בשנת המס הקודמת' }
+  { key:'c16', label:'16. שירתתי כלוחם/לוחמת מילואים בשנת המס הקודמת',
+    extraFields:[{key:'c16Days',label:'מספר ימי מילואים',type:'number'}] }
 ];
 
 let _f101Kids = [];
 function f101KidsHtml(){
   return _f101Kids.map((k,i)=>`
-    <div class="chiprow" style="margin-bottom:6px">
-      <input type="text" class="i-kid-name" value="${esc(k.name||'')}" placeholder="שם הילד" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    <div class="chiprow" style="margin-bottom:6px;flex-wrap:wrap">
+      <input type="text" class="i-kid-name" value="${esc(k.name||'')}" placeholder="שם הילד" style="flex:1;min-width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <input type="text" class="i-kid-id" value="${esc(k.id||'')}" placeholder="ת.ז" dir="ltr" style="width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <input type="date" class="i-kid-birth" value="${esc(k.birth||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <label style="display:flex;align-items:center;gap:4px;font-size:11.5px"><input type="checkbox" class="i-kid-custody" ${k.inCustody?'checked':''}> (1) בחזקתי</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:11.5px"><input type="checkbox" class="i-kid-allowance" ${k.childAllowance?'checked':''}> (2) מקבל/ת קצבת ילדים</label>
       <button class="btn plain kid-del" data-i="${i}" style="padding:6px 10px">✕</button>
     </div>`).join('');
 }
@@ -4524,17 +4557,55 @@ function bindF101KidRows(){
   }));
 }
 
+let _f101TaxCoordRows = [];
+function f101TaxCoordHtml(){
+  return _f101TaxCoordRows.map((r,i)=>`
+    <div class="chiprow" style="margin-bottom:6px;flex-wrap:wrap">
+      <input type="text" class="i-tc-employer" value="${esc(r.employer||'')}" placeholder="המעסיק/משלם המשכורת" style="flex:1;min-width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-tc-address" value="${esc(r.address||'')}" placeholder="כתובת" style="flex:1;min-width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-tc-taxfile" value="${esc(r.taxFileNo||'')}" placeholder="מספר תיק ניכויים" dir="ltr" style="width:130px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-tc-incometype" value="${esc(r.incomeType||'')}" placeholder="סוג ההכנסה" style="width:130px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-tc-monthly" value="${esc(r.monthlyIncome||'')}" placeholder="הכנסה חודשית" dir="ltr" style="width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" class="i-tc-withheld" value="${esc(r.taxWithheld||'')}" placeholder="המס שנוכה" dir="ltr" style="width:100px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <button class="btn plain tc-del" data-i="${i}" style="padding:6px 10px">✕</button>
+    </div>`).join('');
+}
+function bindF101TaxCoordRows(){
+  document.querySelectorAll('.tc-del').forEach(b=>b.addEventListener('click', ()=>{
+    _f101TaxCoordRows.splice(Number(b.dataset.i),1);
+    document.getElementById('f101TaxCoordList').innerHTML = f101TaxCoordHtml();
+    bindF101TaxCoordRows();
+  }));
+}
+
 function renderF101Body(data, employer){
   data = data || {};
   const d = k => esc(data[k]||'');
   const chk = k => data[k] ? 'checked' : '';
   _f101Kids = (data.kids||[]).slice();
+  _f101TaxCoordRows = (data.taxCoordRows||[]).slice();
   const credits = data.credits || {};
+  const otherIncomeTypes = data.otherIncomeTypes || {};
+  const kibbutzVal = data.kibbutz || 'no';
+  const taxCoordVal = data.taxCoord || 'none';
+
   const creditsHtml = F101_CREDIT_OPTIONS.map(o=>`
-    <label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:12.5px;cursor:pointer">
-      <input type="checkbox" class="i-credit" data-key="${o.key}" ${credits[o.key]?'checked':''} style="margin-top:2px">
-      <span>${esc(o.label)}</span>
-    </label>`).join('');
+    <div style="padding:6px 0;border-bottom:1px solid var(--line)">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer">
+        <input type="checkbox" class="i-credit" data-key="${o.key}" ${credits[o.key]?'checked':''} style="margin-top:2px">
+        <span>${esc(o.label)}</span>
+      </label>
+      ${(o.extraFields||[]).length ? `<div style="padding-right:26px;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px">
+        ${o.extraFields.map(ef=>`
+          <label style="display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted)">${esc(ef.label)}:
+            <input type="${ef.type}" id="f-${ef.key}" value="${esc(data[ef.key]||'')}" style="width:${ef.type==='date'?'138px':'70px'};border:1.5px solid var(--line);border-radius:6px;padding:4px 7px">
+          </label>`).join('')}
+      </div>` : ''}
+    </div>`).join('');
+
+  const otherIncomeTypesHtml = F101_INCOME_TYPES.map(t=>`
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" class="i-otherIncomeType" data-key="${t.key}" ${otherIncomeTypes[t.key]?'checked':''}> ${esc(t.label)}</label>`).join('');
+
   document.getElementById('f101Body').innerHTML = `
     <style>#f101Body h4{font-size:13px;background:#f5f5f5;padding:5px 10px;margin:18px 0 8px;border-radius:6px}
     #f101Body .lbl{font-size:12.5px;color:var(--muted)}</style>
@@ -4547,11 +4618,8 @@ function renderF101Body(data, employer){
     <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <input type="text" id="f-firstName" value="${d('firstName')}" placeholder="שם פרטי *" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <input type="text" id="f-lastName" value="${d('lastName')}" placeholder="שם משפחה *" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-      <select id="f-idType" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-        <option ${data.idType==='דרכון'?'':'selected'}>תעודת זהות</option>
-        <option ${data.idType==='דרכון'?'selected':''}>דרכון</option>
-      </select>
-      <input type="text" id="f-idNumber" value="${d('idNumber')}" placeholder="מספר זהות *" dir="ltr" style="width:130px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-idNumber" value="${d('idNumber')}" placeholder="מספר זהות (9 ספרות) *" dir="ltr" style="width:150px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-passportNumber" value="${d('passportNumber')}" placeholder="מספר דרכון (למי שאין ת.ז)" dir="ltr" style="width:150px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
     <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <span class="lbl">תאריך לידה:</span><input type="date" id="f-birthDate" value="${d('birthDate')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
@@ -4559,7 +4627,7 @@ function renderF101Body(data, employer){
     </div>
     <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <input type="text" id="f-city" value="${d('city')}" placeholder="ישוב" style="flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-      <input type="text" id="f-street" value="${d('street')}" placeholder="רחוב" style="flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <input type="text" id="f-street" value="${d('street')}" placeholder="רחוב/שכונה" style="flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <input type="text" id="f-houseNo" value="${d('houseNo')}" placeholder="מס' בית" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <input type="text" id="f-zip" value="${d('zip')}" placeholder="מיקוד" dir="ltr" style="width:100px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
@@ -4577,8 +4645,16 @@ function renderF101Body(data, employer){
         ${['רווק/ה','נשוי/אה','גרוש/ה','אלמן/ה','פרוד/ה'].map(m=>`<option ${data.marital===m?'selected':''}>${m}</option>`).join('')}
       </select>
       <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-israeliResident" ${chk('israeliResident')}> תושב ישראל</label>
-      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-kibbutz" ${chk('kibbutz')}> חבר קיבוץ/מושב שיתופי</label>
+    </div>
+    <div class="chiprow" style="flex-wrap:wrap;gap:14px;margin-bottom:8px">
+      <span class="lbl">חבר קיבוץ/מושב שיתופי:</span>
+      <select id="f-kibbutz" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <option value="no" ${kibbutzVal==='no'?'selected':''}>לא</option>
+        <option value="yes_transferred" ${kibbutzVal==='yes_transferred'?'selected':''}>כן, הכנסותיי מועברות לקיבוץ</option>
+        <option value="yes_not_transferred" ${kibbutzVal==='yes_not_transferred'?'selected':''}>כן, הכנסותיי אינן מועברות לקיבוץ</option>
+      </select>
       <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-healthFund" ${chk('healthFund')}> חבר בקופת חולים</label>
+      <input type="text" id="f-healthFundName" value="${d('healthFundName')}" placeholder="שם הקופה" style="${data.healthFund?'':'display:none'};border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
 
     <h4>ג. ילדים שבשנת המס טרם מלאו להם 19 שנה</h4>
@@ -4588,30 +4664,56 @@ function renderF101Body(data, employer){
     <h4>ד. הכנסות ממעסיק זה</h4>
     <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <select id="f-incomeType" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-        ${['משכורת חודש','משכורת בעד משרה נוספת','משכורת חלקית','שכר עבודה (עובד יומי)','קצבה','מלגה'].map(t=>`<option ${data.incomeType===t?'selected':''}>${t}</option>`).join('')}
+        ${F101_INCOME_TYPES.map(t=>`<option value="${t.key}" ${data.incomeType===t.key?'selected':''}>${esc(t.label)}</option>`).join('')}
       </select>
       <span class="lbl">תאריך תחילת עבודה בשנת המס:</span>
       <input type="date" id="f-workStartInTaxYear" value="${d('workStartInTaxYear')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-requestCreditThisIncome" ${chk('requestCreditThisIncome')}> אבקש לקבל נקודות זיכוי ומדרגות מס כנגד הכנסתי זו. איני מקבל/ת אותן בהכנסה אחרת</label>
 
     <h4>ה. הכנסות אחרות</h4>
-    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;margin-bottom:8px"><input type="checkbox" id="f-otherIncome" ${chk('otherIncome')}> יש לי הכנסות נוספות (מלבד ממעסיק זה)</label>
-    <input type="text" id="f-otherIncomeDetails" value="${d('otherIncomeDetails')}" placeholder="פירוט ההכנסות הנוספות" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;margin-bottom:8px"><input type="checkbox" id="f-otherIncome" ${chk('otherIncome')}> יש לי הכנסות אחרות (מלבד ממעסיק זה)</label>
+    <div id="f101OtherIncomeSection" style="${data.otherIncome?'':'display:none'};padding-right:6px">
+      <div class="chiprow" style="flex-wrap:wrap;gap:10px;margin-bottom:8px">${otherIncomeTypesHtml}</div>
+      <input type="text" id="f-otherIncomeDetails" value="${d('otherIncomeDetails')}" placeholder="פירוט נוסף (אופציונלי)" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;margin-bottom:6px"><input type="checkbox" id="f-creditsInOtherIncome" ${chk('creditsInOtherIncome')}> אני מקבל/ת נקודות זיכוי ומדרגות מס בהכנסה אחרת ועל כן איני זכאי/ת להן כנגד הכנסה זו</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;margin-bottom:6px"><input type="checkbox" id="f-noStudyFundOtherIncome" ${chk('noStudyFundOtherIncome')}> אין מפרישים עבורי לקרן השתלמות בגין הכנסתי האחרת (או שכל ההפרשות מצורפות אליה)</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="f-noPensionOtherIncome" ${chk('noPensionOtherIncome')}> אין מפרישים עבורי לקצבה/ביטוח אובדן כושר עבודה/פיצויים בגין הכנסתי האחרת (או שכל ההפרשות מצורפות אליה)</label>
+    </div>
 
     <div id="f101SpouseSection" style="${data.marital==='נשוי/אה'?'':'display:none'}">
       <h4>ו. פרטי בן/בת הזוג</h4>
-      <div class="chiprow" style="flex-wrap:wrap;gap:8px">
-        <input type="text" id="f-spouseName" value="${d('spouseName')}" placeholder="שם בן/בת הזוג" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <input type="text" id="f-spouseFirstName" value="${d('spouseFirstName')}" placeholder="שם פרטי" style="flex:1;min-width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <input type="text" id="f-spouseLastName" value="${d('spouseLastName')}" placeholder="שם משפחה" style="flex:1;min-width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
         <input type="text" id="f-spouseId" value="${d('spouseId')}" placeholder="ת.ז" dir="ltr" style="width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-        <input type="text" id="f-spouseIncome" value="${d('spouseIncome')}" placeholder="מצב הכנסות" style="flex:1;min-width:140px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <input type="text" id="f-spousePassport" value="${d('spousePassport')}" placeholder="מספר דרכון" dir="ltr" style="width:120px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      </div>
+      <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <span class="lbl">תאריך לידה:</span><input type="date" id="f-spouseBirthDate" value="${d('spouseBirthDate')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <span class="lbl">תאריך עליה:</span><input type="date" id="f-spouseAliyaDate" value="${d('spouseAliyaDate')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <span class="lbl">הכנסות:</span>
+        <select id="f-spouseIncomeStatus" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+          <option value="none" ${data.spouseIncomeStatus==='none'?'selected':''}>אין לבן/בת הזוג הכנסה</option>
+          <option value="work_pension_business" ${data.spouseIncomeStatus==='work_pension_business'?'selected':''}>יש הכנסה מ: עבודה/קצבה/עסק</option>
+          <option value="other" ${data.spouseIncomeStatus==='other'?'selected':''}>הכנסה אחרת</option>
+        </select>
       </div>
     </div>
 
     <h4>ח. אני מבקש/ת פטור או זיכוי ממס מהסיבות הבאות</h4>
     <div>${creditsHtml}</div>
 
-    <h4>ט. תיאום מס</h4>
-    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-taxCoordinationAttached" ${chk('taxCoordinationAttached')}> יש לי אישור תיאום מס בתוקף (מוגש בנפרד למעסיק)</label>
+    <h4>ט. אני מבקש/ת תיאום מס מהסיבות הבאות</h4>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px"><input type="radio" name="f-taxCoord" value="none" ${taxCoordVal==='none'?'checked':''}> לא היתה לי הכנסה מתחילת שנת המס הנוכחית עד לתחילת עבודתי אצל מעסיק זה</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px"><input type="radio" name="f-taxCoord" value="otherIncome" ${taxCoordVal==='otherIncome'?'checked':''}> יש לי הכנסות נוספות ממשכורת כמפורט להלן</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px"><input type="radio" name="f-taxCoord" value="approved" ${taxCoordVal==='approved'?'checked':''}> פקיד השומה אישר תיאום לפי אישור מצורף</label>
+    </div>
+    <div id="f101TaxCoordSection" style="${taxCoordVal==='otherIncome'?'':'display:none'}">
+      <div id="f101TaxCoordList" style="margin-bottom:6px">${f101TaxCoordHtml()}</div>
+      <button class="btn plain" id="f101AddTaxCoord">+ הוספת שורה</button>
+    </div>
 
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-top:18px">
       <b>י. הצהרה</b>
@@ -4623,12 +4725,27 @@ function renderF101Body(data, employer){
   document.getElementById('f-marital').addEventListener('change', ev=>{
     document.getElementById('f101SpouseSection').style.display = ev.target.value==='נשוי/אה' ? '' : 'none';
   });
+  document.getElementById('f-healthFund').addEventListener('change', ev=>{
+    document.getElementById('f-healthFundName').style.display = ev.target.checked ? '' : 'none';
+  });
+  document.getElementById('f-otherIncome').addEventListener('change', ev=>{
+    document.getElementById('f101OtherIncomeSection').style.display = ev.target.checked ? '' : 'none';
+  });
+  document.querySelectorAll('input[name="f-taxCoord"]').forEach(r=>r.addEventListener('change', ev=>{
+    document.getElementById('f101TaxCoordSection').style.display = ev.target.value==='otherIncome' ? '' : 'none';
+  }));
   document.getElementById('f101AddKid').addEventListener('click', ()=>{
-    _f101Kids.push({name:'',id:'',birth:''});
+    _f101Kids.push({name:'',id:'',birth:'',inCustody:false,childAllowance:false});
     document.getElementById('f101KidsList').innerHTML = f101KidsHtml();
     bindF101KidRows();
   });
+  document.getElementById('f101AddTaxCoord').addEventListener('click', ()=>{
+    _f101TaxCoordRows.push({employer:'',address:'',taxFileNo:'',incomeType:'',monthlyIncome:'',taxWithheld:''});
+    document.getElementById('f101TaxCoordList').innerHTML = f101TaxCoordHtml();
+    bindF101TaxCoordRows();
+  });
   bindF101KidRows();
+  bindF101TaxCoordRows();
 }
 
 async function openF101(){
@@ -4650,15 +4767,33 @@ async function submitF101Flow(){
   const kids = kidsRows.map(r=>({
     name: r.querySelector('.i-kid-name').value.trim(),
     id: r.querySelector('.i-kid-id').value.trim(),
-    birth: r.querySelector('.i-kid-birth').value
+    birth: r.querySelector('.i-kid-birth').value,
+    inCustody: r.querySelector('.i-kid-custody').checked,
+    childAllowance: r.querySelector('.i-kid-allowance').checked
   })).filter(k=>k.name||k.id||k.birth);
+  const taxCoordRows = Array.from(document.querySelectorAll('#f101TaxCoordList .chiprow')).map(r=>({
+    employer: r.querySelector('.i-tc-employer').value.trim(),
+    address: r.querySelector('.i-tc-address').value.trim(),
+    taxFileNo: r.querySelector('.i-tc-taxfile').value.trim(),
+    incomeType: r.querySelector('.i-tc-incometype').value.trim(),
+    monthlyIncome: r.querySelector('.i-tc-monthly').value.trim(),
+    taxWithheld: r.querySelector('.i-tc-withheld').value.trim()
+  })).filter(r=>r.employer||r.address||r.taxFileNo||r.incomeType||r.monthlyIncome||r.taxWithheld);
   const credits = {};
+  const creditExtras = {};
   document.querySelectorAll('.i-credit').forEach(c=>{ credits[c.dataset.key] = c.checked; });
-  const fields = {
+  F101_CREDIT_OPTIONS.forEach(o=>(o.extraFields||[]).forEach(ef=>{
+    const el = document.getElementById('f-'+ef.key);
+    if(el && el.value.trim()) creditExtras[ef.key] = el.value.trim();
+  }));
+  const otherIncomeTypes = {};
+  document.querySelectorAll('.i-otherIncomeType').forEach(c=>{ otherIncomeTypes[c.dataset.key] = c.checked; });
+  const taxCoordEl = document.querySelector('input[name="f-taxCoord"]:checked');
+  const fields = Object.assign({
     firstName: document.getElementById('f-firstName').value.trim(),
     lastName: document.getElementById('f-lastName').value.trim(),
-    idType: document.getElementById('f-idType').value,
     idNumber: document.getElementById('f-idNumber').value.trim(),
+    passportNumber: document.getElementById('f-passportNumber').value.trim(),
     birthDate: document.getElementById('f-birthDate').value,
     aliyaDate: document.getElementById('f-aliyaDate').value,
     city: document.getElementById('f-city').value.trim(),
@@ -4671,20 +4806,31 @@ async function submitF101Flow(){
     gender: document.getElementById('f-gender').value,
     marital: document.getElementById('f-marital').value,
     israeliResident: document.getElementById('f-israeliResident').checked,
-    kibbutz: document.getElementById('f-kibbutz').checked,
+    kibbutz: document.getElementById('f-kibbutz').value,
     healthFund: document.getElementById('f-healthFund').checked,
+    healthFundName: document.getElementById('f-healthFundName').value.trim(),
     kids,
     incomeType: document.getElementById('f-incomeType').value,
     workStartInTaxYear: document.getElementById('f-workStartInTaxYear').value,
+    requestCreditThisIncome: document.getElementById('f-requestCreditThisIncome').checked,
     otherIncome: document.getElementById('f-otherIncome').checked,
+    otherIncomeTypes,
     otherIncomeDetails: document.getElementById('f-otherIncomeDetails').value.trim(),
-    spouseName: document.getElementById('f-spouseName').value.trim(),
+    creditsInOtherIncome: document.getElementById('f-creditsInOtherIncome').checked,
+    noStudyFundOtherIncome: document.getElementById('f-noStudyFundOtherIncome').checked,
+    noPensionOtherIncome: document.getElementById('f-noPensionOtherIncome').checked,
+    spouseFirstName: document.getElementById('f-spouseFirstName').value.trim(),
+    spouseLastName: document.getElementById('f-spouseLastName').value.trim(),
     spouseId: document.getElementById('f-spouseId').value.trim(),
-    spouseIncome: document.getElementById('f-spouseIncome').value.trim(),
+    spousePassport: document.getElementById('f-spousePassport').value.trim(),
+    spouseBirthDate: document.getElementById('f-spouseBirthDate').value,
+    spouseAliyaDate: document.getElementById('f-spouseAliyaDate').value,
+    spouseIncomeStatus: document.getElementById('f-spouseIncomeStatus').value,
     credits,
-    taxCoordinationAttached: document.getElementById('f-taxCoordinationAttached').checked,
+    taxCoord: taxCoordEl ? taxCoordEl.value : 'none',
+    taxCoordRows,
     declarationConfirmed: document.getElementById('f-declarationConfirmed').checked
-  };
+  }, creditExtras);
   if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
   if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
   if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
