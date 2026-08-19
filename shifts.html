@@ -1111,7 +1111,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzPocp7FUV6Q3rigw4-6yaz6Jq7V6AHrsT5Y514ztvw0xmuXZPrkv-DJvcGJb0cIttl/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwLe4NiY5c23booYwY0Y_AuFOeRY-_rZEcLcJMs7pVBGxg-ltSMhtPlW1U8wz2kc_Jh/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -3677,7 +3677,9 @@ function openMgrAttEdit(employee, date){
   const events = ((day && day.events)||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
 
   const renderRows = () => events.map((e,i)=>`<div class="mgr-ev-row" data-i="${i}" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="width:120px;font-size:13px">${labels[e.type]||e.type}</span>
+      <select class="mgr-ev-type" style="width:132px;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 4px;font-size:12.5px">
+        ${types.map(t=>`<option value="${t}"${t===e.type?' selected':''}>${labels[t]}</option>`).join('')}
+      </select>
       <input type="time" class="mgr-ev-time" value="${e.time}" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:14px;flex:1">
       <button class="mgr-ev-del" title="מחיקת רישום" style="background:#fee2e2;color:#b91c1c;border:0;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:14px">🗑</button>
     </div>`).join('') || `<div style="font-size:12.5px;color:#9ca3af;margin-bottom:10px">אין רישומים ביום זה</div>`;
@@ -3703,10 +3705,13 @@ function openMgrAttEdit(employee, date){
     <div id="mgrEditErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
   </div>`;
   document.body.appendChild(dlg);
+  // הגנה: לוודא שלחיצות כאן לעולם לא "יזלגו" למאזינים חיצוניים (כמו סגירת מסך ניהול הנוכחות כולו)
+  dlg.addEventListener('click', e => e.stopPropagation());
   const err = dlg.querySelector('#mgrEditErr');
   let refreshedList = false; // אם בוצע שינוי — נרענן את הדוח בסגירה
 
-  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); if(refreshedList) loadMgrDetailed(); });
+  // סגירת חלון העריכה תמיד מחזירה לרשימת הפירוט המעודכנת (לא סוגרת את מסך ניהול הנוכחות)
+  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); loadMgrDetailed(); });
 
   const bindDelete = () => {
     dlg.querySelectorAll('.mgr-ev-del').forEach(btn=>{
@@ -3752,16 +3757,22 @@ function openMgrAttEdit(employee, date){
       const i = Number(row.dataset.i);
       const e = events[i];
       const newTime = row.querySelector('.mgr-ev-time').value;
-      if(!newTime || newTime===e.time) continue; // לא השתנה
-      const res=await apiPost({ action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:e.type, oldTime:e.time, time:newTime });
+      const newType = row.querySelector('.mgr-ev-type').value;
+      const timeChanged = newTime && newTime!==e.time;
+      const typeChanged = newType && newType!==e.type;
+      if(!timeChanged && !typeChanged) continue; // לא השתנה
+      const payload = { action:'mgrSetAttendance', ...mgrAuth(), employee, date, type:e.type, oldTime:e.time, time:newTime||e.time };
+      if(typeChanged) payload.newType = newType;
+      const res=await apiPost(payload);
       if(!res.ok){ err.textContent=res.error||'שגיאה'; return; }
-      e.time = newTime;
+      e.time = newTime||e.time; e.type = newType||e.type;
       refreshedList = true; changed=true;
     }
     // לא סוגר את החלון ולא מרענן את כל הדוח — כדי לאפשר עריכה רציפה של עובדים/ימים נוספים.
     // הדוח המלא מתרענן רק כשלוחצים "סגור".
     err.textContent='';
     toast(changed?'נוכחות עודכנה ✓ — ניתן להמשיך לערוך':'אין שינויים לשמירה','ok');
+    if(changed){ dlg.querySelector('#mgrEvList').innerHTML = renderRows(); bindDelete(); }
   });
 }
 
