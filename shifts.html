@@ -3493,11 +3493,13 @@ async function renderLive(){
     const breakOn=d&&d.breakT&&!d.backT;
     const lateIn=hasIn&&shift?Math.max(0,toM(d.inT)-toM(shift.start)):null;
     const lateMiss=missedStart?nowM-toM(shift.start):null;
-    const dur=hasIn&&!hasOut?Math.round((now-new Date(todayStr+'T'+d.inT))/60000):null;
+    // dur: כשעדיין במשמרת — ריצה חיה מרגע הכניסה; כשכבר יצא — סיכום סופי (d.minutes, נטו הפסקות, מחושב בשרת)
+    const dur = hasIn && !hasOut ? Math.round((now-new Date(todayStr+'T'+d.inT))/60000)
+              : hasOut ? d.minutes : null;
     lines.push({name:emp.employee, dept:emp.dept, branch:emp.branch||'',
       shiftStart:shift?shift.start:'', inT:d?d.inT||'—':'—', outT:d?d.outT||'':'',
       status:!hasIn?'לא הגיע':hasOut?'יצא':breakOn?'בהפסקה':'במשמרת',
-      lateIn, lateMiss, dur});
+      lateIn, lateMiss, dur, durFinal:hasOut});
   });
   if(!lines.length){ box.innerHTML='<div style="color:var(--muted)">אין עובדים במשמרת כרגע</div>'; return; }
   const now2=new Date().toTimeString().slice(0,5);
@@ -3513,8 +3515,8 @@ async function renderLive(){
         ${l.lateIn&&l.lateIn>=10?` <b style="color:#b91c1c;font-size:11px">איחור ${l.lateIn}ד׳</b>`:''}
         ${l.lateMiss?` <b style="color:#b91c1c;font-size:11px">${l.lateMiss}ד׳ ממתין</b>`:''}
       </td>
-      <td>${l.dur!=null?Math.floor(l.dur/60)+'ש׳ '+(l.dur%60)+'ד׳':'—'}</td></tr>`).join('');
-  const tableHdr = `<tr><th>עובד</th><th>מחלקה</th><th>משמרת</th><th>כניסה בפועל</th><th>מצב</th><th>זמן מ-כניסה</th></tr>`;
+      <td>${l.dur!=null?(l.durFinal?'✔ ':'')+Math.floor(l.dur/60)+'ש׳ '+(l.dur%60)+'ד׳':'—'}</td></tr>`).join('');
+  const tableHdr = `<tr><th>עובד</th><th>מחלקה</th><th>משמרת</th><th>כניסה בפועל</th><th>מצב</th><th>משך משמרת</th></tr>`;
   let bodyHtml;
   if(isAdmin() && !effectiveBranch()){
     // אדמין ללא סינון סניף: קיבוץ לטבלה נפרדת לכל סניף
