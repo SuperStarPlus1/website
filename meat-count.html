@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>טופס ספירת מלאי - מחלקת בשר</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f2f2f2;
+  padding: 20px;
+  direction: rtl;
+}
+h1 {
+  text-align: center;
+}
+label {
+  display: block;
+  margin-top: 10px;
+}
+select, input[type="number"], input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+}
+button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+th {
+  background-color: #eee;
+}
+#report-time {
+  margin-top: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<h1>טופס ספירת מלאי - מחלקת בשר</h1>
+
+<label for="family">בחר משפחה:</label>
+<select id="family"></select>
+
+<label for="item">בחר פריט:</label>
+<select id="item"></select>
+
+<label for="searchInput">חפש לפי שם או קוד:</label>
+<input type="text" id="searchInput" placeholder="הקלד שם או קוד פריט..." />
+
+<label for="gross">משקל ברוטו (ק"ג):</label>
+<input type="number" id="gross" step="0.01" />
+
+<label for="hooks">מספר קולבים:</label>
+<input type="number" id="hooks" step="1" min="0" />
+
+<label for="boxes">מספר ארגזים:</label>
+<input type="number" id="boxes" step="1" min="0" />
+
+<label for="boxWeight">משקל ארגז (ק"ג):</label>
+<select id="boxWeight">
+  <option value="">בחר משקל ארגז...</option>
+  <option value="1.5">1.5 ק"ג</option>
+  <option value="1.7">1.7 ק"ג</option>
+  <option value="1.8">1.8 ק"ג</option>
+</select>
+
+<button onclick="addEntry()">חשב והוסף לטבלה</button>
+<button onclick="sendReportByEmail()">שלח דוח למייל</button>
+
+<p id="report-time"></p>
+
+<table id="summary">
+  <thead>
+    <tr>
+      <th>קוד פריט</th>
+      <th>שם פריט</th>
+      <th>משקל נטו מצטבר (ק"ג)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvbZgbfANo6xw4W2C-RsN9BVNfPKT5lU8fiEiysBq76egu4sxJUML6nU_vyxC-M3GX/exec';
+
+const itemsData = [
+  {"code": 777444, "family": "טלה", "name": "אוסובוקו טלה"},
+  {"code": 888402, "family": "טלה", "name": "טלה טרי עם עצם"},
+  {"code": 888084, "family": "טלה", "name": "צווואר טלה"},
+  {"code": 888085, "family": "טלה", "name": "כתף טלה"},
+  {"code": 888047, "family": "טלה", "name": "טיבון טלה"},
+  {"code": 888407, "family": "מיוחדים", "name": "אשכי טלה"},
+  {"code": 888411, "family": "מיוחדים", "name": "חלקי פנים טלה"},
+  {"code": 888466, "family": "מיוחדים", "name": "קריספי"},
+  {"code": 888467, "family": "מיוחדים", "name": "קריספי רול"},
+  {"code": 57031, "family": "מיוחדים", "name": "לסת טלה"},
+  {"code": 432691, "family": "מיוחדים", "name": "לשון"},
+  {"code": 887831, "family": "מיוחדים", "name": "כבד אווז קפוא"},
+  {"code": 631134, "family": "עגל", "name": "אחורי עגלה עם סינטה"},
+  {"code": 888070, "family": "עגל", "name": "אנטריקוט עגל טרי"},
+  {"code": 888529, "family": "עגל", "name": "אסאדו עגל עם עצם"},
+  {"code": 888000, "family": "עגל", "name": "המבורגר שקיל"},
+  {"code": 888455, "family": "עגל", "name": "נקניקיות חריפות/שאריות"},
+  {"code": 888410, "family": "עגל", "name": "סינטה משוישת"},
+  {"code": 888082, "family": "עגל", "name": "פילה עגלה"},
+  {"code": 631231, "family": "עגל", "name": "קדמי עגלה בלי ברוסט"},
+  {"code": 888522, "family": "עגל", "name": "פיקאניה"},
+  {"code": 9720000000902, "family": "עגל", "name": "קפוא מספר 3"},
+  {"code": 320211, "family": "עגל", "name": "קפוא צלעות מספר 2"},
+  {"code": 888453, "family": "עוף", "name": "חזה עוף"},
+  {"code": 888009, "family": "עוף", "name": "חזה עוף עם עצם"},
+  {"code": 888464, "family": "עוף", "name": "ירכיים עוף טרי"},
+  {"code": 888463, "family": "עוף", "name": "כבד עוף"},
+  {"code": 888456, "family": "עוף", "name": "כנפיים עוף"},
+  {"code": 888459, "family": "עוף", "name": "כרעיים עוף"},
+  {"code": 888055, "family": "עוף", "name": "לבבות עוף"},
+  {"code": 888006, "family": "עוף", "name": "עוף שלם במשקל"},
+  {"code": 888008, "family": "עוף", "name": "פרגית עם עור"},
+  {"code": 888460, "family": "עוף", "name": "פילה עוף"}
+];
+
+const hookWeight = 0.4;
+const summary = {};
+
+window.onload = function () {
+  const familySelect = document.getElementById("family");
+  const itemSelect = document.getElementById("item");
+  const searchInput = document.getElementById("searchInput");
+
+  const families = ["הכל", ...new Set(itemsData.map((item) => item.family))];
+  families.forEach((fam) => {
+    const opt = document.createElement("option");
+    opt.value = fam;
+    opt.textContent = fam;
+    familySelect.appendChild(opt);
+  });
+
+  function updateItemList() {
+    const selectedFamily = familySelect.value;
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    itemSelect.innerHTML = "";
+    const filtered = itemsData.filter((item) =>
+      (selectedFamily === "הכל" || item.family === selectedFamily) &&
+      (item.name.toLowerCase().includes(searchTerm) || item.code.toString().includes(searchTerm))
+    );
+    if (filtered.length === 0) {
+      const opt = document.createElement("option");
+      opt.textContent = "לא נמצאו תוצאות";
+      itemSelect.appendChild(opt);
+    } else {
+      filtered.forEach((item) => {
+        const opt = document.createElement("option");
+        opt.value = item.code;
+        opt.textContent = `${item.name} (${item.code})`;
+        itemSelect.appendChild(opt);
+      });
+    }
+  }
+
+  familySelect.onchange = updateItemList;
+  searchInput.oninput = updateItemList;
+  familySelect.dispatchEvent(new Event("change"));
+};
+
+function addEntry() {
+  const itemCode = document.getElementById("item").value;
+  const itemName = document.getElementById("item").selectedOptions[0].text;
+  const gross = parseFloat(document.getElementById("gross").value);
+  const hooks = parseInt(document.getElementById("hooks").value) || 0;
+  const boxes = parseInt(document.getElementById("boxes").value) || 0;
+  const boxWeightVal = document.getElementById("boxWeight").value;
+
+  if (isNaN(gross)) return alert("יש להזין משקל ברוטו תקין.");
+  if (boxes > 0 && !boxWeightVal) return alert("יש לבחור משקל ארגז כשמסמנים ארגזים.");
+
+  const boxWeight = boxes > 0 ? parseFloat(boxWeightVal) : 0;
+  const net = +(gross - (hooks * hookWeight) - (boxes * boxWeight)).toFixed(2);
+
+  if (!summary[itemCode]) {
+    summary[itemCode] = { name: itemName, net: 0 };
+  }
+  summary[itemCode].net += net;
+  summary[itemCode].net = +summary[itemCode].net.toFixed(2);
+
+  updateTable();
+
+  document.getElementById("gross").value = "";
+  document.getElementById("hooks").value = "";
+  document.getElementById("boxes").value = "";
+  document.getElementById("boxWeight").value = "";
+}
+
+function updateTable() {
+  const now = new Date();
+  const timestamp = now.toLocaleString('he-IL');
+  document.getElementById("report-time").textContent = `עודכן לאחרונה: ${timestamp}`;
+
+  const tbody = document.querySelector("#summary tbody");
+  tbody.innerHTML = "";
+
+  for (const code in summary) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${code}</td>
+      <td>${summary[code].name}</td>
+      <td>${summary[code].net}</td>
+    `;
+    tbody.appendChild(row);
+  }
+}
+
+function sendReportByEmail() {
+  const rows = Object.entries(summary).map(([code, { name, net }]) => ({ code, name, net }));
+  if (!rows.length) { alert("אין נתונים לשליחה."); return; }
+
+  fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "sendInventoryReport",
+      items: rows
+    })
+  })
+    .then(res => res.json())
+    .then(j => {
+      if (!j.ok) throw new Error(j.error || "שליחה נכשלה");
+      alert("הדוח נשלח למייל ונשמר בדרייב בהצלחה ✅");
+    })
+    .catch(err => {
+      console.error(err);
+      alert("שגיאה בשליחת הדוח ❌ " + err.message);
+    });
+}
+</script>
+</body>
+</html>
