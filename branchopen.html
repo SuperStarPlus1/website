@@ -42,35 +42,21 @@ header h2 { font-size: 28px; color: #333; }
 </form>
 <script src="checklist-common.js"></script>
 <script>
-// זמנית: אותה רשימת משימות כמו סגירת סניף (המשתמש יחליף לרשימת משימות ייעודית לפתיחה בהמשך)
 const items = [
-  { text: "לוודא שכל הקרטונים בדחסן", requireImage: true },
-  { text: "להוציא עגלות מהמחסן", requireImage: false },
-  { text: "לוודא עם עובד מחלקת ירקות חיבור מלגזה לטעינה", requireImage: true },
-  { text: "סגירת דלת מחסן מזרחית", requireImage: false },
-  { text: "כיבוי אורות ממ\"ד", requireImage: false },
-  { text: "חיבור מכונת שטיפה לחשמל", requireImage: true },
-  { text: "כיבוי אור שירותים", requireImage: false },
-  { text: "כיבוי אורות מקררים", requireImage: false },
-  { text: "צילום טמפרוטורת של מקררי חלב", requireImage: true },
-  { text: "סגירת דלת מחסן אמצעית", requireImage: false },
-  { text: "צילום טמפרטורטת של מקפיא עומד", requireImage: true },
-  { text: "מעבר בין המדפים לוודא שאין חריגים ולוודא ניקיון מעברים", requireImage: false },
-  { text: "סגירת דלת מחסן אחורית (ליד המקרר)", requireImage: false },
-  { text: "לוודא שכל המקררי גיבוי ומקפאים סגורים", requireImage: true },
-  { text: "צילום טמפרטורות של מקררי גיבוי", requireImage: true },
-  { text: "לוודא שאין עגלות בתוך הסופר", requireImage: false },
-  { text: "פינוי פחים כולל פח קופה ראשית", requireImage: false },
-  { text: "כיבוי אורות מחלקת שתייה וחומרי ניקוי", requireImage: false },
-  { text: "כיבוי מזגנים בחלק האחורי", requireImage: true },
-  { text: "צילום מדף לחם ושליחה לאשרף", requireImage: true },
-  { text: "להוציא עגלת חזרות לחם", requireImage: true },
-  { text: "לוודא נעילת שער חצר ארגזים", requireImage: false },
-  { text: "לוודא שאין עגלות שלא במקומם", requireImage: false },
-  { text: "כיבוי מזגנים", requireImage: true },
-  { text: "כיבוי אורות כניסה והדלקת תאורת לילה", requireImage: false },
-  { text: "כיבוי אורות ראשי", requireImage: false },
-  { text: "לוודא שאין הפרעה לתריס הראשי. לסגור את התריס ולוודא שנסגר עד הסוף", requireImage: true }
+  { text: "ספירת עגלות לפי סוג (אדומות/נורמה/לבנות/קטנות)", requireImage: false },
+  { text: "הדלקת תאורה סניף מלאה", requireImage: false },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקררי חלב", requireImage: false, tempCount: 4 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקרר סלטים", requireImage: false, tempCount: 1 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקפיא עומד", requireImage: false, tempCount: 1 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקפיא שוכב", requireImage: false, tempCount: 2 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מעדניה", requireImage: false, tempCount: 1 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקפיא גיבוי", requireImage: false, tempCount: 1 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקררי גיבוי", requireImage: false, tempCount: 4 },
+  { text: "הדלקת תאורה ורישום טמפרטורת מקרר בשר", requireImage: false, tempCount: 1 },
+  { text: "הדלקת מעדניית בשר", requireImage: false },
+  { text: "לוודא ניקיון מעדניית בשר", requireImage: false },
+  { text: "סיור בין המדפים לראות שאין משהו חריג", requireImage: false },
+  { text: "לספור את כל הקופות ולוודא שיש כסף קטן בכולם", requireImage: false }
 ];
 initBranchChecklist({ items, mode: 'opening', title: 'משימות פתיחת סניף' });
 </script>
