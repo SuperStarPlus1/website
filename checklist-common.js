@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwZaNMNViVxp31eSn60geAqwwnnCa9Ep1ii-JNHTcOYPoCKOdEMU3xhSTXxfPrp6vgX/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzM-LQ8t7CH14Mlij4p6r2fnC1PMzBoE8eFeP4VTPqSKJQDI6aoRmP641ONpqolJEet/exec';
 
 const DEFAULT_CHECKLIST_EMPLOYEE = 'אשרף עדנאן';
 
@@ -11,6 +11,7 @@ function initBranchChecklist(opts) {
 
   const now = new Date();
   document.getElementById("dateTime").value = now.toLocaleString();
+  const stamp = now.toISOString().replace(/[:.]/g, '-');
   const checklistDiv = document.getElementById("checklist");
   const uploadedFiles = {};
 
@@ -58,13 +59,29 @@ function initBranchChecklist(opts) {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         const base64 = reader.result.split(',')[1];
         const fileName = `item${idx}_image${uploadedFiles[idx].length + 1}.jpg`;
-        uploadedFiles[idx].push({ name: fileName, data: base64 });
         const img = document.createElement("img"); img.src = reader.result; img.className = "preview-img";
+        img.style.opacity = '0.4';
         document.getElementById(`imgContainer${idx}`).appendChild(img);
-        document.getElementById(`item${idx}`).checked = true; updateTaskCounter();
+        // מעלים כל תמונה מיד עם הצילום (בקשה קטנה ונפרדת) - כדי לא לצבור את כל התמונות
+        // לבקשה אחת ענקית בסוף, מה שגרם ל"load failed" בנייד כשיש כמה תמונות.
+        try {
+          const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'uploadChecklistPhoto', mode, stamp, fileName, fileData: base64 })
+          });
+          const j = await res.json();
+          if (!j.ok) throw new Error(j.error || 'העלאה נכשלה');
+          uploadedFiles[idx].push({ name: fileName });
+          img.style.opacity = '1';
+          document.getElementById(`item${idx}`).checked = true; updateTaskCounter();
+        } catch (err) {
+          console.error(err);
+          img.remove();
+          alert("שגיאה בהעלאת התמונה ❌ " + err.message);
+        }
       };
       reader.readAsDataURL(file);
     };
@@ -92,7 +109,7 @@ function initBranchChecklist(opts) {
     try {
       const res = await fetch(GAS_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'submitClosingChecklist', mode, employeeName, sections })
+        body: JSON.stringify({ action: 'submitClosingChecklist', mode, stamp, employeeName, sections })
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error || 'שליחה נכשלה');
