@@ -435,6 +435,15 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <button id="mgrPushBtn2" style="color:#166534">🔔 Push</button>
       </div>
     </div>
+    <!-- תפריט 4: תפעול -->
+    <div class="mgr-menu" id="menuOps">
+      <button class="mgr-menu-btn" id="menuOpsBtn">🛠 תפעול</button>
+      <div class="mgr-dropdown" id="menuOpsDrop">
+        <button onclick="window.open('https://www.superstar-plus.co.il/meat-count.html','_blank')">🥩 ספירת מלאי בשר</button>
+        <button onclick="window.open('https://www.superstar-plus.co.il/closecheck.html','_blank')">🔒 סגירת סניף</button>
+        <button onclick="window.open('https://www.superstar-plus.co.il/branchopen.html','_blank')">🔓 פתיחת סניף</button>
+      </div>
+    </div>
     <button class="hbtn" id="mgrPushBtn" style="display:none">🔔</button>
     <button class="hbtn hidden" id="mgrsBtn">👑 מנהלים</button>
     <button class="hbtn hidden" id="logBtn">📜 לוג</button>
@@ -499,6 +508,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button data-go="sick"><span class="ic">🤒</span>דיווח מחלה</button>
       <button data-go="swap"><span class="ic">🔁</span>החלפת משמרת</button>
       <button data-go="f101" id="ehF101" class="hidden"><span class="ic">📋</span>טופס 101</button>
+      <div style="grid-column:1/-1;font-size:11.5px;font-weight:800;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">🛠 תפעול</div>
+      <button data-go="meat"><span class="ic">🥩</span>ספירת מלאי בשר</button>
+      <button data-go="closecheck"><span class="ic">🔒</span>סגירת סניף</button>
+      <button data-go="branchopen"><span class="ic">🔓</span>פתיחת סניף</button>
     </div>
   </div>
 </div>
@@ -2474,7 +2487,7 @@ function runAutoAssign(cfg, prevShifts){
 }
 
 /* ============ תפריטי מנהל ============ */
-['menuAttBtn','menuSchedBtn','menuAdminBtn'].forEach(id=>{
+['menuAttBtn','menuSchedBtn','menuAdminBtn','menuOpsBtn'].forEach(id=>{
   document.getElementById(id).addEventListener('click', e=>{
     e.stopPropagation();
     const drop = id.replace('Btn','Drop');
@@ -3078,6 +3091,9 @@ document.querySelectorAll('#empHome .eh-links button').forEach(b=>b.addEventList
   if(go==='swap'){ openEmpSwap(); return; }
   if(go==='sick'){ openSick(); return; }
   if(go==='f101'){ openF101(); return; }
+  if(go==='meat'){ window.open('https://www.superstar-plus.co.il/meat-count.html','_blank'); return; }
+  if(go==='closecheck'){ window.open('https://www.superstar-plus.co.il/closecheck.html','_blank'); return; }
+  if(go==='branchopen'){ window.open('https://www.superstar-plus.co.il/branchopen.html','_blank'); return; }
 }));
 
 /* ============ דיווח נוכחות ============ */
