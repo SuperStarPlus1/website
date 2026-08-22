@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz6eYlbEiFTCg-sZ5H4pmtI16cQHG1YZEsYrXLSBPXdRD6M9wV4DB28l0QADzwhwrmH/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxh6oqXtJ6wN1zX3QbCGgJcy5897K4WcT1oQgJfreFZuTRKp_cRKge1NwO6vkarwXYC/exec';
 
 function initBranchChecklist(opts) {
   const items = opts.items;
