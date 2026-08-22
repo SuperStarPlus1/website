@@ -1,4 +1,6 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxh6oqXtJ6wN1zX3QbCGgJcy5897K4WcT1oQgJfreFZuTRKp_cRKge1NwO6vkarwXYC/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwZaNMNViVxp31eSn60geAqwwnnCa9Ep1ii-JNHTcOYPoCKOdEMU3xhSTXxfPrp6vgX/exec';
+
+const DEFAULT_CHECKLIST_EMPLOYEE = 'אשרף עדנאן';
 
 function initBranchChecklist(opts) {
   const items = opts.items;
@@ -11,6 +13,17 @@ function initBranchChecklist(opts) {
   document.getElementById("dateTime").value = now.toLocaleString();
   const checklistDiv = document.getElementById("checklist");
   const uploadedFiles = {};
+
+  const empSelect = document.getElementById("employeeName");
+  fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'activeShiftEmployees' }) })
+    .then(res => res.json())
+    .then(j => {
+      const names = (j.ok && j.employees && j.employees.length) ? j.employees : [DEFAULT_CHECKLIST_EMPLOYEE];
+      empSelect.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+    })
+    .catch(() => {
+      empSelect.innerHTML = `<option value="${DEFAULT_CHECKLIST_EMPLOYEE}">${DEFAULT_CHECKLIST_EMPLOYEE}</option>`;
+    });
 
   function updateTaskCounter() {
     const total = items.length;
@@ -67,7 +80,7 @@ function initBranchChecklist(opts) {
   document.getElementById("checkForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const employeeName = document.getElementById("employeeName").value.trim();
-    if (!employeeName) { alert("יש להזין שם עובד."); return; }
+    if (!employeeName) { alert("יש לבחור עובד."); return; }
 
     showProgress("שולח דוח...", 60);
     const sections = items.map((item, idx) => ({
