@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzM-LQ8t7CH14Mlij4p6r2fnC1PMzBoE8eFeP4VTPqSKJQDI6aoRmP641ONpqolJEet/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1uHGv3oEEOYz2Y5OeSpEYXNXN4BEYtRd9QuDjslhrKyY1OKWKSuUHV7gp2Kv2GSUr/exec';
 
 const DEFAULT_CHECKLIST_EMPLOYEE = 'אשרף עדנאן';
 
@@ -19,7 +19,9 @@ function initBranchChecklist(opts) {
   fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'activeShiftEmployees' }) })
     .then(res => res.json())
     .then(j => {
-      const names = (j.ok && j.employees && j.employees.length) ? j.employees : [DEFAULT_CHECKLIST_EMPLOYEE];
+      const active = (j.ok && j.employees) ? j.employees : [];
+      // אשרף עדנאן תמיד מופיע ברשימה, בנוסף לעובדים שבמשמרת (לא רק כברירת מחדל כשאין אף אחד)
+      const names = Array.from(new Set([DEFAULT_CHECKLIST_EMPLOYEE, ...active])).sort((a, b) => a.localeCompare(b, 'he'));
       empSelect.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
     })
     .catch(() => {
@@ -46,6 +48,18 @@ function initBranchChecklist(opts) {
       addBtn.onclick = () => addImage(idx); section.appendChild(addBtn);
       const imgContainer = document.createElement("div"); imgContainer.id = `imgContainer${idx}`;
       section.appendChild(imgContainer); uploadedFiles[idx] = [];
+    }
+    if (item.tempCount) {
+      const tempsDiv = document.createElement("div");
+      tempsDiv.style.cssText = "margin-top:8px;display:flex;flex-wrap:wrap;gap:6px";
+      for (let t = 0; t < item.tempCount; t++) {
+        const tempInput = document.createElement("input");
+        tempInput.type = "number"; tempInput.step = "0.1"; tempInput.id = `temp${idx}_${t}`;
+        tempInput.placeholder = item.tempCount > 1 ? `תא ${t + 1}` : 'מעלות';
+        tempInput.style.cssText = `width:${item.tempCount > 1 ? '70px' : '100px'};padding:6px`;
+        tempsDiv.appendChild(tempInput);
+      }
+      textContainer.appendChild(tempsDiv);
     }
     checklistDiv.appendChild(section);
     document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
@@ -110,11 +124,20 @@ function initBranchChecklist(opts) {
     if (!employeeName) { alert("יש לבחור עובד."); return; }
 
     showProgress("שולח דוח...", 60);
-    const sections = items.map((item, idx) => ({
-      text: item.text,
-      done: document.getElementById(`item${idx}`).checked,
-      images: uploadedFiles[idx] || []
-    }));
+    const sections = items.map((item, idx) => {
+      const sec = {
+        text: item.text,
+        done: document.getElementById(`item${idx}`).checked,
+        images: uploadedFiles[idx] || []
+      };
+      if (item.tempCount) {
+        sec.temps = [];
+        for (let t = 0; t < item.tempCount; t++) {
+          sec.temps.push(document.getElementById(`temp${idx}_${t}`).value.trim());
+        }
+      }
+      return sec;
+    });
 
     // הערה: כאן בכוונה בלי ריטריי אוטומטי (בניגוד להעלאת תמונה) - כי הפעולה הזו שולחת מייל
     // ויוצרת קובץ דוח; ריטריי אוטומטי עלול לשלוח מייל כפול אם התגובה פשוט לא הגיעה בזמן.
