@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1uHGv3oEEOYz2Y5OeSpEYXNXN4BEYtRd9QuDjslhrKyY1OKWKSuUHV7gp2Kv2GSUr/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbybrlNM--KmALdRePOnjno9muEcJ6sDJfErRWMyD5s_gpN27yiEk_dmyVDQoqUaB_XY/exec';
 
 const DEFAULT_CHECKLIST_EMPLOYEE = 'אשרף עדנאן';
 
@@ -60,6 +60,21 @@ function initBranchChecklist(opts) {
         tempsDiv.appendChild(tempInput);
       }
       textContainer.appendChild(tempsDiv);
+    }
+    if (item.counts) {
+      const countsDiv = document.createElement("div");
+      countsDiv.style.cssText = "margin-top:8px;display:flex;flex-wrap:wrap;gap:8px";
+      item.counts.forEach((label, c) => {
+        const wrap = document.createElement("label");
+        wrap.style.cssText = "display:flex;flex-direction:column;font-size:12px;color:#555";
+        const countInput = document.createElement("input");
+        countInput.type = "number"; countInput.step = "1"; countInput.min = "0"; countInput.id = `count${idx}_${c}`;
+        countInput.style.cssText = "width:70px;padding:6px;margin-top:2px";
+        wrap.appendChild(document.createTextNode(label));
+        wrap.appendChild(countInput);
+        countsDiv.appendChild(wrap);
+      });
+      textContainer.appendChild(countsDiv);
     }
     checklistDiv.appendChild(section);
     document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
@@ -135,6 +150,9 @@ function initBranchChecklist(opts) {
         for (let t = 0; t < item.tempCount; t++) {
           sec.temps.push(document.getElementById(`temp${idx}_${t}`).value.trim());
         }
+      }
+      if (item.counts) {
+        sec.counts = item.counts.map((label, c) => ({ label, value: document.getElementById(`count${idx}_${c}`).value.trim() }));
       }
       return sec;
     });
