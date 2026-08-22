@@ -67,20 +67,30 @@ function initBranchChecklist(opts) {
         document.getElementById(`imgContainer${idx}`).appendChild(img);
         // מעלים כל תמונה מיד עם הצילום (בקשה קטנה ונפרדת) - כדי לא לצבור את כל התמונות
         // לבקשה אחת ענקית בסוף, מה שגרם ל"load failed" בנייד כשיש כמה תמונות.
-        try {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'uploadChecklistPhoto', mode, stamp, fileName, fileData: base64 })
-          });
-          const j = await res.json();
-          if (!j.ok) throw new Error(j.error || 'העלאה נכשלה');
+        // רשת סלולרית לפעמים "מקלקלת" בקשה בודדת בטרנספר (במיוחד בקבצים גדולים) - לכן עד 3 ניסיונות לפני שמדווחים שגיאה.
+        let uploadOk = false, lastErr = null;
+        for (let attempt = 1; attempt <= 3 && !uploadOk; attempt++) {
+          try {
+            const res = await fetch(GAS_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'uploadChecklistPhoto', mode, stamp, fileName, fileData: base64 })
+            });
+            const j = await res.json();
+            if (!j.ok) throw new Error(j.error || 'העלאה נכשלה');
+            uploadOk = true;
+          } catch (err) {
+            lastErr = err;
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+          }
+        }
+        if (uploadOk) {
           uploadedFiles[idx].push({ name: fileName });
           img.style.opacity = '1';
           document.getElementById(`item${idx}`).checked = true; updateTaskCounter();
-        } catch (err) {
-          console.error(err);
+        } else {
+          console.error(lastErr);
           img.remove();
-          alert("שגיאה בהעלאת התמונה ❌ " + err.message);
+          alert("שגיאה בהעלאת התמונה ❌ " + lastErr.message + " — נסה לצלם שוב");
         }
       };
       reader.readAsDataURL(file);
@@ -106,6 +116,8 @@ function initBranchChecklist(opts) {
       images: uploadedFiles[idx] || []
     }));
 
+    // הערה: כאן בכוונה בלי ריטריי אוטומטי (בניגוד להעלאת תמונה) - כי הפעולה הזו שולחת מייל
+    // ויוצרת קובץ דוח; ריטריי אוטומטי עלול לשלוח מייל כפול אם התגובה פשוט לא הגיעה בזמן.
     try {
       const res = await fetch(GAS_URL, {
         method: 'POST',
