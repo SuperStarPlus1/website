@@ -53,6 +53,14 @@ th {
 <body>
 <h1>טופס ספירת מלאי - מחלקת בשר</h1>
 
+<label for="performedBy">מבצע הספירה:</label>
+<select id="performedBy">
+  <option value="">בחר מבצע ספירה...</option>
+  <option value="אשרף חדר">אשרף חדר</option>
+  <option value="אשרף עדנאן">אשרף עדנאן</option>
+  <option value="מוחמד כריים">מוחמד כריים</option>
+</select>
+
 <label for="family">בחר משפחה:</label>
 <select id="family"></select>
 
@@ -96,7 +104,7 @@ th {
 </table>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxh6oqXtJ6wN1zX3QbCGgJcy5897K4WcT1oQgJfreFZuTRKp_cRKge1NwO6vkarwXYC/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwZaNMNViVxp31eSn60geAqwwnnCa9Ep1ii-JNHTcOYPoCKOdEMU3xhSTXxfPrp6vgX/exec';
 
 const itemsData = [
   {"code": 777444, "family": "טלה", "name": "אוסובוקו טלה"},
@@ -227,12 +235,15 @@ function updateTable() {
 function sendReportByEmail() {
   const rows = Object.entries(summary).map(([code, { name, net }]) => ({ code, name, net }));
   if (!rows.length) { alert("אין נתונים לשליחה."); return; }
+  const performedBy = document.getElementById("performedBy").value;
+  if (!performedBy) { alert("יש לבחור מבצע ספירה."); return; }
 
   fetch(GAS_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "sendInventoryReport",
-      items: rows
+      items: rows,
+      performedBy
     })
   })
     .then(res => res.json())
