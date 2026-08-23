@@ -619,6 +619,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <button class="preset" data-s="15:00" data-e="22:00">🌙 ערב<small>15:00 – 22:00</small></button>
         <button class="preset" data-s="16:00" data-e="22:00">🌙 ערב 2<small>16:00 – 22:00</small></button>
       </div>
+      <div class="presets hidden" id="deptPresets"></div>
       <div class="timegrid">
         <div class="mrow"><label>התחלה</label><select id="shStart"></select></div>
         <div class="mrow"><label>סיום</label><select id="shEnd"></select></div>
@@ -1721,6 +1722,35 @@ function onDrop(td){
   document.getElementById('shEnd').innerHTML=opts;
 })();
 
+/* משמרות ייעודיות (8:30 שעות) הזמינות רק למחלקות ספציפיות שנרשמו כאן — לא לכלל המחלקות */
+const DEPT_SHIFT_PRESETS = {
+  'קצביה': [
+    { label: '☀ בוקר', s: '08:00', e: '16:30' },
+    { label: '🕐 אמצע', s: '10:00', e: '18:30' },
+    { label: '🌙 ערב', s: '12:00', e: '20:30' }
+  ],
+  'ירקות': [
+    { label: '☀ בוקר', s: '08:00', e: '16:30' },
+    { label: '🌙 ערב', s: '14:00', e: '22:30' }
+  ],
+  'מחסן': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
+  'הנהלה': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
+  'הנח"ש': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
+  'כללי': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ]
+};
+function renderDeptPresets(dept){
+  const box = document.getElementById('deptPresets');
+  const list = DEPT_SHIFT_PRESETS[dept];
+  if(!list || !list.length){ box.innerHTML=''; box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  box.innerHTML = list.map(p=>`<button class="preset dept-preset" data-s="${p.s}" data-e="${p.e}">${p.label}<small>${p.s} – ${p.e} (8:30)</small></button>`).join('');
+  box.querySelectorAll('.preset').forEach(p=>p.addEventListener('click',()=>{
+    document.getElementById('shStart').value=p.dataset.s;
+    document.getElementById('shEnd').value=p.dataset.e;
+    markPreset();
+  }));
+}
+
 let editCtx = null;
 function openChipEditor(sid){
   const s = state.shifts.find(x=>x._id===sid);
@@ -1740,6 +1770,7 @@ function openShiftEditor(ds){
   if(!names.includes(ds.emp)) names.unshift(ds.emp);
   empSel.innerHTML = names.map(n=>`<option value="${esc(n)}" ${n===ds.emp?'selected':''}>${esc(n)}</option>`).join('');
 
+  renderDeptPresets(ds.dept);
   document.getElementById('shStart').value = existing ? existing.start : '08:00';
   document.getElementById('shEnd').value   = existing ? existing.end   : '15:00';
   document.getElementById('shDel').classList.toggle('hidden', !existing);
