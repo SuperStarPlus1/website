@@ -391,13 +391,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
   <!-- מצב צפייה -->
   <button class="hbtn gold" id="loginBtn">🔒 כניסה</button>
+  <button class="hbtn gold" id="manualPunchBtn" style="padding:6px 10px;font-size:12px">✏ הזנה ידנית</button>
   <span id="viewerChip" class="whoami hidden">👤 <b id="viewerName"></b>
     <button class="hbtn gold" id="myConsBtn" style="padding:6px 10px;font-size:12px">🖐 אילוצים</button>
     <button class="hbtn gold" id="mySwapBtn" style="padding:6px 10px;font-size:12px">🔁 החלפה</button>
     <button class="hbtn gold" id="myPayBtn" style="padding:6px 10px;font-size:12px">🧾 תלושים</button>
     <button class="hbtn gold" id="myF101Btn" style="padding:6px 10px;font-size:12px">📋 הטפסים שלי</button>
     <button class="hbtn gold" id="myAttBtn" style="padding:6px 10px;font-size:12px">⏱ נוכחות</button>
-    <button class="hbtn gold" id="manualPunchBtn" style="padding:6px 10px;font-size:12px">✏ הזנה</button>
     <button class="hbtn ghost" id="viewerExit" style="padding:5px 9px;font-size:11px">יציאה</button></span>
 
   <!-- מצב מנהל -->
@@ -879,6 +879,12 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3>✏ בקשת הזנת שעה ידנית</h3><p>הדיווח יישלח לאישור מנהל לפני שיירשם</p></header>
     <div class="mbody">
+      <div class="mrow hidden" id="mpGuestBranchRow"><label>סניף</label>
+        <select id="mpGuestBranch" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px"></select></div>
+      <div class="mrow hidden" id="mpGuestNameRow"><label>שם עובד</label>
+        <select id="mpGuestName" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px"></select></div>
+      <div class="mrow hidden" id="mpGuestPinRow"><label>קוד PIN אישי</label>
+        <input type="password" id="mpGuestPin" maxlength="4" inputmode="numeric" placeholder="קוד PIN בן 4 ספרות" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:8px"></div>
       <div class="timegrid">
         <div class="mrow"><label>תאריך</label><input type="date" id="mpDate"></div>
         <div class="mrow"><label>שעה</label><input type="time" id="mpTime"></div>
@@ -1124,7 +1130,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvbZgbfANo6xw4W2C-RsN9BVNfPKT5lU8fiEiysBq76egu4sxJUML6nU_vyxC-M3GX/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxjLVNGZ-xi3p4JapWKqgpUjni_n3xeGYC5cCDoscOHx70RVdjto63m5fwMNddspJ_7/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -3589,26 +3595,65 @@ document.getElementById('mgrPushBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('liveRefresh').addEventListener('click', renderLive);
 
-/* --- הזנה ידנית (עובד) --- */
+/* --- הזנה ידנית (עובד, מחובר או לא — ללא התחברות מזוהים לפי סניף+שם+PIN, כמו בקיוסק) --- */
+async function mpLoadGuestBranches(){
+  const sel = document.getElementById('mpGuestBranch');
+  sel.innerHTML = '<option value="">טוען…</option>';
+  try{
+    const r = await apiPost({ action:'kioskEmployees', branch:'' });
+    const branches = r.branches||[];
+    sel.innerHTML = branches.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('') || '<option value="">לא הוגדרו סניפים</option>';
+    if(branches.length) mpLoadGuestNames(branches[0]);
+  }catch(e){ sel.innerHTML = '<option value="">שגיאת טעינה</option>'; }
+}
+async function mpLoadGuestNames(branch){
+  const sel = document.getElementById('mpGuestName');
+  sel.innerHTML = '<option value="">טוען…</option>';
+  try{
+    const r = await apiPost({ action:'kioskEmployees', branch });
+    const emps = r.employees||[];
+    sel.innerHTML = emps.map(e=>`<option value="${esc(e.name)}">${esc(e.name)}</option>`).join('') || '<option value="">אין עובדים פעילים בסניף זה</option>';
+  }catch(e){ sel.innerHTML = '<option value="">שגיאת טעינה</option>'; }
+}
+document.getElementById('mpGuestBranch').addEventListener('change', ()=>{
+  mpLoadGuestNames(document.getElementById('mpGuestBranch').value);
+});
 document.getElementById('manualPunchBtn').addEventListener('click', ()=>{
   document.getElementById('mpDate').value=iso(new Date());
   document.getElementById('mpTime').value=new Date().toTimeString().slice(0,5);
   document.getElementById('mpReason').value='';
   document.getElementById('mpErr').textContent='';
+  const isGuest = !state.emp;
+  document.getElementById('mpGuestBranchRow').classList.toggle('hidden', !isGuest);
+  document.getElementById('mpGuestNameRow').classList.toggle('hidden', !isGuest);
+  document.getElementById('mpGuestPinRow').classList.toggle('hidden', !isGuest);
+  if(isGuest){
+    document.getElementById('mpGuestPin').value='';
+    mpLoadGuestBranches();
+  }
   show('manualPunchOverlay');
 });
 document.getElementById('mpSend').addEventListener('click', async ()=>{
   const err=document.getElementById('mpErr');
-  if(!state.emp){ err.textContent='הזנה ידנית זמינה לעובדים בלבד — כנס כעובד'; return; }
   const date=document.getElementById('mpDate').value;
   const time=document.getElementById('mpTime').value;
   const type=document.getElementById('mpType').value;
   const reason=document.getElementById('mpReason').value.trim();
   if(!date||!time){ err.textContent='יש לבחור תאריך ושעה'; return; }
   if(!reason){ err.textContent='יש לציין סיבה'; return; }
+  let payload;
+  if(state.emp){
+    payload = { action:'requestManualPunch', username:state.emp.username, password:state.emp.pw, date, time, type, reason };
+  } else {
+    const branch = document.getElementById('mpGuestBranch').value;
+    const employeeName = document.getElementById('mpGuestName').value;
+    const pin = document.getElementById('mpGuestPin').value.trim();
+    if(!branch||!employeeName){ err.textContent='יש לבחור סניף ושם עובד'; return; }
+    if(!/^\d{4}$/.test(pin)){ err.textContent='יש להזין קוד PIN בן 4 ספרות'; return; }
+    payload = { action:'requestManualPunch', branch, employeeName, pin, date, time, type, reason };
+  }
   err.textContent='שולח…';
-  const r=await apiPost({ action:'requestManualPunch', username:state.emp.username,
-    password:state.emp.pw, date, time, type, reason });
+  const r=await apiPost(payload);
   err.textContent='';
   if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
   hide('manualPunchOverlay');
@@ -5370,7 +5415,7 @@ function setAuthUI(){
   document.getElementById('myConsBtn').classList.toggle('hidden', restricted);
   document.getElementById('mySwapBtn').classList.toggle('hidden', restricted);
   document.getElementById('myAttBtn').classList.toggle('hidden', restricted);
-  document.getElementById('manualPunchBtn').classList.toggle('hidden', restricted);
+  document.getElementById('manualPunchBtn').classList.toggle('hidden', restricted || m);
   document.getElementById('pdfBtn').classList.toggle('hidden', restricted);
   document.getElementById('empFilter').classList.toggle('hidden', restricted);
   document.getElementById('deptFilter').classList.toggle('hidden', restricted);
