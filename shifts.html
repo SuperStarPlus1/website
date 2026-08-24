@@ -466,10 +466,17 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <button id="f101Link" class="btn plain" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #fdba74;color:#9a3412;font-weight:800">📋 למילוי הטופס לחץ כאן</button>
   <span class="spacer"></span>
 </div>
-<div class="notice hidden" id="annNotice" style="background:#eff6ff;color:#1e3a8a;border-bottom:1px solid #93c5fd;font-weight:600">
-  <span>📢 <b id="annTitle"></b> — <span id="annText"></span></span>
-  <span class="spacer"></span>
-  <button class="btn plain" id="annDismiss" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #93c5fd;color:#1e3a8a">✕ סגירה</button>
+<div class="notice hidden" id="annNotice" style="background:#eff6ff;color:#1e3a8a;border-bottom:1px solid #93c5fd;font-weight:600;flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span>📢 <b id="annTitle"></b> — <span id="annText"></span></span>
+    <span class="spacer"></span>
+    <button class="btn plain" id="annDismiss" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #93c5fd;color:#1e3a8a">✕ סגירה</button>
+  </div>
+  <div id="annCongratsBox" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:400;font-size:12.5px">
+    <input type="text" id="annCongratsMsg" placeholder="הוסף/י ברכה אישית (לא חובה)" maxlength="200" style="flex:1;min-width:160px;padding:6px 9px;border-radius:8px;border:1.5px solid #93c5fd">
+    <button class="btn plain" id="annCongratsBtn" style="padding:6px 12px;font-size:12px;background:#fff;border:1.5px solid #93c5fd;color:#1e3a8a;font-weight:800;white-space:nowrap">🎉 ברך/י</button>
+    <span id="annCongratsList" style="color:#1e3a8ab3"></span>
+  </div>
 </div>
 
 <main>
@@ -1130,7 +1137,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwP2FxpINjz3Cqs53uP0PrqfY2BJQWaUh0tW4KYaoa74ApGY8DhQp9YaP-LvMvCSho8/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyQjcl1K_hqAjEHBHew04x-EXFf_wSDKVFj7xR0ZlgG3HxKy0Pnn0I7IJZFuSHfBzXg/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -4691,9 +4698,35 @@ function updateAnnouncementBanner(){
   document.getElementById('annTitle').textContent = next.title;
   document.getElementById('annText').textContent = next.text.length>140 ? next.text.slice(0,140)+'…' : next.text;
   n.classList.remove('hidden');
+
+  // ברכת יום הולדת: מוצג רק לעובדים אחרים (לא לחוגג/ת עצמו/ה), עם רשימת מי כבר בירך
+  const box = document.getElementById('annCongratsBox');
+  const canCongrats = !!(next.birthdayEmp && state.emp && state.emp.name !== next.birthdayEmp);
+  box.classList.toggle('hidden', !canCongrats);
+  if(canCongrats){
+    const congrats = next.congrats || [];
+    const mine = congrats.find(c => c.name === state.emp.name);
+    document.getElementById('annCongratsMsg').value = mine ? mine.message : '';
+    document.getElementById('annCongratsBtn').textContent = mine ? '🎉 עדכון ברכה' : '🎉 ברך/י';
+    const names = congrats.map(c => c.message ? `${c.name} ("${c.message}")` : c.name);
+    document.getElementById('annCongratsList').textContent = names.length ? 'בירכו: '+names.join(', ') : '';
+  }
 }
 document.getElementById('annDismiss').addEventListener('click', ()=>{
   if(_annShownRow) localStorage.setItem('sp_ann_seen_'+_annShownRow, '1');
+  updateAnnouncementBanner();
+});
+document.getElementById('annCongratsBtn').addEventListener('click', async ()=>{
+  if(!_annShownRow || !state.emp) return;
+  const btn = document.getElementById('annCongratsBtn');
+  const message = document.getElementById('annCongratsMsg').value.trim();
+  btn.disabled = true;
+  const r = await apiPost({ action:'sendCongrats', username:state.emp.username, password:state.emp.pw, row:_annShownRow, message });
+  btn.disabled = false;
+  if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+  const ann = (state.announcements||[]).find(a=>a.row===_annShownRow);
+  if(ann) ann.congrats = r.congrats || ann.congrats;
+  toast('הברכה נשלחה 🎉','ok');
   updateAnnouncementBanner();
 });
 function updateF101Banner(){
