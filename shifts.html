@@ -583,25 +583,15 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <div id="pdfStage"></div>
 
-<!-- מודאל כניסה -->
+<!-- מודאל כניסה: לוגין אחיד — עובד שהוא גם מנהל מזוהה אוטומטית לפי מספר עובד (ר' elogin/authManager_) -->
 <div class="overlay hidden" id="loginOverlay">
   <div class="modal">
-    <header><h3>כניסה למערכת</h3><p>מנהלים עורכים · עובדים צופים בסידור האישי</p></header>
-    <div class="tabs">
-      <button class="tab active" id="tabMgr">מנהל</button>
-      <button class="tab" id="tabEmp">עובד</button>
-    </div>
+    <header><h3>כניסה למערכת</h3><p>שם משתמש וסיסמה שקיבלת מהמנהל</p></header>
     <div class="mbody">
-      <div id="mgrPane">
-        <div class="mrow"><label>שם מנהל</label><input type="text" id="lgMgrName" name="mgr-username" autocomplete="username"></div>
-        <div class="mrow"><label>סיסמה</label><input type="password" id="lgMgrPw" name="mgr-password" autocomplete="current-password"></div>
-      </div>
-      <div id="empPane" class="hidden">
-        <div class="mrow"><label>שם משתמש (מקבלים מהמנהל)</label><input type="text" id="lgEmpUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
-        <div class="mrow"><label>סיסמה</label><input type="password" id="lgEmpPw" name="password" autocomplete="current-password"></div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
-          <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
-      </div>
+      <div class="mrow"><label>שם משתמש</label><input type="text" id="lgUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
+      <div class="mrow"><label>סיסמה</label><input type="password" id="lgPw" name="password" autocomplete="current-password"></div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
+        <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
       <div class="merr" id="lgErr"></div>
     </div>
     <div class="mfoot">
@@ -1140,7 +1130,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbye7H53P3N5yFtaha8gKEzNUDJq2_lO5zCApx9CRYkHOewt-rYnXOw-stk5h6sXgZm8/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzYGSGd_P5CbE2LI241cdipg7eqd7hmb0lBQmYJZGpSpNOZ0QPZKXhuP4I3chZXP0kO/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -2304,6 +2294,7 @@ function mgrRowEl(m){
     </select>
     <select class="i-branch" title="סניף (מנהל משמרת בלבד)" style="${m.role===ROLE_ADMIN?'display:none':''}">${branchOpts}</select>
     <input type="text" class="i-memail" value="${esc(m.email||'')}" placeholder="אימייל להתראות" dir="ltr">
+    <input type="text" class="i-empno" value="${esc(m.empNo||'')}" placeholder="מספר עובד (זיהוי אוטומטי בכניסה)" dir="ltr">
     <button class="del" title="הסרה">✕</button>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelector('.i-role').addEventListener('change',e=>{
@@ -2312,7 +2303,7 @@ function mgrRowEl(m){
   return div;
 }
 document.getElementById('mgrAdd').addEventListener('click',()=>{
-  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:'',branch:state.branches[0]||''}));
+  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:'',branch:state.branches[0]||'',empNo:''}));
 });
 document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
@@ -2320,7 +2311,8 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
     password: r.querySelector('.i-pw').value.trim(),
     role: r.querySelector('.i-role').value,
     email: r.querySelector('.i-memail').value.trim(),
-    branch: r.querySelector('.i-branch').value
+    branch: r.querySelector('.i-branch').value,
+    empNo: r.querySelector('.i-empno').value.trim()
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;
@@ -2331,9 +2323,13 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   try{
     const r = await apiPost({ action:'saveManagers', ...mgrAuth(), managers:list });
     if(!r.ok) throw new Error(r.error);
-    // אם המנהל הנוכחי שינה את הסיסמה/סניף של עצמו — עדכון החיבור
-    const me = list.find(m=>m.name===state.mgr.name);
-    if(me){ state.mgr.pw = me.password; state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; store.set({kind:'mgr',name:me.name,pw:me.password}); }
+    // אם המנהל הנוכחי שינה את הסיסמה/סניף של עצמו — עדכון החיבור.
+    // עובד-מנהל מאוחד מזוהה לפי מספר עובד (state.mgr.name הוא שם המשתמש שלו, לא שם השורה בגיליון);
+    // מנהל "טהור" בלי חשבון עובד ממשיך להיות מזוהה לפי שם, כמו קודם.
+    const myEmpNo = state.emp ? (empByName(state.emp.name)||{}).empNo : null;
+    const me = myEmpNo ? list.find(m=>m.empNo===myEmpNo) : list.find(m=>m.name===state.mgr.name);
+    if(me && !state.emp){ state.mgr.pw = me.password; state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; store.set({kind:'mgr',name:me.name,pw:me.password}); }
+    else if(me && state.emp){ state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; }
     hide('mgrsOverlay');
     toast('המנהלים נשמרו ✓','ok');
   }catch(e){ document.getElementById('mgrErr').textContent = e.message; }
@@ -5411,46 +5407,26 @@ document.getElementById('consToggleHistory').addEventListener('click', ()=>{
 });
 
 /* ============ כניסה ויציאה ============ */
-let loginTab = 'mgr';
 function openLoginModal(){
   document.getElementById('lgErr').textContent='';
-  document.getElementById('lgMgrPw').value=''; document.getElementById('lgEmpPw').value='';
+  document.getElementById('lgPw').value='';
   show('loginOverlay');
 }
 document.getElementById('loginBtn').addEventListener('click', openLoginModal);
-function setTab(t){
-  loginTab = t;
-  document.getElementById('tabMgr').classList.toggle('active', t==='mgr');
-  document.getElementById('tabEmp').classList.toggle('active', t==='emp');
-  document.getElementById('mgrPane').classList.toggle('hidden', t!=='mgr');
-  document.getElementById('empPane').classList.toggle('hidden', t!=='emp');
-  document.getElementById('lgErr').textContent='';
-}
-document.getElementById('tabMgr').addEventListener('click',()=>setTab('mgr'));
-document.getElementById('tabEmp').addEventListener('click',()=>setTab('emp'));
 
+/* לוגין אחיד: תמיד מנסים קודם ככניסת עובד (elogin) — אם השם רשום גם כמנהל (לפי מספר
+ * עובד, ר' authManager_/elogin בשרת) מקבלים אוטומטית גם גישת ניהול (ר' applyEmpMgrRole_).
+ * נופלים חזרה ל-mlogin רק אם שם המשתמש לא קיים בכלל כעובד — תאימות לאחור למנהל
+ * "טהור" בלי חשבון עובד (למשל מנהל חיצוני שלא מוזן בגיליון העובדים). */
 async function doLogin(){
   const err = document.getElementById('lgErr');
+  const username = document.getElementById('lgUser').value.trim();
+  const pw = document.getElementById('lgPw').value;
+  if(!username){ err.textContent='יש להזין שם משתמש'; return; }
   err.textContent='בודק…';
   try{
-    if(loginTab==='mgr'){
-      const name = document.getElementById('lgMgrName').value.trim();
-      const pw = document.getElementById('lgMgrPw').value;
-      if(!name){ err.textContent='יש להזין שם מנהל'; return; }
-      const r = await apiPost({ action:'mlogin', mname:name, password:pw });
-      if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
-      state.mgr = { name:r.name||name, pw, role:r.role, branch:r.branch||'' };
-      state.branches = r.branches || [];
-      if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
-      store.set({ kind:'mgr', name:state.mgr.name, pw });
-      hide('loginOverlay'); setAuthUI(); load();
-      toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
-    } else {
-      const username = document.getElementById('lgEmpUser').value.trim();
-      const pw = document.getElementById('lgEmpPw').value;
-      if(!username){ err.textContent='יש להזין שם משתמש'; return; }
-      const r = await apiPost({ action:'elogin', username, password:pw });
-      if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+    const r = await apiPost({ action:'elogin', username, password:pw });
+    if(r.ok){
       state.emp = { name:r.name, username, pw, active:r.active!==false };
       applyEmpMgrRole_(r, username, pw);
       store.set({ kind:'emp', name:r.name, username, pw }, document.getElementById('lgRemember').checked);
@@ -5462,11 +5438,25 @@ async function doLogin(){
         load();
         toast(state.emp.active ? 'שלום '+r.name+(state.mgr?' · '+state.mgr.role:'') : 'שלום '+r.name+' · גישה מוגבלת לתלושי שכר בלבד','ok');
       }
+      return;
     }
+    if(r.error === 'שם משתמש לא נמצא'){
+      const r2 = await apiPost({ action:'mlogin', mname:username, password:pw });
+      if(r2.ok){
+        state.mgr = { name:r2.name||username, pw, role:r2.role, branch:r2.branch||'' };
+        state.branches = r2.branches || [];
+        if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
+        store.set({ kind:'mgr', name:state.mgr.name, pw });
+        hide('loginOverlay'); setAuthUI(); load();
+        toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
+        return;
+      }
+    }
+    err.textContent = r.error||'שגיאה';
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
 }
 document.getElementById('lgOk').addEventListener('click',doLogin);
-['lgMgrPw','lgEmpPw'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }));
+document.getElementById('lgPw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 
 // עובד-מנהל מאוחד מחובר בבת אחת (state.emp+state.mgr יחד) — כל כפתור "יציאה" מנתק את שניהם,
 // כדי לא להשאיר מצב-ביניים מבלבל של "יצא מהניהול אבל עדיין מחובר כעובד" או להפך.
