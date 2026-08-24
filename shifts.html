@@ -184,6 +184,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:100;padding:14px}
 .modal{background:#fff;border-radius:14px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden;max-height:92vh;display:flex;flex-direction:column}
 .modal.wide{max-width:600px}
+.modal.xwide{max-width:1100px}
 .modal header{background:var(--navy);position:static;padding:13px 16px;display:block;box-shadow:none}
 .modal header h3{font-family:'Rubik';font-size:15px;font-weight:700}
 .modal header p{font-size:12px;color:#c7d0e2;margin-top:2px}
@@ -873,7 +874,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 
 <!-- מסך נוכחות בזמן אמת (מנהל) -->
 <div class="overlay hidden" id="liveOverlay">
-  <div class="modal wide">
+  <div class="modal xwide">
     <header><h3>📍 נוכחות בזמן אמת</h3><p>עובדים שדיווחו כניסה ועדיין לא דיווחו יציאה היום</p></header>
     <div class="mbody"><div id="liveList">טוען…</div></div>
     <div class="mfoot">
@@ -3619,11 +3620,11 @@ async function renderLive(){
     const byBranch={};
     lines.forEach(l=>{ (byBranch[l.branch||'—']=byBranch[l.branch||'—']||[]).push(l); });
     bodyHtml = Object.keys(byBranch).sort().map(b=>
-      `<h4 style="margin:14px 0 6px">${esc(b)}</h4><table class="att-table">${tableHdr}${rowsHtml(byBranch[b])}</table>`).join('');
+      `<h4 style="margin:14px 0 6px">${esc(b)}</h4><table class="att-table" style="min-width:720px;width:100%">${tableHdr}${rowsHtml(byBranch[b])}</table>`).join('');
   } else {
-    bodyHtml = `<table class="att-table">${tableHdr}${rowsHtml(lines)}</table>`;
+    bodyHtml = `<table class="att-table" style="min-width:720px;width:100%">${tableHdr}${rowsHtml(lines)}</table>`;
   }
-  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2} · לחיצה על השעות בכל שורה מציגה פירוט כניסות</div>`+bodyHtml;
+  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2} · לחיצה על השעות בכל שורה מציגה פירוט כניסות</div><div style="overflow-x:auto">${bodyHtml}</div>`;
   box.querySelectorAll('.live-dur').forEach(td=>td.addEventListener('click',()=>{
     document.getElementById(td.dataset.target).classList.toggle('hidden');
   }));
