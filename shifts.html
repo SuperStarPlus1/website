@@ -1137,7 +1137,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzIKdIHDtAM_X0dUdWK4Cb6QSAZqOgiYCMv2Ou4E1tlE-t9pqar7Z_PhrFJkGegNr9F/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYH445ogm9GaUgns40iWUbvke0iE7RIn5wZCY6sOJ7ZpAv59bX0ZaVlC2Lnkag795X/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -5311,9 +5311,11 @@ function openConsReview(){
       const acts = v.status==='ממתין'
         ? `<button class="ap" data-a="מאושר">אשר</button><button class="rj" data-a="נדחה">דחה</button>`
         : `<button class="dl2" data-a="מחק">מחיקה</button>`;
+      const overBal = v.vacBalance>0 && v.days>v.vacBalance;
+      const balWarn = overBal ? ` <span style="color:#9a3412;font-size:11px;font-weight:700">⚠ חורג מהיתרה (${v.days} ימים, יתרה ${v.vacBalance})</span>` : '';
       return `<div class="cons-item vac" data-from="${v.from}" data-to="${v.to}" data-emp="${esc(v.employee)}">
         <span><b>${esc(v.employee)}</b> · ${fmtR(v)} · ${esc(v.reason)}
-          <span class="st ${v.status==='ממתין'?'wait':'ok'}">${esc(v.status)}</span></span>
+          <span class="st ${v.status==='ממתין'?'wait':'ok'}">${esc(v.status)}</span>${balWarn}</span>
         <span class="acts">${acts}</span></div>`;
     }).join('') : '<div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">אין בקשות חופשה ממתינות</div>');
 
