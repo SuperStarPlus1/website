@@ -1140,7 +1140,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwWt671V3fH-f_tYbQ20od1o8BG4wTCoy6XD2LUeqW4wtzlVv2JBfgg-14Qs7ITswAq/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbye7H53P3N5yFtaha8gKEzNUDJq2_lO5zCApx9CRYkHOewt-rYnXOw-stk5h6sXgZm8/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -1321,6 +1321,15 @@ function confirmConflicts(emp, dateIso, start, excludeSids){
 }
 
 /* ============ שכבת שרת ============ */
+/* עובד-מנהל מאוחד: אם elogin החזיר mgrRole (השם רשום גם בגיליון "מנהלים"), מפעילים גם
+ * את מצב הניהול — עם שם המשתמש+סיסמת העובד עצמם (mgrAuth שולח אותם ל-authManager_,
+ * שיודע לפתור אותם דרך authEmployee_+findManagerByName_ בלי סיסמת מנהל נפרדת). */
+function applyEmpMgrRole_(r, username, pw){
+  if(!r.mgrRole){ state.mgr = null; return; }
+  state.mgr = { name: username, pw, role: r.mgrRole, branch: r.mgrBranch||'' };
+  state.branches = r.mgrBranches || [];
+  if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
+}
 function mgrAuth(){ return state.mgr ? { mname: state.mgr.name, password: state.mgr.pw } : {}; }
 function authed(){ return !!(state.mgr || state.emp); }
 function anyAuth(){
@@ -5443,13 +5452,15 @@ async function doLogin(){
       const r = await apiPost({ action:'elogin', username, password:pw });
       if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
       state.emp = { name:r.name, username, pw, active:r.active!==false };
+      applyEmpMgrRole_(r, username, pw);
       store.set({ kind:'emp', name:r.name, username, pw }, document.getElementById('lgRemember').checked);
-      state.filterEmp = r.name;
+      // עובד-מנהל מאוחד: לא מסננים את לוח הסידור לשורה שלו בלבד — מנהל צריך לראות/לערוך את כולם
+      state.filterEmp = state.mgr ? '' : r.name;
       hide('loginOverlay'); setAuthUI();
       if(r.mustChange){ openPwChange(); }
       else {
         load();
-        toast(state.emp.active ? 'שלום '+r.name : 'שלום '+r.name+' · גישה מוגבלת לתלושי שכר בלבד','ok');
+        toast(state.emp.active ? 'שלום '+r.name+(state.mgr?' · '+state.mgr.role:'') : 'שלום '+r.name+' · גישה מוגבלת לתלושי שכר בלבד','ok');
       }
     }
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
@@ -5457,34 +5468,41 @@ async function doLogin(){
 document.getElementById('lgOk').addEventListener('click',doLogin);
 ['lgMgrPw','lgEmpPw'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }));
 
-document.getElementById('adminExit').addEventListener('click',()=>{
-  if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
-  state.mgr=null; store.clear();
+// עובד-מנהל מאוחד מחובר בבת אחת (state.emp+state.mgr יחד) — כל כפתור "יציאה" מנתק את שניהם,
+// כדי לא להשאיר מצב-ביניים מבלבל של "יצא מהניהול אבל עדיין מחובר כעובד" או להפך.
+function fullLogout_(){
+  state.mgr=null; state.emp=null; state.filterEmp=''; store.clear();
   state.dirtyShifts=false; state.dirtyEmps=false;
-  setAuthUI(); gateOrLoad();
-});
-document.getElementById('viewerExit').addEventListener('click',()=>{
-  state.emp=null; state.filterEmp=''; store.clear();
   state._homeShown=false; hideEmpHome();
   document.getElementById('backHomeFab').classList.add('hidden');
   setAuthUI(); gateOrLoad();
+}
+document.getElementById('adminExit').addEventListener('click',()=>{
+  if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
+  fullLogout_();
+});
+document.getElementById('viewerExit').addEventListener('click',()=>{
+  if(isMgr() && hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
+  fullLogout_();
 });
 
 function setAuthUI(){
   const m = isMgr();
   const restricted = !!state.emp && state.emp.active===false;
+  // עובד-מנהל מאוחד (state.emp+state.mgr יחד): שני הסרגלים מוצגים בו-זמנית — תפריטי הניהול
+  // בנוסף לצ'יפ העובד האישי, ולא לסירוגין כמו במצב "מנהל טהור" (בלי חשבון עובד).
   document.getElementById('adminTools').classList.toggle('hidden', !m);
   document.getElementById('loginBtn').classList.toggle('hidden', m || !!state.emp);
-  document.getElementById('viewerChip').classList.toggle('hidden', !state.emp || m);
+  document.getElementById('viewerChip').classList.toggle('hidden', !state.emp);
   document.getElementById('myConsBtn').classList.toggle('hidden', restricted);
   document.getElementById('mySwapBtn').classList.toggle('hidden', restricted);
   document.getElementById('myAttBtn').classList.toggle('hidden', restricted);
-  document.getElementById('manualPunchBtn').classList.toggle('hidden', restricted || m);
+  document.getElementById('manualPunchBtn').classList.toggle('hidden', restricted || (m && !state.emp));
   document.getElementById('pdfBtn').classList.toggle('hidden', restricted);
   document.getElementById('empFilter').classList.toggle('hidden', restricted);
   document.getElementById('deptFilter').classList.toggle('hidden', restricted);
   if(m){
-    document.getElementById('mgrName').textContent = state.mgr.name;
+    document.getElementById('mgrName').textContent = state.emp ? state.emp.name : state.mgr.name;
     document.getElementById('mgrRole').textContent = state.mgr.role;
     document.getElementById('mgrBranchChip').textContent = state.mgr.role===ROLE_ADMIN ? 'כל הסניפים' : (state.mgr.branch||'');
     const admin = state.mgr.role===ROLE_ADMIN;
@@ -5890,7 +5908,11 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
     else store.clear();
   } else if(auth && auth.kind==='emp' && auth.username){
     const r = await apiPost({ action:'elogin', username:auth.username, password:auth.pw }).catch(()=>({ok:false}));
-    if(r.ok){ state.emp = { name:r.name, username:auth.username, pw:auth.pw, active:r.active!==false }; state.filterEmp = r.name; }
+    if(r.ok){
+      state.emp = { name:r.name, username:auth.username, pw:auth.pw, active:r.active!==false };
+      applyEmpMgrRole_(r, auth.username, auth.pw);
+      state.filterEmp = state.mgr ? '' : r.name;
+    }
     else store.clear();
   }
   setAuthUI();
