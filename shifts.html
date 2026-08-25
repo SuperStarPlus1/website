@@ -1141,7 +1141,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYH445ogm9GaUgns40iWUbvke0iE7RIn5wZCY6sOJ7ZpAv59bX0ZaVlC2Lnkag795X/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxBPVxC57nXh16_t0DHbsAOgjglrjRYwBsaqVMVk1rmBGYrKPt72BR1JBCNYiRkyojZ/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -2100,7 +2100,7 @@ function empRow(e){
   div.innerHTML = `<div class="emp-top">
       <input type="text" class="i-name" value="${esc(e.name)}" placeholder="שם העובד">
       <input type="text" class="i-user" value="${esc(e.username||'')}" placeholder="שם משתמש" dir="ltr">
-      <input type="text" class="i-pw" value="${esc(e.password||'')}" placeholder="סיסמה">
+      <input type="text" class="i-pw" value="" data-orig="${esc(e.password||'')}" placeholder="${e.password?'•••• (השאר ריק לשמירה)':'קבע סיסמה'}">
       <input type="text" class="i-pin" value="${esc(e.pin||'')}" placeholder="PIN קיוסק" maxlength="4" pattern="\\d{4}" title="קוד בן 4 ספרות לכניסה למסך הקיוסק" style="width:80px" dir="ltr">
       <select class="i-active" title="סטטוס עובד" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-weight:700">
         <option value="1" ${e.active!==false?'selected':''}>✅ פעיל</option>
@@ -2199,7 +2199,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
   if(!nm){ toast('יש להזין שם עובד','err'); return; }
   const updated={
     name:nm, dept:depts.join(', '), depts, active:r.querySelector('.i-active').value!=='0',
-    offDays, password:r.querySelector('.i-pw').value.trim(),
+    offDays, password:r.querySelector('.i-pw').value.trim() || r.querySelector('.i-pw').dataset.orig || '',
     pin:r.querySelector('.i-pin').value.trim(),
     username:r.querySelector('.i-user').value.trim(),
     skills:r.querySelector('.i-skills').value.trim(),
@@ -2298,7 +2298,7 @@ function mgrRowEl(m){
   div.className='mgr-item';
   const branchOpts = (state.branches||[]).map(b=>`<option value="${esc(b)}" ${m.branch===b?'selected':''}>${esc(b)}</option>`).join('');
   div.innerHTML = `<input type="text" class="i-name" value="${esc(m.name)}" placeholder="שם מנהל">
-    <input type="text" class="i-pw" value="${esc(m.password)}" placeholder="סיסמה">
+    <input type="text" class="i-pw" value="" data-orig="${esc(m.password||'')}" placeholder="${m.password?'•••• (השאר ריק לשמירה)':'קבע סיסמה'}">
     <select class="i-role">
       <option ${m.role===ROLE_ADMIN?'selected':''}>${ROLE_ADMIN}</option>
       <option ${m.role!==ROLE_ADMIN?'selected':''}>מנהל משמרת</option>
@@ -2319,7 +2319,7 @@ document.getElementById('mgrAdd').addEventListener('click',()=>{
 document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
     name: r.querySelector('.i-name').value.trim(),
-    password: r.querySelector('.i-pw').value.trim(),
+    password: r.querySelector('.i-pw').value.trim() || r.querySelector('.i-pw').dataset.orig || '',
     role: r.querySelector('.i-role').value,
     email: r.querySelector('.i-memail').value.trim(),
     branch: r.querySelector('.i-branch').value,
@@ -5527,6 +5527,20 @@ function fullLogout_(){
   document.getElementById('backHomeFab').classList.add('hidden');
   setAuthUI(); gateOrLoad();
 }
+
+/* ============ ניתוק אוטומטי לאחר חוסר פעילות — 15 דק' לעובד, 5 דק' למנהל/אדמין (כולל חשבון מאוחד) ============ */
+let _lastActivity = Date.now();
+['mousemove','mousedown','keydown','touchstart','wheel','scroll'].forEach(ev =>
+  document.addEventListener(ev, () => { _lastActivity = Date.now(); }, { passive:true, capture:true }));
+setInterval(() => {
+  if(!authed()) return;
+  const limitMin = isMgr() ? 5 : 15;
+  if(Date.now() - _lastActivity >= limitMin*60000){
+    fullLogout_();
+    toast('התנתקת אוטומטית עקב '+limitMin+' דקות חוסר פעילות','err');
+  }
+}, 20000);
+
 document.getElementById('adminExit').addEventListener('click',()=>{
   if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?')) return;
   fullLogout_();
