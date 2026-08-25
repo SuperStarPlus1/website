@@ -934,6 +934,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
           <button class="btn plain" id="attMgrPDF" style="padding:8px 16px;background:#fee2e2;color:#b91c1c;font-weight:700">📄 PDF</button>
           <button class="btn plain" id="attMgrManual" style="padding:8px 16px;background:#fef3c7;color:#92400e;font-weight:700">✏ ממתינות</button>
           <button class="btn plain" id="attMgrDatImport" style="padding:8px 16px;background:#dbeafe;color:#1d4ed8;font-weight:700">📥 ייבוא משעון</button>
+          <button class="btn plain" id="attMgrReclassify" style="padding:8px 16px;background:#ede9fe;color:#5b21b6;font-weight:700">🔄 סיווג מחדש</button>
         </div>
       </div>
       <div id="attMgrReport"></div>
@@ -1141,7 +1142,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiBTbkoLQgZAjT-vqJ9AFYDMNtYn7o3aQrbeOOxL_FdOk8TXYC-5LnMTAx5eGdkWei/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx0FZeWdk-SAV80oMfZKlrW_PrD2BUUr1XJD8KVsXAeCdVG9vkhsapXZdUVGvs6_shJ/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -3555,6 +3556,7 @@ document.getElementById('attBtn').addEventListener('click', ()=>{
   document.getElementById('attMgrReport').innerHTML='';
   document.getElementById('attMgrManual').classList.toggle('hidden', !isAdmin());
   document.getElementById('attMgrDatImport').classList.toggle('hidden', !isAdmin());
+  document.getElementById('attMgrReclassify').classList.toggle('hidden', !isAdmin());
   show('attMgrOverlay');
 });
 document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
@@ -4041,6 +4043,21 @@ document.getElementById('attDatUpload').addEventListener('click', async ()=>{
     toast('הייבוא הושלם','ok');
   }catch(e){ resultBox.innerHTML = '<span style="color:#b91c1c">שגיאה: '+esc(e.message)+'</span>'; }
   btn.disabled = false; btn.textContent = 'העלאה וייבוא';
+});
+
+document.getElementById('attMgrReclassify').addEventListener('click', async ()=>{
+  const month = document.getElementById('attMgrMonth').value;
+  if(!month) return;
+  if(!confirm('לסווג מחדש את כל חתימות השעון לחודש '+fmtMonth(month)+'? פעולה זו תתקן רישומי כניסה/הפסקה/חזרה/יציאה שגויים לפי הלוגיקה העדכנית, ולא תיגע בדיווח עצמי/GPS.')) return;
+  const btn = document.getElementById('attMgrReclassify');
+  btn.disabled = true; const prevTxt = btn.textContent; btn.textContent = 'מסווג…';
+  try{
+    const r = await apiPost({ action:'reclassifyAttendance', ...mgrAuth(), month });
+    if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
+    toast(`תוקנו ${r.updatedEmployeeDays} ימי-עובד (${r.rowsWritten} רשומות נכתבו)`,'ok');
+    loadMgrDetailed();
+  }catch(e){ toast('שגיאה: '+e.message,'err'); }
+  btn.disabled = false; btn.textContent = prevTxt;
 });
 
 document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
