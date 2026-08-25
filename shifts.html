@@ -1141,7 +1141,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxBPVxC57nXh16_t0DHbsAOgjglrjRYwBsaqVMVk1rmBGYrKPt72BR1JBCNYiRkyojZ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbypl3GN1eHMwkgKu4bzbhGJKsIZ9f8DlsN_R85rIbDDRpqMa6sNDGN5Vpu7OvHOHITc/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -3553,6 +3553,8 @@ document.getElementById('attBtn').addEventListener('click', ()=>{
     bs.classList.add('hidden');
   }
   document.getElementById('attMgrReport').innerHTML='';
+  document.getElementById('attMgrManual').classList.toggle('hidden', !isAdmin());
+  document.getElementById('attMgrDatImport').classList.toggle('hidden', !isAdmin());
   show('attMgrOverlay');
 });
 document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
@@ -3828,6 +3830,8 @@ async function loadMgrDetailed(){
     return;
   }
   lastMgrDetailed = r;
+  const canEdit = isAdmin();
+  const rowAttrs = canEdit ? 'class="mgr-att-row" style="cursor:pointer" title="לחיצה לעריכת שעות"' : '';
   const withData = r.employees.filter(e=>e.days.length);
   if(!withData.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחים בחודש זה</div>'; return; }
   box.innerHTML = withData.map(emp=>{
@@ -3835,12 +3839,12 @@ async function loadMgrDetailed(){
       const dd=new Date(d.date+'T00:00:00');
       if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="6" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td></tr>`;
       const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
-      if(!d.inT && d.siteNote) return `<tr class="mgr-att-row" data-emp="${esc(emp.employee)}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לעריכת שעות">
+      if(!d.inT && d.siteNote) return `<tr ${rowAttrs} data-emp="${esc(emp.employee)}" data-date="${d.date}">
         <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
         <td colspan="4" style="text-align:center;color:#1e40af;font-size:11px">📍 ${esc(d.siteNote)}</td>
         <td><b>${fmtMin(d.minutes)}</b></td>
         <td>${d.ot?'<b style="color:#9a3412">'+d.ot+'</b>':'—'}</td></tr>`;
-      return `<tr class="mgr-att-row" data-emp="${esc(emp.employee)}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לעריכת שעות">
+      return `<tr ${rowAttrs} data-emp="${esc(emp.employee)}" data-date="${d.date}">
         <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
         <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
         <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}</td>
@@ -3855,7 +3859,7 @@ async function loadMgrDetailed(){
       <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
         רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.empType==='חודשי'?'—':emp.hourRate+' ₪'}</div>
       <div style="overflow-x:auto"><table class="att-table" style="min-width:720px;width:100%"><tr><th>יום</th><th>כניסה</th><th>תחילת הפסקה</th><th>סיום הפסקה</th><th>סיום משמרת</th><th>שעות</th><th>נוספות</th></tr>${rows}</table></div>
-      <div style="font-size:10.5px;color:var(--muted);padding:5px 10px">לחיצה על שורה — עריכת שעות נוכחות</div>
+      ${canEdit ? '<div style="font-size:10.5px;color:var(--muted);padding:5px 10px">לחיצה על שורה — עריכת שעות נוכחות</div>' : ''}
     </div>`;
   }).join('');
   box.querySelectorAll('.mgr-att-row').forEach(row=>row.addEventListener('click',()=>openMgrAttEdit(row.dataset.emp, row.dataset.date)));
