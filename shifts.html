@@ -238,6 +238,14 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-item{display:grid;grid-template-columns:1fr 95px 120px 1fr 34px;gap:7px;align-items:center}
 .mgr-item input,.mgr-item select{border:1.5px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
 .mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
+.mgr-item .bell{border:1.5px solid var(--line);background:#f8fafc;border-radius:8px;height:34px;font-size:15px;cursor:pointer}
+.mgr-item .bell.active{background:#eef2ff;border-color:#818cf8}
+.mgr-prefs-panel{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:12.5px}
+.mgr-prefs-panel table{width:100%;border-collapse:collapse}
+.mgr-prefs-panel th{font-size:11px;color:var(--muted);font-weight:700;padding:3px 6px;text-align:center}
+.mgr-prefs-panel th:first-child{text-align:right}
+.mgr-prefs-panel td{padding:3px 6px;border-top:1px solid var(--line)}
+.mgr-prefs-panel td:not(:first-child){text-align:center}
 .mgr-list{display:flex;flex-direction:column;gap:8px}
 
 /* שיבוץ אוטומטי — תקן יומי */
@@ -1142,7 +1150,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 /* ================================================================
    הגדרות
    ================================================================ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbytCAWJc0hV10rHmhZNxSI8Y-l8X9xLbgYaid7siKmhwlnZ_TJVoFzOeZCkP7EtD-bJ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbze9AQ0vpidBqKhVzd6lqSwUhVN_PxPTVj33_Xfmr3JBjqPnkDMqJH8A7NCIN5BDkv_/exec';
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
@@ -2294,10 +2302,32 @@ async function openMgrs(){
     show('mgrsOverlay');
   }catch(e){ toast('שגיאה: '+e.message,'err'); }
 }
+const MGR_ALERT_TYPES = [
+  ['late','איחור עובד'],
+  ['longBreak','הפסקה ארוכה'],
+  ['noCheckout','אין דיווח יציאה'],
+  ['locationAnomaly','חריגת נוכחות/מיקום'],
+  ['constraint','הגשת אילוץ'],
+  ['swap','בקשת החלפה'],
+  ['vacation','בקשת חופשה'],
+  ['sick','בקשת מחלה'],
+  ['form101','הגשת טופס 101'],
+  ['manualPunch','הזנה ידנית לאישור'],
+  ['deptHours','חריגת שעות מחלקתית (אדמין)']
+];
+// ברירת מחדל תואמת בדיוק את defaultMgrAlertPref_ בשרת — הכל מופעל, חוץ משתי התראות-מייל שהיו מוגבלות לאשרף בלבד
+function defaultMgrPref(name, key, channel){
+  if(channel==='email' && (key==='late' || key==='manualPunch')) return name==='אשרף';
+  return true;
+}
+function parseMgrPrefs(raw){
+  try{ return raw ? JSON.parse(raw) : {}; }catch(e){ return {}; }
+}
 function mgrRowEl(m){
   const div = document.createElement('div');
   div.className='mgr-item';
   const branchOpts = (state.branches||[]).map(b=>`<option value="${esc(b)}" ${m.branch===b?'selected':''}>${esc(b)}</option>`).join('');
+  const prefs = parseMgrPrefs(m.prefs);
   div.innerHTML = `<input type="text" class="i-name" value="${esc(m.name)}" placeholder="שם מנהל">
     <input type="text" class="i-pw" value="" data-orig="${esc(m.password||'')}" placeholder="${m.password?'•••• (השאר ריק לשמירה)':'קבע סיסמה'}">
     <select class="i-role">
@@ -2307,15 +2337,40 @@ function mgrRowEl(m){
     <select class="i-branch" title="סניף (מנהל משמרת בלבד)" style="${m.role===ROLE_ADMIN?'display:none':''}">${branchOpts}</select>
     <input type="text" class="i-memail" value="${esc(m.email||'')}" placeholder="אימייל להתראות" dir="ltr">
     <input type="text" class="i-empno" value="${esc(m.empNo||'')}" placeholder="מספר עובד (זיהוי אוטומטי בכניסה)" dir="ltr">
-    <button class="del" title="הסרה">✕</button>`;
+    <button class="del" title="הסרה">✕</button>
+    <button type="button" class="bell" title="הגדרת התראות">🔔</button>
+    <div class="mgr-prefs-panel hidden">
+      <table><tr><th>סוג התראה</th><th>מייל</th><th>Push</th></tr>
+        ${MGR_ALERT_TYPES.map(([key,label])=>{
+          const emailOn = (prefs[key] && typeof prefs[key].email==='boolean') ? prefs[key].email : defaultMgrPref(m.name,key,'email');
+          const pushOn = (prefs[key] && typeof prefs[key].push==='boolean') ? prefs[key].push : defaultMgrPref(m.name,key,'push');
+          return `<tr data-key="${key}"><td>${esc(label)}</td>
+            <td><input type="checkbox" class="pref-email" ${emailOn?'checked':''}></td>
+            <td><input type="checkbox" class="pref-push" ${pushOn?'checked':''}></td></tr>`;
+        }).join('')}
+      </table>
+    </div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelector('.i-role').addEventListener('change',e=>{
     div.querySelector('.i-branch').style.display = e.target.value===ROLE_ADMIN ? 'none' : '';
   });
+  div.querySelector('.bell').addEventListener('click',(e)=>{
+    e.preventDefault();
+    const panel = div.querySelector('.mgr-prefs-panel');
+    panel.classList.toggle('hidden');
+    div.querySelector('.bell').classList.toggle('active', !panel.classList.contains('hidden'));
+  });
   return div;
 }
+function mgrRowPrefsJson(row){
+  const out = {};
+  row.querySelectorAll('.mgr-prefs-panel tr[data-key]').forEach(tr=>{
+    out[tr.dataset.key] = { email: tr.querySelector('.pref-email').checked, push: tr.querySelector('.pref-push').checked };
+  });
+  return JSON.stringify(out);
+}
 document.getElementById('mgrAdd').addEventListener('click',()=>{
-  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:'',branch:state.branches[0]||'',empNo:''}));
+  document.getElementById('mgrList').appendChild(mgrRowEl({name:'',password:'',role:'מנהל משמרת',email:'',branch:state.branches[0]||'',empNo:'',prefs:''}));
 });
 document.getElementById('mgrsOk').addEventListener('click',async ()=>{
   const list = [...document.querySelectorAll('#mgrList .mgr-item')].map(r=>({
@@ -2324,7 +2379,8 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
     role: r.querySelector('.i-role').value,
     email: r.querySelector('.i-memail').value.trim(),
     branch: r.querySelector('.i-branch').value,
-    empNo: r.querySelector('.i-empno').value.trim()
+    empNo: r.querySelector('.i-empno').value.trim(),
+    prefs: mgrRowPrefsJson(r)
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;
