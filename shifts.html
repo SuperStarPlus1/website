@@ -240,11 +240,13 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
 .mgr-item .bell{border:1.5px solid var(--line);background:#f8fafc;border-radius:8px;height:34px;font-size:15px;cursor:pointer}
 .mgr-item .bell.active{background:#eef2ff;border-color:#818cf8}
-.mgr-prefs-panel{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:12.5px}
-.mgr-prefs-panel table{width:100%;border-collapse:collapse}
+.mgr-prefs-panel{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:12.5px;overflow-x:auto}
+.mgr-prefs-panel table{width:100%;border-collapse:collapse;table-layout:fixed}
 .mgr-prefs-panel th{font-size:11px;color:var(--muted);font-weight:700;padding:3px 6px;text-align:center}
-.mgr-prefs-panel th:first-child{text-align:right}
-.mgr-prefs-panel td{padding:3px 6px;border-top:1px solid var(--line)}
+.mgr-prefs-panel th:first-child,.mgr-prefs-panel td:first-child{text-align:right;width:auto}
+.mgr-prefs-panel th:nth-child(2),.mgr-prefs-panel th:nth-child(3),
+.mgr-prefs-panel td:nth-child(2),.mgr-prefs-panel td:nth-child(3){width:52px}
+.mgr-prefs-panel td{padding:3px 6px;border-top:1px solid var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mgr-prefs-panel td:not(:first-child){text-align:center}
 .mgr-list{display:flex;flex-direction:column;gap:8px}
 
