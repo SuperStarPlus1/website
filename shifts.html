@@ -240,14 +240,11 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .mgr-item .del{border:0;background:#fee2e2;color:#991b1b;border-radius:8px;height:34px;font-size:15px}
 .mgr-item .bell{border:1.5px solid var(--line);background:#f8fafc;border-radius:8px;height:34px;font-size:15px;cursor:pointer}
 .mgr-item .bell.active{background:#eef2ff;border-color:#818cf8}
-.mgr-prefs-panel{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:12.5px;overflow-x:auto}
-.mgr-prefs-panel table{width:100%;border-collapse:collapse;table-layout:fixed}
-.mgr-prefs-panel th{font-size:11px;color:var(--muted);font-weight:700;padding:3px 6px;text-align:center}
-.mgr-prefs-panel th:first-child,.mgr-prefs-panel td:first-child{text-align:right;width:auto}
-.mgr-prefs-panel th:nth-child(2),.mgr-prefs-panel th:nth-child(3),
-.mgr-prefs-panel td:nth-child(2),.mgr-prefs-panel td:nth-child(3){width:52px}
-.mgr-prefs-panel td{padding:3px 6px;border-top:1px solid var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mgr-prefs-panel td:not(:first-child){text-align:center}
+.mgr-prefs-panel{grid-column:1/-1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:12.5px}
+.mgr-pref-row{display:flex;align-items:center;gap:4px;padding:3px 0;border-top:1px solid var(--line)}
+.mgr-pref-row.head{border-top:0;font-size:11px;color:var(--muted);font-weight:700}
+.mgr-pref-row .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.mgr-pref-row .cb{width:44px;flex:0 0 auto;text-align:center}
 .mgr-list{display:flex;flex-direction:column;gap:8px}
 
 /* שיבוץ אוטומטי — תקן יומי */
@@ -2342,15 +2339,16 @@ function mgrRowEl(m){
     <button class="del" title="הסרה">✕</button>
     <button type="button" class="bell" title="הגדרת התראות">🔔</button>
     <div class="mgr-prefs-panel hidden">
-      <table><tr><th>סוג התראה</th><th>מייל</th><th>Push</th></tr>
-        ${MGR_ALERT_TYPES.map(([key,label])=>{
-          const emailOn = (prefs[key] && typeof prefs[key].email==='boolean') ? prefs[key].email : defaultMgrPref(m.name,key,'email');
-          const pushOn = (prefs[key] && typeof prefs[key].push==='boolean') ? prefs[key].push : defaultMgrPref(m.name,key,'push');
-          return `<tr data-key="${key}"><td>${esc(label)}</td>
-            <td><input type="checkbox" class="pref-email" ${emailOn?'checked':''}></td>
-            <td><input type="checkbox" class="pref-push" ${pushOn?'checked':''}></td></tr>`;
-        }).join('')}
-      </table>
+      <div class="mgr-pref-row head"><div class="lbl">סוג התראה</div><div class="cb">מייל</div><div class="cb">Push</div></div>
+      ${MGR_ALERT_TYPES.map(([key,label])=>{
+        const emailOn = (prefs[key] && typeof prefs[key].email==='boolean') ? prefs[key].email : defaultMgrPref(m.name,key,'email');
+        const pushOn = (prefs[key] && typeof prefs[key].push==='boolean') ? prefs[key].push : defaultMgrPref(m.name,key,'push');
+        return `<div class="mgr-pref-row" data-key="${key}">
+          <div class="lbl">${esc(label)}</div>
+          <div class="cb"><input type="checkbox" class="pref-email" ${emailOn?'checked':''}></div>
+          <div class="cb"><input type="checkbox" class="pref-push" ${pushOn?'checked':''}></div>
+        </div>`;
+      }).join('')}
     </div>`;
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelector('.i-role').addEventListener('change',e=>{
@@ -2366,8 +2364,8 @@ function mgrRowEl(m){
 }
 function mgrRowPrefsJson(row){
   const out = {};
-  row.querySelectorAll('.mgr-prefs-panel tr[data-key]').forEach(tr=>{
-    out[tr.dataset.key] = { email: tr.querySelector('.pref-email').checked, push: tr.querySelector('.pref-push').checked };
+  row.querySelectorAll('.mgr-prefs-panel .mgr-pref-row[data-key]').forEach(r=>{
+    out[r.dataset.key] = { email: r.querySelector('.pref-email').checked, push: r.querySelector('.pref-push').checked };
   });
   return JSON.stringify(out);
 }
