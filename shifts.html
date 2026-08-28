@@ -940,6 +940,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
           <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
           <button class="btn plain" id="attMgrPDF" style="padding:8px 16px;background:#fee2e2;color:#b91c1c;font-weight:700">📄 PDF</button>
           <button class="btn plain" id="attMgrManual" style="padding:8px 16px;background:#fef3c7;color:#92400e;font-weight:700">✏ ממתינות</button>
+          <button class="btn plain" id="attMgrAddHours" style="padding:8px 16px;background:#e0f2fe;color:#0369a1;font-weight:700">➕ הוספת שעות</button>
           <button class="btn plain" id="attMgrDatImport" style="padding:8px 16px;background:#dbeafe;color:#1d4ed8;font-weight:700">📥 ייבוא משעון</button>
           <button class="btn plain" id="attMgrReclassify" style="padding:8px 16px;background:#ede9fe;color:#5b21b6;font-weight:700">🔄 סיווג מחדש</button>
         </div>
@@ -1965,7 +1966,7 @@ async function openEmpMgr(){
               Object.assign(local, {
                 password:se.password, pin:se.pin||'', username:se.username||'', rating:se.rating||2,
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
-                vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
+                vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי', autoBreakDeduct:!!se.autoBreakDeduct,
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
                 startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', clockEmpNo:se.clockEmpNo||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
@@ -1975,7 +1976,7 @@ async function openEmpMgr(){
                 active:se.active, offDays:parseOffDays(se.offDays), password:se.password, pin:se.pin||'',
                 username:se.username||'', skills:se.skills||'', rating:se.rating||2,
                 fixedShifts:se.fixedShifts||'', email:se.email||'', empNo:se.empNo||'',
-                vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי',
+                vacQuota:se.vacQuota||0, hourRate:se.hourRate||0, empType:se.empType||'שעתי', autoBreakDeduct:!!se.autoBreakDeduct,
                 monthlyHours:se.monthlyHours||0, primaryDept:se.primaryDept||'',
                 startDate:se.startDate||'', birthDate:se.birthDate||'', endDate:se.endDate||'', clockEmpNo:se.clockEmpNo||'', avatar:se.avatar||'', f101:se.f101||0, branch:se.branch
               });
@@ -2051,7 +2052,7 @@ let _currentEmp = null;
 
 function loadEmpCard(empName){
   _currentEmp = empName ? empByName(empName) : null;
-  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',clockEmpNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',endDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
+  if(!_currentEmp && empName) _currentEmp = {name:'',depts:[_empMgrDepts[0]||''],offDays:[],password:'',active:true,username:'',email:'',empNo:'',clockEmpNo:'',skills:'',rating:2,fixedShifts:'',vacQuota:0,hourRate:0,empType:'שעתי',autoBreakDeduct:false,monthlyHours:0,primaryDept:'',startDate:'',birthDate:'',endDate:'',avatar:'',f101:0,branch:empMgrBranch()||undefined};
   const e = _currentEmp || {name:'',depts:[],offDays:[],password:'',active:true};
   document.getElementById('empCard').classList.remove('hidden');
   document.getElementById('empCardEmpty').classList.add('hidden');
@@ -2159,6 +2160,11 @@ function empRow(e){
       <input type="number" class="i-monthly mo-only" value="${e.monthlyHours||''}" placeholder="186" style="width:72px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType!=='חודשי'?'display:none':''}" title="תקן שעות חודשי (עובד חודשי בלבד)">
       <span class="lbl hr-only" style="${e.empType==='חודשי'?'display:none':''}">ערך שעה:</span>
       <input type="number" step="0.01" class="i-rate hr-only" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType==='חודשי'?'display:none':''}" title="ריק = שכר מינימום · לא רלוונטי לעובד חודשי"></div>
+    <div class="chiprow" style="margin-top:7px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;color:#374151">
+        <input type="checkbox" class="i-autobreak" ${e.autoBreakDeduct?'checked':''} style="width:16px;height:16px">
+        ⏸ ניכוי הפסקה אוטומטי (חצי שעה בכל יום עבודה ללא חתימת הפסקה בשעון)
+      </label></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">טופס 101 — שנה אחרונה:</span>
       <input type="number" class="i-f101" value="${e.f101||''}" placeholder="—" style="width:90px;border:1.5px solid ${f101Missing(e)?'#ef4444':'var(--line)'};border-radius:8px;padding:6px 9px;text-align:center"
         title="השנה האחרונה שבה מולא טופס 101. אדום = חסר לשנה הנדרשת (${requiredF101Year()})">
@@ -2224,6 +2230,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     empType:r.querySelector('.i-emptype').value||'שעתי',
     monthlyHours:Number(r.querySelector('.i-monthly').value)||0,
     hourRate:Number(r.querySelector('.i-rate').value)||0,
+    autoBreakDeduct:r.querySelector('.i-autobreak').checked,
     f101:Number(r.querySelector('.i-f101').value)||0,
     avatar:_currentEmp?.avatar||'',
     vacBalance:Number(r.querySelector('.i-vac-bal')?.value)||0,
@@ -2261,6 +2268,7 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
         password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'',
         skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'',
         email:e.email||'', empNo:e.empNo||'', clockEmpNo:e.clockEmpNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0,
+        autoBreakDeduct:!!e.autoBreakDeduct,
         f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי',
         monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
         vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0,
@@ -3611,6 +3619,7 @@ document.getElementById('attBtn').addEventListener('click', ()=>{
   }
   document.getElementById('attMgrReport').innerHTML='';
   document.getElementById('attMgrManual').classList.toggle('hidden', !isAdmin());
+  document.getElementById('attMgrAddHours').classList.toggle('hidden', !isAdmin());
   document.getElementById('attMgrDatImport').classList.toggle('hidden', !isAdmin());
   document.getElementById('attMgrReclassify').classList.toggle('hidden', !isAdmin());
   show('attMgrOverlay');
@@ -4030,6 +4039,57 @@ function openMgrAttEdit(employee, date){
     if(changed){ dlg.querySelector('#mgrEvList').innerHTML = renderRows(); bindDelete(); }
   });
 }
+
+/* --- הוספת/עריכת שעות ידנית לעובד ליום כלשהו (גם יום ללא שום דיווח קיים), אדמין בלבד --- */
+document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
+  const month = document.getElementById('attMgrMonth').value;
+  if(!month){ toast('יש לבחור חודש','err'); return; }
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:320px;direction:rtl;font-family:inherit">
+    <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:4px">➕ הוספת שעות לעובד</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:16px">בחירת עובד ותאריך — כולל ימים שאין בהם עדיין שום דיווח נוכחות</div>
+    <div id="addHoursBody" style="text-align:center;padding:10px;color:var(--muted)">טוען עובדים…</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button id="addHoursGo" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer" disabled>פתיחה לעריכה ✓</button>
+      <button id="addHoursCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">ביטול</button>
+    </div>
+    <div id="addHoursErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
+  </div>`;
+  document.body.appendChild(dlg);
+  dlg.addEventListener('click', e => e.stopPropagation());
+  dlg.querySelector('#addHoursCancel').addEventListener('click', ()=>dlg.remove());
+  const r = await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month, branch: attReportBranch()||undefined });
+  if(!r.ok){ dlg.querySelector('#addHoursBody').innerHTML = `<span style="color:#b91c1c">${esc(r.error||'שגיאה בטעינת רשימת העובדים')}</span>`; return; }
+  lastMgrDetailed = r;
+  const emps = (r.employees||[]).slice().sort((a,b)=>a.employee.localeCompare(b.employee,'he'));
+  if(!emps.length){ dlg.querySelector('#addHoursBody').innerHTML = '<span style="color:#b91c1c">אין עובדים פעילים בסניף/חודש שנבחרו</span>'; return; }
+  const [ym1,ym2] = month.split('-');
+  const lastDay = new Date(Number(ym1), Number(ym2), 0).getDate();
+  const minD = month+'-01', maxD = month+'-'+String(lastDay).padStart(2,'0');
+  const todayStr = iso(new Date());
+  const defD = (todayStr>=minD && todayStr<=maxD) ? todayStr : minD;
+  dlg.querySelector('#addHoursBody').innerHTML = `
+    <div class="mrow" style="text-align:right;margin-bottom:10px">
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">עובד</label>
+      <select id="addHoursEmp" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px">
+        ${emps.map(e=>`<option value="${esc(e.employee)}">${esc(e.employee)}${e.branch?' · '+esc(e.branch):''}</option>`).join('')}
+      </select>
+    </div>
+    <div class="mrow" style="text-align:right">
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">תאריך</label>
+      <input type="date" id="addHoursDate" min="${minD}" max="${maxD}" value="${defD}" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px">
+    </div>`;
+  const goBtn = dlg.querySelector('#addHoursGo');
+  goBtn.disabled = false;
+  goBtn.addEventListener('click', ()=>{
+    const employee = dlg.querySelector('#addHoursEmp').value;
+    const date = dlg.querySelector('#addHoursDate').value;
+    if(!date){ dlg.querySelector('#addHoursErr').textContent = 'יש לבחור תאריך'; return; }
+    dlg.remove();
+    openMgrAttEdit(employee, date);
+  });
+});
 
 /* --- הזנות ידניות ממתינות --- */
 document.getElementById('attMgrManual').addEventListener('click', async ()=>{
@@ -5673,7 +5733,7 @@ document.getElementById('saveBtn').addEventListener('click',async ()=>{
     if(state.dirtyEmps){
       const r = await apiPost({ action:'saveEmployees', ...mgrAuth(), branch: effectiveBranch()||undefined,
         employees: state.employees.map(e=>({ name:e.name, dept:e.depts.join(', '), active:e.active!==false,
-          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', clockEmpNo:e.clockEmpNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
+          password:e.password||'', pin:e.pin||'', offDays:offDaysToStr(e.offDays), username:e.username||'', skills:e.skills||'', rating:e.rating||2, fixedShifts:e.fixedShifts||'', email:e.email||'', empNo:e.empNo||'', clockEmpNo:e.clockEmpNo||'', vacQuota:e.vacQuota||0, hourRate:e.hourRate||0, autoBreakDeduct:!!e.autoBreakDeduct, f101:e.f101||0, startDate:e.startDate||'', birthDate:e.birthDate||'', endDate:e.endDate||'', empType:e.empType||'שעתי', monthlyHours:e.monthlyHours||0, primaryDept:e.primaryDept||'',
           vacBalance:e.vacBalance||0, sickBalance:e.sickBalance||0, vacationBalance:e.vacationBalance||0, branch:e.branch||effectiveBranch()||undefined })) });
       if(!r.ok) throw new Error(r.error||'שגיאה בשמירת עובדים');
       state.dirtyEmps=false;
