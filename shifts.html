@@ -940,7 +940,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
           <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
           <button class="btn plain" id="attMgrPDF" style="padding:8px 16px;background:#fee2e2;color:#b91c1c;font-weight:700">📄 PDF</button>
           <button class="btn plain" id="attMgrManual" style="padding:8px 16px;background:#fef3c7;color:#92400e;font-weight:700">✏ ממתינות</button>
-          <button class="btn plain" id="attMgrAddHours" style="padding:8px 16px;background:#e0f2fe;color:#0369a1;font-weight:700">➕ הוספת שעות</button>
+          <button class="btn plain" id="attMgrAddHours" style="padding:8px 16px;background:#e0f2fe;color:#0369a1;font-weight:700">✏ עריכת שעות</button>
           <button class="btn plain" id="attMgrDatImport" style="padding:8px 16px;background:#dbeafe;color:#1d4ed8;font-weight:700">📥 ייבוא משעון</button>
           <button class="btn plain" id="attMgrReclassify" style="padding:8px 16px;background:#ede9fe;color:#5b21b6;font-weight:700">🔄 סיווג מחדש</button>
         </div>
@@ -3975,7 +3975,7 @@ function openMgrAttEdit(employee, date){
   let refreshedList = false; // אם בוצע שינוי — נרענן את הדוח בסגירה
 
   // סגירת חלון העריכה תמיד מחזירה לרשימת הפירוט המעודכנת (לא סוגרת את מסך ניהול הנוכחות)
-  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); loadMgrDetailed(); });
+  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); if(refreshedList) loadMgrDetailed(); });
 
   const bindDelete = () => {
     dlg.querySelectorAll('.mgr-ev-del').forEach(btn=>{
@@ -4040,18 +4040,18 @@ function openMgrAttEdit(employee, date){
   });
 }
 
-/* --- הוספת/עריכת שעות ידנית לעובד ליום כלשהו (גם יום ללא שום דיווח קיים), אדמין בלבד --- */
+/* --- עריכת שעות לעובד לחודש שלם, בטבלה אחת (כולל ימים ללא שום דיווח, וסימון חופש/מחלה), אדמין בלבד --- */
 document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
   const month = document.getElementById('attMgrMonth').value;
   if(!month){ toast('יש לבחור חודש','err'); return; }
   const dlg=document.createElement('div');
   dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
   dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;min-width:320px;direction:rtl;font-family:inherit">
-    <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:4px">➕ הוספת שעות לעובד</div>
-    <div style="font-size:12px;color:#6b7280;margin-bottom:16px">בחירת עובד ותאריך — כולל ימים שאין בהם עדיין שום דיווח נוכחות</div>
+    <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:4px">✏ עריכת שעות לעובד</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:16px">בחירת עובד — ייפתח לוח החודש המלא לעריכה, כולל ימים שאין בהם עדיין שום דיווח</div>
     <div id="addHoursBody" style="text-align:center;padding:10px;color:var(--muted)">טוען עובדים…</div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button id="addHoursGo" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer" disabled>פתיחה לעריכה ✓</button>
+      <button id="addHoursGo" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer" disabled>פתיחה ✓</button>
       <button id="addHoursCancel" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">ביטול</button>
     </div>
     <div id="addHoursErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
@@ -4061,35 +4061,129 @@ document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
   dlg.querySelector('#addHoursCancel').addEventListener('click', ()=>dlg.remove());
   const r = await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month, branch: attReportBranch()||undefined });
   if(!r.ok){ dlg.querySelector('#addHoursBody').innerHTML = `<span style="color:#b91c1c">${esc(r.error||'שגיאה בטעינת רשימת העובדים')}</span>`; return; }
-  lastMgrDetailed = r;
   const emps = (r.employees||[]).slice().sort((a,b)=>a.employee.localeCompare(b.employee,'he'));
   if(!emps.length){ dlg.querySelector('#addHoursBody').innerHTML = '<span style="color:#b91c1c">אין עובדים פעילים בסניף/חודש שנבחרו</span>'; return; }
-  const [ym1,ym2] = month.split('-');
-  const lastDay = new Date(Number(ym1), Number(ym2), 0).getDate();
-  const minD = month+'-01', maxD = month+'-'+String(lastDay).padStart(2,'0');
-  const todayStr = iso(new Date());
-  const defD = (todayStr>=minD && todayStr<=maxD) ? todayStr : minD;
   dlg.querySelector('#addHoursBody').innerHTML = `
-    <div class="mrow" style="text-align:right;margin-bottom:10px">
+    <div class="mrow" style="text-align:right">
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">עובד</label>
       <select id="addHoursEmp" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px">
         ${emps.map(e=>`<option value="${esc(e.employee)}">${esc(e.employee)}${e.branch?' · '+esc(e.branch):''}</option>`).join('')}
       </select>
-    </div>
-    <div class="mrow" style="text-align:right">
-      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">תאריך</label>
-      <input type="date" id="addHoursDate" min="${minD}" max="${maxD}" value="${defD}" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px">
     </div>`;
   const goBtn = dlg.querySelector('#addHoursGo');
   goBtn.disabled = false;
   goBtn.addEventListener('click', ()=>{
     const employee = dlg.querySelector('#addHoursEmp').value;
-    const date = dlg.querySelector('#addHoursDate').value;
-    if(!date){ dlg.querySelector('#addHoursErr').textContent = 'יש לבחור תאריך'; return; }
     dlg.remove();
-    openMgrAttEdit(employee, date);
+    openMgrMonthEdit(employee, month);
   });
 });
+
+/* --- לוח עריכת שעות מלא לעובד ולחודש: יום ביומו, כניסה/הפסקה/חזרה/יציאה + סימון עבודה/חופש/מחלה --- */
+async function openMgrMonthEdit(employee, month){
+  const dlg=document.createElement('div');
+  dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">
+    <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:2px">✏ עריכת שעות — ${esc(employee)}</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:10px">${fmtMonth(month)} · שינויים בשעות/בסטטוס נשמרים בלחיצת "שמירה"</div>
+    <div id="monthEditBody" style="overflow-y:auto;flex:1;min-height:100px">טוען…</div>
+    <div id="monthEditErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0">
+      <button id="monthEditSave" style="flex:1;background:#1b2a4a;color:#fff;border:0;border-radius:9px;padding:10px;font-family:inherit;font-weight:700;cursor:pointer">שמירה ✓</button>
+      <button id="monthEditClose" style="flex:1;background:#f1f5f9;border:0;border-radius:9px;padding:10px;font-family:inherit;cursor:pointer">סגירה</button>
+    </div>
+  </div>`;
+  document.body.appendChild(dlg);
+  dlg.addEventListener('click', e => e.stopPropagation());
+  let hasSaved = false; // רק אם באמת נשמר שינוי — נרענן את הדוח המלא בסגירה
+  dlg.querySelector('#monthEditClose').addEventListener('click', ()=>{ dlg.remove(); if(hasSaved) loadMgrDetailed(); });
+
+  const body = dlg.querySelector('#monthEditBody');
+  const err = dlg.querySelector('#monthEditErr');
+  const STYPES = ['עבודה','חופש','מחלה'];
+  let days = [];
+
+  const renderTable = () => {
+    body.innerHTML = `<table class="att-table" style="width:100%;font-size:12.5px">
+      <tr><th>יום</th><th>סטטוס</th><th>כניסה</th><th>הפסקה</th><th>חזרה</th><th>יציאה</th></tr>
+      ${days.map((d,i)=>{
+        const dd=new Date(d.date+'T00:00:00');
+        const label = `${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}`;
+        if(d.locked){
+          const statusLbl = d.status==='ממתין'?' (ממתין)':'';
+          return `<tr data-i="${i}"><td>${label}</td>
+            <td colspan="5" style="text-align:center;color:#92400e">🔒 ${esc(d.dayType)}${statusLbl} — חלק מבקשה ${esc(d.range||'')}, ניהול דרך מסך האישורים</td></tr>`;
+        }
+        const curType = d._newDayType || d.dayType;
+        const selectHtml = `<select class="me-status" style="border:1.5px solid #e2e8f0;border-radius:6px;padding:3px">${STYPES.map(s=>`<option value="${s}" ${s===curType?'selected':''}>${s}</option>`).join('')}</select>`;
+        if(curType!=='עבודה'){
+          return `<tr data-i="${i}">
+            <td>${label}</td>
+            <td>${selectHtml}</td>
+            <td colspan="4" style="text-align:center;color:var(--muted)">${esc(curType)}</td>
+          </tr>`;
+        }
+        return `<tr data-i="${i}">
+          <td>${label}</td>
+          <td>${selectHtml}</td>
+          <td><input type="time" class="me-t" data-f="inT" value="${d.inT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
+          <td><input type="time" class="me-t" data-f="breakT" value="${d.breakT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
+          <td><input type="time" class="me-t" data-f="backT" value="${d.backT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
+          <td><input type="time" class="me-t" data-f="outT" value="${d.outT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
+        </tr>`;
+      }).join('')}
+    </table>`;
+    body.querySelectorAll('.me-status').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const i = Number(sel.closest('tr').dataset.i);
+        days[i]._newDayType = sel.value;
+        renderTable();
+      });
+    });
+  };
+
+  const r = await apiPost({ action:'mgrEmpMonth', ...mgrAuth(), employee, month });
+  if(!r.ok){ body.innerHTML = `<span style="color:#b91c1c">${esc(r.error||'שגיאה בטעינת החודש')}</span>`; return; }
+  days = r.days.map(d=>({...d, _newDayType: d.dayType}));
+  renderTable();
+
+  dlg.querySelector('#monthEditSave').addEventListener('click', async ()=>{
+    err.textContent='שומר…';
+    const rows=[...body.querySelectorAll('tr[data-i]')];
+    let changed=false, failed=[];
+    for(const row of rows){
+      const i = Number(row.dataset.i);
+      const d = days[i];
+      if(d.locked) continue;
+      const newType = d._newDayType || d.dayType;
+      if(newType !== d.dayType){
+        const rs = await apiPost({ action:'mgrSetDayStatus', ...mgrAuth(), employee, date:d.date, status:newType });
+        if(!rs.ok){ failed.push(d.date+': '+(rs.error||'שגיאה')); continue; }
+        changed = true;
+        d.dayType = newType;
+        if(newType!=='עבודה'){ d.status='מאושר'; d.locked=false; d.range=null; }
+        continue; // אם שונה הסטטוס — לא ממשיכים גם לבדוק שעות באותה שורה באותה שמירה
+      }
+      if(newType!=='עבודה') continue;
+      const timeInputs = [...row.querySelectorAll('.me-t')];
+      for(const inp of timeInputs){
+        const field = inp.dataset.f;
+        const typeMap = {inT:'כניסה', breakT:'הפסקה', backT:'חזרה', outT:'יציאה'};
+        const oldVal = d[field]||'', newVal = inp.value||'';
+        if(oldVal===newVal) continue;
+        const payload = { action:'mgrSetAttendance', ...mgrAuth(), employee, date:d.date, type:typeMap[field], time:newVal };
+        if(oldVal) payload.oldTime = oldVal;
+        const rs = await apiPost(payload);
+        if(!rs.ok){ failed.push(d.date+' · '+typeMap[field]+': '+(rs.error||'שגיאה')); continue; }
+        changed = true;
+        d[field] = newVal;
+      }
+    }
+    err.textContent = failed.length ? ('שגיאות: '+failed.join(' | ')) : '';
+    if(changed){ hasSaved = true; toast('נשמר ✓','ok'); renderTable(); }
+    else if(!failed.length) toast('אין שינויים לשמירה','ok');
+  });
+}
 
 /* --- הזנות ידניות ממתינות --- */
 document.getElementById('attMgrManual').addEventListener('click', async ()=>{
