@@ -1,0 +1,135 @@
+﻿<meta charset="UTF-8">
+<title>סופר סטאר - מבצעים השבוע</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="סופר סטאר - מבצעים השבוע">
+<meta property="og:image" content="https://www.superstar-plus.co.il/mivtzaim/images/01.jpg">
+<link rel="icon" href="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png">
+<style>
+    :root { --blue: #0076DA; --yellow: #ffcc00; --bg: #f4f7f9; }
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        margin: 0;
+        background: var(--bg);
+        direction: rtl;
+        color: #222;
+    }
+    header {
+        background: var(--blue);
+        padding: 14px 16px;
+        text-align: center;
+    }
+    header img { height: 46px; }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 10px;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    .grid img {
+        width: 100%;
+        display: block;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .cta {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 6px 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .btn {
+        display: block;
+        text-align: center;
+        padding: 13px 16px;
+        border-radius: 25px;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 1.02rem;
+    }
+    .btn-whatsapp { background: #25D366; color: #fff; }
+    .btn-site { background: var(--blue); color: #fff; }
+    .btn-channel { background: var(--yellow); color: #0076DA; }
+    .disclaimer {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 0 20px 30px;
+        font-size: 0.72rem;
+        color: #777;
+        line-height: 1.5;
+        text-align: center;
+    }
+</style>
+
+<header>
+    <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="סופר סטאר">
+</header>
+
+<div class="grid">
+    <!-- IMAGES:START -->
+    <img src="images/01.jpg" alt="מבצע 1" loading="lazy">
+    <img src="images/02.jpg" alt="מבצע 2" loading="lazy">
+    <img src="images/03.jpg" alt="מבצע 3" loading="lazy">
+    <img src="images/04.jpg" alt="מבצע 4" loading="lazy">
+    <img src="images/05.jpg" alt="מבצע 5" loading="lazy">
+    <img src="images/06.jpg" alt="מבצע 6" loading="lazy">
+    <img src="images/07.jpg" alt="מבצע 7" loading="lazy">
+    <img src="images/08.jpg" alt="מבצע 8" loading="lazy">
+    <img src="images/09.jpg" alt="מבצע 9" loading="lazy">
+    <img src="images/10.jpg" alt="מבצע 10" loading="lazy">
+    <img src="images/11.jpg" alt="מבצע 11" loading="lazy">
+    <img src="images/12.jpg" alt="מבצע 12" loading="lazy">
+    <img src="images/13.jpg" alt="מבצע 13" loading="lazy">
+    <img src="images/14.jpg" alt="מבצע 14" loading="lazy">
+    <img src="images/15.jpg" alt="מבצע 15" loading="lazy">
+    <img src="images/16.jpg" alt="מבצע 16" loading="lazy">
+    <!-- IMAGES:END -->
+</div>
+
+<div class="cta">
+    <a class="btn btn-whatsapp" data-track="whatsapp_share"
+       href="https://wa.me/?text=%D7%9E%D7%91%D7%A6%D7%A2%D7%99%20%D7%94%D7%A9%D7%91%D7%95%D7%A2%20%D7%91%D7%A1%D7%95%D7%A4%D7%A8%20%D7%A1%D7%98%D7%90%D7%A8!%20https://www.superstar-plus.co.il/mivtzaim">
+        שתף בוואטסאפ
+    </a>
+    <a class="btn btn-site" data-track="website" target="_blank" rel="noopener"
+       href="https://www.superstar-plus.co.il/">
+        גלו את כל המבצעים באתר שלנו
+    </a>
+    <a class="btn btn-channel" data-track="whatsapp_channel" target="_blank" rel="noopener"
+       href="https://whatsapp.com/channel/0029VaKheZt4tRroRjS3sK2K">
+        הצטרף לערוץ הוואטסאפ שלנו והיה הראשון לקבל עדכונים ומבצעים
+    </a>
+</div>
+
+<div class="disclaimer">
+    תקף בין התאריכים המצוינים בפרסום ומותנה בכמות המוציינת בפרסום. הרשת רשאית להגביל ולהפסיק מבצעים בכל עת/אין מכירה סיטונאית/התמונות להמחשה בלבד/אין כפל מבצעים/בכפוף לתקנון/אין צבירת נקודות על מבצעים. ט.ל.ח
+</div>
+
+<script>
+(function () {
+    var STATS_URL = 'https://script.google.com/macros/s/AKfycbxBIwIVnEk8uI19Upxap8vQkvZpqtYUpUNro8iJlZ1SvRfOn5GDD6EvdRnQq01YuNwjlQ/exec';
+
+    function track(type, target) {
+        if (!STATS_URL || STATS_URL.indexOf('PLACEHOLDER') !== -1) return;
+        var url = STATS_URL + '?type=' + encodeURIComponent(type)
+            + '&target=' + encodeURIComponent(target || '')
+            + '&page=mivtzaim';
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url);
+        } else {
+            fetch(url, { mode: 'no-cors' });
+        }
+    }
+
+    track('visit', '');
+    document.querySelectorAll('[data-track]').forEach(function (el) {
+        el.addEventListener('click', function () {
+            track('click', el.getAttribute('data-track'));
+        });
+    });
+})();
+</script>
