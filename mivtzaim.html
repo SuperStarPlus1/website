@@ -19,7 +19,20 @@
         padding: 14px 16px;
         text-align: center;
     }
-    header img { height: 46px; }
+    header img { height: 90px; }
+    .hero {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 10px 10px 0;
+    }
+    .hero img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        display: block;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
     .grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -71,9 +84,14 @@
     <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="סופר סטאר">
 </header>
 
+<div class="hero">
+    <!-- HERO:START -->
+    <img src="/mivtzaim/images/01.jpg" alt="מבצע השבוע">
+    <!-- HERO:END -->
+</div>
+
 <div class="grid">
     <!-- IMAGES:START -->
-    <img src="/mivtzaim/images/01.jpg" alt="מבצע 1">
     <img src="/mivtzaim/images/02.jpg" alt="מבצע 2">
     <img src="/mivtzaim/images/03.jpg" alt="מבצע 3">
     <img src="/mivtzaim/images/04.jpg" alt="מבצע 4">
