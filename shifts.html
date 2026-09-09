@@ -6056,12 +6056,15 @@ if ('serviceWorker' in navigator) {
   // כשגרסת SW חדשה משתלטת (אחרי skipWaiting+clients.claim בתוך sw.js), מרעננים את הדף פעם אחת
   // כדי שכל מכשיר יעבור לגרסה העדכנית לבד — בלי להסתמך על שהעובד יסגור/יתקין מחדש את האפליקציה ידנית.
   // אם יש עריכות לא-שמורות (מנהל באמצע עריכת סידור/עובדים) — לא קוטעים אותו, בודקים שוב כל 30 שנ'.
-  let _swRefreshing = false;
+  // חשוב: המונה חייב לשרוד רענון (sessionStorage, לא משתנה רגיל בזיכרון) — אחרת אם controllerchange
+  // יורה שוב אחרי הרענון (מכל סיבה — SW תקוע/גרסה ישנה שמאוחסנת ב-cache וכו') נכנסים ללולאת רענון
+  // אינסופית (קרה בפועל, 2026-09-09: האתר "קפץ" כל שנייה אצל המשתמש בכמה מחשבים). עכשיו: לכל היותר
+  // רענון אחד לכל טאב, לא משנה כמה פעמים controllerchange יורה.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (_swRefreshing) return;
+    if (sessionStorage.getItem('sp_sw_reloaded')) return;
     const tryReload = () => {
       if (typeof hasDirty === 'function' && hasDirty()) { setTimeout(tryReload, 30000); return; }
-      _swRefreshing = true;
+      sessionStorage.setItem('sp_sw_reloaded', '1');
       window.location.reload();
     };
     tryReload();
