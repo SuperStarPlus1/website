@@ -188,6 +188,28 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .modal header{background:var(--navy);position:static;padding:13px 16px;display:block;box-shadow:none}
 .modal header h3{font-family:'Rubik';font-size:15px;font-weight:700}
 .modal header p{font-size:12px;color:#c7d0e2;margin-top:2px}
+
+/* מסך כניסה בדמות הלוגו: רקע ממותג במסך מלא (עיצוב בלבד — אין כאן שינוי בלוגיקת הכניסה) */
+#loginOverlay{
+  background:
+    radial-gradient(circle at 14% 20%, rgba(255,197,49,.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 24% 36%, rgba(255,255,255,.65) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 83% 63%, rgba(255,197,49,.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 90% 22%, rgba(255,255,255,.5) 0 1.5px, transparent 2.5px),
+    radial-gradient(120% 140% at 30% 0%, #1a44d1 0%, #0d2570 60%, #081142 100%);
+  overflow:hidden;
+}
+#loginOverlay::before{
+  content:"";position:absolute;top:-8%;right:-10%;width:62%;max-width:460px;aspect-ratio:376/300;
+  background:url('/logo.png') center/contain no-repeat;opacity:.13;pointer-events:none;
+}
+#loginOverlay .modal{
+  position:relative;z-index:1;border-radius:18px;
+  box-shadow:0 30px 60px -20px rgba(5,10,35,.6);
+}
+#loginOverlay .modal header{background:transparent;box-shadow:none;text-align:center;padding:0 16px 6px}
+#loginOverlay .modal header h3{color:var(--ink)}
+#loginOverlay .modal header p{color:var(--muted)}
 .mbody{padding:16px;overflow-y:auto}
 .mrow{margin-bottom:12px}
 .mrow label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
@@ -601,7 +623,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל כניסה: לוגין אחיד — עובד שהוא גם מנהל מזוהה אוטומטית לפי מספר עובד (ר' elogin/authManager_) -->
 <div class="overlay hidden" id="loginOverlay">
   <div class="modal">
-    <div style="text-align:center;padding-top:16px"><img src="/logo.png" alt="סופר סטאר" style="width:110px;height:auto"></div>
+    <div style="text-align:center;padding-top:20px"><img src="/logo.png" alt="סופר סטאר" style="width:84px;height:auto"></div>
     <header><h3>כניסה למערכת</h3><p>שם משתמש וסיסמה שקיבלת מהמנהל</p></header>
     <div class="mbody">
       <div class="mrow"><label>שם משתמש</label><input type="text" id="lgUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
