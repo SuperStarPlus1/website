@@ -601,6 +601,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל כניסה: לוגין אחיד — עובד שהוא גם מנהל מזוהה אוטומטית לפי מספר עובד (ר' elogin/authManager_) -->
 <div class="overlay hidden" id="loginOverlay">
   <div class="modal">
+    <div style="text-align:center;padding-top:16px"><img src="/logo.png" alt="סופר סטאר" style="width:110px;height:auto"></div>
     <header><h3>כניסה למערכת</h3><p>שם משתמש וסיסמה שקיבלת מהמנהל</p></header>
     <div class="mbody">
       <div class="mrow"><label>שם משתמש</label><input type="text" id="lgUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
@@ -4485,9 +4486,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
       return `
       <div class="page">
         <div class="page-header">
-          <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="/logo.png" alt="" style="width:44px;height:auto">
+            <div>
             <div class="co-name">${COMPANY}</div>
             <div class="branch">שם עובד: ${esc(emp.employee)}</div>
+            </div>
           </div>
           <div style="text-align:center">
             <div class="doc-title">דו"ח סיכום חודשי לעובד</div>
@@ -4597,9 +4601,12 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
     const summaryPage = `
       <div class="page">
         <div class="page-header">
-          <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="/logo.png" alt="" style="width:44px;height:auto">
+            <div>
             <div class="co-name">${COMPANY}</div>
             <div class="branch">${BRANCH}</div>
+            </div>
           </div>
           <div style="text-align:center">
             <div class="doc-title">דף מסכם — כל העובדים</div>
