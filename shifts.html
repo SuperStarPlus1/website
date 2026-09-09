@@ -322,6 +322,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 .att-table{width:100%;border-collapse:collapse;font-size:12.5px}
 .att-table th{background:var(--navy);color:#fff;padding:6px;font-size:11.5px}
 .att-table td{border-bottom:1px solid var(--line);padding:6px;text-align:center}
+.mgr-att-row{cursor:pointer}
 .att-gross{background:#fff8e6;border:1.5px solid var(--gold);border-radius:10px;padding:10px;text-align:center;font-weight:800;margin-top:10px}
 .att-day{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
 .att-day-head{background:#f1f5f9;padding:6px 10px;font-weight:800;font-size:12.5px;display:flex;justify-content:space-between}
@@ -613,6 +614,27 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button class="btn plain" data-close>ביטול</button>
       <span class="spacer"></span>
       <button class="btn plain" id="lgKioskLink" style="color:#6b7280;font-size:12px">🖥 מסך קיוסק (טאבלט משותף)</button>
+    </div>
+    <div style="text-align:center;padding-bottom:14px"><a href="javascript:void(0)" id="lgForgotPw" style="font-size:12.5px;color:#6b7280">שכחתי סיסמה 🔑</a></div>
+  </div>
+</div>
+
+<!-- מודאל שחזור סיסמה עצמאי (OTP במייל) — ר' sendOtp_/verifyOtp_ ב-Code.gs, קיים כבר בשרת ולא היה מחובר לשום כפתור עד עכשיו -->
+<div class="overlay hidden" id="fpOverlay">
+  <div class="modal">
+    <header><h3>🔑 שחזור סיסמה</h3><p id="fpSubtitle">הזן/י שם משתמש — קוד איפוס יישלח לכתובת המייל הרשומה שלך</p></header>
+    <div class="mbody">
+      <div class="mrow" id="fpStep1Row"><label>שם משתמש</label><input type="text" id="fpUser" autocomplete="username" placeholder="לדוגמה: aya1"></div>
+      <div id="fpStep2" class="hidden">
+        <div class="mrow"><label>קוד מהמייל</label><input type="text" id="fpCode" maxlength="6" dir="ltr" placeholder="123456"></div>
+        <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="fpNew" autocomplete="new-password"></div>
+        <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="fpNew2" autocomplete="new-password"></div>
+      </div>
+      <div class="merr" id="fpErr"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn primary" id="fpOk">שליחת קוד</button>
+      <button class="btn plain" data-close>ביטול</button>
     </div>
   </div>
 </div>
@@ -3636,7 +3658,7 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
   const rows = r.report.map(e=>{
     grossAll+=e.gross; totReg+=(e.regHours||0); tot125+=(e.ot125||0); tot150+=(e.ot150||0);
     const noRep = !e.reported;
-    return `<tr${noRep?' style="opacity:.55"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:10px">ללא דיווח</span>':''}</td>
+    return `<tr${noRep?' style="opacity:.55"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:10px">ללא דיווח</span>':''}${e.incomplete?' <span style="color:#b91c1c;font-size:10px" title="ימים עם החתמה חסרה שלא ניתן להשלים">⚠ '+e.incomplete+' לא שלם</span>':''}${e.autoCompleted?' <span style="color:#4338ca;font-size:10px" title="הושלמו אוטומטית לפי סידור עבודה">🔧 '+e.autoCompleted+'</span>':''}</td>
       <td>${e.days}</td>
       <td>${e.regHours?e.regHours:'—'}</td>
       <td>${e.ot125?'<b style="color:#9a3412">'+e.ot125+'</b>':'—'}</td>
@@ -3661,10 +3683,9 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
 async function renderLive(){
   const box=document.getElementById('liveList');
   box.innerHTML='טוען…';
-  const today=iso(new Date());
-  const r=await apiPost({ action:'myAttendance', username:'__mgr__', password:'', month:today.slice(0,7) });
-  // לוגיקת זמן אמת: קוראים דוח של כולם לחודש הנוכחי (מוגבל לסניף הנוכחי, או כל הסניפים לאדמין ללא בחירה)
-  const r2=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:today.slice(0,7), branch: effectiveBranch()||undefined });
+  // נקרא רק את היום הנוכחי (action ייעודי, לא attendanceDetailed לחודש שלם) — מסך זה מתרענן
+  // חוזר ונשנה, אז חישוב חודש שלם לכל רענון היה בזבזני ולא הכרחי (תוקן 2026-09-07).
+  const r2=await apiPost({ action:'attendanceLive', ...mgrAuth(), branch: effectiveBranch()||undefined });
   if(!r2.ok){ box.innerHTML=esc(r2.error||'שגיאה'); return; }
   const now=new Date();
   const todayStr=iso(now);
@@ -3676,22 +3697,21 @@ async function renderLive(){
   });
   const toM=t=>{const p=String(t||'').split(':');return p.length>=2?Number(p[0])*60+Number(p[1]):0;};
   const nowM=now.getHours()*60+now.getMinutes();
-  r2.employees.forEach(emp=>{
-    const d=emp.days.find(x=>x.date===todayStr);
-    const shift=todayShifts[emp.employee];
-    const hasIn=d&&d.inT, hasOut=d&&d.outT;
+  r2.employees.forEach(d=>{
+    const shift=todayShifts[d.employee];
+    const hasIn=d.inT, hasOut=d.outT;
     const missedStart=shift&&!hasIn&&nowM>=toM(shift.start)+5;
     if(!hasIn&&!missedStart) return;
-    const breakOn=d&&d.breakT&&!d.backT;
+    const breakOn=d.breakT&&!d.backT;
     const lateIn=hasIn&&shift?Math.max(0,toM(d.inT)-toM(shift.start)):null;
     const lateMiss=missedStart?nowM-toM(shift.start):null;
     // dur: כשעדיין במשמרת — ריצה חיה מרגע הכניסה; כשכבר יצא — סיכום סופי (d.minutes, נטו הפסקות, מחושב בשרת)
     const dur = hasIn && !hasOut ? Math.round((now-new Date(todayStr+'T'+d.inT))/60000)
               : hasOut ? d.minutes : null;
-    lines.push({name:emp.employee, dept:emp.dept, branch:emp.branch||'',
-      shiftStart:shift?shift.start:'', inT:d?d.inT||'—':'—', outT:d?d.outT||'':'',
+    lines.push({name:d.employee, dept:d.dept, branch:d.branch||'',
+      shiftStart:shift?shift.start:'', inT:d.inT||'—', outT:d.outT||'',
       status:!hasIn?'לא הגיע':hasOut?'יצא':breakOn?'בהפסקה':'במשמרת',
-      lateIn, lateMiss, dur, durFinal:hasOut, events:(d&&d.events)||[]});
+      lateIn, lateMiss, dur, durFinal:hasOut, events:d.events||[]});
   });
   if(!lines.length){ box.innerHTML='<div style="color:var(--muted)">אין עובדים במשמרת כרגע</div>'; return; }
   const now2=new Date().toTimeString().slice(0,5);
@@ -3898,7 +3918,7 @@ async function loadMgrDetailed(){
   }
   lastMgrDetailed = r;
   const canEdit = isAdmin();
-  const rowAttrs = canEdit ? 'class="mgr-att-row" style="cursor:pointer" title="לחיצה לעריכת שעות"' : '';
+  const rowAttrs = canEdit ? 'class="mgr-att-row" title="לחיצה לעריכת שעות"' : '';
   const withData = r.employees.filter(e=>e.days.length);
   if(!withData.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחים בחודש זה</div>'; return; }
   box.innerHTML = withData.map(emp=>{
@@ -3911,10 +3931,11 @@ async function loadMgrDetailed(){
         <td colspan="4" style="text-align:center;color:#1e40af;font-size:11px">📍 ${esc(d.siteNote)}</td>
         <td><b>${fmtMin(d.minutes)}</b></td>
         <td>${d.ot?'<b style="color:#9a3412">'+d.ot+'</b>':'—'}</td></tr>`;
-      return `<tr ${rowAttrs} data-emp="${esc(emp.employee)}" data-date="${d.date}">
-        <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
+      const rowBg = !d.complete ? 'background:#fee2e2' : d.autoCompleted ? 'background:#e0e7ff' : '';
+      return `<tr ${rowAttrs} data-emp="${esc(emp.employee)}" data-date="${d.date}" style="${rowBg}">
+        <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}${!d.complete?' <b style="color:#b91c1c">⚠ חסרה החתמה</b>':''}</td>
         <td dir="ltr">${esc(d.inT||'—')}</td><td dir="ltr">${esc(d.breakT||'—')}</td>
-        <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}</td>
+        <td dir="ltr">${esc(d.backT||'—')}</td><td dir="ltr">${esc(d.outT||(d.complete?'—':'⚠'))}${d.autoCompleted?' <span title="הושלם אוטומטית לפי סידור עבודה" style="color:#4338ca;font-size:10px">🔧</span>':''}</td>
         <td><b>${fmtMin(d.minutes)}</b>${d.travel?' <small style="color:#1e40af">+נסיעה</small>':''}</td>
         <td>${d.ot?'<b style="color:#9a3412">'+d.ot+'</b>':'—'}</td></tr>`;
     }).join('');
@@ -4306,11 +4327,14 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
       const reg=e.regHours||0,o1=e.ot125||0,o2=e.ot150||0;
       tReg+=reg; t125+=o1; t150+=o2; tGross+=e.gross;
       const rate=e.empType==='חודשי' ? '' : (e.hourRate||r.minWage);
+      const incompleteN=e.days.filter(d=>!d.sick&&!d.complete).length;
+      const autoN=e.days.filter(d=>d.autoCompleted).length;
+      const notes=e.days.length?[incompleteN?('⚠ '+incompleteN+' ימים ללא החתמה מלאה'):'', autoN?('🔧 '+autoN+' יציאה הושלמה אוטומטית'):''].filter(Boolean).join(' · '):'ללא דיווח';
       sheetRows.push([e.empNo||'', e.employee, e.dept||'', rate,
         Math.round(reg*100)/100, Math.round(o1*100)/100, Math.round(o2*100)/100,
         Math.round((reg+o1+o2)*100)/100, e.days.filter(d=>!d.sick).length,
         e.sick||0, e.vacUsed||0, e.overAbsence||0, e.lateCount||0, e.gross,
-        e.days.length?'':'ללא דיווח']);
+        notes]);
     });
     sheetRows.push([]); sheetRows.push(['','','','סה"כ',Math.round(tReg*100)/100,Math.round(t125*100)/100,Math.round(t150*100)/100,Math.round((tReg+t125+t150)*100)/100,'','','','','',Math.round(tGross*100)/100]);
 
@@ -4426,11 +4450,13 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             cols.total=fDec(h);
             if(d.events&&d.events.some(e=>e.status&&e.status!=='תקין')) rowClass+=' flagged';
           }
+          if(!d.complete) rowClass+=' incomplete-row';
+          else if(d.autoCompleted) rowClass+=' auto-row';
         }
-        dayRows.push({day,dayName:dayName[dow],cols,note,rowClass,isShabbat,dateStr});
+        dayRows.push({day,dayName:dayName[dow],cols,note,rowClass,isShabbat,dateStr,autoCompleted:d&&d.autoCompleted});
       }
 
-      const rowsHtml = dayRows.map(({day,dayName:dn,cols,note,rowClass,isShabbat})=>{
+      const rowsHtml = dayRows.map(({day,dayName:dn,cols,note,rowClass,isShabbat,autoCompleted})=>{
         // שבת מוצגת כ"שבת" רק אם לא היה בה בפועל דיווח נוכחות (כדי לא להסתיר עובדים שעבדו בשבת)
         if(isShabbat && !cols.inT && !cols.siteNote && !note) return `<tr class="shabbat-row"><td>${day}</td><td>${dn}</td><td colspan="8" style="text-align:center;color:#9ca3af;font-size:10px">שבת</td></tr>`;
         if(cols.siteNote) return `<tr class="${rowClass}">
@@ -4448,7 +4474,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
           <td style="text-align:center">${cols.inT}</td>
           <td style="text-align:center">${cols.brk1}</td>
           <td style="text-align:center">${cols.back1}</td>
-          <td style="text-align:center">${cols.out||(!cols.inT?'':'<span style="color:#b91c1c">⚠</span>')}</td>
+          <td style="text-align:center">${cols.out||(!cols.inT?'':'<span style="color:#b91c1c">⚠</span>')}${autoCompleted?' <span style="color:#4338ca;font-size:8px">🔧</span>':''}</td>
           <td style="text-align:center">${note||cols.reg}</td>
           <td style="text-align:center">${cols.ot125}</td>
           <td style="text-align:center">${cols.ot150}</td>
@@ -4620,6 +4646,8 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
       .att-table tr.shabbat-row{background:#f3f4f6}
       .att-table tr.friday{background:#fef9c3}
       .att-table tr.flagged td{background:#fff3cd}
+      .att-table tr.incomplete-row td{background:#fee2e2}
+      .att-table tr.auto-row td{background:#e0e7ff}
       .att-table tfoot .total-row{background:#dbeafe;font-weight:700}
       .summary-box{display:flex;gap:12px;margin:8px 0;border:1px solid #d1d5db;padding:8px;border-radius:4px}
       .summary-box table td{padding:2px 6px;font-size:10px;border:none}
@@ -5748,6 +5776,62 @@ async function doLogin(){
 }
 document.getElementById('lgOk').addEventListener('click',doLogin);
 document.getElementById('lgPw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+/* ============ שחזור סיסמה עצמאי (שכחתי סיסמה) — שני שלבים באותו מודאל: שליחת קוד למייל, ואז קוד+סיסמה חדשה ============ */
+let _fpStep = 1;
+function openForgotPw(){
+  _fpStep = 1;
+  document.getElementById('fpUser').value = document.getElementById('lgUser').value.trim();
+  document.getElementById('fpCode').value='';
+  document.getElementById('fpNew').value='';
+  document.getElementById('fpNew2').value='';
+  document.getElementById('fpErr').textContent='';
+  document.getElementById('fpStep1Row').classList.remove('hidden');
+  document.getElementById('fpStep2').classList.add('hidden');
+  document.getElementById('fpSubtitle').textContent='הזן/י שם משתמש — קוד איפוס יישלח לכתובת המייל הרשומה שלך';
+  document.getElementById('fpOk').textContent='שליחת קוד';
+  hide('loginOverlay'); show('fpOverlay');
+  document.getElementById('fpUser').focus();
+}
+document.getElementById('lgForgotPw').addEventListener('click', openForgotPw);
+
+document.getElementById('fpOk').addEventListener('click', async ()=>{
+  const err=document.getElementById('fpErr');
+  err.textContent='';
+  const btn=document.getElementById('fpOk');
+  if(_fpStep===1){
+    const username=document.getElementById('fpUser').value.trim();
+    if(!username){ err.textContent='יש להזין שם משתמש'; return; }
+    btn.disabled=true; btn.textContent='שולח…';
+    const r=await apiPost({ action:'sendOtp', username });
+    btn.disabled=false; btn.textContent='שליחת קוד';
+    if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+    _fpStep=2;
+    document.getElementById('fpStep1Row').classList.add('hidden');
+    document.getElementById('fpStep2').classList.remove('hidden');
+    document.getElementById('fpSubtitle').textContent='קוד נשלח ל-'+(r.hint||'המייל הרשום')+' — הזן/י אותו יחד עם סיסמה חדשה';
+    document.getElementById('fpOk').textContent='איפוס סיסמה';
+    document.getElementById('fpCode').focus();
+  } else {
+    const code=document.getElementById('fpCode').value.trim();
+    const np=document.getElementById('fpNew').value;
+    const np2=document.getElementById('fpNew2').value;
+    if(!code){ err.textContent='יש להזין את הקוד שנשלח למייל'; return; }
+    if(np.length<4){ err.textContent='הסיסמה חייבת להכיל לפחות 4 תווים'; return; }
+    if(np!==np2){ err.textContent='הסיסמאות אינן תואמות'; return; }
+    const username=document.getElementById('fpUser').value.trim();
+    btn.disabled=true; btn.textContent='מאפס…';
+    const r=await apiPost({ action:'verifyOtp', username, code, newPassword:np });
+    btn.disabled=false; btn.textContent='איפוס סיסמה';
+    if(!r.ok){ err.textContent=r.error||'שגיאה'; return; }
+    hide('fpOverlay');
+    toast('הסיסמה אופסה ✓ ניתן להתחבר עכשיו עם הסיסמה החדשה','ok');
+    show('loginOverlay');
+    document.getElementById('lgUser').value=username;
+    document.getElementById('lgPw').value='';
+    document.getElementById('lgPw').focus();
+  }
+});
 
 // עובד-מנהל מאוחד מחובר בבת אחת (state.emp+state.mgr יחד) — כל כפתור "יציאה" מנתק את שניהם,
 // כדי לא להשאיר מצב-ביניים מבלבל של "יצא מהניהול אבל עדיין מחובר כעובד" או להפך.
