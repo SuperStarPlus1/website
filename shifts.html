@@ -1541,7 +1541,7 @@ function renderGate(){
     </div>`;
   document.getElementById('gateLogin').addEventListener('click', openLoginModal);
 }
-function gateOrLoad(){ if(authed()) load(); else renderGate(); }
+function gateOrLoad(){ if(authed()) load(); else { renderGate(); openLoginModal(); } }
 
 let _loadSeq = 0;
 async function load(){
