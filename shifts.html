@@ -5773,7 +5773,19 @@ async function doLogin(){
   if(!username){ err.textContent='יש להזין שם משתמש'; return; }
   err.textContent='בודק…';
   try{
-    const r = await apiPost({ action:'elogin', username, password:pw });
+    // 'login' מאוחד — מנסה עובד ואז (רק אם לא נמצא בכלל) מנהל, בסבב-רשת אחד בשרת במקום שתי
+    // קריאות elogin+mlogin נפרדות ברצף (חסך כ-2.5-3 שנ' מכל כניסת מנהל/אדמין, ר' Code.gs).
+    // תשובת מנהל מזוהה לפי שדה r.role (קיים רק בנתיב המנהל; נתיב העובד מחזיר mgrRole מקונן).
+    const r = await apiPost({ action:'login', username, password:pw });
+    if(r.ok && r.role){
+      state.mgr = { name:r.name||username, pw, role:r.role, branch:r.branch||'' };
+      state.branches = r.branches || [];
+      if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
+      store.set({ kind:'mgr', name:state.mgr.name, pw });
+      hide('loginOverlay'); setAuthUI(); load();
+      toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
+      return;
+    }
     if(r.ok){
       state.emp = { name:r.name, username, pw, active:r.active!==false };
       applyEmpMgrRole_(r, username, pw);
@@ -5787,18 +5799,6 @@ async function doLogin(){
         toast(state.emp.active ? 'שלום '+r.name+(state.mgr?' · '+state.mgr.role:'') : 'שלום '+r.name+' · גישה מוגבלת לתלושי שכר בלבד','ok');
       }
       return;
-    }
-    if(r.error === 'שם משתמש לא נמצא'){
-      const r2 = await apiPost({ action:'mlogin', mname:username, password:pw });
-      if(r2.ok){
-        state.mgr = { name:r2.name||username, pw, role:r2.role, branch:r2.branch||'' };
-        state.branches = r2.branches || [];
-        if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
-        store.set({ kind:'mgr', name:state.mgr.name, pw });
-        hide('loginOverlay'); setAuthUI(); load();
-        toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
-        return;
-      }
     }
     err.textContent = r.error||'שגיאה';
   }catch(e){ err.textContent='שגיאת תקשורת: '+e.message; }
