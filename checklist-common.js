@@ -1,6 +1,11 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbybrlNM--KmALdRePOnjno9muEcJ6sDJfErRWMyD5s_gpN27yiEk_dmyVDQoqUaB_XY/exec';
+// עודכן 2026-09-13: הכתובת הקודמת הצביעה על פריסה ישנה/נטושה של הסקריפט (לא זו שמעודכנת בכל
+// שינוי ב-shifts.html) — activeShiftEmployees שם תמיד חזר ריק (כנראה עדיין קורא את גיליון
+// הנוכחות הישן, לפני הפיצול לטאבים חודשיים), ולכן התפריט תמיד הציג רק את השם הקבוע למטה.
+// הכתובת הזו היא אותה פריסה שמתעדכנת תמיד יחד עם shifts.html — ר' GAS_URL שם.
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbze9AQ0vpidBqKhVzd6lqSwUhVN_PxPTVj33_Xfmr3JBjqPnkDMqJH8A7NCIN5BDkv_/exec';
 
-const DEFAULT_CHECKLIST_EMPLOYEE = 'אשרף עדנאן';
+// הסניף היחיד שטופסי הבקרה האלה משמשים אותו (הכלי קדם לגרסה הרב-סניפית ולא עודכן מאז)
+const CHECKLIST_BRANCH = 'סופרסטאר';
 
 function initBranchChecklist(opts) {
   const items = opts.items;
@@ -15,17 +20,21 @@ function initBranchChecklist(opts) {
   const checklistDiv = document.getElementById("checklist");
   const uploadedFiles = {};
 
+  // kioskEmployees — רשימת עובדים פעילים בסניף, ציבורית בכוונה (בלי חשיפת נוכחות/סיסמה),
+  // בדיוק מתאימה לטופס ציבורי כזה בלי התחברות. מחליף את activeShiftEmployees (דרש התחברות
+  // מנהל שהטופס הזה מעולם לא שלח, ולכן חזר ריק) ואת ברירת המחדל הקבועה ("אשרף עדנאן") שהיתה
+  // תמיד מופיעה ברשימה בלי קשר למי שבאמת עובד היום — הוסרה לפי בקשת המשתמש.
   const empSelect = document.getElementById("employeeName");
-  fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'activeShiftEmployees' }) })
+  fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'kioskEmployees', branch: CHECKLIST_BRANCH }) })
     .then(res => res.json())
     .then(j => {
-      const active = (j.ok && j.employees) ? j.employees : [];
-      // אשרף עדנאן תמיד מופיע ברשימה, בנוסף לעובדים שבמשמרת (לא רק כברירת מחדל כשאין אף אחד)
-      const names = Array.from(new Set([DEFAULT_CHECKLIST_EMPLOYEE, ...active])).sort((a, b) => a.localeCompare(b, 'he'));
-      empSelect.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+      const names = (j.ok && j.employees) ? j.employees.map(e => e.name) : [];
+      empSelect.innerHTML = names.length
+        ? names.map(n => `<option value="${n}">${n}</option>`).join('')
+        : `<option value="">— לא נמצאו עובדים פעילים —</option>`;
     })
     .catch(() => {
-      empSelect.innerHTML = `<option value="${DEFAULT_CHECKLIST_EMPLOYEE}">${DEFAULT_CHECKLIST_EMPLOYEE}</option>`;
+      empSelect.innerHTML = `<option value="">— שגיאה בטעינת רשימת עובדים —</option>`;
     });
 
   function updateTaskCounter() {
