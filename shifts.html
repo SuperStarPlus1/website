@@ -626,8 +626,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <div style="text-align:center;padding-top:20px"><img src="/logo.png" alt="סופר סטאר" style="width:84px;height:auto"></div>
     <header><h3>כניסה למערכת</h3><p>שם משתמש וסיסמה שקיבלת מהמנהל</p></header>
     <div class="mbody">
-      <div class="mrow"><label>שם משתמש</label><input type="text" id="lgUser" name="username" autocomplete="username" placeholder="לדוגמה: aya1"></div>
-      <div class="mrow"><label>סיסמה</label><input type="password" id="lgPw" name="password" autocomplete="current-password"></div>
+      <div class="mrow"><label>שם משתמש</label><input type="text" id="lgUser" name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="לדוגמה: aya1"></div>
+      <div class="mrow"><label>סיסמה</label><input type="password" id="lgPw" name="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin-top:2px">
         <input type="checkbox" id="lgRemember" checked> 🔓 השאר אותי מחובר/ת במכשיר זה</label>
       <div class="merr" id="lgErr"></div>
@@ -647,11 +647,11 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3>🔑 שחזור סיסמה</h3><p id="fpSubtitle">הזן/י שם משתמש — קוד איפוס יישלח לכתובת המייל הרשומה שלך</p></header>
     <div class="mbody">
-      <div class="mrow" id="fpStep1Row"><label>שם משתמש</label><input type="text" id="fpUser" autocomplete="username" placeholder="לדוגמה: aya1"></div>
+      <div class="mrow" id="fpStep1Row"><label>שם משתמש</label><input type="text" id="fpUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="לדוגמה: aya1"></div>
       <div id="fpStep2" class="hidden">
-        <div class="mrow"><label>קוד מהמייל</label><input type="text" id="fpCode" maxlength="6" dir="ltr" placeholder="123456"></div>
-        <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="fpNew" autocomplete="new-password"></div>
-        <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="fpNew2" autocomplete="new-password"></div>
+        <div class="mrow"><label>קוד מהמייל</label><input type="text" id="fpCode" maxlength="6" dir="ltr" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="123456"></div>
+        <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="fpNew" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="fpNew2" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       </div>
       <div class="merr" id="fpErr"></div>
     </div>
@@ -1111,8 +1111,8 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal">
     <header><h3>🔑 בחירת סיסמה אישית</h3><p>זו כניסתך הראשונה (או שסיסמתך אופסה) — יש לבחור סיסמה חדשה כדי להמשיך</p></header>
     <div class="mbody">
-      <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="pwcNew" autocomplete="new-password"></div>
-      <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="pwcNew2" autocomplete="new-password"></div>
+      <div class="mrow"><label>סיסמה חדשה (לפחות 4 תווים)</label><input type="password" id="pwcNew" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="mrow"><label>אימות סיסמה חדשה</label><input type="password" id="pwcNew2" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       <div class="merr" id="pwcErr"></div>
     </div>
     <div class="mfoot">
