@@ -142,10 +142,43 @@ function initBranchChecklist(opts) {
     document.getElementById("progressBar").style.width = percent + "%";
   }
 
+  // בסיום שליחה מוצלחת אין כיום שום דרך לצאת ממסך ה"נשלח בהצלחה" — נוצר בכוונה דינמית (לא בכל
+  // HTML קובץ בנפרד) כדי שהתיקון יחול על שני הטפסים (פתיחה/סגירה) ממקום אחד. window.close()
+  // עובד רק אם החלון נפתח ע"י סקריפט (למשל מכפתור "פתיחת סניף" ב-shifts.html) — אם לא (נפתח
+  // כטאב ישיר/מהמסך הראשי), הוא לא עושה כלום, ולכן יש גם נפילה חזרה לעמוד הראשי אחרי רגע קצר.
+  function showDone(stage) {
+    showProgress(stage, 100);
+    document.getElementById("progressBarContainer").style.display = 'none';
+    let closeBtn = document.getElementById("progressCloseBtn");
+    if (!closeBtn) {
+      closeBtn = document.createElement("button");
+      closeBtn.id = "progressCloseBtn";
+      closeBtn.textContent = "סגירה";
+      closeBtn.style.cssText = "margin-top:20px;padding:10px 30px;font-size:16px;background:#4caf50;color:#fff;border:none;border-radius:8px;cursor:pointer";
+      closeBtn.onclick = () => {
+        window.close();
+        setTimeout(() => { location.href = '/shifts'; }, 200);
+      };
+      document.getElementById("progressContainer").appendChild(closeBtn);
+    }
+    closeBtn.style.display = 'inline-block';
+  }
+
   document.getElementById("checkForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const employeeName = document.getElementById("employeeName").value.trim();
     if (!employeeName) { alert("יש לבחור עובד."); return; }
+
+    // אישור לפני שליחה — עם אזהרה מפורשת אם נשארו משימות שלא סומנו, כדי לצמצם דיווחים חלקיים
+    // בטעות (למשל לחיצה מוקדמת מדי על "שלח טופס בקרה").
+    const totalItemsC = items.length;
+    let doneItemsC = 0;
+    for (let i = 0; i < totalItemsC; i++) { if (document.getElementById(`item${i}`).checked) doneItemsC++; }
+    const missingC = totalItemsC - doneItemsC;
+    const confirmMsg = missingC > 0
+      ? `שים/י לב: נותרו ${missingC} משימות שלא סומנו כבוצעו. לשלוח את הדוח בכל זאת?`
+      : `לשלוח את הדוח בשם ${employeeName}?`;
+    if (!confirm(confirmMsg)) return;
 
     showProgress("שולח דוח...", 60);
     const sections = items.map((item, idx) => {
@@ -175,7 +208,7 @@ function initBranchChecklist(opts) {
       });
       const j = await res.json();
       if (!j.ok) throw new Error(j.error || 'שליחה נכשלה');
-      showProgress("הדוח נשלח למייל בהצלחה ✅", 100);
+      showDone("הדוח נשלח למייל בהצלחה ✅");
     } catch (err) {
       console.error(err);
       document.getElementById("progressOverlay").style.display = 'none';
