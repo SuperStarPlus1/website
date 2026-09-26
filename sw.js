@@ -3,7 +3,7 @@
  */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE  = 'superstar-v58';
+const CACHE  = 'superstar-v59';
 const ASSETS = ['/shifts', '/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -24,6 +24,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.hostname.includes('script.google') ||
+      url.hostname.includes('supabase.co') ||
       url.hostname.includes('googleapis') ||
       url.hostname.includes('onesignal') ||
       e.request.method !== 'GET') return;

@@ -2,7 +2,7 @@
 // שינוי ב-shifts.html) — activeShiftEmployees שם תמיד חזר ריק (כנראה עדיין קורא את גיליון
 // הנוכחות הישן, לפני הפיצול לטאבים חודשיים), ולכן התפריט תמיד הציג רק את השם הקבוע למטה.
 // הכתובת הזו היא אותה פריסה שמתעדכנת תמיד יחד עם shifts.html — ר' GAS_URL שם.
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbze9AQ0vpidBqKhVzd6lqSwUhVN_PxPTVj33_Xfmr3JBjqPnkDMqJH8A7NCIN5BDkv_/exec';
+const GAS_URL = 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api';
 
 // הסניף היחיד שטופסי הבקרה האלה משמשים אותו (הכלי קדם לגרסה הרב-סניפית ולא עודכן מאז)
 const CHECKLIST_BRANCH = 'סופרסטאר';
