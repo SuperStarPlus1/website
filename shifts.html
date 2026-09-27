@@ -4721,11 +4721,11 @@ function openBlobFile(b64, filename, mime){
   const w=window.open(url,'_blank');
   if(!w){ const a=document.createElement('a'); a.href=url; a.download=filename||'file'; a.click(); }
 }
-function openBlobPdf(b64, filename){
+function openBlobPdf(b64, filename, mime){
   const bin = atob(b64);
   const arr = new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([arr], { type:'application/pdf' }));
+  const url = URL.createObjectURL(new Blob([arr], { type: mime || 'application/pdf' }));
   const w = window.open(url, '_blank');
   if(!w){ const a=document.createElement('a'); a.href=url; a.download=filename||'payslip.pdf'; a.click(); }
 }
@@ -4964,15 +4964,22 @@ document.getElementById('myF101Btn').addEventListener('click', async ()=>{
   box.innerHTML = r.forms.length ? r.forms.map(f=>`
     <div class="cons-item">
       <span>📋 טופס 101 · ${esc(f.year)}</span>
-      <span class="acts"><button class="ap my-f101-open" data-fid="${esc(f.fileId)}" data-fn="${esc(f.filename)}">פתיחה</button></span>
+      <span class="acts"><button class="ap my-f101-open" data-fid="${esc(f.fileId)}" data-kind="">פתיחה</button>${f101AttachButtons(f, 'my-f101-open')}</span>
     </div>`).join('') : '<div style="color:var(--muted);font-size:12.5px">עדיין לא הגשת טופס 101 דרך המערכת</div>';
   box.querySelectorAll('.my-f101-open').forEach(b=>b.addEventListener('click', async ()=>{
+    const label = b.textContent;
     b.textContent='טוען…';
-    const r2 = await apiPost({ action:'getF101File', username:state.emp.username, password:state.emp.pw, fileId:b.dataset.fid });
-    b.textContent='פתיחה';
-    if(r2.ok) openBlobPdf(r2.data, r2.filename); else toast(r2.error||'שגיאה','err');
+    const r2 = await apiPost({ action:'getF101File', username:state.emp.username, password:state.emp.pw, fileId:b.dataset.fid, kind:b.dataset.kind||undefined });
+    b.textContent=label;
+    if(r2.ok) openBlobPdf(r2.data, r2.filename, r2.mimeType); else toast(r2.error||'שגיאה','err');
   }));
 });
+
+/* buttons for a submission's supporting documents (bank confirmation / residency certificate) */
+const F101_ATTACH_LABELS = { bank:'🏦 אישור בנק', resident:'🏠 אישור תושב' };
+function f101AttachButtons(f, cls){
+  return (f.attachments||[]).map(a=>` <button class="ap ${cls}" data-fid="${esc(f.fileId)}" data-kind="${esc(a.kind)}">${F101_ATTACH_LABELS[a.kind]||esc(a.kind)}</button>`).join('');
+}
 
 /* --- מנהל --- */
 async function openF101Admin(){
@@ -4992,11 +4999,11 @@ document.getElementById('f101ViewEmp').addEventListener('change', async ()=>{
   box.innerHTML = r.forms.length ? r.forms.map(f=>`
     <div class="cons-item">
       <span>📋 ${esc(f.year)}</span>
-      <span class="acts"><button class="ap f101-open" data-fid="${esc(f.fileId)}" data-fn="${esc(f.filename)}">צפייה</button></span>
+      <span class="acts"><button class="ap f101-open" data-fid="${esc(f.fileId)}" data-kind="">צפייה</button>${f101AttachButtons(f, 'f101-open')}</span>
     </div>`).join('') : '<div style="color:var(--muted);font-size:12.5px">אין טפסים לעובד זה</div>';
   box.querySelectorAll('.f101-open').forEach(b=>b.addEventListener('click', async ()=>{
-    const r2 = await apiPost({ action:'getF101File', ...mgrAuth(), fileId:b.dataset.fid });
-    if(r2.ok) openBlobPdf(r2.data, b.dataset.fn); else toast(r2.error||'שגיאה','err');
+    const r2 = await apiPost({ action:'getF101File', ...mgrAuth(), fileId:b.dataset.fid, kind:b.dataset.kind||undefined });
+    if(r2.ok) openBlobPdf(r2.data, r2.filename, r2.mimeType); else toast(r2.error||'שגיאה','err');
   }));
 });
 
@@ -5278,6 +5285,12 @@ function renderF101Body(data, employer){
       <button class="btn plain" id="f101AddTaxCoord">+ הוספת שורה</button>
     </div>
 
+    <h4>מסמכים מצורפים</h4>
+    <div class="mrow"><label>אישור ניהול חשבון בנק * (PDF או תמונה, עד 5MB)</label>
+      <input type="file" id="f-bankCert" accept="application/pdf,image/*"></div>
+    <div class="mrow"><label>אישור תושב (לא חובה — למי שגר ביישוב מזכה)</label>
+      <input type="file" id="f-residentCert" accept="application/pdf,image/*"></div>
+
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-top:18px">
       <b>י. הצהרה</b>
       <p style="font-size:12px;color:#444;margin:8px 0">אני מצהיר/ה כי הפרטים שמסרתי בטופס זה הינם מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הינה עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי שיחול בפרטיי האישיים תוך שבוע ימים מתאריך השינוי.</p>
@@ -5397,11 +5410,26 @@ async function submitF101Flow(){
   if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
   if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
   if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
+  const attachSpecs = [
+    { kind:'bank', id:'f-bankCert', label:'אישור ניהול חשבון בנק', required:true },
+    { kind:'resident', id:'f-residentCert', label:'אישור תושב', required:false }
+  ];
+  const attachFiles = [];
+  for(const s of attachSpecs){
+    const f = document.getElementById(s.id).files[0];
+    if(!f){ if(s.required){ err.textContent = 'חובה לצרף '+s.label; return; } continue; }
+    if(f.size > 5*1024*1024){ err.textContent = s.label+': הקובץ גדול מדי (מקסימום 5MB)'; return; }
+    const mime = (f.type||'').toLowerCase();
+    if(!(mime==='application/pdf' || mime.startsWith('image/'))){ err.textContent = s.label+': יש לצרף קובץ PDF או תמונה'; return; }
+    attachFiles.push({ kind:s.kind, file:f, mime });
+  }
   const btn = document.getElementById('f101Submit');
   btn.disabled = true; btn.textContent = 'שולח…';
+  const attachments = [];
+  for(const a of attachFiles) attachments.push({ kind:a.kind, mime:a.mime, data: await fileToB64(a.file) });
   let clientIp = '';
   try{ const ipr = await fetch('https://api.ipify.org?format=json').then(r=>r.json()); clientIp = ipr.ip||''; }catch(e){}
-  const r = await apiPost({ action:'submitF101', username:state.emp.username, password:state.emp.pw, fields, clientIp });
+  const r = await apiPost({ action:'submitF101', username:state.emp.username, password:state.emp.pw, fields, clientIp, attachments });
   btn.disabled = false; btn.textContent = '📨 שליחת הטופס';
   if(!r.ok){ err.textContent = r.error||'שגיאה בשליחה'; return; }
   const me = empByName(state.emp.name);
