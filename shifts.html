@@ -2,6 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://*.onesignal.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://onesignal.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://onesignal.com https://*.onesignal.com; connect-src 'self' https://*.supabase.co https://api.ipify.org https://onesignal.com https://*.onesignal.com https://cdnjs.cloudflare.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src https://onesignal.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <!-- OneSignal Push Notifications -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -639,6 +641,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <button class="btn plain" id="lgKioskLink" style="color:#6b7280;font-size:12px">🖥 מסך קיוסק (טאבלט משותף)</button>
     </div>
     <div style="text-align:center;padding-bottom:14px"><a href="javascript:void(0)" id="lgForgotPw" style="font-size:12.5px;color:#6b7280">שכחתי סיסמה 🔑</a></div>
+    <div style="text-align:center;padding:4px 0 14px"><a class="sf-powered" href="https://shiftfloo.co.il" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6b7280;text-decoration:none">מופעל על ידי <img src="/shiftfloo-mark.svg" alt="" style="height:13px"><b style="font-family:Sora,Heebo,Arial,sans-serif;color:#13234A;letter-spacing:-.02em">shiftfloo</b></a></div>
   </div>
 </div>
 
@@ -2449,7 +2452,7 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
     // מנהל "טהור" בלי חשבון עובד ממשיך להיות מזוהה לפי שם, כמו קודם.
     const myEmpNo = state.emp ? (empByName(state.emp.name)||{}).empNo : null;
     const me = myEmpNo ? list.find(m=>m.empNo===myEmpNo) : list.find(m=>m.name===state.mgr.name);
-    if(me && !state.emp){ state.mgr.pw = me.password; state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; store.set({kind:'mgr',name:me.name,pw:me.password}); }
+    if(me && !state.emp){ state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; }   // the session stays valid; no password on the device
     else if(me && state.emp){ state.mgr.role = me.role; state.mgr.branch = me.role===ROLE_ADMIN?'':me.branch; }
     hide('mgrsOverlay');
     toast('המנהלים נשמרו ✓','ok');
@@ -2865,8 +2868,9 @@ document.getElementById('pwcOk').addEventListener('click', async ()=>{
   err.textContent='שומר…';
   const r = await apiPost({ action:'changePassword', username:state.emp.username, password:state.emp.pw, newPassword:np });
   if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
-  state.emp.pw = np;
-  store.set({ kind:'emp', name:state.emp.name, username:state.emp.username, pw:np });
+  state.emp.pw = r.token || np;   // the server signed out the other devices and issued a new session for this one
+  if(state.mgr && state.mgr.name===state.emp.username) state.mgr.pw = state.emp.pw;
+  store.set({ kind:'emp', name:state.emp.name, username:state.emp.username, pw:state.emp.pw });
   hide('pwcOverlay');
   toast('הסיסמה עודכנה ✓ שלום '+state.emp.name,'ok');
   load();
@@ -5804,20 +5808,20 @@ async function doLogin(){
     // 'login' מאוחד — מנסה עובד ואז (רק אם לא נמצא בכלל) מנהל, בסבב-רשת אחד בשרת במקום שתי
     // קריאות elogin+mlogin נפרדות ברצף (חסך כ-2.5-3 שנ' מכל כניסת מנהל/אדמין, ר' Code.gs).
     // תשובת מנהל מזוהה לפי שדה r.role (קיים רק בנתיב המנהל; נתיב העובד מחזיר mgrRole מקונן).
-    const r = await apiPost({ action:'login', username, password:pw });
+    const r = await apiPost({ action:'login', username, password:pw, remember: document.getElementById('lgRemember').checked });
     if(r.ok && r.role){
-      state.mgr = { name:r.name||username, pw, role:r.role, branch:r.branch||'' };
+      state.mgr = { name:r.name||username, pw: r.token||pw, role:r.role, branch:r.branch||'' };
       state.branches = r.branches || [];
       if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
-      store.set({ kind:'mgr', name:state.mgr.name, pw });
+      store.set({ kind:'mgr', name:state.mgr.name, pw: state.mgr.pw });
       hide('loginOverlay'); setAuthUI(); load();
       toast('שלום '+state.mgr.name+' · '+state.mgr.role,'ok');
       return;
     }
     if(r.ok){
-      state.emp = { name:r.name, username, pw, active:r.active!==false };
-      applyEmpMgrRole_(r, username, pw);
-      store.set({ kind:'emp', name:r.name, username, pw }, document.getElementById('lgRemember').checked);
+      state.emp = { name:r.name, username, pw: r.token||pw, active:r.active!==false };
+      applyEmpMgrRole_(r, username, state.emp.pw);
+      store.set({ kind:'emp', name:r.name, username, pw: state.emp.pw }, document.getElementById('lgRemember').checked);
       // עובד-מנהל מאוחד: לא מסננים את לוח הסידור לשורה שלו בלבד — מנהל צריך לראות/לערוך את כולם
       state.filterEmp = state.mgr ? '' : r.name;
       hide('loginOverlay'); setAuthUI();
@@ -5893,6 +5897,7 @@ document.getElementById('fpOk').addEventListener('click', async ()=>{
 // עובד-מנהל מאוחד מחובר בבת אחת (state.emp+state.mgr יחד) — כל כפתור "יציאה" מנתק את שניהם,
 // כדי לא להשאיר מצב-ביניים מבלבל של "יצא מהניהול אבל עדיין מחובר כעובד" או להפך.
 function fullLogout_(){
+  { const tk=(state.emp&&state.emp.pw)||(state.mgr&&state.mgr.pw); if(tk && String(tk).indexOf('sft1.')===0) apiPost({ action:'logout', token:tk }).catch(()=>{}); }
   state.mgr=null; state.emp=null; state.filterEmp=''; store.clear();
   state.dirtyShifts=false; state.dirtyEmps=false;
   state._homeShown=false; hideEmpHome();
@@ -6340,7 +6345,8 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
   if(auth && auth.kind==='mgr'){
     const r = await apiPost({ action:'mlogin', mname:auth.name, password:auth.pw }).catch(()=>({ok:false}));
     if(r.ok){
-      state.mgr = { name:r.name||auth.name, pw:auth.pw, role:r.role, branch:r.branch||'' };
+      state.mgr = { name:r.name||auth.name, pw:r.token||auth.pw, role:r.role, branch:r.branch||'' };
+      if(r.token && r.token!==auth.pw) store.set({ kind:'mgr', name:state.mgr.name, pw:r.token });   // an old saved password becomes a session
       state.branches = r.branches || [];
       if(state.mgr.role===ROLE_ADMIN && !state.branch) state.branch = state.branches[0]||'';
     }
@@ -6348,8 +6354,9 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
   } else if(auth && auth.kind==='emp' && auth.username){
     const r = await apiPost({ action:'elogin', username:auth.username, password:auth.pw }).catch(()=>({ok:false}));
     if(r.ok){
-      state.emp = { name:r.name, username:auth.username, pw:auth.pw, active:r.active!==false };
-      applyEmpMgrRole_(r, auth.username, auth.pw);
+      state.emp = { name:r.name, username:auth.username, pw:r.token||auth.pw, active:r.active!==false };
+      if(r.token && r.token!==auth.pw) store.set({ kind:'emp', name:r.name, username:auth.username, pw:r.token });
+      applyEmpMgrRole_(r, auth.username, state.emp.pw);
       state.filterEmp = state.mgr ? '' : r.name;
     }
     else store.clear();
@@ -6358,5 +6365,6 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
   gateOrLoad();
 })();
 </script>
+<script>(function(){var h=document.getElementById("empHome");if(h&&!h.querySelector(".sf-powered"))h.insertAdjacentHTML("beforeend","<div style=\"text-align:center;padding:18px 0 26px\"><a class=\"sf-powered\" href=\"https://shiftfloo.co.il\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6b7280;text-decoration:none\">מופעל על ידי <img src=\"/shiftfloo-mark.svg\" alt=\"\" style=\"height:13px\"><b style=\"font-family:Sora,Heebo,Arial,sans-serif;color:#13234A;letter-spacing:-.02em\">shiftfloo</b></a></div>");})();</script>
 </body>
 </html>
