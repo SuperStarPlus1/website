@@ -2110,7 +2110,7 @@ function loadEmpCard(empName){
   document.getElementById('empCardActive').textContent = e.active===false ? '❌ לא פעיל' : '✅ פעיל';
   // תמונה
   const img=document.getElementById('empAvatarImg'), ini=document.getElementById('empAvatarInit');
-  if(e.avatar){ img.src=e.avatar; img.style.display='block'; ini.style.display='none'; }
+  if(e.avatarUrl){ img.src=e.avatarUrl; img.style.display='block'; ini.style.display='none'; }
   else { img.style.display='none'; ini.style.display=''; ini.textContent=(e.name||'?').charAt(0); }
   // שדות
   const list=document.getElementById('empList');
@@ -2130,25 +2130,19 @@ document.getElementById('empAdd').addEventListener('click',()=>{
   loadEmpCard(null);
 });
 
-// אווטאר מנהל
-document.getElementById('empAvatarWrap').addEventListener('click',()=>document.getElementById('empAvatarFile').click());
-document.getElementById('empAvatarFile').addEventListener('change', ev=>{
-  const file=ev.target.files[0]; if(!file) return;
-  if(file.size>614400){ toast('תמונה גדולה מדי — עד 600KB','err'); return; }
+// אווטאר מנהל — נשמר בשרת (Storage), מוקטן במכשיר; לחיצה על תמונה קיימת מגדילה אותה
+document.getElementById('empAvatarWrap').addEventListener('click',()=>window.avatarClick('mgr'));
+document.getElementById('empAvatarFile').addEventListener('change', async ev=>{
+  const file=ev.target.files[0]; ev.target.value=''; if(!file) return;
   const empName = _currentEmp?.name || document.querySelector('#empList .i-name')?.value.trim();
   if(!empName){ toast('יש להזין ולשמור שם עובד לפני העלאת תמונה','err'); return; }
-  const reader=new FileReader();
-  reader.onload=async re=>{
-    const src=re.target.result;
-    const img=document.getElementById('empAvatarImg'), ini=document.getElementById('empAvatarInit');
-    img.src=src; img.style.display='block'; ini.style.display='none';
-    if(_currentEmp) _currentEmp.avatar=src;
-    if(state.demo){ toast('מצב הדגמה — לא נשמר בפועל','ok'); return; }
-    const r = await apiPost({ action:'mgrSaveAvatar', ...mgrAuth(), employee:empName, avatar:src });
-    if(r.ok) toast('תמונה נשמרה ✓','ok');
-    else toast('שגיאה בשמירת תמונה: '+(r.error||''),'err');
-  };
-  reader.readAsDataURL(file);
+  let src; try{ src = await window.shrinkImage(file); }catch(e){ toast(e.message||'התמונה לא נתמכת','err'); return; }
+  const img=document.getElementById('empAvatarImg'), ini=document.getElementById('empAvatarInit');
+  img.src=src; img.style.display='block'; ini.style.display='none';
+  if(state.demo){ toast('מצב הדגמה — לא נשמר בפועל','ok'); return; }
+  const r = await apiPost({ action:'mgrSaveAvatar', ...mgrAuth(), employee:empName, avatar:src });
+  if(r.ok){ if(_currentEmp) _currentEmp.avatarUrl=r.avatarUrl; const x=empByName(empName); if(x) x.avatarUrl=r.avatarUrl; toast('תמונה נשמרה ✓','ok'); }
+  else toast('שגיאה בשמירת תמונה: '+(r.error||''),'err');
 });
 
 function empRow(e){
@@ -3051,7 +3045,7 @@ function showEmpHome(){
     </div>`;
     balDiv.classList.remove('hidden');
   } else if(balDiv) balDiv.classList.add('hidden');
-  const savedAvatar = localStorage.getItem('sp_avatar_'+state.emp.username) || empByName(state.emp.name)?.avatar || '';
+  const savedAvatar = empByName(state.emp.name)?.avatarUrl || '';
   updateSelfAvatar(savedAvatar);
   renderHomePunch();
   // מרצפים את שתי הקריאות במקום להריץ אותן בו-זמנית — מצמצם התנגשויות בקשות מקבילות מול GAS
@@ -3585,6 +3579,7 @@ function generateEmpPDF(r, month){
     <div class="stat"><div class="val">${(r.regHours||0).toFixed(2)}</div><div class="lbl">שעות רגילות</div></div>
     <div class="stat"><div class="val">${(r.ot125||0).toFixed(2)}</div><div class="lbl">נוספות 125%</div></div>
     <div class="stat"><div class="val">${(r.ot150||0).toFixed(2)}</div><div class="lbl">נוספות 150%</div></div>
+    ${r.restHours?`<div class="stat"><div class="val">${(r.restHours||0).toFixed(2)}</div><div class="lbl">מנוחה / חג</div></div>`:''}
     <div class="stat"><div class="val">${r.lateCount||0}</div><div class="lbl">איחורים</div></div>
     <div class="stat"><div class="val">~${r.gross.toLocaleString()}</div><div class="lbl">ברוטו צפוי (₪)</div></div>
   </div>
@@ -3680,18 +3675,17 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
     month: document.getElementById('attMgrMonth').value, branch: attReportBranch()||undefined });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
   if(!r.report.length){ box.innerHTML='<div style="color:var(--muted)">אין דיווחי נוכחות בחודש זה</div>'; return; }
-  let grossAll=0, totReg=0, tot125=0, tot150=0;
+  let grossAll=0, totReg=0, tot125=0, tot150=0, totRest=0;
   const hh = m => (m/60).toFixed(1);
   const rows = r.report.map(e=>{
-    grossAll+=e.gross; totReg+=(e.regHours||0); tot125+=(e.ot125||0); tot150+=(e.ot150||0);
+    grossAll+=e.gross; totReg+=(e.regHours||0); tot125+=(e.ot125||0); tot150+=(e.ot150||0); totRest+=(e.restHours||0);
     const noRep = !e.reported;
     return `<tr${noRep?' style="opacity:.55"':''}><td style="text-align:right;font-weight:700">${esc(e.employee)}${noRep?' <span style="color:#b91c1c;font-size:10px">ללא דיווח</span>':''}${e.incomplete?' <span style="color:#b91c1c;font-size:10px" title="ימים עם החתמה חסרה שלא ניתן להשלים">⚠ '+e.incomplete+' לא שלם</span>':''}${e.autoCompleted?' <span style="color:#4338ca;font-size:10px" title="הושלמו אוטומטית לפי סידור עבודה">🔧 '+e.autoCompleted+'</span>':''}</td>
       <td>${e.days}</td>
       <td>${e.regHours?e.regHours:'—'}</td>
       <td>${e.ot125?'<b style="color:#9a3412">'+e.ot125+'</b>':'—'}</td>
       <td>${e.ot150?'<b style="color:#b91c1c">'+e.ot150+'</b>':'—'}</td>
-      <td>${e.sick?e.sick:'—'}</td>
-      <td>${e.vacUsed?e.vacUsed:'—'}${e.vacQuota?'<small style="color:var(--muted)">/'+e.vacQuota+'</small>':''}</td>
+      <td>${e.restHours?'<b style="color:#6d28d9">'+e.restHours+'</b>':'—'}</td>
       <td>${e.lateCount?'<span style="color:#9a3412;font-weight:700">'+e.lateCount+'</span>':'—'}</td>
       <td>${e.sick?e.sick:'—'}</td>
       <td>${e.vacUsed?e.vacUsed.toFixed(2):'—'}<small style="color:var(--muted)">/${(e.vacQuota||0).toFixed(2)}</small></td>
@@ -3699,11 +3693,11 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
       <td>${e.reported?'~'+e.gross.toLocaleString()+' ₪':'—'}</td></tr>`;
   }).join('');
   box.innerHTML = `<div style="overflow-x:auto"><table class="att-table" style="min-width:900px;width:100%">
-    <tr><th>עובד</th><th>ימים</th><th>רגילות</th><th>125%</th><th>150%</th><th>איחורים</th><th>מחלה</th><th>חופש (מתקן)</th><th>היעדרות</th><th>ברוטו צפוי</th></tr>
+    <tr><th>עובד</th><th>ימים</th><th>רגילות</th><th>125%</th><th>150%</th><th>מנוחה/חג</th><th>איחורים</th><th>מחלה</th><th>חופש (מתקן)</th><th>היעדרות</th><th>ברוטו צפוי</th></tr>
     ${rows}
-    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${totReg}</td><td>${tot125}</td><td>${tot150}</td><td></td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
+    <tr style="background:#f8fafc;font-weight:800"><td style="text-align:right">סה"כ</td><td></td><td>${totReg}</td><td>${tot125}</td><td>${tot150}</td><td>${Math.round(totRest*100)/100}</td><td></td><td></td><td></td><td></td><td>~${Math.round(grossAll).toLocaleString()} ₪</td></tr>
   </table></div>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">חודש: ${document.getElementById('attMgrMonth').value} · נוספות מעל ${r.regHours} ש'/יום — 125% לשעתיים, 150% מעבר · חופש: מחלה ללא אישור + היעדרות נספגים בתקן · ברוטו לפי תעריף אישי או מינימום ${r.minWage} ₪</div>`;
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">חודש: ${document.getElementById('attMgrMonth').value} · שעות לפי ${esc(r.laborLaw||'')} וחוזה כל עובד: נוספות מעל ${r.regHours} ש'/יום (7 בלילה) או 42 בשבוע — 125% לשעתיים, 150% מעבר; מנוחה/חג 150% (לעובד שנקבע לו יום מנוחה) · חופש: מחלה ללא אישור + היעדרות נספגים בתקן · ברוטו לפי תעריף אישי או מינימום ${r.minWage} ₪</div>`;
 });
 
 /* --- מסך נוכחות בזמן אמת (מנהל) --- */
@@ -4466,14 +4460,13 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
             cols.out=d.outT||'';
             if(!cols.inT && d.siteNote) cols.siteNote=d.siteNote; // יום שדווח רק כביקור אתר, ללא שעון נוכחות
             const h=d.minutes/60;
-            const sp=d.ot?(d.ot):0;
-            const reg=Math.min(h,r.regHours);
-            const ov=Math.max(0,h-r.regHours);
-            const o125=Math.min(ov,2);
-            const o150=Math.max(0,ov-2);
-            cols.reg=fDec(reg);
-            cols.ot125=o125>0?fDec(o125):'';
-            cols.ot150=o150>0?fDec(o150):'';
+            const sp=d.split||{reg:h,ot125:0,ot150:0,rest150:0,rest175:0,rest200:0,night:false};
+            const rest=(sp.rest150||0)+(sp.rest175||0)+(sp.rest200||0);
+            cols.reg=sp.reg>0?fDec(sp.reg):'';
+            cols.ot125=sp.ot125>0?fDec(sp.ot125):'';
+            cols.ot150=sp.ot150>0?fDec(sp.ot150):'';
+            if(rest>0) note='מנוחה/חג: '+fDec(sp.rest150)+' ש׳ 150%'+(sp.rest175?' · '+fDec(sp.rest175)+' ש׳ 175%':'')+(sp.rest200?' · '+fDec(sp.rest200)+' ש׳ 200%':'');
+            if(sp.night) note=(note?note+' · ':'')+'משמרת לילה';
             cols.total=fDec(h);
             if(d.events&&d.events.some(e=>e.status&&e.status!=='תקין')) rowClass+=' flagged';
           }
@@ -4579,8 +4572,9 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <tr><td>שעות רגילות %100</td><td>${fDec(emp.regHours||0)}</td></tr>
               <tr><td>שעות נוספות %125</td><td>${fDec(emp.ot125||0)}</td></tr>
               <tr><td>שעות נוספות %150</td><td>${fDec(emp.ot150||0)}</td></tr>
-              <tr><td>שעות נוספות %175</td><td>0</td></tr>
-              <tr><td>שעות נוספות %200</td><td>0</td></tr>
+              <tr><td>מנוחה / חג %150</td><td>${fDec(emp.rest150||0)}</td></tr>
+              <tr><td>שעות נוספות %175</td><td>${fDec(emp.ot175||0)}</td></tr>
+              <tr><td>שעות נוספות %200</td><td>${fDec(emp.ot200||0)}</td></tr>
               <tr><td style="font-weight:700">סה"כ שעות</td><td style="font-weight:700">${fDec(totalH)}</td></tr>
             </table>
           </div>
@@ -4609,7 +4603,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
     let sTReg=0, sT125=0, sT150=0, sTTotal=0, sTDays=0, sTVac=0, sTSick=0;
     const summaryRowsHtml = r.employees.map(emp=>{
       const workDaysEmp=emp.days.filter(d=>!d.sick&&d.minutes>0).length;
-      const totH=Math.round(((emp.regHours||0)+(emp.ot125||0)+(emp.ot150||0))*100)/100;
+      const totH=Math.round(((emp.regHours||0)+(emp.ot125||0)+(emp.ot150||0)+(emp.restHours||0))*100)/100;
       sTReg+=emp.regHours||0; sT125+=emp.ot125||0; sT150+=emp.ot150||0; sTTotal+=totH;
       sTDays+=workDaysEmp; sTVac+=emp.vacUsed||0; sTSick+=emp.sick||0;
       return `<tr>
@@ -5292,6 +5286,11 @@ function renderF101Body(data, employer){
     <h4>מסמכים מצורפים</h4>
     <div class="mrow"><label>אישור ניהול חשבון בנק * (PDF או תמונה, עד 5MB)</label>
       <input type="file" id="f-bankCert" accept="application/pdf,image/*"></div>
+    <div class="mrow"><label>חשבון בנק לתשלום השכר * (כפי שמופיע באישור)</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input id="f-bankNumber" inputmode="numeric" dir="ltr" placeholder="מס' בנק" value="${esc(data.bankNumber||'')}" style="width:90px">
+        <input id="f-bankBranch" inputmode="numeric" dir="ltr" placeholder="סניף" value="${esc(data.bankBranch||'')}" style="width:90px">
+        <input id="f-bankAccount" inputmode="numeric" dir="ltr" placeholder="מספר חשבון" value="${esc(data.bankAccount||'')}" style="flex:1;min-width:140px"></div></div>
     <div class="mrow"><label>אישור תושב (לא חובה — למי שגר ביישוב מזכה)</label>
       <input type="file" id="f-residentCert" accept="application/pdf,image/*"></div>
 
@@ -5409,8 +5408,13 @@ async function submitF101Flow(){
     credits,
     taxCoord: taxCoordEl ? taxCoordEl.value : 'none',
     taxCoordRows,
-    declarationConfirmed: document.getElementById('f-declarationConfirmed').checked
+    declarationConfirmed: document.getElementById('f-declarationConfirmed').checked,
+    bankNumber: document.getElementById('f-bankNumber').value.trim(),
+    bankBranch: document.getElementById('f-bankBranch').value.trim(),
+    bankAccount: document.getElementById('f-bankAccount').value.trim()
   }, creditExtras);
+  if(!/^\d{1,3}$/.test(fields.bankNumber.replace(/[\s-]/g,'')) || !/^\d{1,4}$/.test(fields.bankBranch.replace(/[\s-]/g,'')) || !/^\d{4,13}$/.test(fields.bankAccount.replace(/[\s-]/g,''))){
+    err.textContent = 'יש למלא חשבון בנק: מספר בנק, סניף ומספר חשבון (ספרות בלבד)'; return; }
   if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
   if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
   if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
@@ -6095,22 +6099,16 @@ function updateSelfAvatar(src){
   if(src){ img.src=src; img.style.display='block'; if(ini) ini.style.display='none'; }
   else { img.style.display='none'; if(ini){ ini.style.display=''; ini.textContent=(state.emp?.name||'?').charAt(0); } }
 }
-document.getElementById('empSelfAvatarWrap').addEventListener('click',()=>document.getElementById('empSelfAvatarFile').click());
-document.getElementById('empSelfAvatarFile').addEventListener('change', e=>{
-  const file=e.target.files[0]; if(!file) return;
-  if(file.size>614400){ toast('התמונה גדולה מדי — עד 600KB','err'); return; }
-  const reader=new FileReader();
-  reader.onload=async ev=>{
-    const src=ev.target.result;
-    updateSelfAvatar(src);
-    if(state.emp){
-      localStorage.setItem('sp_avatar_'+state.emp.username, src);
-      const r=await apiPost({ action:'saveAvatar', username:state.emp.username, password:state.emp.pw, avatar:src });
-      if(r.ok) toast('תמונה עודכנה ✓','ok');
-      else toast('שגיאה: '+(r.error||'בשמירת תמונה'),'err');
-    }
-  };
-  reader.readAsDataURL(file);
+document.getElementById('empSelfAvatarWrap').addEventListener('click',()=>window.avatarClick('self'));
+document.getElementById('empSelfAvatarFile').addEventListener('change', async e=>{
+  const file=e.target.files[0]; e.target.value=''; if(!file) return;
+  let src; try{ src = await window.shrinkImage(file); }catch(err){ toast(err.message||'התמונה לא נתמכת','err'); return; }
+  updateSelfAvatar(src);
+  if(state.emp){
+    const r=await apiPost({ action:'saveAvatar', username:state.emp.username, password:state.emp.pw, avatar:src });
+    if(r.ok){ const me=empByName(state.emp.name); if(me) me.avatarUrl=r.avatarUrl; toast('תמונה עודכנה ✓','ok'); }
+    else toast('שגיאה: '+(r.error||'בשמירת תמונה'),'err');
+  }
 });
 
 /* ── Service Worker (PWA) — עדכון אוטומטי ── */
@@ -6366,5 +6364,6 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 })();
 </script>
 <script>(function(){var h=document.getElementById("empHome");if(h&&!h.querySelector(".sf-powered"))h.insertAdjacentHTML("beforeend","<div style=\"text-align:center;padding:18px 0 26px\"><a class=\"sf-powered\" href=\"https://shiftfloo.co.il\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6b7280;text-decoration:none\">מופעל על ידי <img src=\"/shiftfloo-mark.svg\" alt=\"\" style=\"height:13px\"><b style=\"font-family:Sora,Heebo,Arial,sans-serif;color:#13234A;letter-spacing:-.02em\">shiftfloo</b></a></div>");})();</script>
+<script src="employee-records.js"></script>
 </body>
 </html>
