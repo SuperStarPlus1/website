@@ -14,7 +14,9 @@
   // the app declares state / _currentEmp with const / let: global by name, but not properties of window
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const curEmp = () => (typeof _currentEmp !== 'undefined' ? _currentEmp : null);
-  const isAdmin = () => !!(appState() && appState().mgr && $('payBtn') && !$('payBtn').classList.contains('hidden'));
+  // an admin (by role) — checked each time it is needed: watching another button's visibility missed the case where
+  // that button never changes (visible from the start, as in Superstar), so the buttons stayed hidden after sign-in
+  const isAdmin = () => !!(appState() && appState().mgr && appState().mgr.role === 'אדמין');
   const fileToB64 = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
 
   function addOverlay(id, title, sub, bodyId, foot) {
@@ -118,7 +120,11 @@
       '<button type="button" class="btn plain" id="empDetBtn" style="padding:5px 10px;font-size:12.5px">📋 פרטים נוספים</button>' +
       '<button type="button" class="btn plain" id="empConBtn" style="padding:5px 10px;font-size:12.5px">📄 חוזה עבודה</button></div>');
     const sync = () => $('empRecBtns').classList.toggle('hidden', !isAdmin());
+    // re-checked whenever an employee card is shown (and on sign-in / role changes)
+    const card = $('empCard');
+    if (card) new MutationObserver(sync).observe(card, { attributes: true, attributeFilter: ['class'] });
     if ($('payBtn')) new MutationObserver(sync).observe($('payBtn'), { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('click', (ev) => { if (ev.target && ev.target.closest && ev.target.closest('#empMgr, #empSelector')) setTimeout(sync, 0); }, true);
     sync();
     $('empDetBtn').addEventListener('click', () => openDetails(currentName()));
     $('empConBtn').addEventListener('click', () => openContract(currentName()));
