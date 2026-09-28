@@ -270,6 +270,14 @@
     const names = f106All.employees.slice().sort((a, b) => a.localeCompare(b, 'he'));
     const done = names.filter((n) => byEmp[n]).length;
     $('f106AllBody').innerHTML =
+      // batch: one PDF with every employee's form — pages matched on the server (ID from Form 101 / employee no. / name)
+      '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:12px">' +
+      '<b>העלאה מרוכזת</b> <span style="font-size:13px;color:var(--muted)">— קובץ PDF אחד עם טפסי 106 של כל העובדים. ' +
+      'זיהוי אוטומטי לפי ת״ז (מטופס 101), מספר עובד או שם — כמו בתלושים.</span>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">' +
+      '<input type="file" id="f106Batch" accept="application/pdf" aria-label="קובץ PDF מרוכז של טפסי 106">' +
+      '<button class="btn primary" id="f106Analyze">🔍 ניתוח</button></div>' +
+      '<div id="f106Review"></div></div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">' +
       '<label style="font-size:14px">שנת מס <select id="f106Year2">' + years.map((v) => '<option' + (v === y ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></label>' +
       '<label style="font-size:14px"><input type="checkbox" id="f106Notify2" checked> לשלוח לעובד במייל בהעלאה</label>' +
@@ -285,6 +293,8 @@
           (f ? '<button class="btn plain" data-del106="' + f.id + '" style="color:#b91c1c">מחיקה</button>' : '') + '</span></div>';
       }).join('') + '</div>';
     $('f106Year2').addEventListener('change', () => renderF106All($('f106Year2').value));
+    $('f106Analyze').addEventListener('click', () => analyzeBatch106());
+    if (batch) renderBatch106();   // a review in progress survives a change of tax year
     $('f106Filter').addEventListener('input', () => {
       const q = $('f106Filter').value.trim();
       document.querySelectorAll('#f106Rows .f106-row').forEach((row) => { row.style.display = !q || row.dataset.name.includes(q) ? '' : 'none'; });
@@ -312,6 +322,94 @@
       if (x.ok) openF106All().then(() => renderF106All(y)); else toast(x.error || 'שגיאה', 'err');
     }));
   }
+  /* batch Form 106: read each page's text in the browser (pdf.js), match on the server, review, split (pdf-lib), upload */
+  const BY_LABEL = { id: 'לפי ת״ז', empNo: 'לפי מס׳ עובד', name: 'לפי שם' };
+  let batch = null;   // { bytes, pages: [{ page, employee, by, ambiguous, unknownIds }] }
+  async function analyzeBatch106() {
+    const box = $('f106Review'), f = $('f106Batch').files[0];
+    if (!f) { box.innerHTML = '<p class="merr">יש לבחור קובץ PDF</p>'; return; }
+    if (f.size > 40 * 1024 * 1024) { box.innerHTML = '<p class="merr">הקובץ גדול מדי (עד 40MB)</p>'; return; }
+    box.innerHTML = 'קורא את הקובץ…';
+    try {
+      await loadScript(PDFJS_URL);
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const doc = await window.pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+      const texts = [];
+      for (let p = 1; p <= doc.numPages; p++) {
+        const tc = await (await doc.getPage(p)).getTextContent();
+        texts.push(tc.items.map((it) => String(it.str || '')).join(' '));
+        box.textContent = 'קורא עמוד ' + p + ' מתוך ' + doc.numPages + '…';
+      }
+      box.textContent = 'מזהה עובדים…';
+      const r = await apiPost({ action: 'matchForm106Pages', ...mgrAuth(), pages: texts });
+      if (!r.ok) { box.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
+      batch = { bytes, noId: r.noId || [], pages: r.pages.map((x, i) => ({ page: i + 1, ...x })) };
+      renderBatch106();
+    } catch (err) { box.innerHTML = '<p class="merr">שגיאה בקריאת הקובץ: ' + e(err.message || err) + '</p>'; }
+  }
+  function renderBatch106() {
+    const box = $('f106Review');
+    const names = f106All.employees.slice().sort((a, b) => a.localeCompare(b, 'he'));
+    const found = batch.pages.filter((p) => p.employee).length;
+    box.innerHTML = '<div style="margin:10px 0 6px;font-size:14px"><b>זוהו ' + found + ' מתוך ' + batch.pages.length + ' עמודים.</b> ' +
+      'עמוד בלי זיהוי (מסגרת אדומה) — לשייך ידנית, לסמן "המשך העמוד הקודם", או להשאיר "דלג".</div>' +
+      (batch.noId.length ? '<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">ל-' + batch.noId.length +
+        ' עובדים אין ת״ז במערכת (עוד לא הגישו טופס 101) — הם מזוהים רק לפי מספר עובד או שם.</div>' : '') +
+      batch.pages.map((pg, i) => {
+        const why = pg.employee ? '<span style="font-size:12px;color:#166534">✓ ' + BY_LABEL[pg.by] + '</span>'
+          : pg.ambiguous.length ? '<span style="font-size:12px;color:#b91c1c">⚠ כמה עובדים בעמוד: ' + e(pg.ambiguous.join(', ')) + '</span>'
+          : pg.unknownIds.length ? '<span style="font-size:12px;color:#b91c1c">ת״ז ' + e(pg.unknownIds.join(', ')) + ' לא שייכת לאף עובד פעיל (לא הגיש 101?)</span>'
+          : '<span style="font-size:12px;color:var(--muted)">לא נמצאו פרטים מזהים</span>';
+        return '<div class="cons-item" style="display:grid;grid-template-columns:80px 1fr;gap:6px;align-items:center">' +
+          '<span>עמוד ' + pg.page + '</span>' +
+          '<select class="b106-sel" data-i="' + i + '" aria-label="עובד לעמוד ' + pg.page + '" style="border:1.5px solid ' + (pg.employee ? 'var(--line,#d1d5db)' : '#ef4444') + ';border-radius:8px;padding:6px">' +
+          '<option value="">— לא זוהה / דלג —</option>' + (i > 0 ? '<option value="__prev"' + (pg.employee === '__prev' ? ' selected' : '') + '>↑ המשך הטופס מהעמוד הקודם</option>' : '') +
+          names.map((n) => '<option' + (n === pg.employee ? ' selected' : '') + '>' + e(n) + '</option>').join('') + '</select>' +
+          '<span></span>' + why + '</div>';
+      }).join('') +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn primary" id="b106Upload">⬆ העלאת הכל</button>' +
+      '<span id="b106Prog" style="font-size:13px"></span></div>';
+    box.querySelectorAll('.b106-sel').forEach((s) => s.addEventListener('change', () => { batch.pages[Number(s.dataset.i)].employee = s.value; }));
+    $('b106Upload').addEventListener('click', uploadBatch106);
+  }
+  async function uploadBatch106() {
+    const prog = $('b106Prog'), year = Number($('f106Year2').value);
+    // consecutive pages of one employee (a form of more than one page, or "continues the previous page") → one file
+    const groups = [];
+    let current = null;
+    batch.pages.forEach((pg) => {
+      if (pg.employee === '__prev' && current) { current.pages.push(pg.page); return; }
+      if (!pg.employee || pg.employee === '__prev') { current = null; return; }
+      if (current && current.employee === pg.employee && current.pages[current.pages.length - 1] === pg.page - 1) current.pages.push(pg.page);
+      else { current = { employee: pg.employee, pages: [pg.page] }; groups.push(current); }
+    });
+    if (!groups.length) { prog.textContent = 'אין עמודים משויכים'; return; }
+    const replacing = groups.filter((g) => f106All.forms.some((f) => f.employee === g.employee && f.year === year)).length;
+    if (!confirm('להעלות ' + groups.length + ' טפסי 106 לשנת ' + year + '?' + (replacing ? '\n' + replacing + ' טפסים קיימים לשנה זו יוחלפו.' : ''))) return;
+    $('b106Upload').disabled = true;
+    try {
+      await loadScript(PDFLIB_URL);
+      const src = await window.PDFLib.PDFDocument.load(batch.bytes);
+      const notify = $('f106Notify2').checked;
+      let ok = 0, mailed = 0; const fails = [];
+      for (const [k, g] of groups.entries()) {
+        prog.textContent = 'מעלה ' + (k + 1) + '/' + groups.length + ' — ' + g.employee + '…';
+        try {
+          const out = await window.PDFLib.PDFDocument.create();
+          (await out.copyPages(src, g.pages.map((p) => p - 1))).forEach((p) => out.addPage(p));
+          const x = await apiPost({ action: 'uploadForm106', ...mgrAuth(), employee: g.employee, year, data: await out.saveAsBase64(), notify });
+          if (x.ok) { ok++; if (x.notified) mailed++; } else fails.push(g.employee + ': ' + (x.error || 'שגיאה'));
+        } catch (err) { fails.push(g.employee + ': ' + (err.message || err)); }
+      }
+      toast('הועלו ' + ok + ' טפסי 106' + (mailed ? ' · ' + mailed + ' נשלחו במייל' : '') + (fails.length ? ' · ' + fails.length + ' נכשלו' : '') + ' ✓', fails.length ? 'err' : 'ok');
+      batch = null;
+      await openF106All();
+      renderF106All(year);
+      if (fails.length) $('f106Review').innerHTML = '<p class="merr">נכשלו: ' + e(fails.join(' | ')) + '</p>';
+    } finally { const b = $('b106Upload'); if (b) b.disabled = false; }
+  }
+
   if ($('menuAdminDrop')) {
     $('menuAdminDrop').insertAdjacentHTML('beforeend', '<button id="f106AllBtn" class="hidden">📄 טפסי 106</button>');
     $('f106AllBtn').addEventListener('click', openF106All);
