@@ -250,6 +250,77 @@
     $('empConOverlay').classList.add('hidden'); toast('החוזה נשמר ✓', 'ok');
   });
 
+  /* ---------- 3b. admin menu: Form 106 of all employees (by tax year) ---------- */
+  addOverlay('f106AllOverlay', '📄 טפסי 106', 'טופס 106 לכל עובד פעיל, לפי שנת מס · אדמין בלבד', 'f106AllBody');
+  let f106All = null;
+  async function openF106All() {
+    $('f106AllBody').innerHTML = 'טוען…'; $('f106AllOverlayErr').textContent = '';
+    show('f106AllOverlay');
+    const r = await apiPost({ action: 'listForm106All', ...mgrAuth() });
+    if (!r.ok) { $('f106AllBody').innerHTML = ''; $('f106AllOverlayErr').textContent = r.error || 'שגיאה'; return; }
+    f106All = r;
+    renderF106All();
+  }
+  function renderF106All(year) {
+    const thisYear = new Date().getFullYear();
+    const years = [0, 1, 2, 3, 4].map((k) => thisYear - 1 - k).concat([thisYear]);
+    const y = Number(year || ($('f106Year2') && $('f106Year2').value) || thisYear - 1);
+    const byEmp = {};
+    f106All.forms.filter((f) => f.year === y).forEach((f) => (byEmp[f.employee] = f));
+    const names = f106All.employees.slice().sort((a, b) => a.localeCompare(b, 'he'));
+    const done = names.filter((n) => byEmp[n]).length;
+    $('f106AllBody').innerHTML =
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">' +
+      '<label style="font-size:14px">שנת מס <select id="f106Year2">' + years.map((v) => '<option' + (v === y ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></label>' +
+      '<label style="font-size:14px"><input type="checkbox" id="f106Notify2" checked> לשלוח לעובד במייל בהעלאה</label>' +
+      '<span style="font-size:13px;color:var(--muted);margin-inline-start:auto">הועלו ' + done + ' מתוך ' + names.length + '</span></div>' +
+      '<input type="search" id="f106Filter" placeholder="חיפוש עובד" aria-label="חיפוש עובד" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid #d1d5db;border-radius:8px">' +
+      '<input type="file" id="f106Pick" accept="application/pdf" style="display:none" aria-label="בחירת קובץ טופס 106">' +
+      '<div id="f106Rows">' + names.map((n) => {
+        const f = byEmp[n];
+        return '<div class="cons-item f106-row" data-name="' + e(n) + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+          '<span><b>' + e(n) + '</b> ' + (f ? '<small style="color:#166534">✓ הועלה ' + e(f.uploaded) + '</small>' : '<small style="color:var(--muted)">— לא הועלה</small>') + '</span>' +
+          '<span style="display:flex;gap:6px">' + (f ? '<button class="btn plain" data-open106="' + f.id + '">פתיחה</button>' : '') +
+          '<button class="btn plain" data-up106="' + e(n) + '">' + (f ? 'החלפה' : '⬆ העלאה') + '</button>' +
+          (f ? '<button class="btn plain" data-del106="' + f.id + '" style="color:#b91c1c">מחיקה</button>' : '') + '</span></div>';
+      }).join('') + '</div>';
+    $('f106Year2').addEventListener('change', () => renderF106All($('f106Year2').value));
+    $('f106Filter').addEventListener('input', () => {
+      const q = $('f106Filter').value.trim();
+      document.querySelectorAll('#f106Rows .f106-row').forEach((row) => { row.style.display = !q || row.dataset.name.includes(q) ? '' : 'none'; });
+    });
+    let target = '';
+    $('f106AllBody').querySelectorAll('[data-up106]').forEach((b) => b.addEventListener('click', () => { target = b.dataset.up106; $('f106Pick').click(); }));
+    $('f106Pick').addEventListener('change', async () => {
+      const f = $('f106Pick').files[0]; $('f106Pick').value = '';
+      if (!f || !target) return;
+      if (f.size > 10 * 1024 * 1024) { toast('הקובץ גדול מדי (עד 10MB)', 'err'); return; }
+      const x = await apiPost({ action: 'uploadForm106', ...mgrAuth(), employee: target, year: y, data: await fileToB64(f), notify: $('f106Notify2').checked });
+      if (!x.ok) { toast(x.error || 'שגיאה', 'err'); return; }
+      toast('טופס 106 של ' + target + ' לשנת ' + y + ' הועלה' + (x.notified ? ' ונשלח במייל' : '') + ' ✓', 'ok');
+      openF106All().then(() => renderF106All(y));
+    });
+    $('f106AllBody').querySelectorAll('[data-open106]').forEach((b) => b.addEventListener('click', async () => {
+      const f = f106All.forms.find((x) => String(x.id) === b.dataset.open106);
+      const x = await apiPost({ action: 'getForm106', ...mgrAuth(), employee: f.employee, id: f.id });
+      if (x.ok) openBlobPdf(x.data, x.filename, x.mimeType); else toast(x.error || 'שגיאה', 'err');
+    }));
+    $('f106AllBody').querySelectorAll('[data-del106]').forEach((b) => b.addEventListener('click', async () => {
+      const f = f106All.forms.find((x) => String(x.id) === b.dataset.del106);
+      if (!confirm('למחוק את טופס 106 של ' + f.employee + ' לשנת ' + f.year + '?')) return;
+      const x = await apiPost({ action: 'deleteForm106', ...mgrAuth(), employee: f.employee, id: f.id });
+      if (x.ok) openF106All().then(() => renderF106All(y)); else toast(x.error || 'שגיאה', 'err');
+    }));
+  }
+  if ($('menuAdminDrop')) {
+    $('menuAdminDrop').insertAdjacentHTML('beforeend', '<button id="f106AllBtn" class="hidden">📄 טפסי 106</button>');
+    $('f106AllBtn').addEventListener('click', openF106All);
+    // admins only, re-checked whenever the admin menu opens (the same rule as the employee-card buttons)
+    const syncMenu = () => $('f106AllBtn').classList.toggle('hidden', !isAdmin());
+    if ($('menuAdminBtn')) $('menuAdminBtn').addEventListener('click', syncMenu, true);
+    syncMenu();
+  }
+
   /* ---------- 4. employee: my Form 106 ---------- */
   addOverlay('my106Overlay', '📄 טופס 106', 'סיכום שכר וניכויים שנתי מהמעסיק', 'my106Body');
   async function openMy106() {
