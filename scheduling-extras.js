@@ -4,7 +4,8 @@
 //   2. skills — picked from the company's skills catalog (several per employee, several required per shift standard);
 //      the admin edits the catalog (add / rename / remove — employees and standards follow) → saveSkills
 //   3. constraint rules — the admin sets how many constraints an employee may submit per week and whether Friday /
-//      Saturday count (in the "pending requests" window) → saveConstraintRules; the employee window shows the rule
+//      Saturday are included (counted and approved at once; otherwise not counted and waiting for a manager), in the
+//      "pending requests" window → saveConstraintRules; the employee window shows the rule
 // Uses the app's own globals: apiPost, mgrAuth, state, _currentEmp, toast. Rules come with getData (consRules, skills).
 (function () {
   'use strict';
@@ -16,7 +17,7 @@
   const norm = (s) => String(s || '').toLowerCase().replace(/[֑-ׇ]/g, '').replace(/['"`׳״.\-_()]/g, '').replace(/\s+/g, ' ').trim();
   const splitSkills = (s) => [...new Set(String(s || '').split(',').map((x) => x.trim()).filter(Boolean))];
   const catalog = () => { const s = appState(); return (s && Array.isArray(s.skillsCatalog)) ? s.skillsCatalog : []; };
-  const consRules = () => { const s = appState(); return (s && s.consRules) || { maxPerWeek: 2, countWeekend: true }; };
+  const consRules = () => { const s = appState(); return (s && s.consRules) || { maxPerWeek: 0, countWeekend: true }; };
   const fire = (el) => { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
 
   document.head.insertAdjacentHTML('beforeend', '<style>' +
@@ -182,7 +183,7 @@
   const SEARCH_SELECTORS = ['#empFilter', '#deptFilter', '#shEmp', '#rowSelect', '#empSelector', '#payViewEmp', '#mpGuestName', '#mpGuestBranch',
     '#f101ViewEmp', '#swTarget', '#addHoursEmp', '#branchSel', '#empBranchFilter', '#attMgrBranch', '#annNewBranch',
     'select.i-primary', 'select.i-branch', 'select.pay-sel', 'select.b106-sel', 'select[data-search]'].join(',');
-  const MIN_OPTIONS = 7;                   // shorter lists stay as they are — a search box would only slow them down
+  const MIN_OPTIONS = 1;                   // every list, short ones too (an empty list waits until it is filled)
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
   const nativeIndex = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
 
@@ -384,9 +385,18 @@
 
   /* ---------- 3. constraint rules ---------- */
   function rulesText(r) {
-    if (!r.maxPerWeek) return 'אילוצים: ללא הגבלה בשבוע (שישי/שבת באישור מנהל) · חופשה: תמיד באישור מנהל';
-    return 'אילוצים: עד ' + r.maxPerWeek + ' בשבוע ' + (r.countWeekend ? 'סה"כ (כולל שישי/שבת; שישי/שבת באישור מנהל)' : '(שישי/שבת לא נספרים ומחייבים אישור מנהל)') +
-      ' · חופשה: תמיד באישור מנהל';
+    const limit = r.maxPerWeek ? 'עד ' + r.maxPerWeek + ' בשבוע' : 'ללא הגבלה';
+    const approval = r.weekendApproval !== undefined ? r.weekendApproval : !r.countWeekend;
+    return 'אילוצים: ' + limit + (r.countWeekend ? ', כולל שישי/שבת' : ' (שישי/שבת לא נספרים)') +
+      (approval ? ' · שישי/שבת באישור מנהל' : '') + ' · חופשה: תמיד באישור מנהל';
+  }
+  /** the explanation under the admin's settings: what "including Friday / Saturday" does in this system */
+  function rulesNote(r) {
+    if (r.approvalFixed) {
+      return '0 = ללא הגבלה · כולל שישי/שבת: נספרים במכסה. לא מסומן: לא נספרים · בכל מקרה אילוצי שישי/שבת ' +
+        (r.weekendApproval ? 'ממתינים לאישור מנהל' : 'מאושרים אוטומטית') + ' (הגדרה קבועה במערכת)';
+    }
+    return '0 = ללא הגבלה · כולל שישי/שבת: נספרים במכסה ומאושרים אוטומטית כמו כל יום. לא מסומן: לא נספרים וממתינים לאישור מנהל';
   }
   function onEmpConsOpen() {
     const p = document.querySelector('#empConsOverlay header p');
@@ -404,10 +414,10 @@
         '<b>⚙ כללי אילוצים</b>' +
         '<label style="display:flex;align-items:center;gap:6px">מותר לעובד עד <input type="number" id="sxConsMax" min="0" max="14" step="1" inputmode="numeric" ' +
           'style="width:64px;border:1.5px solid var(--line,#e5e7eb);border-radius:8px;padding:5px 7px;font:inherit"> אילוצים בשבוע</label>' +
-        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="sxConsWeekend"> אילוצי שישי/שבת נספרים במכסה</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="sxConsWeekend"> כולל שישי/שבת</label>' +
         '<button type="button" class="btn primary" id="sxConsSave" style="padding:6px 14px">שמירה</button>' +
         '<span id="sxConsMsg" style="font-size:12px;font-weight:700"></span>' +
-        '<span style="flex-basis:100%;color:var(--muted,#6b7280);font-size:11.5px">0 = ללא הגבלה · אילוצי שישי/שבת תמיד ממתינים לאישור מנהל, גם כשאינם נספרים במכסה</span></div>');
+        '<span id="sxConsNote" style="flex-basis:100%;color:var(--muted,#6b7280);font-size:11.5px"></span></div>');
       box = document.getElementById('sxConsRules');
       document.getElementById('sxConsSave').addEventListener('click', async () => {
         const msg = document.getElementById('sxConsMsg');
@@ -431,6 +441,7 @@
     document.getElementById('sxConsMax').value = r.maxPerWeek;
     document.getElementById('sxConsWeekend').checked = !!r.countWeekend;
     document.getElementById('sxConsMsg').textContent = '';
+    document.getElementById('sxConsNote').textContent = rulesNote(r);
   }
   function watchOpen(id, fn) {
     const ov = document.getElementById(id);
