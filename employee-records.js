@@ -344,28 +344,34 @@
       box.textContent = 'מזהה עובדים…';
       const r = await apiPost({ action: 'matchForm106Pages', ...mgrAuth(), pages: texts });
       if (!r.ok) { box.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
-      batch = { bytes, noId: r.noId || [], pages: r.pages.map((x, i) => ({ page: i + 1, ...x })) };
+      batch = { bytes, noId: r.noId || [], employees: r.employees || null, pages: r.pages.map((x, i) => ({ page: i + 1, ...x })) };
       renderBatch106();
     } catch (err) { box.innerHTML = '<p class="merr">שגיאה בקריאת הקובץ: ' + e(err.message || err) + '</p>'; }
   }
   function renderBatch106() {
     const box = $('f106Review');
-    const names = f106All.employees.slice().sort((a, b) => a.localeCompare(b, 'he'));
+    // active employees first, then those who left (a year's forms include them); older servers send active names only
+    const people = (batch.employees || f106All.employees.map((n) => ({ name: n, active: true })))
+      .slice().sort((a, b) => (a.active === b.active ? a.name.localeCompare(b.name, 'he') : a.active ? -1 : 1));
     const found = batch.pages.filter((p) => p.employee).length;
+    const unknownN = batch.pages.filter((p) => !p.employee && (p.unknownNos || []).length).length;
     box.innerHTML = '<div style="margin:10px 0 6px;font-size:14px"><b>זוהו ' + found + ' מתוך ' + batch.pages.length + ' עמודים.</b> ' +
       'עמוד בלי זיהוי (מסגרת אדומה) — לשייך ידנית, לסמן "המשך העמוד הקודם", או להשאיר "דלג".</div>' +
       (batch.noId.length ? '<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">ל-' + batch.noId.length +
         ' עובדים אין ת״ז במערכת (עוד לא הגישו טופס 101) — הם מזוהים רק לפי מספר עובד או שם.</div>' : '') +
+      (unknownN ? '<div style="font-size:12.5px;color:#b91c1c;margin-bottom:6px">ב-' + unknownN + ' עמודים מספר העובד לא קיים במערכת — ' +
+        'עובדים שעזבו לפני שהוזנו למערכת, או מספר עובד שונה בכרטיס. אפשר להוסיף אותם כעובדים לא פעילים עם מספר העובד, או לדלג.</div>' : '') +
       batch.pages.map((pg, i) => {
         const why = pg.employee ? '<span style="font-size:12px;color:#166534">✓ ' + BY_LABEL[pg.by] + '</span>'
           : pg.ambiguous.length ? '<span style="font-size:12px;color:#b91c1c">⚠ כמה עובדים בעמוד: ' + e(pg.ambiguous.join(', ')) + '</span>'
+          : (pg.unknownNos || []).length ? '<span style="font-size:12px;color:#b91c1c">מספר עובד ' + e(pg.unknownNos.join(', ')) + ' לא קיים במערכת</span>'
           : pg.unknownIds.length ? '<span style="font-size:12px;color:#b91c1c">ת״ז ' + e(pg.unknownIds.join(', ')) + ' לא שייכת לאף עובד פעיל (לא הגיש 101?)</span>'
           : '<span style="font-size:12px;color:var(--muted)">לא נמצאו פרטים מזהים</span>';
         return '<div class="cons-item" style="display:grid;grid-template-columns:80px 1fr;gap:6px;align-items:center">' +
           '<span>עמוד ' + pg.page + '</span>' +
           '<select class="b106-sel" data-i="' + i + '" aria-label="עובד לעמוד ' + pg.page + '" style="border:1.5px solid ' + (pg.employee ? 'var(--line,#d1d5db)' : '#ef4444') + ';border-radius:8px;padding:6px">' +
           '<option value="">— לא זוהה / דלג —</option>' + (i > 0 ? '<option value="__prev"' + (pg.employee === '__prev' ? ' selected' : '') + '>↑ המשך הטופס מהעמוד הקודם</option>' : '') +
-          names.map((n) => '<option' + (n === pg.employee ? ' selected' : '') + '>' + e(n) + '</option>').join('') + '</select>' +
+          people.map((p) => '<option value="' + e(p.name) + '"' + (p.name === pg.employee ? ' selected' : '') + '>' + e(p.name) + (p.active ? '' : ' (לא פעיל)') + '</option>').join('') + '</select>' +
           '<span></span>' + why + '</div>';
       }).join('') +
       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn primary" id="b106Upload">⬆ העלאת הכל</button>' +
