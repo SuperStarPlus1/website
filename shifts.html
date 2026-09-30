@@ -1576,6 +1576,7 @@ async function load(){
     state.vacationsPending = d.vacationsPending || state.vacations.filter(v=>v.status==='ממתין');
     state.staffing = d.staffing || {};
     state.announcements = d.announcements || [];
+    state.consRules = d.consRules || null; state.skillsCatalog = d.skills || [];   // scheduling-extras.js
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
     checkMyUpdates();
@@ -2635,7 +2636,7 @@ function runAutoAssign(cfg, prevShifts){
       Object.keys(cfg).forEach(dept=>{
         const target = cfg[dept].days[dow][part==='בוקר'?0:1];
         if(!target) return;
-        const reqSkill = part==='בוקר' ? cfg[dept].ms : cfg[dept].es;
+        const reqSkills = parseSkills(part==='בוקר' ? cfg[dept].ms : cfg[dept].es);   // כמה כישורי חובה — כל אחד אצל עובד אחד לפחות במשמרת
         const existing = state.shifts.filter(s=>s.dept===dept && s.date===di && partOf(s.start)===part);
         let need = target - existing.length;
         if(need<=0) return;
@@ -2655,11 +2656,16 @@ function runAutoAssign(cfg, prevShifts){
           (minutes[a.name]||0)-(minutes[b.name]||0));
 
         const chosen = [];
-        if(reqSkill && !existing.some(s=>{ const e=empByName(s.employee); return e && hasSkill(e, reqSkill); })){
-          const skilled = cands.find(e=>hasSkill(e, reqSkill));
-          if(skilled){ chosen.push(skilled); cands = cands.filter(e=>e!==skilled); }
-          else issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': אין עובד זמין עם הכישור "'+reqSkill+'"');
+        // כישורים שעוד אין להם עובד במשמרת: בכל פעם העובד (לפי סדר ההוגנות) שמכסה הכי הרבה מהחסרים, עד גודל התקן
+        const missing = reqSkills.filter(k=>!existing.some(s=>{ const e=empByName(s.employee); return e && hasSkill(e, k); }));
+        while(missing.length && chosen.length < need){
+          let best = null, bestN = 0;
+          cands.forEach(e=>{ const n = missing.filter(k=>hasSkill(e, k)).length; if(n > bestN){ best = e; bestN = n; } });
+          if(!best) break;
+          chosen.push(best); cands = cands.filter(e=>e!==best);
+          for(let i=missing.length-1; i>=0; i--) if(hasSkill(best, missing[i])) missing.splice(i, 1);
         }
+        missing.forEach(k=>issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': אין עובד זמין עם הכישור "'+k+'"'));
         while(chosen.length < need && cands.length) chosen.push(cands.shift());
         if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים (חופשים/אילוצים/מכסות דירוג)');
         chosen.forEach(e=>{
@@ -5625,7 +5631,7 @@ document.getElementById('ecAdd').addEventListener('click', async ()=>{
   const r = await apiPost({ action:'addConstraint', username:state.emp.username, password:state.emp.pw, date, part });
   if(!r.ok){
     if(r.code==='limit'){
-      err.innerHTML = '<span style="display:block;background:#fee2e2;border:1.5px solid #ef4444;border-radius:9px;padding:10px;font-size:13px;font-weight:800;color:#991b1b">⛔ אין אפשרות להכניס יותר מ-2 בקשות אילוץ לשבוע.<br>לבקשות חריגות יש לפנות למנהל.</span>';
+      err.innerHTML = '<span style="display:block;background:#fee2e2;border:1.5px solid #ef4444;border-radius:9px;padding:10px;font-size:13px;font-weight:800;color:#991b1b">⛔ '+esc(r.error||'הגעת למכסת האילוצים לשבוע — לבקשות חריגות יש לפנות למנהל')+'</span>';
     } else if(r.code==='coverage'){
       err.innerHTML = '<span style="display:block;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;padding:10px;font-size:13px;font-weight:700;color:#92400e">⚠️ '+esc(r.error)+'</span>';
     } else err.textContent = r.error || 'שגיאה';
@@ -6363,5 +6369,6 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 </script>
 <script>(function(){var h=document.getElementById("empHome");if(h&&!h.querySelector(".sf-powered"))h.insertAdjacentHTML("beforeend","<div style=\"text-align:center;padding:18px 0 26px\"><a class=\"sf-powered\" href=\"https://shiftfloo.co.il\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6b7280;text-decoration:none\">מופעל על ידי <img src=\"/shiftfloo-mark.svg\" alt=\"\" style=\"height:13px\"><b style=\"font-family:Sora,Heebo,Arial,sans-serif;color:#13234A;letter-spacing:-.02em\">shiftfloo</b></a></div>");})();</script>
 <script src="employee-records.js"></script>
+<script src="scheduling-extras.js"></script>
 </body>
 </html>
