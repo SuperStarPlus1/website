@@ -420,6 +420,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <select class="hsel" id="deptFilter" title="סינון לפי מחלקה">
     <option value="">כל המחלקות</option>
   </select>
+  <label class="hidden" id="showInactiveWrap" title="עובדים לא פעילים — לצפייה בלבד, אי אפשר לשבץ אותם" style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:#fff;cursor:pointer;white-space:nowrap"><input type="checkbox" id="showInactive"> הצג לא פעילים</label>
 
   <div class="spacer"></div>
 
@@ -726,6 +727,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <select id="empSelector" style="flex:1;min-width:180px;border:1.5px solid var(--gold);border-radius:9px;padding:7px 10px;font-family:inherit;font-weight:700;font-size:14px;background:#fffdf0">
           <option value="">— בחר עובד —</option>
         </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;white-space:nowrap;cursor:pointer"><input type="checkbox" id="empShowInactive"> הצג לא פעילים<span id="empInactiveCount"></span></label>
         <button class="btn plain" id="empAdd" style="background:#dbeafe;color:#1e40af;font-weight:700;white-space:nowrap">+ חדש</button>
         <button class="btn plain" id="deptMgrBtn" style="white-space:nowrap">⚙ מחלקות</button>
       </div>
@@ -1623,8 +1625,8 @@ function render(){
 
   deps.forEach(dept=>{
     const names = new Set();
-    state.employees.forEach(e=>{ if(e.active && e.depts.includes(dept)) names.add(e.name); });
-    state.shifts.forEach(s=>{ if(s.dept===dept) names.add(s.employee); });
+    state.employees.forEach(e=>{ if((e.active || state.showInactive) && e.depts.includes(dept)) names.add(e.name); });
+    state.shifts.forEach(s=>{ if(s.dept===dept && (state.showInactive || !isInactive(s.employee))) names.add(s.employee); });
     state.extraRows.forEach(k=>{ const [d,n]=k.split('||'); if(d===dept) names.add(n); });
 
     let rows = [...names].sort((a,b)=>a.localeCompare(b,'he'));
@@ -1691,11 +1693,12 @@ function render(){
             : `<span class="chip off">🖐 אילוץ ${lbl}</span>`;
         });
 
-        cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${isMgr()?'clickable':''}"
+        const canEdit = isMgr() && !isInactive(name);
+        cells += `<td class="cell ${iso(d)===todayIso?'today':''} ${canEdit?'clickable':''}"
           data-emp="${esc(name)}" data-dept="${esc(dept)}" data-date="${di}">
-          ${chips || (isMgr()?'<span class="addhint">+</span>':'')}</td>`;
+          ${chips || (canEdit?'<span class="addhint">+</span>':'')}</td>`;
       });
-      html += `<tr><td class="namecol"><div class="nm">${esc(name)}</div><div class="hrs">${fmtMin(empWeek)} שעות</div></td>${cells}</tr>`;
+      html += `<tr${isInactive(name)?' style="opacity:.6"':''}><td class="namecol"><div class="nm">${esc(name)}${isInactive(name)?' <span style="font-size:10.5px;color:#dc2626;font-weight:700">(לא פעיל)</span>':''}</div><div class="hrs">${fmtMin(empWeek)} שעות</div></td>${cells}</tr>`;
     });
 
     if(!state.filterEmp){
@@ -1756,11 +1759,19 @@ document.getElementById('branchSel').addEventListener('change',e=>{
   state.filterEmp=''; state.filterDept='';
   load();
 });
+/** inactive employees are hidden everywhere unless the manager ticks "show inactive" — and never schedulable */
+function isInactive(name){ const e = empByName(name); return !!e && e.active===false; }
+function setShowInactive(on){
+  state.showInactive = !!on;
+  ['showInactive','empShowInactive'].forEach(id=>{ const c=document.getElementById(id); if(c) c.checked = state.showInactive; });
+}
+document.getElementById('showInactive').addEventListener('change', e=>{ setShowInactive(e.target.checked); render(); });
 function renderFilterOptions(){
   renderBranchSel();
+  document.getElementById('showInactiveWrap').classList.toggle('hidden', !isMgr());
   const sel = document.getElementById('empFilter');
-  const names = [...new Set(state.employees.filter(e=>e.active).map(e=>e.name)
-    .concat(state.shifts.filter(s=>s.dept!==UNAVAIL).map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
+  const names = [...new Set(state.employees.filter(e=>e.active || state.showInactive).map(e=>e.name)
+    .concat(state.shifts.filter(s=>s.dept!==UNAVAIL && (state.showInactive || !isInactive(s.employee))).map(s=>s.employee)))].sort((a,b)=>a.localeCompare(b,'he'));
   sel.innerHTML = '<option value="">כל העובדים</option>' +
     names.map(n=>`<option value="${esc(n)}" ${n===state.filterEmp?'selected':''}>${esc(n)}</option>`).join('');
   const ds = document.getElementById('deptFilter');
@@ -1777,6 +1788,7 @@ function onDrop(td){
   if(!s || s.dept===UNAVAIL) return;
   const { emp, dept, date } = td.dataset;
   if(s.employee===emp && s.dept===dept && s.date===date) return;
+  if(isInactive(emp) || isInactive(s.employee)){ toast('עובד לא פעיל — אי אפשר לשבץ אותו','err'); render(); return; }
   const existing = shiftsOf(emp, dept, date).filter(x=>x._id!==s._id);
   if(!confirmConflicts(emp, date, s.start, [s._id, ...existing.map(x=>x._id)])) { render(); return; }
   if(existing.length && !confirm('לעובד '+emp+' כבר יש משמרת בתא זה ('+existing[0].start+'–'+existing[0].end+'). להחליף אותה?')){ render(); return; }
@@ -1849,6 +1861,7 @@ function openChipEditor(sid){
   openShiftEditor({ emp:s.employee, dept:s.dept, date:s.date });
 }
 function openShiftEditor(ds){
+  if(isInactive(ds.emp)){ toast('עובד לא פעיל — אי אפשר לשבץ או לערוך את המשמרות שלו','err'); return; }
   editCtx = { emp: ds.emp, dept: ds.dept, date: ds.date };
   const existing = shiftsOf(ds.emp, ds.dept, ds.date)[0];
   editCtx.sid = existing ? existing._id : null;
@@ -2038,7 +2051,10 @@ async function openEmpMgr(){
   const sel = document.getElementById('empSelector');
   sel.innerHTML = '<option value="">— בחר עובד —</option>';
   const branchNow = empMgrBranch();
-  [...state.employees].filter(e=>!branchNow || e.branch===branchNow)
+  const _inBranch = [...state.employees].filter(e=>!branchNow || e.branch===branchNow);
+  const _inactiveN = _inBranch.filter(e=>e.active===false).length;
+  document.getElementById('empInactiveCount').textContent = _inactiveN ? ' ('+_inactiveN+')' : '';
+  _inBranch.filter(e=>e.active!==false || state.showInactive)
     .sort((a,b)=>a.name.localeCompare(b.name,'he')).forEach(e=>{
     const opt=document.createElement('option');
     opt.value=e.name;
@@ -2050,6 +2066,7 @@ async function openEmpMgr(){
   show('empOverlay');
 }
 let _empBranchSwitching = false;
+document.getElementById('empShowInactive').addEventListener('change', e=>{ setShowInactive(e.target.checked); openEmpMgr(); render(); });
 document.getElementById('empBranchFilter').addEventListener('change', async e=>{
   // מכוון רק את _empMgrBranch (מקומי למסך הזה) — לא נוגע ב-state.branch/לוח הראשי בכלל,
   // ולא קורא ל-load(): כל מה שהמסך הזה צריך כבר מגיע מ-getAdminData בתוך openEmpMgr.
@@ -4985,7 +5002,7 @@ function f101AttachButtons(f, cls){
 
 /* --- מנהל --- */
 async function openF101Admin(){
-  const opts = state.employees.map(e=>`<option value="${esc(e.name)}">${esc(e.name)}${e.active===false?' (לא פעיל)':''}</option>`).join('');
+  const opts = state.employees.filter(e=>e.active!==false || state.showInactive).map(e=>`<option value="${esc(e.name)}">${esc(e.name)}${e.active===false?' (לא פעיל)':''}</option>`).join('');
   document.getElementById('f101ViewEmp').innerHTML = '<option value="">— בחר עובד —</option>'+opts;
   document.getElementById('f101ViewList').innerHTML='';
   show('f101AdminOverlay');
