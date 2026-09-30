@@ -6,7 +6,9 @@
 //   3. constraint rules — the admin sets how many constraints an employee may submit per week and whether Friday /
 //      Saturday are included (counted and approved at once; otherwise not counted and waiting for a manager), in the
 //      "pending requests" window → saveConstraintRules; the employee window shows the rule
-// Uses the app's own globals: apiPost, mgrAuth, state, _currentEmp, toast. Rules come with getData (consRules, skills).
+//   4. week navigation — clear "previous week" / "next week" buttons; the dates open a calendar (month + year pickers)
+//      and a chosen day moves the board to that day's week
+// Uses the app's own globals: apiPost, mgrAuth, state, _currentEmp, toast, moveWeek, sundayOf. Rules come with getData (consRules, skills).
 (function () {
   'use strict';
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -455,6 +457,116 @@
     }).observe(ov, { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
   }
 
+  /* ---------- 4. week navigation: clear previous / next buttons + a calendar on the dates ---------- */
+  // uses the app's moveWeek (unsaved-changes check, one load for quick clicks), sundayOf and state.weekStart
+  const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+  const dayNo = (d) => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);   // DST-safe day count
+  let cal = null;
+  function closeCal() { if (cal) { cal.el.remove(); document.removeEventListener('mousedown', cal.outside, true); cal = null; } }
+  function goToDate(d) {
+    const s = appState();
+    if (!s || !s.weekStart || typeof moveWeek !== 'function') return;
+    const target = typeof sundayOf === 'function' ? sundayOf(d) : new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+    const diff = dayNo(target) - dayNo(s.weekStart);
+    closeCal();
+    if (diff) moveWeek(diff);
+  }
+  function drawCal() {
+    const s = appState(), y = cal.y, m = cal.m;
+    const today = new Date(), shown = s && s.weekStart ? dayNo(s.weekStart) : null;
+    const first = new Date(y, m, 1), start = new Date(y, m, 1 - first.getDay());
+    const yNow = today.getFullYear();
+    let years = '';
+    for (let yy = Math.min(2018, y); yy <= Math.max(yNow + 2, y); yy++) years += '<option' + (yy === y ? ' selected' : '') + '>' + yy + '</option>';
+    let rows = '';
+    for (let w = 0; w < 6; w++) {
+      const ws = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+      if (w === 5 && ws.getMonth() !== m) break;
+      const cur = shown !== null && dayNo(ws) === shown;
+      rows += '<div class="sx-cal-wk' + (cur ? ' cur' : '') + '">';
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + i);
+        const cls = (d.getMonth() !== m ? ' out' : '') + (dayNo(d) === dayNo(today) ? ' today' : '');
+        rows += '<button type="button" class="sx-cal-d' + cls + '" data-d="' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '" ' +
+          'aria-label="' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '">' + d.getDate() + '</button>';
+      }
+      rows += '</div>';
+    }
+    cal.el.innerHTML =
+      '<div class="sx-cal-head"><button type="button" class="sx-cal-nav" data-step="-1" aria-label="חודש קודם">›</button>' +
+      '<select class="sx-cal-m" aria-label="חודש">' + MONTHS.map((n, i) => '<option value="' + i + '"' + (i === m ? ' selected' : '') + '>' + n + '</option>').join('') + '</select>' +
+      '<select class="sx-cal-y" aria-label="שנה">' + years + '</select>' +
+      '<button type="button" class="sx-cal-nav" data-step="1" aria-label="חודש הבא">‹</button></div>' +
+      '<div class="sx-cal-wk sx-cal-dn">' + ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((x) => '<span>' + x + '</span>').join('') + '</div>' + rows +
+      '<div class="sx-cal-foot"><button type="button" class="sx-cal-today">השבוע</button><span>בחירת יום עוברת לשבוע שלו</span></div>';
+    cal.el.querySelector('.sx-cal-m').addEventListener('change', (ev) => { cal.m = Number(ev.target.value); drawCal(); });
+    cal.el.querySelector('.sx-cal-y').addEventListener('change', (ev) => { cal.y = Number(ev.target.value); drawCal(); });
+    cal.el.querySelectorAll('.sx-cal-nav').forEach((b) => b.addEventListener('click', () => {
+      const d = new Date(cal.y, cal.m + Number(b.dataset.step), 1); cal.y = d.getFullYear(); cal.m = d.getMonth(); drawCal();
+    }));
+    cal.el.querySelectorAll('.sx-cal-d').forEach((b) => b.addEventListener('click', () => {
+      const [yy, mm, dd] = b.dataset.d.split('-').map(Number); goToDate(new Date(yy, mm - 1, dd));
+    }));
+    cal.el.querySelector('.sx-cal-today').addEventListener('click', () => goToDate(new Date()));
+  }
+  function openCal(anchor) {
+    if (cal) { closeCal(); return; }
+    const s = appState();
+    const base = s && s.weekStart ? new Date(s.weekStart) : new Date();
+    const el = document.createElement('div');
+    el.className = 'sx-cal';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'בחירת תאריך');
+    document.body.appendChild(el);
+    const outside = (ev) => { if (!el.contains(ev.target) && !anchor.contains(ev.target)) closeCal(); };
+    cal = { el, outside, y: base.getFullYear(), m: base.getMonth() };
+    drawCal();
+    const r = anchor.getBoundingClientRect(), w = Math.min(300, window.innerWidth - 16);
+    el.style.width = w + 'px';
+    el.style.top = (r.bottom + 6) + 'px';
+    el.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+    document.addEventListener('mousedown', outside, true);
+    const cur = el.querySelector('.sx-cal-wk.cur .sx-cal-d') || el.querySelector('.sx-cal-d');
+    if (cur) cur.focus();
+  }
+  function setupWeekNav() {
+    const prev = document.getElementById('prevW'), next = document.getElementById('nextW'), range = document.getElementById('weekRange');
+    if (!prev || !next || !range || range._sx) return;
+    range._sx = true;
+    document.head.insertAdjacentHTML('beforeend', '<style>' +
+      '.weeknav button#prevW,.weeknav button#nextW{width:auto!important;padding:0 11px;font-size:13px!important;font-weight:700;background:rgba(255,255,255,.14)!important;white-space:nowrap}' +
+      '.weeknav button#prevW:hover,.weeknav button#nextW:hover{background:rgba(255,255,255,.26)!important}' +
+      '.weeknav .sx-short{display:none}' +
+      '@media (max-width:560px){.weeknav .sx-long{display:none}.weeknav .sx-short{display:inline}.weeknav button#prevW,.weeknav button#nextW{padding:0 8px}}' +
+      '#weekRange.sx-range{cursor:pointer;border-radius:8px;padding:5px 8px}' +
+      '#weekRange.sx-range:hover,#weekRange.sx-range:focus-visible{background:rgba(255,255,255,.14);outline:none}' +
+      '#weekRange.sx-range::after{content:" 📅";font-size:12px}' +
+      '.sx-cal{position:fixed;z-index:30000;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.28);padding:10px;direction:rtl;font-size:14px}' +
+      '.sx-cal-head{display:flex;gap:6px;align-items:center;margin-bottom:8px}' +
+      '.sx-cal-head select{flex:1;border:1.5px solid #d1d5db;border-radius:8px;padding:6px;font:inherit;font-size:14px;background:#fff}' +
+      '.sx-cal-nav{border:0;background:#f1f5f9;border-radius:8px;width:32px;height:32px;font-size:17px;cursor:pointer}' +
+      '.sx-cal-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;border-radius:8px}' +
+      '.sx-cal-wk.cur{background:#e0e7ff}' +
+      '.sx-cal-dn span{text-align:center;font-size:11.5px;font-weight:700;color:#6b7280;padding:4px 0}' +
+      '.sx-cal-d{border:0;background:none;height:34px;border-radius:8px;font:inherit;font-size:13.5px;cursor:pointer;color:inherit}' +
+      '.sx-cal-d:hover,.sx-cal-d:focus-visible{background:#1b2a4a;color:#fff;outline:none}' +
+      '.sx-cal-d.out{color:#9ca3af}' +
+      '.sx-cal-d.today{font-weight:800;box-shadow:inset 0 0 0 1.5px #e8a819}' +
+      '.sx-cal-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px;color:#6b7280;gap:8px}' +
+      '.sx-cal-today{border:0;background:#1b2a4a;color:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}' +
+      '</style>');
+    prev.innerHTML = '<span aria-hidden="true">›</span> <span class="sx-long">שבוע קודם</span><span class="sx-short">קודם</span>';
+    next.innerHTML = '<span class="sx-long">שבוע הבא</span><span class="sx-short">הבא</span> <span aria-hidden="true">‹</span>';
+    range.classList.add('sx-range');
+    range.setAttribute('role', 'button');
+    range.setAttribute('tabindex', '0');
+    range.setAttribute('title', 'בחירת תאריך מלוח השנה');
+    range.addEventListener('click', () => openCal(range));
+    range.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openCal(range); } });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && cal) { closeCal(); range.focus(); } });
+    window.addEventListener('resize', closeCal);
+  }
+
   /* ---------- wiring: current and future controls ---------- */
   function scan(root) {
     if (!root.querySelectorAll) return;
@@ -470,6 +582,7 @@
     }).observe(document.body, { childList: true, subtree: true });
     watchOpen('empConsOverlay', onEmpConsOpen);
     watchOpen('consOverlay', onMgrConsOpen);
+    setupWeekNav();
     document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && pop) closePop(); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

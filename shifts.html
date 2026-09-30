@@ -6063,7 +6063,8 @@ document.getElementById('pdfBtn').addEventListener('click',async ()=>{
 let _moveWeekTimer = null;
 function moveWeek(days){
   if(hasDirty() && !confirm('יש שינויים שלא נשמרו. לעבור שבוע בכל זאת?')) return;
-  state.weekStart = new Date(state.weekStart.getTime()+days*86400000);
+  // calendar days, not 24-hour blocks: across a daylight-saving change a 'week' of hours lands on Saturday 23:00
+  const _d = new Date(state.weekStart); _d.setDate(_d.getDate()+days); state.weekStart = sundayOf(_d);
   // דחיסת קליקים מהירים לקריאת שרת אחת בלבד — לחיצות חוזרות-ומהירות על ניווט השבועות
   // יצרו כמה בקשות מקבילות ל-GAS, שחלקן חוזרות עם 404/HTML זמני תחת עומס
   clearTimeout(_moveWeekTimer);
