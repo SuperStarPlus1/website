@@ -1,6 +1,7 @@
 // Monthly hours approval — screens (same file in shiftfloo web/app/ and on the Superstar site; server in api/hours-approval.ts):
-//   employee  a banner on the home screen while last month's report waits for approval (1st–3rd), and "אישור שעות":
-//             the month day by day, "I approve", and correction requests (entry / exit of a day, a missing day, a remark)
+//   employee  "אישור שעות": the current month (approved as it goes — "up to yesterday") and last month until the 3rd, day
+//             by day, with correction requests (entry / exit of a day, a missing day, a remark); a home-screen banner while
+//             last month still waits for approval
 //   manager   "נוכחות ← אישורי שעות": who approved, who not yet, and the corrections to approve or reject
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch.
 (function () {
@@ -62,7 +63,7 @@
     const home = $('empHome');
     if (!home) return;
     let b = $('haBanner');
-    const a = mine && mine.approval;
+    const a = mine && mine.approval;                  // last month, while it waits for approval
     const pending = a && a.status === 'ממתין';
     if (!pending) { if (b) b.remove(); return; }
     if (!b) {
@@ -72,24 +73,36 @@
     }
     b.innerHTML = '<div><b>📋 דוח השעות של ' + e(fmtM(a.month)) + ' ממתין לאישורך</b><div style="font-size:12.5px;color:#7c2d12">עד ' + e(fmtD(a.deadline)) +
       ' · לאחר מכן השעות יירשמו כפי שהן</div></div><button type="button" id="haBannerBtn">לצפייה ואישור</button>';
-    $('haBannerBtn').addEventListener('click', openMine);
+    $('haBannerBtn').addEventListener('click', () => openMine(a.month));
   }
   async function refreshHome() { await fetchMine(); drawBanner(); }
 
-  async function openMine() {
-    overlay('haMineOverlay', '📋 אישור דוח שעות');
+  let pick = '';     // the month shown in the employee window
+  async function openMine(month) {
+    overlay('haMineOverlay', '📋 אישור שעות');
     const body = $('haMineOverlayBody');
     $('haMineOverlay').classList.remove('hidden');
     body.innerHTML = 'טוען…';
     await fetchMine();
-    const a = mine && mine.approval;
-    if (!a) { $('haMineOverlaySub').textContent = ''; body.innerHTML = '<p style="color:var(--muted,#6b7280)">אין דוח שעות לאישור. הדוח של החודש הקודם נשלח לאישורך ב-1 לכל חודש.</p>'; return; }
+    const months = (mine && mine.months) || [];
+    if (!months.length) { $('haMineOverlaySub').textContent = ''; body.innerHTML = '<p style="color:var(--muted,#6b7280)">אין דוח שעות לאישור.</p>'; return; }
+    // last month first while it waits for approval, otherwise the current month
+    const urgent = months.find((m) => m.month < mine.today.slice(0, 7) && m.status === 'ממתין');
+    pick = (typeof month === 'string' && months.some((m) => m.month === month)) ? month : (urgent || months[months.length - 1]).month;
+    const a = months.find((m) => m.month === pick);
     const r = await apiPost({ action: 'myAttendance', ...empAuth(), month: a.month });
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const open = a.status === 'ממתין' && mine.today <= a.deadline;
-    $('haMineOverlaySub').innerHTML = 'חודש ' + e(fmtM(a.month)) + ' · ' + (STATUS_CHIP[a.status] || e(a.status)) +
-      (a.status === 'ממתין' ? ' · לאישור עד ' + e(fmtD(a.deadline)) : '');
-    const cs = mine.corrections || [];
+    const thru = a.approvedThrough || '';
+    const canApprove = open && a.approvable && thru < a.approvable;
+    const whole = a.approvable && a.approvable.slice(8) === String(new Date(+a.month.slice(0, 4), +a.month.slice(5, 7), 0).getDate()).padStart(2, '0');
+    $('haMineOverlaySub').innerHTML = (months.length > 1 ? months.map((m) =>
+      '<button type="button" class="ha-btn sm ' + (m.month === pick ? '' : 'plain') + '" data-month="' + m.month + '">' + fmtM(m.month) +
+      (m.status === 'ממתין' && m.month < mine.today.slice(0, 7) ? ' ⏳' : '') + '</button>').join(' ') + ' ' : '') +
+      (STATUS_CHIP[a.status] || e(a.status)) +
+      (a.status === 'ממתין' ? (thru ? ' · אישרת עד ' + e(fmtD(thru)) : '') + ' · לאישור סופי עד ' + e(fmtD(a.deadline)) : '');
+    $('haMineOverlaySub').querySelectorAll('[data-month]').forEach((b) => b.addEventListener('click', () => openMine(b.dataset.month)));
+    const cs = a.corrections || [];
     const byDate = {};
     cs.forEach((c) => (byDate[c.date] = byDate[c.date] || []).push(c));
     const inOut = (evs) => {
@@ -100,9 +113,11 @@
     const rows = (r.days || []).map((d) => {
       const t = inOut(d.events);
       const cc = (byDate[d.date] || []).map((c) => C_CHIP[c.status] || '').join(' ');
+      const ok = a.status !== 'ממתין' || (thru && d.date <= thru);
       return '<tr><td>' + dow(d.date) + ' ' + fmtD(d.date) + '</td><td>' + t.i + '</td><td>' + t.o + '</td><td><b>' + hm(d.minutes) + '</b>' +
-        (d.complete ? '' : ' <span style="color:#b91c1c;font-size:11px">חסר דיווח</span>') + '</td><td>' + cc +
-        (open ? ' <button type="button" class="ha-btn plain sm" data-fix="' + d.date + '" data-i="' + (t.i === '—' ? '' : t.i) + '" data-o="' + (t.o === '—' ? '' : t.o) + '">✏ תיקון</button>' : '') +
+        (d.complete ? '' : ' <span style="color:#b91c1c;font-size:11px">חסר דיווח</span>') + '</td><td>' +
+        (ok ? '<span class="ha-chip ok">✓ אושר</span> ' : '') + cc +
+        (open && d.date <= mine.today ? ' <button type="button" class="ha-btn plain sm" data-fix="' + d.date + '" data-i="' + (t.i === '—' ? '' : t.i) + '" data-o="' + (t.o === '—' ? '' : t.o) + '">✏ תיקון</button>' : '') +
         '</td></tr>';
     }).join('');
     const corrList = cs.length ? '<div style="font-weight:800;margin:14px 0 6px">בקשות התיקון שלי</div>' + cs.map((c) =>
@@ -111,29 +126,33 @@
       (c.status === 'ממתין' && open ? ' <button type="button" class="ha-btn plain sm" data-del="' + c.id + '">מחיקה</button>' : '') + '</div>' +
       '<div style="color:#374151">' + e(c.note) + '</div>' +
       (c.reviewNote ? '<div style="color:#6b7280">הערת המנהל: ' + e(c.reviewNote) + '</div>' : '') + '</div>').join('') : '';
+    const approveLabel = whole ? '✅ אני מאשר/ת את שעות כל החודש' : '✅ אני מאשר/ת את השעות עד ' + fmtD(a.approvable);
     body.innerHTML =
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><div style="font-size:15px">סה"כ בחודש: <b>' + hm(r.totalMinutes) + '</b> שעות</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><div style="font-size:15px">סה"כ עד כה: <b>' + hm(r.totalMinutes) + '</b> שעות</div>' +
       (open ? '<button type="button" class="ha-btn plain sm" id="haMissing">+ יום שחסר בדוח</button><button type="button" class="ha-btn plain sm" id="haNote">+ הערה ליום</button>' : '') + '</div>' +
       '<div id="haForm"></div>' +
       '<div style="overflow-x:auto"><table class="ha-table"><tr><th>יום</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th></th></tr>' +
-      (rows || '<tr><td colspan="5" style="color:#6b7280">אין דיווחים בחודש זה</td></tr>') + '</table></div>' + corrList +
-      (open ? '<div style="margin-top:14px;display:grid;gap:6px"><button type="button" class="ha-btn ok" id="haApprove" style="padding:13px;font-size:15px">✅ אני מאשר/ת את דוח השעות</button>' +
-        '<div style="font-size:12px;color:#6b7280">אפשר לאשר גם כשיש בקשות תיקון — הן יירשמו רק אחרי אישור המנהל. אחרי האישור לא ניתן להוסיף תיקונים.</div></div>'
-        : a.status === 'ממתין' ? '' : '<p style="margin-top:12px;color:#6b7280">הדוח נסגר (' + e(a.status) + '). תיקונים שעוד ממתינים יטופלו על ידי המנהל.</p>');
+      (rows || '<tr><td colspan="5" style="color:#6b7280">אין דיווחים בחודש זה עדיין</td></tr>') + '</table></div>' + corrList +
+      (canApprove ? '<div style="margin-top:14px;display:grid;gap:6px"><button type="button" class="ha-btn ok" id="haApprove" style="padding:13px;font-size:15px">' + approveLabel + '</button>' +
+        '<div style="font-size:12px;color:#6b7280">אפשר לאשר במהלך החודש, בכל פעם עד אתמול; האישור הסופי של החודש — עד ' + fmtD(a.deadline) +
+        '. בקשות תיקון נרשמות רק אחרי אישור המנהל, ואפשר להגיש אותן עד ' + fmtD(a.deadline) + '.</div></div>'
+        : open && thru && thru >= (a.approvable || '') ? '<p style="margin-top:12px;color:#166534;font-weight:700">✓ אישרת את השעות עד ' + fmtD(thru) + '. אפשר להמשיך לאשר כשיתווספו ימים.</p>'
+        : a.status !== 'ממתין' ? '<p style="margin-top:12px;color:#6b7280">החודש נסגר (' + e(a.status) + '). תיקונים שעוד ממתינים יטופלו על ידי המנהל.</p>' : '');
     body.querySelectorAll('[data-fix]').forEach((btn) => btn.addEventListener('click', () => showForm(a.month, 'שעות', btn.dataset.fix, btn.dataset.i, btn.dataset.o)));
     if ($('haMissing')) $('haMissing').addEventListener('click', () => showForm(a.month, 'יום חסר', '', '', ''));
     if ($('haNote')) $('haNote').addEventListener('click', () => showForm(a.month, 'הערה', '', '', ''));
     body.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', async () => {
       const x = await apiPost({ action: 'deleteHoursCorrection', ...empAuth(), id: Number(btn.dataset.del) });
       if (!x.ok) return say(x.error || 'שגיאה', 'err');
-      say('הבקשה נמחקה', 'ok'); openMine();
+      say('הבקשה נמחקה', 'ok'); openMine(pick);
     }));
     if ($('haApprove')) $('haApprove').addEventListener('click', async () => {
       const btn = $('haApprove'); btn.disabled = true;
       const x = await apiPost({ action: 'approveMyHours', ...empAuth(), month: a.month });
       btn.disabled = false;
       if (!x.ok) return say(x.error || 'שגיאה', 'err');
-      say('דוח השעות אושר ✓', 'ok'); await openMine(); drawBanner();
+      say(x.status === 'אושר' ? 'השעות של כל החודש אושרו ✓' : 'השעות אושרו עד ' + fmtD(x.approvedThrough) + ' ✓', 'ok');
+      await openMine(pick); drawBanner();
     });
   }
 
@@ -163,7 +182,7 @@
       const x = await apiPost(req);
       $('haSend').disabled = false;
       if (!x.ok) { $('haErr').textContent = x.error || 'שגיאה'; return; }
-      say('הבקשה נשלחה למנהל', 'ok'); openMine();
+      say('הבקשה נשלחה למנהל', 'ok'); openMine(pick);
     });
   }
 
@@ -200,7 +219,7 @@
       (openC ? '<span class="ha-chip no">תיקונים לטיפולך: ' + openC + '</span>' : '') + '</div>' +
       list.map((a) => '<div class="ha-emp"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + e(a.employee) + '</b><span>' +
         (STATUS_CHIP[a.status] || '') + ' <span style="font-size:12px;color:#6b7280">' + hm(a.minutes) + ' ש׳ בדוח שנשלח' +
-        (a.status === 'ממתין' ? ' · עד ' + fmtD(a.deadline) : '') + '</span></span></div>' +
+        (a.status === 'ממתין' ? (a.approvedThrough ? ' · אישר עד ' + fmtD(a.approvedThrough) : '') + ' · עד ' + fmtD(a.deadline) : '') + '</span></span></div>' +
         a.corrections.map((c) => '<div class="ha-corr" data-cid="' + c.id + '"><div>' + dow(c.date) + ' ' + fmtD(c.date) + ' · <b>' + e(c.kind) + '</b> · ' + (C_CHIP[c.status] || '') + '</div>' +
           (c.kind !== 'הערה' ? '<div>' + (c.kind === 'יום חסר' ? 'מבוקש: ' : 'בדוח: ' + e(c.current.entry || '—') + '–' + e(c.current.exit || '—') + ' ← מבוקש: ') +
             '<b>' + e(c.entry || c.current.entry || '—') + '–' + e(c.exit || c.current.exit || '—') + '</b></div>' : '') +
