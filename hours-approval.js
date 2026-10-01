@@ -3,13 +3,14 @@
 //             by day, with correction requests (entry / exit of a day, a missing day, a remark); a home-screen banner while
 //             last month still waits for approval
 //   manager   "נוכחות ← אישורי שעות": who approved, who not yet, and the corrections to approve or reject
-// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch.
+// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const say = (msg, cls) => { if (typeof toast === 'function') toast(msg, cls); };
+  const isAdminNow = () => { const s = appState(); return !!(s && s.mgr && s.mgr.role === 'אדמין'); };
   const empAuth = () => { const s = appState(); return s && s.emp ? { username: s.emp.username, password: s.emp.pw } : {}; };
   const DAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const fmtD = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '');
@@ -129,6 +130,7 @@
     const approveLabel = whole ? '✅ אני מאשר/ת את שעות כל החודש' : '✅ אני מאשר/ת את השעות עד ' + fmtD(a.approvable);
     body.innerHTML =
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><div style="font-size:15px">סה"כ עד כה: <b>' + hm(r.totalMinutes) + '</b> שעות</div>' +
+      '<button type="button" class="ha-btn plain sm" id="haPdf">📄 PDF של ההחתמות</button>' +
       (open ? '<button type="button" class="ha-btn plain sm" id="haMissing">+ יום שחסר בדוח</button><button type="button" class="ha-btn plain sm" id="haNote">+ הערה ליום</button>' : '') + '</div>' +
       '<div id="haForm"></div>' +
       '<div style="overflow-x:auto"><table class="ha-table"><tr><th>יום</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th></th></tr>' +
@@ -139,6 +141,7 @@
         : open && thru && thru >= (a.approvable || '') ? '<p style="margin-top:12px;color:#166534;font-weight:700">✓ אישרת את השעות עד ' + fmtD(thru) + '. אפשר להמשיך לאשר כשיתווספו ימים.</p>'
         : a.status !== 'ממתין' ? '<p style="margin-top:12px;color:#6b7280">החודש נסגר (' + e(a.status) + '). תיקונים שעוד ממתינים יטופלו על ידי המנהל.</p>' : '');
     body.querySelectorAll('[data-fix]').forEach((btn) => btn.addEventListener('click', () => showForm(a.month, 'שעות', btn.dataset.fix, btn.dataset.i, btn.dataset.o)));
+    $('haPdf').addEventListener('click', () => downloadPdf({ action: 'myHoursPdf', ...empAuth(), month: a.month }, $('haPdf')));
     if ($('haMissing')) $('haMissing').addEventListener('click', () => showForm(a.month, 'יום חסר', '', '', ''));
     if ($('haNote')) $('haNote').addEventListener('click', () => showForm(a.month, 'הערה', '', '', ''));
     body.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', async () => {
@@ -154,6 +157,16 @@
       say(x.status === 'אושר' ? 'השעות של כל החודש אושרו ✓' : 'השעות אושרו עד ' + fmtD(x.approvedThrough) + ' ✓', 'ok');
       await openMine(pick); drawBanner();
     });
+  }
+
+  /** the month's punches as a PDF (built on the server) */
+  async function downloadPdf(req, btn) {
+    const was = btn.textContent; btn.disabled = true; btn.textContent = 'מכין PDF…';
+    try {
+      const x = await apiPost(req);
+      if (!x.ok) return say(x.error || 'שגיאה', 'err');
+      if (typeof openBlobPdf === 'function') openBlobPdf(x.data, x.filename);
+    } finally { btn.disabled = false; btn.textContent = was; }
   }
 
   function showForm(month, kind, date, entry, exit) {
@@ -216,8 +229,10 @@
     body.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:13px">' +
       '<span class="ha-chip ok">אישרו: ' + cnt('אושר') + '</span><span class="ha-chip wait">ממתינים: ' + cnt('ממתין') + '</span>' +
       '<span class="ha-chip auto">אושרו אוטומטית: ' + cnt('אושר אוטומטית') + '</span>' +
-      (openC ? '<span class="ha-chip no">תיקונים לטיפולך: ' + openC + '</span>' : '') + '</div>' +
-      list.map((a) => '<div class="ha-emp"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + e(a.employee) + '</b><span>' +
+      (openC ? '<span class="ha-chip no">תיקונים לטיפולך: ' + openC + '</span>' : '') +
+      (isAdminNow() && cnt('ממתין') ? '<button type="button" class="ha-btn plain sm" id="haResend">✉ שליחה חוזרת עם PDF ל-' + cnt('ממתין') + ' שלא אישרו</button>' : '') + '</div>' +
+      list.map((a) => '<div class="ha-emp"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + e(a.employee) +
+        ' <button type="button" class="ha-btn plain sm" data-pdf="' + e(a.employee) + '">📄 PDF</button></b><span>' +
         (STATUS_CHIP[a.status] || '') + ' <span style="font-size:12px;color:#6b7280">' + hm(a.minutes) + ' ש׳ בדוח שנשלח' +
         (a.status === 'ממתין' ? (a.approvedThrough ? ' · אישר עד ' + fmtD(a.approvedThrough) : '') + ' · עד ' + fmtD(a.deadline) : '') + '</span></span></div>' +
         a.corrections.map((c) => '<div class="ha-corr" data-cid="' + c.id + '"><div>' + dow(c.date) + ' ' + fmtD(c.date) + ' · <b>' + e(c.kind) + '</b> · ' + (C_CHIP[c.status] || '') + '</div>' +
@@ -229,6 +244,17 @@
             '<button type="button" class="ha-btn ok sm" data-ok="1">אישור</button><button type="button" class="ha-btn no sm" data-ok="0">דחייה</button></div>'
             : (c.reviewedBy ? '<div style="color:#6b7280;font-size:12px">' + e(c.status) + ' ע״י ' + e(c.reviewedBy) + (c.reviewNote ? ' · ' + e(c.reviewNote) : '') + '</div>' : '')) +
           '</div>').join('') + '</div>').join('');
+    if ($('haResend')) $('haResend').addEventListener('click', async () => {
+      if (!confirm('לשלוח שוב את דוח השעות של ' + fmtM($('haMonth').value) + ' עם קובץ PDF של ההחתמות לכל העובדים שעוד לא אישרו (ויש להם מייל)?')) return;
+      const btn = $('haResend'); btn.disabled = true; btn.textContent = 'שולח…';
+      const x = await apiPost({ action: 'resendHoursRequests', ...mgrAuth(), month: $('haMonth').value });
+      btn.disabled = false;
+      if (!x.ok) { btn.textContent = '✉ שליחה חוזרת'; return say(x.error || 'שגיאה', 'err'); }
+      btn.textContent = '✓ נשלח ל-' + x.sent + ' עובדים';
+      say('נשלח שוב ל-' + x.sent + ' עובדים, עם PDF', 'ok');
+    });
+    body.querySelectorAll('[data-pdf]').forEach((btn) => btn.addEventListener('click', () =>
+      downloadPdf({ action: 'mgrHoursPdf', ...mgrAuth(), employee: btn.dataset.pdf, month: $('haMonth').value }, btn)));
     body.querySelectorAll('.ha-corr [data-ok]').forEach((btn) => btn.addEventListener('click', async () => {
       const box = btn.closest('.ha-corr');
       box.querySelectorAll('button').forEach((b) => (b.disabled = true));
