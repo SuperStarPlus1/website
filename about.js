@@ -1,16 +1,26 @@
 // The help icon (ⓘ) in the header's corner: the system's version, its last update date, what's new and the user guide.
 // Same file in shiftfloo web/app/ and on the Superstar site. The data comes from version.js (one per system):
-//   window.APP_VERSION = { name, version, date, notes: [...], guide }
+//   window.APP_VERSION = { name, version, date, notes: [...], guides: { employee, manager } }
+// A signed-in manager sees both guides, and the header's "❓ מדריך" button (where shown) opens the manager guide.
 // On each release: update version.js and bump the service worker's CACHE.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  function guideUrl(v) {
-    const g = $('guideBtn');
-    if (g && !g.classList.contains('hidden') && g.getAttribute('href') && g.getAttribute('href') !== '#') return g.getAttribute('href');
-    return v.guide || '';
+  const isManager = () => { try { return !!(typeof state !== 'undefined' && state && state.mgr); } catch (_) { return false; } };
+  function guideLinks(v) {
+    const g = v.guides || (v.guide ? { employee: v.guide } : {});
+    const out = [];
+    if (isManager() && g.manager) out.push(['📘 מדריך למנהל', g.manager]);
+    if (g.employee) out.push(['📖 מדריך לעובד', g.employee]);
+    return out;
+  }
+  /** the header's guide button follows the signed-in role */
+  function syncGuideBtn() {
+    const v = window.APP_VERSION || {}, g = v.guides || {}, b = $('guideBtn');
+    if (!b || !g.employee) return;
+    b.setAttribute('href', isManager() && g.manager ? g.manager : g.employee);
   }
 
   function build() {
@@ -45,12 +55,12 @@
       e.stopPropagation();
       opener = e.currentTarget;
       if (!pop.hidden) { close(); return; }
-      const guide = guideUrl(v);
+      const links = guideLinks(v);
       pop.innerHTML =
         '<h4>' + esc(v.name || document.title) + '</h4>' +
         '<div class="ver"><span>גרסה <b>' + esc(v.version || '—') + '</b></span><span>עדכון אחרון <b>' + esc(v.date || '—') + '</b></span></div>' +
         (v.notes && v.notes.length ? '<div><b>מה חדש בגרסה ' + esc(v.version) + '</b></div><ul>' + v.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '') +
-        '<div class="acts">' + (guide ? '<a href="' + esc(guide) + '" target="_blank" rel="noopener">📖 מדריך למשתמש</a>' : '<span></span>') +
+        '<div class="acts"><span style="display:flex;gap:12px;flex-wrap:wrap">' + links.map((l) => '<a href="' + esc(l[1]) + '" target="_blank" rel="noopener">' + l[0] + '</a>').join('') + '</span>' +
         '<button type="button" class="x">סגירה</button></div>';
       pop.querySelector('.x').addEventListener('click', close);
       const r = opener.getBoundingClientRect();
@@ -61,6 +71,9 @@
     btn.addEventListener('click', toggle);
     if ($('aboutLoginBtn')) $('aboutLoginBtn').addEventListener('click', toggle);
     document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) close(); });
+    syncGuideBtn();
+    const tools = $('adminTools');
+    if (tools) new MutationObserver(syncGuideBtn).observe(tools, { attributes: true, attributeFilter: ['class'] });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { close(); opener.focus(); } });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
