@@ -147,6 +147,9 @@
       (r.avatarUrl ? '<img src="' + e(r.avatarUrl) + '" alt="" id="empDetPhoto" style="width:64px;height:64px;border-radius:50%;object-fit:cover;cursor:zoom-in" title="הגדלה">' : '') +
       '<div><div style="font-size:18px;font-weight:800">' + e(r.employee) + '</div>' +
       '<div style="font-size:12.5px;color:var(--muted)">' + (r.f101 ? 'טופס 101 לשנת ' + r.f101.year + ' · הוגש ' + e(r.f101.submitted) : 'העובד עוד לא הגיש טופס 101 במערכת') + '</div></div></div>';
+    const c = r.contact;
+    if (c && (c.email || c.phone || c.address)) html += h4('פרטי קשר' + (c.setByEmployee ? ' (עודכנו על ידי העובד)' : '')) +
+      row('כתובת מגורים', c.address) + row('טלפון', c.phone) + row('אימייל', c.email);
     if (p) {
       html += h4('פרטים אישיים') + row('שם מלא', p.firstName + ' ' + p.lastName) + row('מספר זהות', p.idNumber) + row('דרכון', p.passportNumber) +
         row('תאריך לידה', fmtDate(p.birthDate)) + row('מין', p.gender) + row('מצב משפחתי', p.marital) + row('תאריך עלייה', fmtDate(p.aliyaDate)) +
