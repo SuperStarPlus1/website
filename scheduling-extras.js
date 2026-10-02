@@ -165,7 +165,13 @@
     const cs = getComputedStyle(ctl);
     const out = COPY.map((p) => { const v = cs.getPropertyValue(p); return v ? p + ':' + v : ''; }).filter(Boolean);
     let width = ctl.style.width;
-    if (!width) {
+    // in a flex row (a list next to buttons / other lists) a stylesheet width such as ".mrow select{width:100%}" would
+    // take the whole row and squeeze its neighbours to nothing: there the field sizes to its content (its flex rules apply)
+    const par = ctl.parentElement;
+    const inFlexRow = !!par && /flex/.test(getComputedStyle(par).display) && !/column/.test(getComputedStyle(par).flexDirection);
+    if (!width && inFlexRow) {
+      if (ctl.offsetParent !== null) out.push('min-width:' + ctl.offsetWidth + 'px');
+    } else if (!width) {
       if (ctl.offsetParent === null) { const w = cs.width; if (w && w !== 'auto') width = w; }
       else {
         const p = ctl.parentElement, pcs = p && getComputedStyle(p);

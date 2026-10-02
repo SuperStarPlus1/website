@@ -981,9 +981,9 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <header><h3>⏱ דוח נוכחות מרוכז</h3><p>שעות בפועל לפי דיווחי העובדים · ברוטו צפוי לפי שכר מינימום, לפני מיסים</p></header>
     <div class="mbody">
       <div class="mrow"><label>חודש</label>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <select id="attMgrBranch" class="hidden" style="min-width:120px"></select>
-          <select id="attMgrMonth" style="flex:1"></select>
+          <select id="attMgrMonth" style="flex:1 1 140px;min-width:140px;width:auto"></select>
           <button class="btn primary" id="attMgrLoad" style="padding:8px 16px">סיכום</button>
           <button class="btn plain" id="attMgrDetailed" style="padding:8px 16px">📋 מפורט</button>
           <button class="btn plain" id="attMgrExcel" style="padding:8px 16px;background:#dcfce7;color:#166534;font-weight:700">⬇ אקסל</button>
