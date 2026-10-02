@@ -31,7 +31,7 @@
     '.ha-banner b{color:#9a3412}' +
     '.ha-banner button,.ha-btn{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;background:#1b2a4a;color:#fff}' +
     '.ha-btn.plain{background:#f1f5f9;color:#1f2937}.ha-btn.ok{background:#16a34a}.ha-btn.no{background:#dc2626}.ha-btn.sm{padding:5px 10px;font-size:12px}' +
-    '.ha-table{width:100%;border-collapse:collapse;font-size:13px}' +
+    '.ha-table{width:100%;min-width:0;border-collapse:collapse;font-size:13px}' +
     '.ha-table th{background:#f8fafc;font-size:11.5px;color:#6b7280;text-align:right;padding:6px}' +
     '.ha-table td{border-top:1px solid #e5e7eb;padding:6px;vertical-align:top}' +
     '.ha-form{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:10px 0;display:grid;gap:8px}' +

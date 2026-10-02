@@ -90,7 +90,7 @@
     show('myAlertsOverlay');
     const r = await apiPost({ action: 'getMyAlertPrefs', ...mgrAuth() });
     if (!r.ok) { $('myAlertsBody').innerHTML = ''; $('myAlertsOverlayErr').textContent = r.error || 'שגיאה'; return; }
-    $('myAlertsBody').innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' +
+    $('myAlertsBody').innerHTML = '<table style="width:100%;min-width:0;border-collapse:collapse;font-size:14px"><thead><tr>' +
       '<th style="text-align:right;padding:6px">התראה</th><th style="width:70px">מייל</th><th style="width:70px">Push</th></tr></thead><tbody>' +
       r.types.map((a) => '<tr data-key="' + e(a.key) + '" style="border-top:1px solid #eef0f4"><td style="padding:8px 6px">' + e(a.label) + '</td>' +
         '<td style="text-align:center"><input type="checkbox" class="al-email" aria-label="מייל — ' + e(a.label) + '"' + (a.email ? ' checked' : '') + '></td>' +
@@ -158,7 +158,7 @@
         row('תחילת עבודה בשנת המס', fmtDate(p.workStart)) + row('קרן פנסיה', p.pension);
       if (p.spouse) html += h4('בן / בת זוג') + row('שם', p.spouse.firstName + ' ' + p.spouse.lastName) + row('מספר זהות', p.spouse.id) +
         row('תאריך לידה', fmtDate(p.spouse.birthDate)) + row('הכנסה', p.spouse.incomeStatus);
-      html += h4('ילדים (' + p.kids.length + ')') + (p.kids.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px"><thead><tr>' +
+      html += h4('ילדים (' + p.kids.length + ')') + (p.kids.length ? '<div style="overflow-x:auto"><table style="width:100%;min-width:0;border-collapse:collapse;font-size:13.5px"><thead><tr>' +
         '<th style="text-align:right">שם</th><th>ת"ז</th><th>תאריך לידה</th><th>בחזקתי</th><th>קצבת ילדים</th></tr></thead><tbody>' +
         p.kids.map((k) => '<tr><td>' + e(k.name) + '</td><td style="text-align:center" dir="ltr">' + e(k.id) + '</td><td style="text-align:center">' + e(fmtDate(k.birth)) +
           '</td><td style="text-align:center">' + (k.inCustody ? '✓' : '') + '</td><td style="text-align:center">' + (k.childAllowance ? '✓' : '') + '</td></tr>').join('') +

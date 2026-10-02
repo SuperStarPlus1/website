@@ -66,7 +66,7 @@
       e(c.label) + (c.key === 'national' ? ' (תמיד)' : '') + '</label>').join('');
     $('holCat').innerHTML = cats.map((c) => '<option value="' + c.key + '">' + e(c.label) + '</option>').join('');
     const label = (k) => (cats.find((c) => c.key === k) || {}).label || k;
-    list.innerHTML = r.holidays.length ? '<div style="overflow-x:auto"><table class="att-table" style="width:100%"><tr><th>תאריך</th><th>יום</th><th>חג</th><th>סוג</th><th>בחישוב</th><th></th></tr>' +
+    list.innerHTML = r.holidays.length ? '<div style="overflow-x:auto"><table class="att-table" style="width:100%;min-width:0"><tr><th>תאריך</th><th>יום</th><th>חג</th><th>סוג</th><th>בחישוב</th><th></th></tr>' +
       r.holidays.map((h) => '<tr style="' + (h.counts ? '' : 'opacity:.55') + '"><td>' + h.date.slice(8, 10) + '/' + h.date.slice(5, 7) + '</td><td>' + DAYS[new Date(h.date + 'T00:00:00').getDay()] + '</td>' +
         '<td style="text-align:right">' + e(h.name) + (h.isEve ? ' <small style="color:var(--muted,#6b7280)">(ערב חג)</small>' : '') + '</td>' +
         '<td><span style="color:' + (CAT_COLOR[h.category] || '#374151') + ';font-weight:700">' + e(label(h.category)) + '</span></td>' +
