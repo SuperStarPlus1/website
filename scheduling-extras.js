@@ -7,7 +7,7 @@
 //      Saturday are included (counted and approved at once; otherwise not counted and waiting for a manager), in the
 //      "pending requests" window → saveConstraintRules; the employee window shows the rule
 //   4. week navigation — clear "previous week" / "next week" buttons; the dates open a calendar (month + year pickers)
-//      and a chosen day moves the board to that day's week
+//      and a chosen day moves the board to that day's week; holidays are marked in the calendar and under the board's dates
 // Uses the app's own globals: apiPost, mgrAuth, state, _currentEmp, toast, moveWeek, sundayOf. Rules come with getData (consRules, skills).
 (function () {
   'use strict';
@@ -33,6 +33,8 @@
     '.sx-chip{display:inline-block;background:#e0e7ff;color:#1e3a8a;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:600;margin-inline-end:3px}' +
     '.sx-chip.unk{background:#fee2e2;color:#991b1b}' +
     '.aa-dept.disabled .sx-skills{opacity:.4;pointer-events:none}' +
+    '.sx-hol{margin-top:3px;font-size:11px;font-weight:800;color:#b91c1c;background:#fee2e2;border-radius:6px;padding:1px 5px;line-height:1.35;white-space:normal}' +
+    '.sx-hol.eve{color:#9a3412;background:#fff7ed;font-weight:700}' +
     '.sx-pop{position:fixed;z-index:30000;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.28);' +
       'display:flex;flex-direction:column;overflow:hidden;font-size:14px;direction:rtl}' +
     '.sx-pop .sx-q{margin:8px;padding:9px 11px;border:1.5px solid #d1d5db;border-radius:9px;font:inherit;font-size:16px;flex:none}' +
@@ -477,6 +479,27 @@
     closeCal();
     if (diff) moveWeek(diff);
   }
+  /* holidays: the week's come with getData (state.holidays); the picker asks for the shown year once */
+  const holYears = {};
+  const auth = () => { const s = appState(); return s && s.mgr ? mgrAuth() : s && s.emp ? { username: s.emp.username, password: s.emp.pw } : null; };
+  async function holidaysFor(year) {
+    if (holYears[year]) return holYears[year];
+    const a = auth();
+    if (!a || typeof apiPost !== 'function') return [];
+    try {
+      const r = await apiPost({ action: 'holidaysOfYearView', ...a, year });
+      if (r && r.ok) holYears[year] = r.holidays || [];
+    } catch (_) { /* offline: no marks */ }
+    if (!holYears[year]) holYears[year] = [];   // asked once: a failure is not retried on every redraw
+    return holYears[year];
+  }
+  /** the line under a date in the board's header: the holiday's name (an eve in a lighter colour) */
+  window.holidayTag = function (date) {
+    const s = appState();
+    const h = s && Array.isArray(s.holidays) ? s.holidays.find((x) => x.date === date) : null;
+    return h ? '<div class="sx-hol' + (h.isEve ? ' eve' : '') + '" title="' + e(h.name) + '">' + (h.isEve ? '' : '🎉 ') + e(h.name) + '</div>' : '';
+  };
+
   function drawCal() {
     const s = appState(), y = cal.y, m = cal.m;
     const today = new Date(), shown = s && s.weekStart ? dayNo(s.weekStart) : null;
@@ -492,9 +515,12 @@
       rows += '<div class="sx-cal-wk' + (cur ? ' cur' : '') + '">';
       for (let i = 0; i < 7; i++) {
         const d = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + i);
-        const cls = (d.getMonth() !== m ? ' out' : '') + (dayNo(d) === dayNo(today) ? ' today' : '');
+        const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const hol = (cal.hol || []).find((x) => x.date === ds);
+        const cls = (d.getMonth() !== m ? ' out' : '') + (dayNo(d) === dayNo(today) ? ' today' : '') + (hol ? (hol.isEve ? ' heve' : ' hol') : '');
         rows += '<button type="button" class="sx-cal-d' + cls + '" data-d="' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '" ' +
-          'aria-label="' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '">' + d.getDate() + '</button>';
+          'aria-label="' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + (hol ? ' — ' + e(hol.name) : '') + '"' +
+          (hol ? ' title="' + e(hol.name) + '"' : '') + '>' + d.getDate() + '</button>';
       }
       rows += '</div>';
     }
@@ -504,6 +530,7 @@
       '<select class="sx-cal-y" aria-label="שנה">' + years + '</select>' +
       '<button type="button" class="sx-cal-nav" data-step="1" aria-label="חודש הבא">‹</button></div>' +
       '<div class="sx-cal-wk sx-cal-dn">' + ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((x) => '<span>' + x + '</span>').join('') + '</div>' + rows +
+      monthHolidays(y, m) +
       '<div class="sx-cal-foot"><button type="button" class="sx-cal-today">השבוע</button><span>בחירת יום עוברת לשבוע שלו</span></div>';
     cal.el.querySelector('.sx-cal-m').addEventListener('change', (ev) => { cal.m = Number(ev.target.value); drawCal(); });
     cal.el.querySelector('.sx-cal-y').addEventListener('change', (ev) => { cal.y = Number(ev.target.value); drawCal(); });
@@ -514,7 +541,22 @@
       const [yy, mm, dd] = b.dataset.d.split('-').map(Number); goToDate(new Date(yy, mm - 1, dd));
     }));
     cal.el.querySelector('.sx-cal-today').addEventListener('click', () => goToDate(new Date()));
+    if (cal.holYear !== cal.y) { cal.holYear = cal.y; cal.hol = holYears[cal.y] || []; if (!holYears[cal.y]) loadCalHolidays(); }
   }
+  /** the month's holidays listed under the grid (the picker's days are too small for names) */
+  function monthHolidays(y, m) {
+    const pre = y + '-' + String(m + 1).padStart(2, '0') + '-';
+    const list = (cal.hol || []).filter((h) => h.date.startsWith(pre));
+    return list.length ? '<div class="sx-cal-hols">' + list.map((h) => '<div><b>' + Number(h.date.slice(8)) + '</b> ' + e(h.name) + (h.isEve ? ' <small>(ערב חג)</small>' : '') + '</div>').join('') + '</div>' : '';
+  }
+  /** load the shown year's holidays, then draw again (the grid is drawn at once, the marks follow) */
+  async function loadCalHolidays() {
+    if (!cal) return;
+    const y = cal.y;
+    const list = await holidaysFor(y);
+    if (cal && cal.y === y && cal.hol !== list) { cal.hol = list; drawCal(); }
+  }
+
   function openCal(anchor) {
     if (cal) { closeCal(); return; }
     const s = appState();
@@ -525,7 +567,7 @@
     el.setAttribute('aria-label', 'בחירת תאריך');
     document.body.appendChild(el);
     const outside = (ev) => { if (!el.contains(ev.target) && !anchor.contains(ev.target)) closeCal(); };
-    cal = { el, outside, y: base.getFullYear(), m: base.getMonth() };
+    cal = { el, outside, y: base.getFullYear(), m: base.getMonth(), hol: holYears[base.getFullYear()] || [] };
     drawCal();
     const r = anchor.getBoundingClientRect(), w = Math.min(300, window.innerWidth - 16);
     el.style.width = w + 'px';
@@ -559,6 +601,10 @@
       '.sx-cal-d.out{color:#9ca3af}' +
       '.sx-cal-d.today{font-weight:800;box-shadow:inset 0 0 0 1.5px #e8a819}' +
       '.sx-cal-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px;color:#6b7280;gap:8px}' +
+      '.sx-cal-d.hol{background:#fee2e2;color:#991b1b;font-weight:800;box-shadow:inset 0 0 0 1.5px #ef4444}' +
+      '.sx-cal-d.heve{background:#fff7ed;color:#9a3412}' +
+      '.sx-cal-hols{margin-top:8px;border-top:1px solid #e5e7eb;padding-top:6px;font-size:12.5px;color:#991b1b;display:grid;gap:2px}' +
+      '.sx-cal-hols small{color:#9a3412}' +
       '.sx-cal-today{border:0;background:#1b2a4a;color:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}' +
       '</style>');
     prev.innerHTML = '<span aria-hidden="true">›</span> <span class="sx-long">שבוע קודם</span><span class="sx-short">קודם</span>';

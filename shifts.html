@@ -1579,6 +1579,7 @@ async function load(){
     state.staffing = d.staffing || {};
     state.announcements = d.announcements || [];
     state.consRules = d.consRules || null; state.skillsCatalog = d.skills || [];   // scheduling-extras.js
+    state.holidays = d.holidays || [];   // the week's holidays (company calendars), shown under the dates
     state.dirtyShifts = false; state.dirtyEmps = false; state.extraRows.clear();
     render();
     checkMyUpdates();
@@ -1651,7 +1652,7 @@ function render(){
       <span class="dsum">${fmtMin(weekMin)} שעות · שבוע${budgetInfo?` · <span style="color:${budgetInfo.color};font-weight:800" title="עלות שכר משוערת מול תקן — לא כולל עובדים חודשיים או ללא ערך שעה מוגדר">≈₪${Math.round(budgetInfo.cost).toLocaleString()} / ₪${budgetInfo.budget.toLocaleString()} (${budgetInfo.pct}%)</span>`:''}</span></div><div class="tblwrap"><table><thead><tr>
       <th class="namecol">עובד</th>`;
     dates.forEach(d=>{
-      html += `<th class="${iso(d)===todayIso?'today':''}">${DAY_NAMES[d.getDay()]}<br>${ddmm(d)}</th>`;
+      html += `<th class="${iso(d)===todayIso?'today':''}">${DAY_NAMES[d.getDay()]}<br>${ddmm(d)}${window.holidayTag?window.holidayTag(iso(d)):''}</th>`;
     });
     html += '</tr></thead><tbody>';
 
