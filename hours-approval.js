@@ -111,7 +111,12 @@
       const i = live.find((x) => x.type === 'כניסה'), o = [...live].reverse().find((x) => x.type === 'יציאה');
       return { i: i ? i.time.slice(0, 5) : '—', o: o ? o.time.slice(0, 5) : '—' };
     };
-    const rows = (r.days || []).map((d) => {
+    // days with punches and approved sick / vacation days (marks), in date order
+    const all = [...(r.days || []).map((d) => ({ d })), ...(r.marks || []).map((m) => ({ m }))]
+      .sort((x, y) => (x.d || x.m).date.localeCompare((y.d || y.m).date));
+    const rows = all.map(({ d, m }) => {
+      if (m) return '<tr><td>' + dow(m.date) + ' ' + fmtD(m.date) + '</td><td colspan="4" style="font-weight:800;color:' +
+        (m.type === 'מחלה' ? '#b45309' : '#1d4ed8') + '">' + (m.type === 'מחלה' ? '🤒 יום מחלה' : '🏖 יום חופש') + '</td></tr>';
       const t = inOut(d.events);
       const cc = (byDate[d.date] || []).map((c) => C_CHIP[c.status] || '').join(' ');
       const ok = a.status !== 'ממתין' || (thru && d.date <= thru);

@@ -3455,7 +3455,7 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
   const r = await apiPost({ action:'myAttendance', username:state.emp.username, password:state.emp.pw,
     month: document.getElementById('attMyMonth').value });
   if(!r.ok){ box.innerHTML=esc(r.error||'שגיאה'); return; }
-  if(!r.days.length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
+  if(!r.days.length && !(r.marks||[]).length){ box.innerHTML='<div style="color:var(--muted);font-size:12.5px">אין דיווחים בחודש זה</div>'; return; }
   const evIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹', 'נוכחות':'📍' };
   const evLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת', 'נוכחות':'נוכחות באתר' };
   const toM = t => { const p=String(t).split(':'); return Number(p[0])*60+Number(p[1]); };
@@ -3489,7 +3489,7 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
         : '<span style="color:#b91c1c">⚠</span>').join('<br>') : '—';
       const flagged = d.events.some(e=>e.status && e.status!=='תקין');
       const detail = d.events.map(e=>`<div class="att-ev"><span>${evIcon[e.type]||''} ${evLbl[e.type]||esc(e.type)}${e.note?' <small style="color:var(--muted)">'+esc(e.note)+'</small>':''}${e.status&&e.status!=='תקין'?' <span style="color:#b91c1c;font-size:11px">⚠ '+esc(e.status)+'</span>':''}</span><span class="tm">${esc(e.time)}</span></div>`).join('');
-      return `<tr class="att-row" data-i="${i}" style="cursor:pointer" title="לחיצה לפירוט">
+      return `<tr class="att-row" data-i="${i}" data-date="${d.date}" style="cursor:pointer" title="לחיצה לפירוט">
         <td style="font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flagged?' <span style="color:#b91c1c">⚠</span>':''}</td>
         <td dir="ltr">${esc(firstIn)}</td>
         <td>${brkOutCell}</td>
@@ -3499,7 +3499,16 @@ document.getElementById('attMyLoad').addEventListener('click', async ()=>{
       <tr class="att-detail hidden" data-d="${i}"><td colspan="6" style="text-align:right;background:#f8fafc;padding:4px 10px">${detail}${d.complete?'':'<div style="color:#b91c1c;font-size:11px;font-weight:700;padding:4px 2px">⚠ יום ללא דיווח יציאה — נספרו רק מקטעים סגורים</div>'}</td></tr>`;
     }).join('') +
   `</table>`;
-  tbl.innerHTML += `<div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
+  // approved sick / vacation days (no punches) in their place in the month
+  (r.marks||[]).forEach(m=>{
+    const dd=new Date(m.date+'T00:00:00');
+    const html=`<tr class="att-mark"><td style="font-weight:700">${DAY_LETTERS[dd.getDay()]}׳ ${m.date.slice(8,10)}/${m.date.slice(5,7)}</td>`+
+      `<td colspan="5" style="font-weight:800;color:${m.type==='מחלה'?'#b45309':'#1d4ed8'}">${m.type==='מחלה'?'🤒 יום מחלה':'🏖 יום חופש'}</td></tr>`;
+    const after=[...tbl.querySelectorAll('tr.att-row')].find(x=>x.dataset.date>m.date);
+    if(after) after.insertAdjacentHTML('beforebegin',html); else { const tb=tbl.querySelectorAll('tbody'); (tb[tb.length-1]||tbl.querySelector('table')).insertAdjacentHTML('beforeend',html); }
+  });
+  const _sickN=(r.marks||[]).filter(m=>m.type==='מחלה').length, _vacN=(r.marks||[]).filter(m=>m.type==='חופש').length;
+  tbl.innerHTML += `<div class="att-gross">סה"כ החודש: ${fmtMin(r.totalMinutes)} שעות (${r.days.length} ימי עבודה${_sickN?' · '+_sickN+' ימי מחלה':''}${_vacN?' · '+_vacN+' ימי חופש':''}) · שכר ברוטו צפוי: ~${r.gross.toLocaleString()} ₪
     <div style="font-weight:500;font-size:11px;color:var(--muted)">אינדיקציה לפי שכר מינימום ${r.minWage} ₪/שעה · לחיצה ארוכה על שורה לעריכה ידנית</div></div>`;
   box.querySelectorAll('.att-row').forEach(row=>row.addEventListener('click',()=>{
     box.querySelector('.att-detail[data-d="'+row.dataset.i+'"]').classList.toggle('hidden');
@@ -6390,5 +6399,6 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="scheduling-extras.js"></script>
 <script src="hours-approval.js"></script>
 <script src="employee-menus.js"></script>
+<script src="mgr-entries.js"></script>
 </body>
 </html>

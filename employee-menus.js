@@ -1,12 +1,14 @@
 // The employee's navigation (same file in shiftfloo web/app/ and on the Superstar site; loaded last, after the other
 // layers have added their buttons):
-//   header    two menus instead of a row of buttons — "📅 סידור עבודה" (constraints, swaps, attendance, hours approval)
-//             and "👤 אזור אישי" (my details, payslips, Form 106, Form 101)
-//   home      the same two groups as sections of the home screen (operations tools, if any, stay at the end)
+//   header    three menus instead of a row of buttons — "📅 סידור עבודה" (my schedule, constraints, vacation request,
+//             swaps), "⏱ נוכחות" (monthly attendance, hours approval, sick report) and "👤 אזור אישי" (my details,
+//             payslips, Form 106, Form 101); constraints and vacation requests are separate items
+//   home      the clock only — branch tools (operations) are not shown to employees
 //   my details  photo, email, phone and home address are the employee's to change (myProfile / saveMyProfile — a new
 //             email asks for the password); start date, ID number etc. are read-only
 // The buttons themselves are the app's own (moved, not copied), so everything they open keeps working as before.
-// Uses the app's own globals: apiPost, state, toast, shrinkImage, updateSelfAvatar.
+// Uses the app's own globals: apiPost, state, toast, shrinkImage, updateSelfAvatar, hideEmpHome, openEmpCons, openSick,
+// openF101, f101Missing, empByName.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -36,9 +38,15 @@
     '@media (max-width:480px){.em-prof .em-row{grid-template-columns:1fr;gap:3px}}' +
     '</style>');
 
-  /* ---------- header: two menus ---------- */
-  const SCHED = ['myConsBtn', 'mySwapBtn', 'myAttBtn'];
-  const PERSONAL = ['myPayBtn', 'my106Btn', 'myF101Btn'];
+  /* ---------- header: three menus ---------- */
+  const item = (id, label, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = id; b.textContent = label;
+    b.addEventListener('click', fn);
+    return b;
+  };
+  /** the app's own button, moved into a menu (its handler, visibility and id stay as they are) */
+  const own = (id, label) => { const b = $(id); if (b && label) b.textContent = label; return b; };
   function menu(id, label, items) {
     const wrap = document.createElement('span');
     wrap.className = 'em-menu';
@@ -49,6 +57,7 @@
     const btn = wrap.querySelector('.em-btn');
     btn.addEventListener('click', (ev) => {
       ev.stopPropagation();
+      syncRestricted();
       const open = !drop.classList.contains('open');
       document.querySelectorAll('#viewerChip .em-drop').forEach((d) => d.classList.remove('open'));
       drop.classList.toggle('open', open);
@@ -60,45 +69,82 @@
   function header() {
     const chip = $('viewerChip');
     if (!chip || $('emSchedBtn')) return;
-    const hours = document.createElement('button');
-    hours.type = 'button'; hours.id = 'myHoursBtn'; hours.textContent = '📋 אישור שעות';
-    hours.addEventListener('click', () => { if (typeof window.openHoursApproval === 'function') window.openHoursApproval(); });
-    const prof = document.createElement('button');
-    prof.type = 'button'; prof.id = 'myProfileBtn'; prof.textContent = '🪪 הפרטים שלי';
-    prof.addEventListener('click', openProfile);
+    const consBtn = $('myConsBtn');
+    if (consBtn) consBtn.style.display = 'none';           // replaced by two separate items (constraints / vacation)
     const before = $('viewerExit');
-    const sched = menu('emSched', '📅 סידור עבודה', [...SCHED.map($), hours]);
-    const pers = menu('emPersonal', '👤 אזור אישי', [prof, ...PERSONAL.map($)]);
+    const sched = menu('emSched', '📅 סידור עבודה', [
+      item('mySchedBtn', '📅 הסידור שלי', () => { if (typeof hideEmpHome === 'function') hideEmpHome(); }),
+      item('myConstraintsBtn', '🖐 אילוצים', () => openConsPart('cons')),
+      item('myVacationBtn', '🏖 בקשת חופשה', () => openConsPart('vac')),
+      own('mySwapBtn', '🔁 החלפת משמרת'),
+    ]);
+    const att = menu('emAtt', '⏱ נוכחות', [
+      own('myAttBtn', '⏱ נוכחות חודשית'),
+      item('myHoursBtn', '📋 אישור שעות', () => { if (typeof window.openHoursApproval === 'function') window.openHoursApproval(); }),
+      item('mySickBtn', '🤒 דיווח מחלה', () => { if (typeof openSick === 'function') openSick(); }),
+    ]);
+    const pers = menu('emPersonal', '👤 אזור אישי', [
+      item('myProfileBtn', '🪪 הפרטים שלי', openProfile),
+      own('myPayBtn', '🧾 תלושי שכר'),
+      own('my106Btn', '📄 טופס 106'),
+      item('myFormsBtn', '📋 טופס 101', openForms),
+    ]);
+    const f101list = $('myF101Btn');
+    if (f101list) f101list.style.display = 'none';         // inside "טופס 101" (fill when missing, else the forms sent)
     chip.insertBefore(sched, before);
+    chip.insertBefore(att, before);
     chip.insertBefore(pers, before);
+    syncRestricted();
+    // the app shows / hides its header after sign-in: follow it
+    new MutationObserver(syncRestricted).observe(chip, { attributes: true, attributeFilter: ['class'] });
     document.addEventListener('click', () => document.querySelectorAll('#viewerChip .em-drop').forEach((d) => d.classList.remove('open')));
   }
+  /** an inactive employee keeps only his payslips and Form 106 (as the app's own restricted mode) */
+  function syncRestricted() {
+    const s = appState();
+    const restricted = !!(s && s.emp && s.emp.active === false);
+    ['emSched', 'emAtt'].forEach((id) => { const w = $(id + 'Btn'); if (w) w.parentElement.style.display = restricted ? 'none' : ''; });
+    ['myProfileBtn', 'myFormsBtn'].forEach((id) => { const b = $(id); if (b) b.style.display = restricted ? 'none' : ''; });
+  }
+  function openForms() {
+    const s = appState();
+    const me = s && s.emp && typeof empByName === 'function' ? empByName(s.emp.name) : null;
+    const missing = me && typeof f101Missing === 'function' ? f101Missing(me) : false;
+    if (missing && typeof openF101 === 'function') openF101(); else if ($('myF101Btn')) $('myF101Btn').click();
+  }
 
-  /* ---------- home screen: sections ---------- */
+  /** constraints and vacation requests are separate items: the same window, showing only the part asked for */
+  async function openConsPart(part) {
+    if (typeof openEmpCons !== 'function') return;
+    await openEmpCons();
+    const ov = $('empConsOverlay');
+    if (!ov) return;
+    const body = ov.querySelector('.mbody');
+    const kids = [...body.children];
+    const cut = kids.findIndex((c) => /border-top/.test(c.getAttribute('style') || ''));   // the line between the two parts
+    kids.forEach((c, i) => {
+      c.style.display = cut < 0 ? '' : (part === 'cons' ? (i < cut ? '' : 'none') : (i > cut ? '' : 'none'));
+    });
+    const h = ov.querySelector('header h3');
+    if (h) h.textContent = part === 'cons' ? '🖐 אילוצים — אי-זמינות' : '🏖 בקשת חופשה';
+    // the header line is set again by scheduling-extras.js when the window opens — adjust after it
+    setTimeout(() => {
+      const p = ov.querySelector('header p');
+      if (p && part === 'vac') p.textContent = 'בקשת חופשה לטווח תאריכים · תמיד באישור מנהל';
+    }, 0);
+  }
+  // any other way into the window (an old shortcut) shows both parts, as before
+  document.addEventListener('click', (ev) => {
+    if (ev.target.closest && ev.target.closest('#myConstraintsBtn, #myVacationBtn')) return;
+    const ov = $('empConsOverlay');
+    if (ov && ov.classList.contains('hidden')) ov.querySelectorAll('.mbody > *').forEach((c) => (c.style.display = ''));
+  }, true);
+
+  /* ---------- home screen: the clock only ---------- */
+  // everything else lives in the header menus; branch tools (operations) are for managers only (their own menu)
   function home() {
     const links = document.querySelector('#empHome .eh-links');
-    if (!links || links.querySelector('.em-sec')) return;
-    const by = (go) => links.querySelector('[data-go="' + go + '"]');
-    const prof = document.createElement('button');
-    prof.type = 'button'; prof.dataset.go = 'profile'; prof.id = 'ehProfile';
-    prof.innerHTML = '<span class="ic">🪪</span>הפרטים שלי';
-    prof.addEventListener('click', openProfile);
-    // Form 101: always in the personal area — to fill it when missing, otherwise the forms already sent
-    const forms = document.createElement('button');
-    forms.type = 'button'; forms.dataset.go = 'myforms'; forms.id = 'ehMyForms';
-    forms.innerHTML = '<span class="ic">📋</span>טופס 101';
-    forms.addEventListener('click', () => { const f = $('ehF101'); if (f && !f.classList.contains('hidden')) f.click(); else if ($('myF101Btn')) $('myF101Btn').click(); });
-    const sec = (t) => { const d = document.createElement('div'); d.className = 'em-sec'; d.textContent = t; return d; };
-    // everything after the old operations heading stays where it is (Superstar's branch tools)
-    const opsHead = [...links.children].find((c) => c.tagName === 'DIV' && /תפעול/.test(c.textContent));
-    const groups = [
-      sec('📅 סידור עבודה'), by('board'), by('att'), by('hours'), by('cons'), by('swap'), by('sick'),
-      sec('👤 אזור אישי'), prof, by('pay'), by('f106'), forms,
-    ].filter(Boolean);
-    const ehF101 = $('ehF101');
-    if (ehF101) ehF101.style.display = 'none';      // the "fill Form 101" shortcut is now inside "טופס 101"
-    groups.forEach((n) => links.insertBefore(n, opsHead || null));
-    if (opsHead) opsHead.className = 'em-sec';
+    if (links) links.style.display = 'none';
   }
 
   /* ---------- my details ---------- */
