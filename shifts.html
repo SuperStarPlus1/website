@@ -3976,6 +3976,7 @@ async function loadMgrDetailed(){
     const rows = emp.days.map(d=>{
       const dd=new Date(d.date+'T00:00:00');
       if(d.sick) return `<tr style="background:${d.sickApproved?'#dcfce7':'#fef3c7'}"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="6" style="text-align:center">🤒 ${d.sickApproved?'מחלה מאושרת':'מחלה — ללא אישור (נזקף לחופשה/היעדרות)'}</td></tr>`;
+      if(d.vacation) return `<tr style="background:#dbeafe"><td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}</td><td colspan="6" style="text-align:center">🏖 חופשה מאושרת</td></tr>`;
       const flag=(d.events||[]).some(e=>e.status&&e.status!=='תקין');
       if(!d.inT && d.siteNote) return `<tr ${rowAttrs} data-emp="${esc(emp.employee)}" data-date="${d.date}">
         <td>${DAY_LETTERS[dd.getDay()]}׳ ${d.date.slice(8,10)}/${d.date.slice(5,7)}${flag?' ⚠':''}</td>
@@ -3994,7 +3995,7 @@ async function loadMgrDetailed(){
       <div style="background:var(--navy);color:#fff;padding:7px 10px;font-weight:800;font-size:13px">
         ${esc(emp.employee)}${emp.empNo?' · מס\' '+esc(emp.empNo):''}${emp.dept?' · '+esc(emp.dept):''}
         <span style="font-size:11px;font-weight:500;opacity:.8"> · ${fmtMonth(r.month)}</span>
-        <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''}${emp.lateCount?' · <span style="color:#fca5a5">'+emp.lateCount+' איחורים</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
+        <span style="float:left">${(emp.regHours||0)}ש' רגיל${emp.ot125||emp.ot150?' + '+((emp.ot125||0)+(emp.ot150||0)).toFixed(1)+' נוספות':''}${emp.sick?' · '+emp.sick+' מחלה':''}${emp.vacation?' · '+emp.vacation+' חופשה':''}${emp.overAbsence?' · <span style="color:#fca5a5">'+emp.overAbsence+' היעד\' </span>':''}${emp.lateCount?' · <span style="color:#fca5a5">'+emp.lateCount+' איחורים</span>':''} · ~${emp.gross.toLocaleString()} ₪</span></div>
       <div style="background:#f8fafc;padding:5px 10px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)">
         רגילות ${emp.regHours||0} · 125%: ${emp.ot125||0} · 150%: ${emp.ot150||0} · מחלה מאושרת ${emp.sick||0} · חופשה ${emp.vacUsed||0}/${emp.vacQuota||0} · ערך שעה ${emp.empType==='חודשי'?'—':emp.hourRate+' ₪'}</div>
       <div style="overflow-x:auto"><table class="att-table" style="min-width:720px;width:100%"><tr><th>יום</th><th>כניסה</th><th>תחילת הפסקה</th><th>סיום הפסקה</th><th>סיום משמרת</th><th>שעות</th><th>נוספות</th></tr>${rows}</table></div>
@@ -4359,7 +4360,7 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     if(rPrev.ok){ rPrev.employees.forEach(e=>{
       const d=e.dept||'ללא'; prevByDept[d]=prevByDept[d]||{reg:0,o1:0,o2:0,days:0};
       prevByDept[d].reg+=e.regHours||0; prevByDept[d].o1+=e.ot125||0; prevByDept[d].o2+=e.ot150||0;
-      prevByDept[d].days+=e.days.filter(dd=>!dd.sick).length;
+      prevByDept[d].days+=e.days.filter(dd=>!dd.sick&&!dd.vacation).length;
     }); }
 
     // חישוב ימי עבודה בחודש (לפי לוח שנה)
@@ -4383,7 +4384,7 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
       const notes=e.days.length?[incompleteN?('⚠ '+incompleteN+' ימים ללא החתמה מלאה'):'', autoN?('🔧 '+autoN+' יציאה הושלמה אוטומטית'):''].filter(Boolean).join(' · '):'ללא דיווח';
       sheetRows.push([e.empNo||'', e.employee, e.dept||'', rate,
         Math.round(reg*100)/100, Math.round(o1*100)/100, Math.round(o2*100)/100,
-        Math.round((reg+o1+o2)*100)/100, e.days.filter(d=>!d.sick).length,
+        Math.round((reg+o1+o2)*100)/100, e.days.filter(d=>!d.sick&&!d.vacation).length,
         e.sick||0, e.vacUsed||0, e.overAbsence||0, e.lateCount||0, e.gross,
         notes]);
     });
@@ -4393,7 +4394,7 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     const byDept={};
     r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
       byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
-      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick).length; byDept[d].emps++; });
+      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick&&!dd.vacation).length; byDept[d].emps++; });
 
     sheetRows.push([]); sheetRows.push([]);
     sheetRows.push(['סיכום שעות לפי מחלקה — '+fmtMonth(month)]);
@@ -4423,7 +4424,7 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
       const byBranch={};
       r.employees.forEach(e=>{ const b=e.branch||'—'; byBranch[b]=byBranch[b]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
         byBranch[b].reg+=e.regHours||0; byBranch[b].o1+=e.ot125||0; byBranch[b].o2+=e.ot150||0;
-        byBranch[b].gross+=e.gross; byBranch[b].days+=e.days.filter(dd=>!dd.sick).length; byBranch[b].emps++; });
+        byBranch[b].gross+=e.gross; byBranch[b].days+=e.days.filter(dd=>!dd.sick&&!dd.vacation).length; byBranch[b].emps++; });
       const brRows=[['סיכום שעות לפי סניף — '+fmtMonth(month)],[],
         ['סניף','עובדים','ימי עבודה','שעות רגילות','נוספות 125%','נוספות 150%','סה"כ שעות','ברוטו (₪)']];
       Object.keys(byBranch).sort().forEach(b=>{
@@ -4483,6 +4484,8 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         if(d){
           if(d.sick){
             note=d.sickApproved?'מחלה בתשלום מלא':'מחלה בתשלום 75%';
+          } else if(d.vacation){
+            note='חופשה מאושרת';
           } else if(d.minutes>0){
             cols.inT=d.inT||'';
             cols.brk1=d.breakT||'';
