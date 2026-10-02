@@ -648,7 +648,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
 <!-- מודאל שחזור סיסמה עצמאי (OTP במייל) — ר' sendOtp_/verifyOtp_ ב-Code.gs, קיים כבר בשרת ולא היה מחובר לשום כפתור עד עכשיו -->
 <div class="overlay hidden" id="fpOverlay">
   <div class="modal">
-    <header><h3>🔑 שחזור סיסמה</h3><p id="fpSubtitle">הזן/י שם משתמש — קוד איפוס יישלח לכתובת המייל הרשומה שלך</p></header>
+    <header><h3>🔑 שחזור סיסמה</h3><p id="fpSubtitle">הזן/י שם משתמש (מנהל: שם המנהל) — קוד איפוס יישלח לכתובת המייל הרשומה</p></header>
     <div class="mbody">
       <div class="mrow" id="fpStep1Row"><label>שם משתמש</label><input type="text" id="fpUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="לדוגמה: noa1"></div>
       <div id="fpStep2" class="hidden">
@@ -5940,7 +5940,7 @@ function openForgotPw(){
   document.getElementById('fpErr').textContent='';
   document.getElementById('fpStep1Row').classList.remove('hidden');
   document.getElementById('fpStep2').classList.add('hidden');
-  document.getElementById('fpSubtitle').textContent='הזן/י שם משתמש — קוד איפוס יישלח לכתובת המייל הרשומה שלך';
+  document.getElementById('fpSubtitle').textContent='הזן/י שם משתמש (מנהל: שם המנהל) — קוד איפוס יישלח לכתובת המייל הרשומה';
   document.getElementById('fpOk').textContent='שליחת קוד';
   hide('loginOverlay'); show('fpOverlay');
   document.getElementById('fpUser').focus();
