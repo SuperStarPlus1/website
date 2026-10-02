@@ -1,14 +1,14 @@
 // The employee's navigation (same file in shiftfloo web/app/ and on the Superstar site; loaded last, after the other
 // layers have added their buttons):
-//   header    three menus instead of a row of buttons — "📅 סידור עבודה" (my schedule, constraints, vacation request,
-//             swaps), "⏱ נוכחות" (monthly attendance, hours approval, sick report) and "👤 אזור אישי" (my details,
+//   header    two menus instead of a row of buttons — "📅 סידור עבודה ונוכחות" (my schedule, constraints, vacation request,
+//             swaps · monthly attendance, hours approval, sick report · request history) and "👤 אזור אישי" (my details,
 //             payslips, Form 106, Form 101); constraints and vacation requests are separate items
 //   home      the clock only — branch tools (operations) are not shown to employees
 //   my details  photo, email, phone and home address are the employee's to change (myProfile / saveMyProfile — a new
 //             email asks for the password); start date, ID number etc. are read-only
 // The buttons themselves are the app's own (moved, not copied), so everything they open keeps working as before.
 // Uses the app's own globals: apiPost, state, toast, shrinkImage, updateSelfAvatar, hideEmpHome, openEmpCons, openSick,
-// openF101, f101Missing, empByName.
+// openBlobPdf, empByName.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -53,7 +53,7 @@
     wrap.innerHTML = '<button type="button" class="em-btn" id="' + id + 'Btn" aria-haspopup="true" aria-expanded="false">' + label + '</button>' +
       '<div class="em-drop" id="' + id + 'Drop" role="menu"></div>';
     const drop = wrap.querySelector('.em-drop');
-    items.forEach((b) => { if (!b) return; b.classList.remove('hbtn', 'gold'); b.removeAttribute('style'); b.setAttribute('role', 'menuitem'); drop.appendChild(b); });
+    items.forEach((b) => { if (!b) return; if (b.tagName === 'HR') { drop.appendChild(b); return; } b.classList.remove('hbtn', 'gold'); b.removeAttribute('style'); b.setAttribute('role', 'menuitem'); drop.appendChild(b); });
     const btn = wrap.querySelector('.em-btn');
     btn.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -72,16 +72,18 @@
     const consBtn = $('myConsBtn');
     if (consBtn) consBtn.style.display = 'none';           // replaced by two separate items (constraints / vacation)
     const before = $('viewerExit');
-    const sched = menu('emSched', '📅 סידור עבודה', [
+    const sep = () => { const h = document.createElement('hr'); h.style.cssText = 'border:0;border-top:1px solid #e5e7eb;margin:3px 0'; return h; };
+    const sched = menu('emSched', '📅 סידור עבודה ונוכחות', [
       item('mySchedBtn', '📅 הסידור שלי', () => { if (typeof hideEmpHome === 'function') hideEmpHome(); }),
       item('myConstraintsBtn', '🖐 אילוצים', () => openConsPart('cons')),
       item('myVacationBtn', '🏖 בקשת חופשה', () => openConsPart('vac')),
       own('mySwapBtn', '🔁 החלפת משמרת'),
-    ]);
-    const att = menu('emAtt', '⏱ נוכחות', [
+      sep(),
       own('myAttBtn', '⏱ נוכחות חודשית'),
       item('myHoursBtn', '📋 אישור שעות', () => { if (typeof window.openHoursApproval === 'function') window.openHoursApproval(); }),
       item('mySickBtn', '🤒 דיווח מחלה', () => { if (typeof openSick === 'function') openSick(); }),
+      sep(),
+      item('myHistoryBtn', '📜 היסטוריית בקשות', openHistory),
     ]);
     const pers = menu('emPersonal', '👤 אזור אישי', [
       item('myProfileBtn', '🪪 הפרטים שלי', openProfile),
@@ -92,8 +94,14 @@
     const f101list = $('myF101Btn');
     if (f101list) f101list.style.display = 'none';         // inside "טופס 101" (fill when missing, else the forms sent)
     chip.insertBefore(sched, before);
-    chip.insertBefore(att, before);
     chip.insertBefore(pers, before);
+    // "הטפסים שלי" holds only Form 101: called by its name
+    const ov = $('myF101Overlay');
+    if (ov) {
+      const h = ov.querySelector('header h3'), p = ov.querySelector('header p');
+      if (h) h.textContent = '📋 טופס 101';
+      if (p) p.textContent = 'מילוי או עדכון הטופס, וצפייה בטפסים שהגשת';
+    }
     syncRestricted();
     // the app shows / hides its header after sign-in: follow it
     new MutationObserver(syncRestricted).observe(chip, { attributes: true, attributeFilter: ['class'] });
@@ -103,14 +111,54 @@
   function syncRestricted() {
     const s = appState();
     const restricted = !!(s && s.emp && s.emp.active === false);
-    ['emSched', 'emAtt'].forEach((id) => { const w = $(id + 'Btn'); if (w) w.parentElement.style.display = restricted ? 'none' : ''; });
+    ['emSched'].forEach((id) => { const w = $(id + 'Btn'); if (w) w.parentElement.style.display = restricted ? 'none' : ''; });
     ['myProfileBtn', 'myFormsBtn'].forEach((id) => { const b = $(id); if (b) b.style.display = restricted ? 'none' : ''; });
   }
-  function openForms() {
-    const s = appState();
-    const me = s && s.emp && typeof empByName === 'function' ? empByName(s.emp.name) : null;
-    const missing = me && typeof f101Missing === 'function' ? f101Missing(me) : false;
-    if (missing && typeof openF101 === 'function') openF101(); else if ($('myF101Btn')) $('myF101Btn').click();
+  /** Form 101: the window with "fill / update" and the forms already sent */
+  function openForms() { if ($('myF101Btn')) $('myF101Btn').click(); }
+
+  /* ---------- request history: sick reports (with their certificates) and vacation requests ---------- */
+  const ST = { 'מאושר': ['#dcfce7', '#166534'], 'ממתין': ['#fef3c7', '#92400e'], 'נדחה': ['#fee2e2', '#991b1b'] };
+  const chip = (st) => { const c = ST[st] || ST['ממתין']; return '<span style="background:' + c[0] + ';color:' + c[1] + ';border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap">' + e(st) + '</span>'; };
+  const dm = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : '');
+  const range = (a, b) => (a === b ? dm(a) : dm(a) + ' – ' + dm(b));
+  let histTab = 'sick';
+  async function openHistory(tab) {
+    if (typeof tab === 'string') histTab = tab;
+    if (!$('emHistOverlay')) {
+      document.body.insertAdjacentHTML('beforeend',
+        '<div class="overlay hidden" id="emHistOverlay"><div class="modal" style="max-width:600px">' +
+        '<header><h3>📜 היסטוריית בקשות</h3><p>כל בקשות המחלה והחופשה שהגשת, והמסמכים שצירפת</p></header>' +
+        '<div class="mbody"><div style="display:flex;gap:6px;margin-bottom:10px">' +
+          '<button type="button" class="btn" data-ht="sick">🤒 מחלה</button><button type="button" class="btn" data-ht="vac">🏖 חופשה</button></div>' +
+          '<div id="emHistBody"></div></div>' +
+        '<div class="mfoot"><button class="btn plain" id="emHistClose">סגירה</button></div></div></div>');
+      $('emHistClose').addEventListener('click', () => $('emHistOverlay').classList.add('hidden'));
+      $('emHistOverlay').querySelectorAll('[data-ht]').forEach((b) => b.addEventListener('click', () => openHistory(b.dataset.ht)));
+    }
+    $('emHistOverlay').classList.remove('hidden');
+    $('emHistOverlay').querySelectorAll('[data-ht]').forEach((b) => { b.className = 'btn ' + (b.dataset.ht === histTab ? 'primary' : 'plain'); });
+    const body = $('emHistBody');
+    body.innerHTML = 'טוען…';
+    const r = await apiPost({ action: 'myRequestHistory', ...empAuth() });
+    if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const row = (main, sub, right) => '<div class="cons-item" style="align-items:center"><span><b>' + main + '</b>' + (sub ? '<br><small style="color:var(--muted,#6b7280)">' + sub + '</small>' : '') +
+      '</span><span class="acts" style="display:flex;gap:6px;align-items:center">' + right + '</span></div>';
+    if (histTab === 'sick') {
+      body.innerHTML = r.sick.length ? r.sick.map((x) => row(range(x.from, x.to), e(x.note),
+        chip(x.status) + (x.hasCert ? ' <button type="button" class="ap" data-cert="' + x.id + '">📎 אישור</button>' : ''))).join('')
+        : '<p style="color:var(--muted,#6b7280)">לא הוגשו דיווחי מחלה</p>';
+      body.querySelectorAll('[data-cert]').forEach((b) => b.addEventListener('click', async () => {
+        const was = b.textContent; b.textContent = 'טוען…'; b.disabled = true;
+        const x = await apiPost({ action: 'mySickCert', ...empAuth(), id: Number(b.dataset.cert) });
+        b.textContent = was; b.disabled = false;
+        if (!x.ok) return say(x.error || 'שגיאה', 'err');
+        if (typeof openBlobPdf === 'function') openBlobPdf(x.data, x.filename, x.mimeType);
+      }));
+    } else {
+      body.innerHTML = r.vacations.length ? r.vacations.map((x) => row(range(x.from, x.to), e(x.reason), chip(x.status))).join('')
+        : '<p style="color:var(--muted,#6b7280)">לא הוגשו בקשות חופשה</p>';
+    }
   }
 
   /** constraints and vacation requests are separate items: the same window, showing only the part asked for */

@@ -5268,6 +5268,10 @@ function renderF101Body(data, employer){
       <input type="date" id="f-workStartInTaxYear" value="${d('workStartInTaxYear')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
     <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-requestCreditThisIncome" ${chk('requestCreditThisIncome')}> אבקש לקבל נקודות זיכוי ומדרגות מס כנגד הכנסתי זו. איני מקבל/ת אותן בהכנסה אחרת</label>
+    <div class="chiprow" style="flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px"><input type="checkbox" id="f-hasPensionFund" ${chk('hasPensionFund')}> קיימת לי קרן פנסיה</label>
+      <input type="text" id="f-pensionCompany" value="${d('pensionCompany')}" maxlength="100" placeholder="באיזו חברת ביטוח / קרן? (חובה)" style="${data.hasPensionFund?'':'display:none'};border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;min-width:220px">
+    </div>
 
     <h4>ה. הכנסות אחרות</h4>
     <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;margin-bottom:8px"><input type="checkbox" id="f-otherIncome" ${chk('otherIncome')}> יש לי הכנסות אחרות (מלבד ממעסיק זה)</label>
@@ -5333,6 +5337,10 @@ function renderF101Body(data, employer){
     <div class="merr" id="f101Err" style="margin-top:8px"></div>`;
   document.getElementById('f-marital').addEventListener('change', ev=>{
     document.getElementById('f101SpouseSection').style.display = ev.target.value==='נשוי/אה' ? '' : 'none';
+  });
+  document.getElementById('f-hasPensionFund').addEventListener('change', ev=>{
+    document.getElementById('f-pensionCompany').style.display = ev.target.checked ? '' : 'none';
+    if(ev.target.checked) document.getElementById('f-pensionCompany').focus();
   });
   document.getElementById('f-healthFund').addEventListener('change', ev=>{
     document.getElementById('f-healthFundName').style.display = ev.target.checked ? '' : 'none';
@@ -5422,6 +5430,8 @@ async function submitF101Flow(){
     incomeType: document.getElementById('f-incomeType').value,
     workStartInTaxYear: document.getElementById('f-workStartInTaxYear').value,
     requestCreditThisIncome: document.getElementById('f-requestCreditThisIncome').checked,
+    hasPensionFund: document.getElementById('f-hasPensionFund').checked,
+    pensionCompany: document.getElementById('f-hasPensionFund').checked ? document.getElementById('f-pensionCompany').value.trim() : '',
     otherIncome: document.getElementById('f-otherIncome').checked,
     otherIncomeTypes,
     otherIncomeDetails: document.getElementById('f-otherIncomeDetails').value.trim(),
@@ -5448,6 +5458,7 @@ async function submitF101Flow(){
   if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
   if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
   if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
+  if(fields.hasPensionFund && !fields.pensionCompany){ err.textContent = 'סימנת שקיימת לך קרן פנסיה — יש לציין באיזו חברת ביטוח / קרן'; document.getElementById('f-pensionCompany').focus(); return; }
   const attachSpecs = [
     { kind:'bank', id:'f-bankCert', label:'אישור ניהול חשבון בנק', required:true },
     { kind:'resident', id:'f-residentCert', label:'אישור תושב', required:false }

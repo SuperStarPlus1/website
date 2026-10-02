@@ -155,7 +155,7 @@
         row('תאריך לידה', fmtDate(p.birthDate)) + row('מין', p.gender) + row('מצב משפחתי', p.marital) + row('תאריך עלייה', fmtDate(p.aliyaDate)) +
         row('כתובת', p.address) + row('טלפון', p.phone) + row('נייד', p.mobile) + row('אימייל', p.email) +
         row('קופת חולים', p.healthFund) + row('תושב ישראל', p.israeliResident ? 'כן' : 'לא') + row('חבר קיבוץ / מושב', p.kibbutz ? 'כן' : '') +
-        row('תחילת עבודה בשנת המס', fmtDate(p.workStart));
+        row('תחילת עבודה בשנת המס', fmtDate(p.workStart)) + row('קרן פנסיה', p.pension);
       if (p.spouse) html += h4('בן / בת זוג') + row('שם', p.spouse.firstName + ' ' + p.spouse.lastName) + row('מספר זהות', p.spouse.id) +
         row('תאריך לידה', fmtDate(p.spouse.birthDate)) + row('הכנסה', p.spouse.incomeStatus);
       html += h4('ילדים (' + p.kids.length + ')') + (p.kids.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px"><thead><tr>' +
