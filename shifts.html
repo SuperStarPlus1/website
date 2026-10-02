@@ -4619,11 +4619,16 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <tr><td>יום מיוחד</td><td>0</td></tr>
               <tr><td>מחלה בתשלום %37.5</td><td>${emp.sick||0}</td></tr>
               <tr><td>מחלה בתשלום %75</td><td></td></tr>
-              <tr><td>צבירת מחלה</td><td>${fDec(emp.sickBalance||0)}</td></tr>
-              <tr><td>צבירת חופש</td><td>${fDec(emp.vacBalance||0)}</td></tr>
             </table>
           </div>
         </div>
+        ${(()=>{ const a=emp.accrual; if(!a) return '';
+          // the month's accrual by law on top of the last payslip: an estimate — the payslip decides (usage too)
+          const b=a.balances, row=(t,x)=>`<tr><td>${t}</td><td>${fDec(x.prev)}</td><td>+${fDec(x.add)}</td><td style="font-weight:700">${fDec(x.est)}</td></tr>`;
+          return `<div class="bal-box"><table><thead><tr><th>יתרות (ימים)</th><th>בתלוש ${esc(a.lastPayslipMonth||'האחרון')}</th><th>צבירה ${fmtMonth(month)} לפי חוק</th><th>יתרה מוערכת</th></tr></thead>`+
+            `<tbody>${row('חופשה',b.vacation)}${row('מחלה',b.sick)}${row('הבראה',b.recovery)}</tbody></table>`+
+            `<div class="bal-note"><b>⚠ יתרה מוערכת, יתרה קובעת בתלוש שכר.</b> ניצול ימי חופשה, מחלה והבראה נקבע לפי התלוש ולא לפי הסידור. `+
+            `ותק: שנה ${a.seniorityYear}${a.seniorityKnown?'':' (לא הוזן תאריך תחילת עבודה)'} · היקף משרה בחודש: ${Math.round(a.jobFraction*100)}%${a.recoveryEligible?'':' · הבראה משולמת לאחר שנת עבודה'}</div></div>`; })()}
         <div class="lbl-row">&gt;&gt; ריכוז נתונים של כל התקופה &lt;&lt;</div>
         <div class="sig-row">
           <div>חתימת העובד ____________</div>
@@ -4650,6 +4655,9 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <td style="text-align:center">${workDaysEmp}</td>
         <td style="text-align:center">${emp.vacUsed||0}</td>
         <td style="text-align:center">${emp.sick||0}</td>
+        <td style="text-align:center">${emp.accrual?fDec(emp.accrual.balances.vacation.est):'—'}</td>
+        <td style="text-align:center">${emp.accrual?fDec(emp.accrual.balances.sick.est):'—'}</td>
+        <td style="text-align:center">${emp.accrual?fDec(emp.accrual.balances.recovery.est):'—'}</td>
       </tr>`;
     }).join('');
     const summaryPage = `
@@ -4673,7 +4681,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <table class="att-table">
           <thead><tr>
             <th>מס' עובד</th><th>שם עובד</th><th>שעות רגילות</th><th>שעות 125%</th><th>שעות 150%</th>
-            <th>סה"כ שעות</th><th>ימי עבודה</th><th>ימי חופשה</th><th>ימי מחלה</th>
+            <th>סה"כ שעות</th><th>ימי עבודה</th><th>ימי חופשה</th><th>ימי מחלה</th><th>יתרת חופשה מוערכת</th><th>יתרת מחלה מוערכת</th><th>יתרת הבראה מוערכת</th>
           </tr></thead>
           <tbody>${summaryRowsHtml}</tbody>
           <tfoot>
@@ -4686,15 +4694,18 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
               <td style="text-align:center;font-weight:700">${sTDays}</td>
               <td style="text-align:center;font-weight:700">${sTVac}</td>
               <td style="text-align:center;font-weight:700">${sTSick}</td>
+              <td></td><td></td><td></td>
             </tr>
           </tfoot>
         </table>
+        <div class="bal-note" style="margin-top:8px"><b>⚠ יתרה מוערכת, יתרה קובעת בתלוש שכר.</b> היתרות: התלוש האחרון + צבירת החודש לפי חוק (ותק והיקף משרה בפועל); ניצול ימי חופשה, מחלה והבראה נקבע לפי התלוש.</div>
       </div>`;
 
     const css=`
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#1b2a4a;background:#fff}
       .page{page-break-after:always;padding:14px;border:1px solid #999;max-width:900px;margin:0 auto 20px}
+      .bal-box{margin-top:8px}.bal-box table{width:100%;border-collapse:collapse;font-size:10.5px}.bal-box th,.bal-box td{border:1px solid #999;padding:3px 6px;text-align:center}.bal-box th{background:#eef2f7}.bal-note{margin-top:4px;font-size:10px;color:#7c2d12;background:#fff7ed;border:1px solid #fdba74;border-radius:4px;padding:4px 6px}
       .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;border-bottom:2px solid #1b2a4a;padding-bottom:8px}
       .co-name{font-size:13px;font-weight:800;color:#1b2a4a}
       .doc-title{font-size:18px;font-weight:800;text-align:center;color:#1b2a4a;border:2px solid #1b2a4a;padding:4px 12px;border-radius:4px}
