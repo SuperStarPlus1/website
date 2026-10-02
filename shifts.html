@@ -4358,11 +4358,11 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
     const prevMonth=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0');
     const rPrev=await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month:prevMonth, branch: attReportBranch()||undefined });
     const prevByDept={};
-    if(rPrev.ok){ rPrev.employees.forEach(e=>{
-      const d=e.dept||'ללא'; prevByDept[d]=prevByDept[d]||{reg:0,o1:0,o2:0,days:0};
-      prevByDept[d].reg+=e.regHours||0; prevByDept[d].o1+=e.ot125||0; prevByDept[d].o2+=e.ot150||0;
-      prevByDept[d].days+=e.days.filter(dd=>!dd.sick&&!dd.vacation).length;
-    }); }
+    if(rPrev.ok){ rPrev.employees.forEach(e=>{ (e.deptSplit&&e.deptSplit.length ? e.deptSplit : [{dept:e.dept||'ללא מחלקה', reg:e.regHours||0, ot125:e.ot125||0, ot150:e.ot150||0, rest:e.restHours||0, gross:e.gross||0, days:e.days.filter(dd=>!dd.sick&&!dd.vacation).length}]).forEach(p=>{
+      const d=p.dept||'ללא מחלקה'; prevByDept[d]=prevByDept[d]||{reg:0,o1:0,o2:0,days:0};
+      prevByDept[d].reg+=p.reg||0; prevByDept[d].o1+=p.ot125||0; prevByDept[d].o2+=p.ot150||0;
+      prevByDept[d].days+=p.days||0;
+    }); }); }
 
     // חישוב ימי עבודה בחודש (לפי לוח שנה)
     const daysInMonth=new Date(month.slice(0,4),month.slice(5,7),0).getDate();
@@ -4393,9 +4393,10 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
 
     // ===== סיכום מחלקות — באותו גיליון, מתחת לסיכום העובדים =====
     const byDept={};
-    r.employees.forEach(e=>{ const d=e.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
-      byDept[d].reg+=e.regHours||0; byDept[d].o1+=e.ot125||0; byDept[d].o2+=e.ot150||0;
-      byDept[d].gross+=e.gross; byDept[d].days+=e.days.filter(dd=>!dd.sick&&!dd.vacation).length; byDept[d].emps++; });
+    // by the department each employee actually worked in, day by day (the schedule) — not his settings
+    r.employees.forEach(e=>{ (e.deptSplit&&e.deptSplit.length ? e.deptSplit : [{dept:e.dept||'ללא מחלקה', reg:e.regHours||0, ot125:e.ot125||0, ot150:e.ot150||0, rest:e.restHours||0, gross:e.gross||0, days:e.days.filter(dd=>!dd.sick&&!dd.vacation).length}]).forEach(p=>{ const d=p.dept||'ללא מחלקה'; byDept[d]=byDept[d]||{reg:0,o1:0,o2:0,gross:0,days:0,emps:0};
+      byDept[d].reg+=p.reg||0; byDept[d].o1+=p.ot125||0; byDept[d].o2+=p.ot150||0;
+      byDept[d].gross+=p.gross||0; byDept[d].days+=p.days||0; byDept[d].emps++; }); });
 
     sheetRows.push([]); sheetRows.push([]);
     sheetRows.push(['סיכום שעות לפי מחלקה — '+fmtMonth(month)]);
@@ -4406,14 +4407,14 @@ document.getElementById('attMgrExcel').addEventListener('click', async ()=>{
       const v=byDept[d], pv=prevByDept[d]||{reg:0,days:0};
       const tot=Math.round((v.reg+v.o1+v.o2)*100)/100;
       const diff=Math.round((v.reg-pv.reg)*100)/100;
-      sheetRows.push([d, v.emps, v.days, Math.round(v.reg*100)/100,
+      sheetRows.push([d, v.emps, Math.round(v.days*100)/100, Math.round(v.reg*100)/100,
         Math.round(v.o1*100)/100, Math.round(v.o2*100)/100, tot,
         Math.round(v.gross*100)/100, pv.days||'—', Math.round(pv.reg*100)/100||'—',
         diff>0?'+'+diff:diff]);
       tR+=v.reg; t1+=v.o1; t2+=v.o2; tG+=v.gross; tD+=v.days;
     });
     sheetRows.push([]);
-    sheetRows.push(['סה"כ','',tD,Math.round(tR*100)/100,Math.round(t1*100)/100,Math.round(t2*100)/100,
+    sheetRows.push(['סה"כ','',Math.round(tD*100)/100,Math.round(tR*100)/100,Math.round(t1*100)/100,Math.round(t2*100)/100,
       Math.round((tR+t1+t2)*100)/100,Math.round(tG*100)/100,'','','']);
 
     const ws1=XLSX.utils.aoa_to_sheet(sheetRows);
@@ -4701,6 +4702,35 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <div class="bal-note" style="margin-top:8px"><b>⚠ יתרה מוערכת, יתרה קובעת בתלוש שכר.</b> היתרות: התלוש האחרון + צבירת החודש לפי חוק (ותק והיקף משרה בפועל); ניצול ימי חופשה, מחלה והבראה נקבע לפי התלוש.</div>
       </div>`;
 
+    // ===== סיכום לפי מחלקות — לפי השיבוץ בפועל בכל יום (לא לפי המחלקה בהגדרות העובד) =====
+    const deptAgg={};
+    r.employees.forEach(e=>{ (e.deptSplit&&e.deptSplit.length ? e.deptSplit : [{dept:e.dept||'ללא מחלקה', reg:e.regHours||0, ot125:e.ot125||0, ot150:e.ot150||0, rest:e.restHours||0, gross:e.gross||0, days:e.days.filter(dd=>!dd.sick&&!dd.vacation).length}]).forEach(p=>{ const d=p.dept||'ללא מחלקה';
+      const v=deptAgg[d]=deptAgg[d]||{emps:0,days:0,reg:0,o1:0,o2:0,rest:0,gross:0};
+      v.emps++; v.days+=p.days||0; v.reg+=p.reg||0; v.o1+=p.ot125||0; v.o2+=p.ot150||0; v.rest+=p.rest||0; v.gross+=p.gross||0; }); });
+    const dT={emps:0,days:0,reg:0,o1:0,o2:0,rest:0,gross:0};
+    const deptRowsHtml=Object.keys(deptAgg).sort().map(d=>{ const v=deptAgg[d]; Object.keys(dT).forEach(k=>dT[k]+=v[k]);
+      return `<tr><td>${esc(d)}</td><td style="text-align:center">${v.emps}</td><td style="text-align:center">${fDec(v.days)}</td>`+
+        `<td style="text-align:center">${fDec(v.reg)}</td><td style="text-align:center">${fDec(v.o1)}</td><td style="text-align:center">${fDec(v.o2)}</td>`+
+        `<td style="text-align:center">${fDec(v.rest)}</td><td style="text-align:center;font-weight:700">${fDec(v.reg+v.o1+v.o2+v.rest)}</td>`+
+        `<td style="text-align:center">${Math.round(v.gross).toLocaleString()} ₪</td></tr>`; }).join('');
+    const deptPage = `
+      <div class="page">
+        <div class="page-header">
+          <div><div class="co-name">${COMPANY}</div><div class="branch">${BRANCH}</div></div>
+          <div style="text-align:center"><div class="doc-title">סיכום לפי מחלקות</div></div>
+          <div style="text-align:left;font-size:10px"><div>חודש: ${fmtMonth(month)}</div><div>תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}</div></div>
+        </div>
+        <table class="att-table">
+          <thead><tr><th>מחלקה</th><th>עובדים</th><th>ימי עבודה</th><th>שעות רגילות</th><th>שעות 125%</th><th>שעות 150%</th><th>מנוחה / חג</th><th>סה"כ שעות</th><th>ברוטו משוער</th></tr></thead>
+          <tbody>${deptRowsHtml}</tbody>
+          <tfoot><tr class="total-row"><td style="font-weight:700">סה"כ</td><td></td><td style="text-align:center;font-weight:700">${fDec(dT.days)}</td>
+            <td style="text-align:center;font-weight:700">${fDec(dT.reg)}</td><td style="text-align:center;font-weight:700">${fDec(dT.o1)}</td><td style="text-align:center;font-weight:700">${fDec(dT.o2)}</td>
+            <td style="text-align:center;font-weight:700">${fDec(dT.rest)}</td><td style="text-align:center;font-weight:700">${fDec(dT.reg+dT.o1+dT.o2+dT.rest)}</td>
+            <td style="text-align:center;font-weight:700">${Math.round(dT.gross).toLocaleString()} ₪</td></tr></tfoot>
+        </table>
+        <div class="bal-note" style="margin-top:8px">השעות משויכות למחלקה שבה העובד שובץ בפועל באותו יום (לא למחלקה שבהגדרות העובד). יום עם משמרות בשתי מחלקות מחולק לפי אורך המשמרות; יום עבודה בלי שיבוץ — במחלקה הראשית של העובד. עובד שעבד בכמה מחלקות נספר בכל אחת מהן.</div>
+      </div>`;
+
     const css=`
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#1b2a4a;background:#fff}
@@ -4739,6 +4769,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <span style="margin-right:16px;font-size:13px">${r.employees.length+1} דפים — דף מסכם + עובד אחד לדף</span>
       </div>
       ${summaryPage}
+      ${deptPage}
       ${pages}
     </body></html>`;
 
