@@ -8,19 +8,21 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  /** the guide address for this company: ?c=<slug> lets the guide page show the company's name, number and logo */
+  const withCompany = (url) => (window.COMPANY && url && !/[?&]c=/.test(url) ? url + (url.indexOf('?') < 0 ? '?' : '&') + 'c=' + encodeURIComponent(window.COMPANY) : url);
   const isManager = () => { try { return !!(typeof state !== 'undefined' && state && state.mgr); } catch (_) { return false; } };
   function guideLinks(v) {
     const g = v.guides || (v.guide ? { employee: v.guide } : {});
     const out = [];
-    if (isManager() && g.manager) out.push(['📘 מדריך למנהל', g.manager]);
-    if (g.employee) out.push(['📖 מדריך לעובד', g.employee]);
+    if (isManager() && g.manager) out.push(['📘 מדריך למנהל', withCompany(g.manager)]);
+    if (g.employee) out.push(['📖 מדריך לעובד', withCompany(g.employee)]);
     return out;
   }
   /** the header's guide button follows the signed-in role */
   function syncGuideBtn() {
     const v = window.APP_VERSION || {}, g = v.guides || {}, b = $('guideBtn');
     if (!b || !g.employee) return;
-    b.setAttribute('href', isManager() && g.manager ? g.manager : g.employee);
+    b.setAttribute('href', withCompany(isManager() && g.manager ? g.manager : g.employee));
   }
 
   function build() {
