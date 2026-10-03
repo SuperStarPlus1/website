@@ -3624,6 +3624,7 @@ function generateEmpPDF(r, month){
     </tr>
   </table>
   <div style="margin-top:16px;font-size:10px;color:#9ca3af">הופק: ${new Date().toLocaleDateString('he-IL')} · פורטל עובדים — סופרסטאר פלוס</div>
+  ${window.productFooter ? productFooter() : ''}
   <button class="no-print" onclick="window.print()" style="margin-top:12px;padding:10px 20px;background:#1b2a4a;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:14px">🖨 הדפס / שמור PDF</button>
   </body></html>`;
   const win=window.open('','_blank');
@@ -4768,9 +4769,7 @@ document.getElementById('attMgrPDF').addEventListener('click', async ()=>{
         <button onclick="window.print()" style="background:#e8a819;color:#1b2a4a;border:0;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:800;cursor:pointer">🖨 הדפס / שמור PDF</button>
         <span style="margin-right:16px;font-size:13px">${r.employees.length+1} דפים — דף מסכם + עובד אחד לדף</span>
       </div>
-      ${summaryPage}
-      ${deptPage}
-      ${pages}
+      ${(window.withPageFooters || ((h) => h))(summaryPage + deptPage + pages)}
     </body></html>`;
 
     const win=window.open('','_blank');
@@ -6118,6 +6117,7 @@ document.getElementById('pdfBtn').addEventListener('click',async ()=>{
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', pageW-margin-w, y, w, h);
       y += h + 3; first = false;
     }
+    if (window.stampPdfFooter) await stampPdfFooter(pdf, pageW, pageH);   // the Sidurit line on every page
     pdf.save('sidur_'+iso(state.weekStart)+'.pdf');
     stage.innerHTML='';
     toast('קובץ ה-PDF ירד ✓','ok');
@@ -6460,6 +6460,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="mgr-entries.js"></script>
 <script src="holidays-admin.js"></script>
 <script src="password-expiry.js"></script>
+<script src="pdf-brand.js"></script>
 <script src="version.js"></script>
 <script src="about.js"></script>
 </body>
