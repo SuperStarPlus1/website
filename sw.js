@@ -3,7 +3,7 @@
  */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE  = 'superstar-v97';
+const CACHE  = 'superstar-v98';
 const ASSETS = ['/shifts', '/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 self.addEventListener('install', e => {

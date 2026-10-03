@@ -5995,13 +5995,13 @@ function fullLogout_(){
   setAuthUI(); gateOrLoad();
 }
 
-/* ============ ניתוק אוטומטי לאחר חוסר פעילות — 15 דק' לעובד, 5 דק' למנהל/אדמין (כולל חשבון מאוחד) ============ */
+/* ============ ניתוק אוטומטי לאחר 15 דקות חוסר פעילות — לעובד ולמנהל/אדמין (כולל חשבון מאוחד) ============ */
 let _lastActivity = Date.now();
 ['mousemove','mousedown','keydown','touchstart','wheel','scroll'].forEach(ev =>
   document.addEventListener(ev, () => { _lastActivity = Date.now(); }, { passive:true, capture:true }));
 setInterval(() => {
   if(!authed()) return;
-  const limitMin = isMgr() ? 5 : 15;
+  const limitMin = 15;                       // was 5 for managers — too short (user, 03/10/2026)
   if(Date.now() - _lastActivity >= limitMin*60000){
     fullLogout_();
     toast('התנתקת אוטומטית עקב '+limitMin+' דקות חוסר פעילות','err');

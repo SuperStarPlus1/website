@@ -5,6 +5,7 @@
 //             "⏳ בקשות בטיפול" — where each of my requests waits now, and the way it went
 //   manager   "נוכחות ← 🧭 שרשרת אישורים" — each employee's direct manager (any employee, any branch; bulk set), the
 //             requests open in the chain, and (admin) the hours before a request moves one up
+//             "⚙ אדמין ← 👥 עובדים" — the same direct manager on the employee's card (one field: employees.reports_to)
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, openBlobPdf.
 (function () {
   'use strict';
@@ -44,6 +45,8 @@
     '.ap-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}' +
     '.ap-tools input,.ap-tools select{border:1.5px solid #d1d5db;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}' +
     '.ap-tabs{display:flex;gap:6px;margin-bottom:10px}' +
+    '#apEmpMgr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 6px;font-size:13px;font-weight:700;color:#1b2a4a}' +
+    '#apEmpMgr input{border:1.5px solid #d1d5db;border-radius:8px;padding:5px 8px;font:inherit;font-size:13.5px;min-width:170px}' +
     '</style>');
 
   function overlay(id, title, sub, wide) {
@@ -68,7 +71,7 @@
   async function fetchTeam() {
     const s = appState();
     if (!s || !s.emp) return null;
-    try { const r = await apiPost({ action: 'teamRequests', ...empAuth() }); if (r && r.ok) team = r; } catch (_) { /* offline */ }
+    try { const r = await apiPost({ action: 'teamRequests', ...empAuth() }); if (r && r.ok && Array.isArray(r.items)) team = { items: r.items, team: r.team || [], hours: r.hours }; } catch (_) { /* offline */ }
     syncTeamUi();
     return team;
   }
@@ -132,7 +135,7 @@
     body.innerHTML = '<p class="ap-meta">טוען…</p>';
     const r = await apiPost({ action: 'myOpenRequests', ...empAuth() });
     if (!r.ok) { body.innerHTML = '<p>' + e(r.error || 'שגיאה') + '</p>'; return; }
-    body.innerHTML = '<p class="ap-meta">' + (r.myManager ? 'המנהל/ת הישיר/ה שלך: <b>' + e(r.myManager) + '</b>' : 'לא הוגדר לך מנהל/ת ישיר/ה — הבקשות מגיעות למנהלי הסניף') + '</p>' +
+    body.innerHTML = '<p class="ap-meta">' + (r.myManager ? 'המנהל/ת הישיר/ה שלך: <b>' + e(r.myManager) + '</b>' : 'לא הוגדר לך מנהל/ת ישיר/ה — הבקשות מגיעות ישר לאדמין') + '</p>' +
       (r.items.length ? r.items.map((x) => '<div class="ap-card"><div class="top"><span class="ap-chip k">' + (KIND_IC[x.kind] || '') + ' ' + e(x.kindLabel) + '</span>' +
         '<span class="ap-chip">ממתין לאישור: ' + e(x.waitingFor) + '</span></div><div class="what">' + e(x.summary) + '</div>' +
         '<div class="ap-meta">הוגשה לפני ' + e(ago(x.createdAt)) + '</div>' + stepsHtml(x.steps) + '</div>').join('')
@@ -143,7 +146,7 @@
   let chain = null, chainTab = 'people', edits = {};
   async function openChain(tab) {
     if (typeof tab === 'string') chainTab = tab;
-    const body = overlay('apChainOverlay', '🧭 שרשרת אישורים', 'מנהל/ת ישיר/ה לכל עובד — מאשר/ת חופשה, מחלה, אילוצים ותיקוני שעות. בהיעדרו/ה, או ללא מענה, הבקשה עולה למנהל שמעל, אחר כך למנהלי הסניף ולאדמין.', true);
+    const body = overlay('apChainOverlay', '🧭 שרשרת אישורים', 'מנהל/ת ישיר/ה לכל עובד — מאשר/ת חופשה, מחלה, אילוצים ותיקוני שעות. בהיעדרו/ה, או ללא מענה, הבקשה עולה למנהל שמעל, ובסוף לאדמין. בלי מנהל ישיר — ישר לאדמין.', true);
     body.innerHTML = '<p class="ap-meta">טוען…</p>';
     const r = await apiPost({ action: 'approvalChain', ...mgrAuth() });
     if (!r.ok) { body.innerHTML = '<p>' + e(r.error || 'שגיאה') + '</p>'; return; }
@@ -229,7 +232,59 @@
     $('apSave').disabled = false;
     if (!x.ok) return say(x.error || 'שגיאה', 'err');
     say('✓ נשמר (' + x.changed + ')', 'ok');
+    empPeople = null;                                        // the employee card reads it again
     openChain('people');
+  }
+
+  /* ================= manager: the employee card (👥 עובדים) ================= */
+  // the direct manager on the card is the same field as in the chain screen (employees.reports_to): saved at once
+  let empPeople = null;
+  async function loadPeople(force) {
+    if (!empPeople || force) {
+      try { const r = await apiPost({ action: 'approvalChain', ...mgrAuth() }); if (r && r.ok && Array.isArray(r.people)) empPeople = r.people; } catch (_) { /* offline */ }
+    }
+    return empPeople || [];
+  }
+  async function syncEmpCard() {
+    const sel = $('empSelector'), anchor = $('empCardDept');
+    if (!sel || !anchor) return;
+    if (!$('apEmpMgr')) {
+      anchor.insertAdjacentHTML('afterend', '<div id="apEmpMgr">👤 מנהל/ת ישיר/ה:<input id="apEmpMgrIn" list="apEmpMgrList" placeholder="— ללא —" title="מאשר/ת חופשה, מחלה, אילוצים ותיקוני שעות — גם ב-🧭 שרשרת אישורים">' +
+        '<span id="apEmpMgrSt" class="ap-meta"></span><datalist id="apEmpMgrList"></datalist></div>');
+      $('apEmpMgrIn').addEventListener('change', saveEmpMgr);
+    }
+    const box = $('apEmpMgr'), inp = $('apEmpMgrIn'), name = sel.value;
+    $('apEmpMgrSt').textContent = '';
+    if (!name) { box.style.display = 'none'; return; }       // a new employee: after he is saved
+    box.style.display = '';
+    const people = await loadPeople();
+    if (sel.value !== name) return;                          // another employee was picked meanwhile
+    $('apEmpMgrList').innerHTML = people.filter((x) => x.active && x.name !== name).map((x) => '<option value="' + e(x.name) + '">' + e(x.branch) + '</option>').join('');
+    const p = people.find((x) => x.name === name);
+    inp.value = p ? p.reportsTo : '';
+    inp.dataset.emp = name;
+    inp.disabled = !!p && !p.canEdit;
+  }
+  async function saveEmpMgr() {
+    const inp = $('apEmpMgrIn'), name = inp.dataset.emp, v = inp.value.trim();
+    const people = await loadPeople();
+    const p = people.find((x) => x.name === name);
+    if (!name || (p && v === p.reportsTo)) return;
+    if (v && !people.some((x) => x.name === v)) { say('יש לבחור עובד/ת מהרשימה', 'err'); inp.value = p ? p.reportsTo : ''; return; }
+    $('apEmpMgrSt').textContent = 'שומר…';
+    const x = await apiPost({ action: 'setReportsTo', ...mgrAuth(), changes: [{ employee: name, reportsTo: v }] });
+    if (!x.ok) { $('apEmpMgrSt').textContent = ''; say(x.error || 'שגיאה', 'err'); inp.value = p ? p.reportsTo : ''; return; }
+    if (p) p.reportsTo = v;
+    $('apEmpMgrSt').textContent = '✓ נשמר';
+    say('✓ ' + (v ? 'המנהל/ת הישיר/ה של ' + name + ': ' + v : name + ' — ללא מנהל/ת ישיר/ה'), 'ok');
+  }
+  function wireEmpCard() {
+    const list = $('empList'), ov = $('empOverlay');
+    if (!list || list._ap) return;
+    list._ap = true;
+    new MutationObserver(syncEmpCard).observe(list, { childList: true });
+    if (ov) new MutationObserver(() => { if (!ov.classList.contains('hidden')) { empPeople = null; syncEmpCard(); } })
+      .observe(ov, { attributes: true, attributeFilter: ['class'] });
   }
 
   /* ================= wiring ================= */
@@ -267,6 +322,7 @@
   function start() {
     wrapApi();
     wireManager();
+    wireEmpCard();
     let tries = 0;
     const iv = setInterval(() => { if (wireEmployee() || ++tries > 40) clearInterval(iv); }, 250);   // employee-menus.js builds the menu first
     const home = $('empHome');
