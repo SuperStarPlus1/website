@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.3',
-  date: '03/10/2026',
+  version: '2.4',
+  date: '05/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'סגירת החודש לשכר: אחרי בדיקת השעות, האדמין שולח לחשב/ת השכר PDF מפורט (עם שם המאשר ותאריך) ודוח אקסל מרוכז',
     'מנהל/ת ישיר/ה לכל עובד: חופשה, מחלה, אילוצים ותיקוני שעות מגיעים אליו/ה קודם, ועולים שלב בהיעדרות או אחרי 48 שעות בלי מענה',
     'עובדים חדשים נרשמים בעצמם ("עובד/ת חדש/ה? הרשמה") — אימות מייל ואישור מנהל',
     '"⏳ בקשות בטיפול": איפה כל בקשה שלך ממתינה עכשיו',
