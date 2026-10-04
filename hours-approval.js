@@ -318,16 +318,30 @@
     }
     async function sendPayroll(includeUnapproved) {
       if (!$('haPayOk').checked) return say('יש לסמן שבדקת ואישרת את השעות', 'err');
-      const btn = $('haPayGo'); btn.disabled = true; btn.textContent = 'מכין את הדוחות ושולח… (עד דקה)';
-      const x = await apiPost({ action: 'closePayrollMonth', ...mgrAuth(), month, emails: $('haPayEmails').value.trim(), confirm: true, includeUnapproved });
-      btn.disabled = false; btn.textContent = r.closing ? '🔁 אישור ושליחה מחדש' : '📤 אישור ושליחה לשכר';
-      if (!x.ok && x.code === 'unapproved') {
-        if (confirm(x.notApproved.length + ' עובדים עוד לא אישרו בעצמם את השעות:\n' + x.notApproved.slice(0, 15).join(', ') + (x.notApproved.length > 15 ? '…' : '') +
+      const btn = $('haPayGo'), label = r.closing ? '🔁 אישור ושליחה מחדש' : '📤 אישור ושליחה לשכר';
+      const auth = { ...mgrAuth(), month };
+      const done = (msg) => { btn.disabled = false; btn.textContent = label; if (msg) say(msg, 'err'); };
+      btn.disabled = true; btn.textContent = 'בודק ומחשב את השעות…';
+      // the work goes in short steps (a server request has little CPU time): start → a few employees at a time → finish
+      const st = await apiPost({ action: 'payrollStart', ...auth, emails: $('haPayEmails').value.trim(), confirm: true, includeUnapproved });
+      if (!st.ok && st.code === 'unapproved') {
+        done();
+        if (confirm(st.notApproved.length + ' עובדים עוד לא אישרו בעצמם את השעות:\n' + st.notApproved.slice(0, 15).join(', ') + (st.notApproved.length > 15 ? '…' : '') +
           '\n\nלשלוח בכל זאת? בדוח יסומן שהם לא אישרו.')) return sendPayroll(true);
         return;
       }
-      if (!x.ok) return say(x.error || 'שגיאה', 'err');
-      say('✓ נשלח לשכר: ' + x.employees + ' עובדים, אל ' + x.sentTo.join(', '), 'ok');
+      if (!st.ok) return done(st.error || 'שגיאה');
+      for (let i = 0; i < st.parts; i++) {
+        btn.textContent = 'מכין את הדוחות… ' + Math.min(st.employees, Math.round((i + 1) * st.employees / st.parts)) + '/' + st.employees;
+        let x = await apiPost({ action: 'payrollPart', ...auth, draftId: st.draftId, part: i });
+        if (!x.ok) x = await apiPost({ action: 'payrollPart', ...auth, draftId: st.draftId, part: i });    // once more
+        if (!x.ok) return done(x.error || 'שגיאה בהכנת הדוח');
+      }
+      btn.textContent = 'מצרף ושולח…';
+      const f = await apiPost({ action: 'payrollFinish', ...auth, draftId: st.draftId });
+      if (!f.ok) return done(f.error || 'שגיאה בשליחה');
+      done();
+      say('✓ נשלח לשכר: ' + f.employees + ' עובדים, אל ' + f.sentTo.join(', '), 'ok');
       loadMgr();
     }
   }
