@@ -3,6 +3,8 @@
 //             by day, with correction requests (entry / exit of a day, a missing day, a remark); a home-screen banner while
 //             last month still waits for approval
 //   manager   "נוכחות ← אישורי שעות": who approved, who not yet, and the corrections to approve or reject
+//   admin     on the same screen: "📤 סגירת החודש לשכר" — after checking everyone's hours, a detailed PDF + an Excel summary
+//             go to the payroll e-mails (api/payroll.ts)
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf.
 (function () {
   'use strict';
@@ -226,7 +228,7 @@
     const r = await apiPost({ action: 'listHoursApprovals', ...mgrAuth(), month: $('haMonth').value, branch: branch || undefined });
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const list = r.approvals || [];
-    if (!list.length) { body.innerHTML = '<p style="color:#6b7280">אין דוחות שעות לחודש זה (הדוח נפתח לאישור העובדים ב-1 לחודש שאחריו).</p>'; return; }
+    if (!list.length) { body.innerHTML = '<p style="color:#6b7280">אין דוחות שעות לחודש זה (הדוח נפתח לאישור העובדים ב-1 לחודש שאחריו).</p>'; payrollPanel(); return; }
     const cnt = (st) => list.filter((a) => a.status === st).length;
     const openC = list.reduce((n, a) => n + a.corrections.filter((c) => c.status === 'ממתין').length, 0);
     // corrections waiting for a decision first, then the rest by name
@@ -249,6 +251,7 @@
             '<button type="button" class="ha-btn ok sm" data-ok="1">אישור</button><button type="button" class="ha-btn no sm" data-ok="0">דחייה</button></div>'
             : (c.reviewedBy ? '<div style="color:#6b7280;font-size:12px">' + e(c.status) + ' ע״י ' + e(c.reviewedBy) + (c.reviewNote ? ' · ' + e(c.reviewNote) : '') + '</div>' : '')) +
           '</div>').join('') + '</div>').join('');
+    payrollPanel();
     if ($('haResend')) $('haResend').addEventListener('click', async () => {
       if (!confirm('לשלוח שוב את דוח השעות של ' + fmtM($('haMonth').value) + ' עם קובץ PDF של ההחתמות לכל העובדים שעוד לא אישרו (ויש להם מייל)?')) return;
       const btn = $('haResend'); btn.disabled = true; btn.textContent = 'שולח…';
@@ -269,6 +272,64 @@
       say(btn.dataset.ok === '1' ? 'התיקון אושר והשעות עודכנו' : 'התיקון נדחה', 'ok');
       loadMgr();
     }));
+  }
+
+
+  /* ---------- admin: the month for payroll ---------- */
+  function saveFile(b64, filename, mime) {
+    const bin = atob(b64), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([arr], { type: mime }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  async function payrollPanel() {
+    if (!isAdminNow()) return;
+    const body = $('haMgrOverlayBody'), month = $('haMonth').value;
+    body.insertAdjacentHTML('afterbegin', '<div id="haPay" class="ha-form" style="border:2px solid #1b2a4a;background:#f8fafc;margin-top:0">טוען את מצב החודש לשכר…</div>');
+    const box = $('haPay');
+    const r = await apiPost({ action: 'payrollStatus', ...mgrAuth(), month });
+    if ($('haMonth').value !== month || !box.isConnected) return;
+    if (!r.ok) { box.innerHTML = '<span class="merr">' + e(r.error || 'שגיאה') + '</span>'; return; }
+    const block = r.openCorrections || r.pendingPunches;
+    const chips = '<span class="ha-chip auto">' + r.employees + ' עובדים עם שעות</span>' +
+      (r.notApproved.length ? '<span class="ha-chip wait">' + r.notApproved.length + ' עוד לא אישרו</span>' : '<span class="ha-chip ok">כל העובדים אישרו</span>') +
+      (r.openCorrections ? '<span class="ha-chip no">' + r.openCorrections + ' תיקונים ממתינים</span>' : '') +
+      (r.pendingPunches ? '<span class="ha-chip no">' + r.pendingPunches + ' הזנות ידניות ממתינות</span>' : '');
+    box.innerHTML = '<b style="font-size:15px">📤 סגירת החודש לשכר — ' + fmtM(month) + '</b>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + chips + '</div>' +
+      (r.closing ? '<div style="background:#dcfce7;border-radius:10px;padding:8px;font-size:13px">✓ נשלח לשכר ב-' + e(r.closing.approvedAt) + ' · אישר/ה: <b>' + e(r.closing.approvedBy) + '</b> · אל ' + e(r.closing.sentTo) +
+        ' · ' + r.closing.employees + ' עובדים <button type="button" class="ha-btn plain sm" id="haPayPdf">📄 PDF</button> <button type="button" class="ha-btn plain sm" id="haPayXlsx">📊 אקסל</button></div>' : '') +
+      (r.currentMonth ? '<div style="font-size:13px;color:#6b7280">אפשר לסגור לשכר אחרי שהחודש מסתיים.</div>' :
+        '<label>מייל חשב/ת שכר / רואה חשבון (כמה כתובות — פסיק)<input type="text" id="haPayEmails" dir="ltr" value="' + e(r.emails) + '" placeholder="payroll@example.com"></label>' +
+        '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:700"><input type="checkbox" id="haPayOk" style="margin-top:3px"' + (block ? ' disabled' : '') + '>' +
+        '<span>בדקתי ואני מאשר/ת את שעות כל העובדים לחודש ' + fmtM(month) + '. יישלחו: PDF מפורט (עם שמי ותאריך האישור) ודוח אקסל מרוכז.</span></label>' +
+        (block ? '<div class="merr" style="font-size:13px">לפני השליחה יש לטפל בבקשות שממתינות (תיקונים למטה; הזנות ידניות — נוכחות ← דוח חודשי).</div>' : '') +
+        '<div><button type="button" class="ha-btn ok" id="haPayGo"' + (block ? ' disabled' : '') + '>' + (r.closing ? '🔁 אישור ושליחה מחדש' : '📤 אישור ושליחה לשכר') + '</button></div>');
+    if ($('haPayPdf')) $('haPayPdf').addEventListener('click', () => payFile('pdf', $('haPayPdf')));
+    if ($('haPayXlsx')) $('haPayXlsx').addEventListener('click', () => payFile('xlsx', $('haPayXlsx')));
+    if ($('haPayGo')) $('haPayGo').addEventListener('click', () => sendPayroll(false));
+    async function payFile(kind, btn) {
+      const was = btn.textContent; btn.disabled = true; btn.textContent = 'טוען…';
+      const x = await apiPost({ action: 'payrollFile', ...mgrAuth(), month, kind });
+      btn.disabled = false; btn.textContent = was;
+      if (!x.ok) return say(x.error || 'שגיאה', 'err');
+      saveFile(x.data, x.filename, x.mimeType);
+    }
+    async function sendPayroll(includeUnapproved) {
+      if (!$('haPayOk').checked) return say('יש לסמן שבדקת ואישרת את השעות', 'err');
+      const btn = $('haPayGo'); btn.disabled = true; btn.textContent = 'מכין את הדוחות ושולח… (עד דקה)';
+      const x = await apiPost({ action: 'closePayrollMonth', ...mgrAuth(), month, emails: $('haPayEmails').value.trim(), confirm: true, includeUnapproved });
+      btn.disabled = false; btn.textContent = r.closing ? '🔁 אישור ושליחה מחדש' : '📤 אישור ושליחה לשכר';
+      if (!x.ok && x.code === 'unapproved') {
+        if (confirm(x.notApproved.length + ' עובדים עוד לא אישרו בעצמם את השעות:\n' + x.notApproved.slice(0, 15).join(', ') + (x.notApproved.length > 15 ? '…' : '') +
+          '\n\nלשלוח בכל זאת? בדוח יסומן שהם לא אישרו.')) return sendPayroll(true);
+        return;
+      }
+      if (!x.ok) return say(x.error || 'שגיאה', 'err');
+      say('✓ נשלח לשכר: ' + x.employees + ' עובדים, אל ' + x.sentTo.join(', '), 'ok');
+      loadMgr();
+    }
   }
 
   /* ================= wiring ================= */
