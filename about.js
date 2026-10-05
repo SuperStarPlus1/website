@@ -48,7 +48,7 @@
     const login = document.querySelector('#loginOverlay .modal');
     if (login && v.version) login.insertAdjacentHTML('beforeend',
       '<div style="text-align:center;padding:0 0 12px"><button type="button" id="aboutLoginBtn" style="border:0;background:none;color:#94a3b8;font:inherit;font-size:11.5px;cursor:pointer">' +
-      'ⓘ גרסה ' + esc(v.version) + (v.date ? ' · ' + esc(v.date) : '') + '</button></div>');
+      'ⓘ גרסה ' + esc(v.version) + '</button></div>');
 
     const btn = $('aboutBtn'), pop = $('aboutPop');
     let opener = btn;
@@ -60,7 +60,7 @@
       const links = guideLinks(v);
       pop.innerHTML =
         '<h4>' + esc(v.name || document.title) + '</h4>' +
-        '<div class="ver"><span>גרסה <b>' + esc(v.version || '—') + '</b></span><span>עדכון אחרון <b>' + esc(v.date || '—') + '</b></span></div>' +
+        '<div class="ver"><span>גרסה <b>' + esc(v.version || '—') + '</b></span></div>' +
         (v.notes && v.notes.length ? '<div><b>מה חדש בגרסה ' + esc(v.version) + '</b></div><ul>' + v.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '') +
         '<div class="acts"><span style="display:flex;gap:12px;flex-wrap:wrap">' + links.map((l) => '<a href="' + esc(l[1]) + '" target="_blank" rel="noopener">' + l[0] + '</a>').join('') + '</span>' +
         '<button type="button" class="x">סגירה</button></div>';
