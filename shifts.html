@@ -6104,6 +6104,9 @@ document.getElementById('pdfBtn').addEventListener('click',async ()=>{
       סידור עבודה · סופרסטאר · ${ddmm(dates[0])} – ${ddmm(dates[6])} · ${dates[0].getFullYear()}</div>`;
     document.querySelectorAll('#board .dept').forEach(sec=>stage.appendChild(sec.cloneNode(true)));
 
+    // the libraries load when needed (they left the page's head on 07/08/2026 — since then this button failed)
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
     const pageW=297, pageH=210, margin=8, imgW=pageW-2*margin;
