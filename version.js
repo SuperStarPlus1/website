@@ -1,10 +1,12 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.5',
+  version: '2.6',
   date: '06/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'משמרות לפי העסק: חלקי היום (בוקר / אמצע / ערב / לילה) והמשמרות המוכנות — ב"🕒 הגדרת משמרות"',
+    'משמרות לפי מחלקה ויום בשבוע: לכל מחלקה המשמרות והשעות שלה, והשיבוץ האוטומטי לפיהן',
     'לוג פעולות עם סינון: סוג פעולה, מי ביצע ותאריכים — לבד או ביחד, בשם המלא',
     'דוח השעות ב-PDF באותו מבנה כמו הדוח המפורט: כניסה, תחילת וסיום הפסקה, סיום משמרת, 100/125/150%',
     'תיקונים: כפתור PDF של הסידור, המקלדת בטלפון לא מסתירה שדות, ניתוק אחרי 15 דקות גם למנהלים',
