@@ -268,12 +268,13 @@
   }
 
   /* ---------- 2. skills ---------- */
-  const SKILL_INPUTS = 'input.i-skills,input.a-ms,input.a-es,input[data-skills]';
+  const SKILL_INPUTS = 'input.i-skills,input.a-ms,input.a-es,input.a-sk,input[data-skills]';   // a-sk: a part of the day's skills (auto-assign)
   function drawSkills(inp) {
     const f = inp._sxf;
     if (!f) return;
     const have = splitSkills(inp.value), cat = catalog();
-    const lead = inp.classList.contains('a-ms') ? '☀ ' : inp.classList.contains('a-es') ? '🌙 ' : '';
+    const skPart = inp.classList.contains('a-sk') && window.SC ? SC.parts()[Number(inp.dataset.j)] : null;
+    const lead = inp.classList.contains('a-ms') ? '☀ ' : inp.classList.contains('a-es') ? '🌙 ' : skPart && skPart.icon ? skPart.icon + ' ' : '';
     f.querySelector('.sx-txt').innerHTML = have.length
       ? lead + have.map((s) => '<span class="sx-chip' + (cat.includes(s) ? '' : ' unk') + '"' + (cat.includes(s) ? '' : ' title="לא ברשימת הכישורים"') + '>' + e(s) + '</span>').join('')
       : '<span class="sx-ph">' + lead + e(inp.placeholder || 'בחירת כישורים') + '</span>';
@@ -382,7 +383,7 @@
       s.skillsCatalog = r.skills || names;
       (s.employees || []).forEach((x) => { x.skills = rewrite(x.skills); });
       if (typeof _currentEmp !== 'undefined' && _currentEmp) _currentEmp.skills = rewrite(_currentEmp.skills);
-      Object.values(s.staffing || {}).forEach((st) => { if (st && !Array.isArray(st)) { st.ms = rewrite(st.ms); st.es = rewrite(st.es); } });
+      Object.values(s.staffing || {}).forEach((st) => { if (st && !Array.isArray(st)) { st.ms = rewrite(st.ms); st.es = rewrite(st.es); if (Array.isArray(st.sk)) st.sk = st.sk.map(rewrite); } });
       document.querySelectorAll(SKILL_INPUTS).forEach((i) => { const v = rewrite(i.value); if (v !== i.value) { i.value = v; fire(i); } });
       redrawAllSkills();
       err.textContent = '';

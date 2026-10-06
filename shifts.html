@@ -397,6 +397,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   select.hsel{max-width:130px}
 }
 </style>
+<script src="shift-config.js"></script>
 </head>
 <body>
 
@@ -671,12 +672,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
     <header><h3 id="shTitle"></h3><p id="shSub"></p></header>
     <div class="mbody">
       <div class="mrow"><label>עובד (אפשר להעביר את המשמרת לעובד אחר)</label><select id="shEmp"></select></div>
-      <div class="presets">
-        <button class="preset" data-s="08:00" data-e="15:00">☀ בוקר<small>8:00 – 15:00</small></button>
-        <button class="preset" data-s="10:00" data-e="16:00">☀ בוקר 2<small>10:00 – 16:00</small></button>
-        <button class="preset" data-s="15:00" data-e="22:00">🌙 ערב<small>15:00 – 22:00</small></button>
-        <button class="preset" data-s="16:00" data-e="22:00">🌙 ערב 2<small>16:00 – 22:00</small></button>
-      </div>
+      <div class="presets" id="genPresets"></div>
       <div class="presets hidden" id="deptPresets"></div>
       <div class="timegrid">
         <div class="mrow"><label>התחלה</label><select id="shStart"></select></div>
@@ -686,10 +682,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <div class="daypick" id="shSpreadDays"></div>
       </div>
       <div class="mrow" style="margin-top:4px"><label>מתי אינך פנוי/ה? (נשמר עם "שמור")</label>
-        <div class="offtoggles">
-          <button class="offbtn" id="offMorning">☀ לא יכול/ה בבוקר</button>
-          <button class="offbtn" id="offEvening">🌙 לא יכול/ה בערב</button>
-        </div>
+        <div class="offtoggles" id="offToggles"></div>
       </div>
       <div class="merr" id="shErr"></div>
     </div>
@@ -801,7 +794,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   <div class="modal wide">
     <header><h3>🪄 שיבוץ אוטומטי</h3><p>תקן עובדים לכל מחלקה, יום ומשמרת · התקן נשמר בגיליון לשבועות הבאים · לא מוחק משמרות קיימות</p></header>
     <div class="mbody">
-      <div class="aa-legend">בכל יום — שדה עליון: ☀ בוקר (8–15) · שדה תחתון: 🌙 ערב (15–22). ערך 0 = ללא שיבוץ. הסרת סימון מחלקה = החרגה מלאה.</div>
+      <div class="aa-legend" id="aaLegend"></div>
       <div id="aaDepts"></div>
       <div class="merr" id="aaErr"></div>
     </div>
@@ -822,7 +815,7 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
       <div class="timegrid">
         <div class="mrow"><label>תאריך</label><input type="date" id="ecDate"></div>
         <div class="mrow"><label>מתי לא פנוי/ה?</label><select id="ecPart">
-          <option value="מלא">יום מלא (לא פנוי/ה)</option><option value="בוקר">☀ לא יכול/ה בבוקר (08:00–15:00)</option><option value="ערב">🌙 לא יכול/ה בערב (15:00–22:00)</option>
+          <option value="מלא">יום מלא (לא פנוי/ה)</option>
         </select></div>
       </div>
       <button class="btn primary" id="ecAdd" style="width:100%">שמירת אי-זמינות</button>
@@ -1205,7 +1198,7 @@ const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי',
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 const DEPT_COLORS = ['#2563eb','#0d9488','#7c3aed','#b45309','#0891b2','#16a34a','#db2777','#64748b','#9333ea','#ca8a04'];
 const UNAVAIL = 'אי-זמינות';   // בגיליון המשמרות: מחלקה="אי-זמינות", התחלה="בוקר"/"ערב"
-const EVENING_FROM = 15 * 60;  // משמרת שמתחילה מ-15:00 נחשבת ערב
+// חלקי היום (בוקר/ערב או מה שהחברה הגדירה) — SC ב-shift-config.js
 const ROLE_ADMIN = 'אדמין';
 const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1296,7 +1289,7 @@ function parseOffDays(str){
     const [d,p]=tok.split('-').map(x=>(x||'').trim());
     const i=DAY_LETTERS.indexOf(d);
     if(i<0) return;
-    out.push({ day:i, part: p==='בוקר'?'בוקר' : p==='ערב'?'ערב' : 'מלא' });
+    out.push({ day:i, part: SC.has(p) ? p : 'מלא' });
   });
   return out;
 }
@@ -1325,14 +1318,15 @@ function primaryOf(n){
   return e.depts.length ? e.depts[0] : null;
 }
 
+/** החלקים ביום שהעובד סימן שאינו פנוי בהם: { 'בוקר':true, ... } */
 function unavailOf(emp, dateIso){
-  const rows = state.shifts.filter(s=>s.dept===UNAVAIL && s.employee===emp && s.date===dateIso);
-  return { morning: rows.some(r=>r.start==='בוקר'), evening: rows.some(r=>r.start==='ערב') };
+  const o = {};
+  state.shifts.forEach(s=>{ if(s.dept===UNAVAIL && s.employee===emp && s.date===dateIso && s.start) o[s.start]=true; });
+  return o;
 }
-function setUnavail(emp, dateIso, morning, evening){
+function setUnavail(emp, dateIso, parts){
   state.shifts = state.shifts.filter(s=>!(s.dept===UNAVAIL && s.employee===emp && s.date===dateIso));
-  if(morning) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'בוקר', end:'' });
-  if(evening) state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:'ערב', end:'' });
+  parts.forEach(p=>state.shifts.push({ _id:SID++, date:dateIso, employee:emp, dept:UNAVAIL, start:p, end:'' }));
 }
 /** אזהרת התנגשות: חופש/אילוץ/משמרת כפולה/רצף. מחזיר true אם אפשר להמשיך */
 function confirmConflicts(emp, dateIso, start, excludeSids){
@@ -1342,15 +1336,15 @@ function confirmConflicts(emp, dateIso, start, excludeSids){
   if(other){
     if(!confirm('לעובד '+emp+' כבר יש משמרת ביום זה ('+other.dept+' '+other.start+'–'+other.end+'). המערכת מגבילה למשמרת אחת ביום — לשבץ בכל זאת?')) return false;
   }
-  const isEvening = toMin(start) >= EVENING_FROM;
+  const part = SC.partOf(start);
   const off = unavailOf(emp, dateIso);
-  if((isEvening && off.evening) || (!isEvening && off.morning)){
-    if(!confirm('לעובד '+emp+' מסומן חופש ב'+(isEvening?'ערב':'בוקר')+' ביום זה. לשבץ בכל זאת?')) return false;
+  if(off[part]){
+    if(!confirm('לעובד '+emp+' מסומן חופש ב'+part+' ביום זה. לשבץ בכל זאת?')) return false;
   }
   const e = empByName(emp);
   const dow = new Date(dateIso+'T00:00:00').getDay();
   const fo = fixedOff(e, dow);
-  if(fo==='מלא' || (fo==='בוקר' && !isEvening) || (fo==='ערב' && isEvening)){
+  if(fo==='מלא' || fo===part){
     const what = fo==='מלא' ? 'יום חופש קבוע' : 'חסימת '+fo+' קבועה (ללא שיבוץ)';
     if(!confirm('ליום '+DAY_NAMES[dow]+' מוגדר לעובד '+emp+' '+what+'. לשבץ בכל זאת?')) return false;
   }
@@ -1361,7 +1355,7 @@ function confirmConflicts(emp, dateIso, start, excludeSids){
     if(!confirm('לעובד '+emp+' '+stV+' ('+vc0.from+' עד '+vc0.to+'). לשבץ בכל זאת?')) return false;
   }
   // בקשת אילוץ של העובד
-  const cc = constraintsOf(emp, dateIso).find(c=>c.part==='מלא' || (c.part==='ערב')===isEvening);
+  const cc = constraintsOf(emp, dateIso).find(c=>c.part==='מלא' || c.part===part);
   if(cc){
     const st = cc.status==='ממתין' ? 'אילוץ הממתין לאישור' : 'אילוץ מאושר';
     if(!confirm('לעובד '+emp+' קיים '+st+' ('+cc.part+') ביום זה. לשבץ בכל זאת?')) return false;
@@ -1564,6 +1558,7 @@ async function load(){
   try{
     const d = await apiGet();
     if(mySeq !== _loadSeq) return; // בינתיים בוצעה קריאה חדשה יותר (למשל ניווט מהיר בין שבועות) — מתעלמים מתוצאה מיושנת
+    state.shiftConfig = d.shiftConfig || null;   // חלקי היום וסוגי המשמרות (shift-config.js) — לפני קריאת ימי החופש הקבועים
     state.employees = d.employees; state.departments = d.departments;
     state.employees.forEach(e=>{
       e.depts = parseDepts(e.dept); if(!e.depts.length) e.depts=[state.departments[0]];
@@ -1675,12 +1670,10 @@ function render(){
         chips += foreign.map(s=>`<span class="chip foreign" ${drag} data-sid="${s._id}">${esc(s.start)} – ${esc(s.end)}<small>${esc(s.dept)}</small></span>`).join('');
 
         const off = unavailOf(name, di);
-        if(off.morning) chips += `<span class="chip off">☀ לא פנוי בוקר</span>`;
-        if(off.evening) chips += `<span class="chip off">🌙 לא פנוי ערב</span>`;
+        SC.parts().forEach(p=>{ if(off[p.key]) chips += `<span class="chip off">${esc(p.icon)} לא פנוי ${esc(p.key)}</span>`; });
         const fo = emp ? fixedOff(emp, d.getDay()) : null;
-        if(fo==='מלא' && !off.morning && !off.evening) chips += `<span class="chip off">🏖 חופש קבוע</span>`;
-        if(fo==='בוקר' && !off.morning) chips += `<span class="chip off">☀ לא פנוי בוקר (קבוע)</span>`;
-        if(fo==='ערב' && !off.evening) chips += `<span class="chip off">🌙 לא פנוי ערב (קבוע)</span>`;
+        if(fo==='מלא' && !Object.keys(off).length) chips += `<span class="chip off">🏖 חופש קבוע</span>`;
+        if(fo && fo!=='מלא' && !off[fo]) chips += `<span class="chip off">${esc(SC.icon(fo))} לא פנוי ${esc(fo)} (קבוע)</span>`;
         const vac = vacationOf(name, di);
         if(vac){
           chips += vac.status==='מאושר'
@@ -1802,7 +1795,7 @@ function onDrop(td){
 /* ============ עריכת משמרת ============ */
 (function buildTimeOptions(){
   let opts='';
-  for(let h=5;h<=23;h++) for(const m of [0,30]){
+  for(let h=0;h<=23;h++) for(const m of [0,30]){   // כל שעות היממה — גם משמרת לילה
     const t=String(h).padStart(2,'0')+':'+(m?'30':'00');
     opts+=`<option value="${t}">${t}</option>`;
   }
@@ -1810,33 +1803,25 @@ function onDrop(td){
   document.getElementById('shEnd').innerHTML=opts;
 })();
 
-/* משמרות ייעודיות (8:30 שעות) הזמינות רק למחלקות ספציפיות שנרשמו כאן — לא לכלל המחלקות */
-const DEPT_SHIFT_PRESETS = {
-  'קצביה': [
-    { label: '☀ בוקר', s: '08:00', e: '16:30' },
-    { label: '🕐 אמצע', s: '10:00', e: '18:30' },
-    { label: '🌙 ערב', s: '12:00', e: '20:30' }
-  ],
-  'ירקות': [
-    { label: '☀ בוקר', s: '08:00', e: '16:30' },
-    { label: '🌙 ערב', s: '14:00', e: '22:30' }
-  ],
-  'מחסן': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
-  'הנהלה': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
-  'הנח"ש': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ],
-  'כללי': [ { label: '☀ בוקר', s: '08:00', e: '16:30' } ]
-};
+/* משמרות מוכנות — כלליות ולמחלקות מסוימות: בהגדרת המשמרות של החברה (SC ב-shift-config.js) */
+function presetBtn(t, dept){
+  return `<button class="preset${dept?' dept-preset':''}" data-s="${esc(t.start)}" data-e="${esc(t.end)}">${esc(SC.icon(SC.partOf(t.start)))} ${esc(t.name)}<small>${esc(t.start)} – ${esc(t.end)}${dept?' ('+fmtMin(shiftMin(t))+')':''}</small></button>`;
+}
+/** המשמרות המוכנות מההגדרות: הכלליות, ומתחת — של המחלקה הזו */
 function renderDeptPresets(dept){
-  const box = document.getElementById('deptPresets');
-  const list = DEPT_SHIFT_PRESETS[dept];
-  if(!list || !list.length){ box.innerHTML=''; box.classList.add('hidden'); return; }
-  box.classList.remove('hidden');
-  box.innerHTML = list.map(p=>`<button class="preset dept-preset" data-s="${p.s}" data-e="${p.e}">${p.label}<small>${p.s} – ${p.e} (8:30)</small></button>`).join('');
-  box.querySelectorAll('.preset').forEach(p=>p.addEventListener('click',()=>{
-    document.getElementById('shStart').value=p.dataset.s;
-    document.getElementById('shEnd').value=p.dataset.e;
-    markPreset();
-  }));
+  const gen = document.getElementById('genPresets'), box = document.getElementById('deptPresets');
+  const g = SC.general(), list = SC.forDept(dept);
+  gen.innerHTML = g.map(t=>presetBtn(t, false)).join(''); gen.classList.toggle('hidden', !g.length);
+  box.innerHTML = list.map(t=>presetBtn(t, true)).join(''); box.classList.toggle('hidden', !list.length);
+  // שעות שההגדרות משתמשות בהן ואינן ברשימה (למשל 08:15) — נוספות לרשימה
+  ['shStart','shEnd'].forEach(id=>{
+    const sel = document.getElementById(id), have = new Set([...sel.options].map(o=>o.value));
+    const add = SC.times_all().filter(t=>/^\d{2}:\d{2}$/.test(t) && !have.has(t));
+    if(!add.length) return;
+    const v = sel.value;
+    sel.innerHTML = [...have, ...add].sort().map(t=>`<option value="${t}">${t}</option>`).join('');
+    sel.value = v;
+  });
 }
 
 /* פריסת אותה משמרת לימים נוספים באותו שבוע (נבחר ידנית בכל פעם, לא נשמר כברירת מחדל) */
@@ -1877,8 +1862,9 @@ function openShiftEditor(ds){
 
   renderDeptPresets(ds.dept);
   renderSpreadDays(ds.date);
-  document.getElementById('shStart').value = existing ? existing.start : '08:00';
-  document.getElementById('shEnd').value   = existing ? existing.end   : '15:00';
+  const def0 = SC.general()[0] || SC.forDept(ds.dept)[0] || { start:SC.times(SC.keys()[0])[0], end:SC.times(SC.keys()[0])[1] };
+  document.getElementById('shStart').value = existing ? existing.start : def0.start;
+  document.getElementById('shEnd').value   = existing ? existing.end   : def0.end;
   document.getElementById('shDel').classList.toggle('hidden', !existing);
   document.getElementById('shErr').textContent='';
   refreshOffToggles();
@@ -1888,14 +1874,15 @@ function openShiftEditor(ds){
 function refreshOffToggles(){
   const emp = document.getElementById('shEmp').value;
   const off = unavailOf(emp, editCtx.date);
-  document.getElementById('offMorning').classList.toggle('active', off.morning);
-  document.getElementById('offEvening').classList.toggle('active', off.evening);
+  document.getElementById('offToggles').innerHTML = SC.parts().map(p=>
+    `<button class="offbtn${off[p.key]?' active':''}" data-part="${esc(p.key)}">${esc(p.icon)} לא יכול/ה ב${esc(p.key)}</button>`).join('');
 }
 function markPreset(){
   const s=document.getElementById('shStart').value, e=document.getElementById('shEnd').value;
   document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active', p.dataset.s===s && p.dataset.e===e));
 }
-document.querySelectorAll('.preset').forEach(p=>p.addEventListener('click',()=>{
+['genPresets','deptPresets'].forEach(id=>document.getElementById(id).addEventListener('click', ev=>{
+  const p = ev.target.closest('.preset'); if(!p) return;
   document.getElementById('shStart').value=p.dataset.s;
   document.getElementById('shEnd').value=p.dataset.e;
   markPreset();
@@ -1904,14 +1891,12 @@ document.getElementById('shStart').addEventListener('change',markPreset);
 document.getElementById('shEnd').addEventListener('change',markPreset);
 document.getElementById('shEmp').addEventListener('change',refreshOffToggles);
 
-['offMorning','offEvening'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',()=>{
-    document.getElementById(id).classList.toggle('active');
-    setUnavail(document.getElementById('shEmp').value, editCtx.date,
-      document.getElementById('offMorning').classList.contains('active'),
-      document.getElementById('offEvening').classList.contains('active'));
-    state.dirtyShifts = true; updateDirtyBadge();
-  });
+document.getElementById('offToggles').addEventListener('click', ev=>{
+  const b = ev.target.closest('.offbtn'); if(!b) return;
+  b.classList.toggle('active');
+  setUnavail(document.getElementById('shEmp').value, editCtx.date,
+    [...document.querySelectorAll('#offToggles .offbtn.active')].map(x=>x.dataset.part));
+  state.dirtyShifts = true; updateDirtyBadge();
 });
 
 document.getElementById('shSave').addEventListener('click',()=>{
@@ -2179,9 +2164,9 @@ function empRow(e){
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${_empMgrDepts.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
-    <div class="chiprow"><span class="lbl">חופש/חסימה קבועה (לחיצות: יום מלא → לא פנוי בוקר → לא פנוי ערב → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
+    <div class="chiprow"><span class="lbl">חופש/חסימה קבועה (לחיצות: יום מלא → ${SC.keys().map(k=>'לא פנוי '+esc(k)).join(' → ')} → ביטול):</span>${DAY_LETTERS.map((l,i)=>{
       const fo=((e.offDays)||[]).find(x=>x.day===i);
-      return `<button class="dchip day ${fo?'active':''}" data-i="${i}" data-part="${fo?fo.part:''}">${l}${fo?(fo.part==='מלא'?'':fo.part==='בוקר'?' ☀':' 🌙'):''}</button>`;
+      return `<button class="dchip day ${fo?'active':''}" data-i="${i}" data-part="${fo?esc(fo.part):''}">${l}${fo?(fo.part==='מלא'?'':esc(SC.mark(fo.part))):''}</button>`;
     }).join('')}</div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">כישורים:</span>
       <input type="text" class="i-skills" value="${esc(e.skills||'')}" placeholder="למשל: טביעת אצבע, ותק" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
@@ -2192,7 +2177,7 @@ function empRow(e){
         <option value="3" ${e.rating===3?'selected':''}>3 — נמוך (עד 3)</option>
       </select>
       <span class="lbl">משמרת קבועה:</span>
-      <input type="text" class="i-fixed" value="${esc(e.fixedShifts||'')}" placeholder="למשל: ש-בוקר, ג-ערב" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
+      <input type="text" class="i-fixed" value="${esc(e.fixedShifts||'')}" placeholder="למשל: ש-${esc(SC.keys()[0])}${SC.keys()[1]?', ג-'+esc(SC.keys()[1]):''}" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
       <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <span class="lbl">מס' עובד:</span>
@@ -2242,11 +2227,11 @@ function empRow(e){
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelectorAll('.dchip.dept').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('active')));
   div.querySelectorAll('.dchip.day').forEach(c=>c.addEventListener('click',()=>{
-    const seq=['','מלא','בוקר','ערב'];
+    const seq=['','מלא',...SC.keys()];
     const next=seq[(seq.indexOf(c.dataset.part)+1)%seq.length];
     c.dataset.part=next;
     c.classList.toggle('active', !!next);
-    c.textContent=DAY_LETTERS[Number(c.dataset.i)]+(next===''?'':next==='מלא'?'':next==='בוקר'?' ☀':' 🌙');
+    c.textContent=DAY_LETTERS[Number(c.dataset.i)]+(next===''||next==='מלא'?'':SC.mark(next));
   }));
   div.querySelector('.i-emptype').addEventListener('change', ev=>{
     const isMonthly = ev.target.value==='חודשי';
@@ -2483,9 +2468,8 @@ async function openLog(){
 }
 
 /* ============ שיבוץ אוטומטי ============ */
-const AA_TIMES = { 'בוקר': ['08:00','15:00'], 'ערב': ['15:00','22:00'] };
 const RATING_QUOTA = { 1: 6, 2: 4, 3: 3 };   // דירוג → מקסימום משמרות בשבוע
-function partOf(start){ return toMin(start) >= EVENING_FROM ? 'ערב' : 'בוקר'; }
+function partOf(start){ return SC.partOf(start); }
 function hasSkill(e, skill){ return parseSkills(e.skills).includes(skill); }
 function quotaOf(e){ return RATING_QUOTA[e.rating||2] || 4; }
 /* משמרות קבועות: "ש-בוקר, ג-ערב" או "ש-בוקר-קופאיות" */
@@ -2494,7 +2478,7 @@ function parseFixedShifts(str){
   String(str||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(tok=>{
     const p = tok.split('-').map(x=>x.trim());
     const day = DAY_LETTERS.indexOf(p[0]);
-    if(day<0 || (p[1]!=='בוקר' && p[1]!=='ערב')) return;
+    if(day<0 || !SC.has(p[1])) return;
     out.push({ day, part:p[1], dept:p[2]||'' });
   });
   return out;
@@ -2511,24 +2495,25 @@ async function openAutoAssign(){
       if(local){ local.rating = se.rating||2; local.fixedShifts = se.fixedShifts||''; }
     });
   }catch(e){}
+  const P = SC.parts();
+  document.getElementById('aaLegend').textContent = 'בכל יום — שדה לכל חלק יום, מלמעלה למטה: ' + P.map(p=>(p.icon?p.icon+' ':'')+p.key+' ('+p.start+'–'+p.end+')').join(' · ') + '. ערך 0 = ללא שיבוץ. הסרת סימון מחלקה = החרגה מלאה.';
   document.getElementById('aaDepts').innerHTML = state.departments.map(d=>{
     let st = staffing[d];
     if(Array.isArray(st)) st = { days: st, ms:'', es:'', budget:0, hoursQuota:0 };            // תאימות לפורמט ישן
-    if(!st) st = { days: Array.from({length:7},()=>[1,1]), ms:'', es: d==='קופאיות' ? 'טביעת אצבע' : '', budget:0, hoursQuota:0 };
-    if(d==='קופאיות' && !st.es) st.es = 'טביעת אצבע';                 // ברירת מחדל: טביעת אצבע בערב קופאיות
+    if(!st) st = { days: Array.from({length:7},()=>P.map(()=>1)), ms:'', es:'', budget:0, hoursQuota:0 };
+    const sk = Array.isArray(st.sk) ? st.sk.slice() : [st.ms||'', st.es||''];                  // כישור חובה לכל חלק יום
+    if(d==='קופאיות' && P.length>1 && !sk[1]) sk[1] = 'טביעת אצבע';     // ברירת מחדל: טביעת אצבע בערב קופאיות
     const days = st.days;
     return `<div class="aa-dept" data-dept="${esc(d)}">
       <div class="aa-dhead">
         <label><input type="checkbox" class="a-on" checked><b>${esc(d)}</b></label>
-        <input type="text" class="a-ms" value="${esc(st.ms)}" placeholder="כישור חובה בבוקר">
-        <input type="text" class="a-es" value="${esc(st.es)}" placeholder="כישור חובה בערב">
+        ${P.map((p,j)=>`<input type="text" class="a-sk" data-j="${j}" value="${esc(sk[j]||'')}" placeholder="כישור חובה ב${esc(p.key)}">`).join('')}
         <input type="number" class="a-budget" min="0" step="50" value="${st.budget||''}" placeholder="תקציב שבועי ₪" title="תקציב שכר שבועי למחלקה (₪) — ריק/0 = ללא הגבלה" style="width:120px">
         <input type="number" class="a-hours" min="0" step="5" value="${st.hoursQuota||''}" placeholder="תקן שעות שבועי" title="תקן שעות עבודה שבועי למחלקה — התראה+דוח יומי לאדמין לפי נוכחות בפועל. ריק/0 = ללא מעקב" style="width:120px">
       </div>
       <div class="aa-grid">${DAY_LETTERS.map((l,i)=>`
         <div class="aa-day"><div class="dl">${l}</div>
-          <input type="number" class="a-m" data-dow="${i}" min="0" max="9" value="${days[i][0]}" title="בוקר">
-          <input type="number" class="a-e" data-dow="${i}" min="0" max="9" value="${days[i][1]}" title="ערב">
+          ${P.map((p,j)=>`<input type="number" class="a-n" data-dow="${i}" data-j="${j}" min="0" max="9" value="${Number((days[i]||[])[j])||0}" title="${esc(p.key)}">`).join('')}
         </div>`).join('')}</div>
     </div>`;
   }).join('');
@@ -2543,20 +2528,18 @@ document.getElementById('autoBtn').addEventListener('click', openAutoAssign);
 document.getElementById('aaOk').addEventListener('click', async ()=>{
   const btn=document.getElementById('aaOk'); btn.disabled=true;
   try{
-    const cfg = {}, staffing = {};
+    const cfg = {}, staffing = {}, P = SC.parts();
     document.querySelectorAll('#aaDepts .aa-dept').forEach(r=>{
       const dept = r.dataset.dept;
-      const days = Array.from({length:7},(_,i)=>[
-        Number(r.querySelector('.a-m[data-dow="'+i+'"]').value)||0,
-        Number(r.querySelector('.a-e[data-dow="'+i+'"]').value)||0
-      ]);
-      const ms = r.querySelector('.a-ms').value.trim();
-      const es = r.querySelector('.a-es').value.trim();
+      const days = Array.from({length:7},(_,i)=>P.map((_,j)=>
+        Number(r.querySelector('.a-n[data-dow="'+i+'"][data-j="'+j+'"]').value)||0));
+      const sk = P.map((_,j)=>r.querySelector('.a-sk[data-j="'+j+'"]').value.trim());
+      const ms = sk[0]||'', es = sk[1]||'';
       const budget = Number(r.querySelector('.a-budget').value)||0;
       const hoursQuota = Number(r.querySelector('.a-hours').value)||0;
-      staffing[dept] = { days, ms, es, budget, hoursQuota }; // התקן נשמר גם עבור מחלקות מוחרגות
+      staffing[dept] = { days, sk, ms, es, budget, hoursQuota }; // התקן נשמר גם עבור מחלקות מוחרגות
       if(!r.querySelector('.a-on').checked) return;
-      cfg[dept] = { days, ms, es, budget, hoursQuota };
+      cfg[dept] = { days, sk, ms, es, budget, hoursQuota };
     });
 
     // שמירת התקן לגיליון
@@ -2591,7 +2574,7 @@ function runAutoAssign(cfg, prevShifts){
   const minutes = {}, counts = {}, partCounts = {};
   const addMin = (n,m)=>{ minutes[n]=(minutes[n]||0)+m; };
   const addCount = (n,part)=>{ counts[n]=(counts[n]||0)+1;
-    partCounts[n]=partCounts[n]||{'בוקר':0,'ערב':0}; partCounts[n][part]++; };
+    partCounts[n]=partCounts[n]||{}; partCounts[n][part]=(partCounts[n][part]||0)+1; };
   state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)){
     addMin(s.employee, shiftMin(s)); addCount(s.employee, partOf(s.start)); } });
 
@@ -2615,9 +2598,7 @@ function runAutoAssign(cfg, prevShifts){
     if((counts[e.name]||0) >= quotaOf(e)) return true;   // מכסת דירוג — קשיחה
     if((worked[e.name]||new Set()).has(di)) return true; // משמרת אחת ביום — קשיחה
     if(busy.has(e.name+'|'+di+'|'+part)) return true;
-    const off = unavailOf(e.name, di);
-    if(part==='בוקר' && off.morning) return true;
-    if(part==='ערב' && off.evening) return true;
+    if(unavailOf(e.name, di)[part]) return true;
     const fo = fixedOff(e, dow);
     if(fo==='מלא' || fo===part) return true;
     // בקשות אילוצים: מאושר או ממתין חוסמים שיבוץ אוטומטי
@@ -2634,11 +2615,11 @@ function runAutoAssign(cfg, prevShifts){
     parseFixedShifts(e.fixedShifts).forEach(f=>{
       const dept = f.dept || e.depts[0];
       if(!cfg[dept]) return;                                    // מחלקה מוחרגת
-      if(!cfg[dept].days[f.day][f.part==='בוקר'?0:1]) return;   // אין תקן ליום/משמרת
+      if(!cfg[dept].days[f.day][SC.idx(f.part)]) return;        // אין תקן ליום/משמרת
       const di = iso(dates[f.day]);
       if(busy.has(e.name+'|'+di+'|'+f.part)) return;            // כבר משובץ
       if(blocked(e, di, f.day, f.part)) return;                 // חופש/אילוץ/רצף גוברים
-      const [st,en] = AA_TIMES[f.part];
+      const [st,en] = SC.times(f.part);
       state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
       busy.add(e.name+'|'+di+'|'+f.part);
       pushW(e.name, di);
@@ -2650,11 +2631,11 @@ function runAutoAssign(cfg, prevShifts){
 
   dates.forEach((d,dow)=>{
     const di = iso(d);
-    ['בוקר','ערב'].forEach(part=>{
+    SC.keys().forEach((part,j)=>{
       Object.keys(cfg).forEach(dept=>{
-        const target = cfg[dept].days[dow][part==='בוקר'?0:1];
+        const target = cfg[dept].days[dow][j];
         if(!target) return;
-        const reqSkills = parseSkills(part==='בוקר' ? cfg[dept].ms : cfg[dept].es);   // כמה כישורי חובה — כל אחד אצל עובד אחד לפחות במשמרת
+        const reqSkills = parseSkills((cfg[dept].sk || [cfg[dept].ms, cfg[dept].es])[j]);   // כמה כישורי חובה — כל אחד אצל עובד אחד לפחות במשמרת
         const existing = state.shifts.filter(s=>s.dept===dept && s.date===di && partOf(s.start)===part);
         let need = target - existing.length;
         if(need<=0) return;
@@ -2687,7 +2668,7 @@ function runAutoAssign(cfg, prevShifts){
         while(chosen.length < need && cands.length) chosen.push(cands.shift());
         if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים (חופשים/אילוצים/מכסות דירוג)');
         chosen.forEach(e=>{
-          const [st,en] = AA_TIMES[part];
+          const [st,en] = SC.times(part);
           state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
           busy.add(e.name+'|'+di+'|'+part);
           pushW(e.name, di);
@@ -2968,9 +2949,7 @@ function fillSwapTargets(){
     if(!e.depts.includes(s.dept)) return false;                       // אותה מחלקה
     const sameCell = state.shifts.some(x=>x.employee===e.name && x.date===s.date && x.dept===s.dept && x.dept!==UNAVAIL && partOf(x.start)===part);
     if(sameCell) return false;                                        // כבר באותה משמרת בדיוק
-    const off = unavailOf(e.name, s.date);
-    if(part==='בוקר' && off.morning) return false;
-    if(part==='ערב' && off.evening) return false;
+    if(unavailOf(e.name, s.date)[part]) return false;
     const fo = fixedOff(e, new Date(s.date+'T00:00:00').getDay());
     if(fo==='מלא' || fo===part) return false;
     if(constraintsOf(e.name, s.date).some(c=>c.part==='מלא' || c.part===part)) return false;
@@ -5616,6 +5595,8 @@ async function fetchMyRequests(){
 }
 async function openEmpCons(){
   renderFixedInfo();
+  document.getElementById('ecPart').innerHTML = '<option value="מלא">יום מלא (לא פנוי/ה)</option>' + SC.parts().map(p=>
+    `<option value="${esc(p.key)}">${esc(p.icon)} לא יכול/ה ב${esc(p.key)} (${esc(p.start)}–${esc(p.end)})</option>`).join('');
   const d = document.getElementById('ecDate');
   d.min = iso(new Date());
   if(!d.value || d.value < d.min) d.value = d.min;
@@ -6468,6 +6449,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="registration.js"></script>
 <script src="mobile-input.js"></script>
 <script src="log-filter.js"></script>
+<script src="shift-settings.js"></script>
 <script src="version.js"></script>
 <script src="about.js"></script>
 </body>
