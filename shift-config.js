@@ -49,8 +49,44 @@
       const c = cfg(), out = new Set();
       c.parts.forEach((p) => { out.add(p.start); out.add(p.end); });
       (c.types || []).forEach((t) => { out.add(t.start); out.add(t.end); });
+      try { (state.shiftTemplates || []).forEach((t) => { out.add(t.start); out.add(t.end); }); } catch (e) { /* not loaded yet */ }
       return [...out];
     },
     toMin,
+
+    /* ---- shifts per department and day of the week (state.shiftTemplates, table shift_templates) ---- */
+    /** the department's shifts on that day ([] — none defined that day) */
+    tpl(dept, dow) {
+      let all = [];
+      try { all = state.shiftTemplates || []; } catch (e) { /* not loaded yet */ }
+      const seen = new Set();   // all branches in view: the same department in two branches — once
+      return all.filter((t) => t.dept === dept && t.dow === dow).filter((t) => {
+        const k = t.name + '|' + t.start + '|' + t.end; if (seen.has(k)) return false; seen.add(k); return true;
+      });
+    },
+    /** does the department have its own shifts (on any day)? */
+    hasTpl(dept) {
+      try { return (state.shiftTemplates || []).some((t) => t.dept === dept); } catch (e) { return false; }
+    },
+    /** the part a shift counts as: a department shift with the same hours that day — its part; else by the start hour */
+    partOfShift(s) {
+      if (s && s.dept && s.date) {
+        const dow = new Date(s.date + 'T00:00:00').getDay();
+        const t = window.SC.tpl(s.dept, dow).find((x) => x.start === s.start && x.end === s.end && window.SC.has(x.part));
+        if (t) return t.part;
+      }
+      return window.SC.partOf(s ? s.start : '');
+    },
+    /** the hours auto-assign gives a part in a department on a day: the department's shift of that part (the one marked
+     *  "for auto-assign", else the first), else the part's own hours */
+    autoTimes(part, dept, dow) {
+      const ts = window.SC.tpl(dept, dow).filter((x) => x.part === part);
+      const t = ts.find((x) => x.auto) || ts[0];
+      return t ? [t.start, t.end] : window.SC.times(part);
+    },
+    /** does the department work in this part on that day? With shifts of its own — only where it has one */
+    works(dept, dow, part) {
+      return !window.SC.hasTpl(dept) || window.SC.tpl(dept, dow).some((x) => x.part === part);
+    },
   };
 })();

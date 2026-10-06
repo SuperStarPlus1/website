@@ -1559,6 +1559,7 @@ async function load(){
     const d = await apiGet();
     if(mySeq !== _loadSeq) return; // בינתיים בוצעה קריאה חדשה יותר (למשל ניווט מהיר בין שבועות) — מתעלמים מתוצאה מיושנת
     state.shiftConfig = d.shiftConfig || null;   // חלקי היום וסוגי המשמרות (shift-config.js) — לפני קריאת ימי החופש הקבועים
+    state.shiftTemplates = d.shiftTemplates || [];   // משמרות לפי מחלקה ויום בשבוע
     state.employees = d.employees; state.departments = d.departments;
     state.employees.forEach(e=>{
       e.depts = parseDepts(e.dept); if(!e.depts.length) e.depts=[state.departments[0]];
@@ -1807,12 +1808,15 @@ function onDrop(td){
 function presetBtn(t, dept){
   return `<button class="preset${dept?' dept-preset':''}" data-s="${esc(t.start)}" data-e="${esc(t.end)}">${esc(SC.icon(SC.partOf(t.start)))} ${esc(t.name)}<small>${esc(t.start)} – ${esc(t.end)}${dept?' ('+fmtMin(shiftMin(t))+')':''}</small></button>`;
 }
-/** המשמרות המוכנות מההגדרות: הכלליות, ומתחת — של המחלקה הזו */
+/** המשמרות המוכנות: הכלליות של החברה, ומתחת — של המחלקה ביום הזה (משמרות לפי מחלקה) */
 function renderDeptPresets(dept){
   const gen = document.getElementById('genPresets'), box = document.getElementById('deptPresets');
-  const g = SC.general(), list = SC.forDept(dept);
+  const dow = new Date(editCtx.date+'T00:00:00').getDay();
+  const own = SC.hasTpl(dept), g = SC.general(), list = own ? SC.tpl(dept, dow) : SC.forDept(dept);
   gen.innerHTML = g.map(t=>presetBtn(t, false)).join(''); gen.classList.toggle('hidden', !g.length);
-  box.innerHTML = list.map(t=>presetBtn(t, true)).join(''); box.classList.toggle('hidden', !list.length);
+  box.innerHTML = list.length ? list.map(t=>presetBtn(t, true)).join('')
+    : (own ? '<div style="grid-column:1/-1;font-size:12.5px;color:var(--muted)">אין משמרות מוגדרות למחלקה ביום '+DAY_NAMES[dow]+'</div>' : '');
+  box.classList.toggle('hidden', !list.length && !own);
   // שעות שההגדרות משתמשות בהן ואינן ברשימה (למשל 08:15) — נוספות לרשימה
   ['shStart','shEnd'].forEach(id=>{
     const sel = document.getElementById(id), have = new Set([...sel.options].map(o=>o.value));
@@ -1862,7 +1866,8 @@ function openShiftEditor(ds){
 
   renderDeptPresets(ds.dept);
   renderSpreadDays(ds.date);
-  const def0 = SC.general()[0] || SC.forDept(ds.dept)[0] || { start:SC.times(SC.keys()[0])[0], end:SC.times(SC.keys()[0])[1] };
+  const dt = SC.tpl(ds.dept, d.getDay());   // ברירת מחדל: משמרת המחלקה ליום הזה, אחרת המשמרת הכללית הראשונה
+  const def0 = dt.find(t=>t.auto) || dt[0] || SC.general()[0] || SC.forDept(ds.dept)[0] || { start:SC.times(SC.keys()[0])[0], end:SC.times(SC.keys()[0])[1] };
   document.getElementById('shStart').value = existing ? existing.start : def0.start;
   document.getElementById('shEnd').value   = existing ? existing.end   : def0.end;
   document.getElementById('shDel').classList.toggle('hidden', !existing);
@@ -2470,6 +2475,8 @@ async function openLog(){
 /* ============ שיבוץ אוטומטי ============ */
 const RATING_QUOTA = { 1: 6, 2: 4, 3: 3 };   // דירוג → מקסימום משמרות בשבוע
 function partOf(start){ return SC.partOf(start); }
+/** חלק היום של משמרת: משמרת מחלקה באותן שעות — החלק שלה; אחרת לפי שעת ההתחלה */
+function shiftPart(s){ return SC.partOfShift(s); }
 function hasSkill(e, skill){ return parseSkills(e.skills).includes(skill); }
 function quotaOf(e){ return RATING_QUOTA[e.rating||2] || 4; }
 /* משמרות קבועות: "ש-בוקר, ג-ערב" או "ש-בוקר-קופאיות" */
@@ -2576,13 +2583,13 @@ function runAutoAssign(cfg, prevShifts){
   const addCount = (n,part)=>{ counts[n]=(counts[n]||0)+1;
     partCounts[n]=partCounts[n]||{}; partCounts[n][part]=(partCounts[n][part]||0)+1; };
   state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)){
-    addMin(s.employee, shiftMin(s)); addCount(s.employee, partOf(s.start)); } });
+    addMin(s.employee, shiftMin(s)); addCount(s.employee, shiftPart(s)); } });
 
   // תפוסה לפי חלק יום + ימי עבודה (כולל שבוע קודם) לרצף
   const busy = new Set();
   const worked = {};
   const pushW = (n,di)=>{ (worked[n]=worked[n]||new Set()).add(di); };
-  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)){ busy.add(s.employee+'|'+s.date+'|'+partOf(s.start)); pushW(s.employee,s.date); } });
+  state.shifts.forEach(s=>{ if(s.dept!==UNAVAIL && weekSet.has(s.date)){ busy.add(s.employee+'|'+s.date+'|'+shiftPart(s)); pushW(s.employee,s.date); } });
   (prevShifts||[]).forEach(s=>{ if(s.dept!==UNAVAIL) pushW(s.employee,s.date); });
 
   function streakWith(name, di){
@@ -2616,10 +2623,11 @@ function runAutoAssign(cfg, prevShifts){
       const dept = f.dept || e.depts[0];
       if(!cfg[dept]) return;                                    // מחלקה מוחרגת
       if(!cfg[dept].days[f.day][SC.idx(f.part)]) return;        // אין תקן ליום/משמרת
+      if(!SC.works(dept, f.day, f.part)) return;                // למחלקה אין משמרת בחלק הזה ביום הזה
       const di = iso(dates[f.day]);
       if(busy.has(e.name+'|'+di+'|'+f.part)) return;            // כבר משובץ
       if(blocked(e, di, f.day, f.part)) return;                 // חופש/אילוץ/רצף גוברים
-      const [st,en] = SC.times(f.part);
+      const [st,en] = SC.autoTimes(f.part, dept, f.day);   // שעות המחלקה ליום, אחרת של חלק היום
       state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
       busy.add(e.name+'|'+di+'|'+f.part);
       pushW(e.name, di);
@@ -2635,8 +2643,9 @@ function runAutoAssign(cfg, prevShifts){
       Object.keys(cfg).forEach(dept=>{
         const target = cfg[dept].days[dow][j];
         if(!target) return;
+        if(!SC.works(dept, dow, part)) return;   // למחלקה יש משמרות משלה, ואין לה משמרת בחלק הזה ביום הזה
         const reqSkills = parseSkills((cfg[dept].sk || [cfg[dept].ms, cfg[dept].es])[j]);   // כמה כישורי חובה — כל אחד אצל עובד אחד לפחות במשמרת
-        const existing = state.shifts.filter(s=>s.dept===dept && s.date===di && partOf(s.start)===part);
+        const existing = state.shifts.filter(s=>s.dept===dept && s.date===di && shiftPart(s)===part);
         let need = target - existing.length;
         if(need<=0) return;
 
@@ -2668,7 +2677,7 @@ function runAutoAssign(cfg, prevShifts){
         while(chosen.length < need && cands.length) chosen.push(cands.shift());
         if(chosen.length < need) issues.push(dept+' · '+DAY_NAMES[dow]+' '+part+': חסרים '+(need-chosen.length)+' עובדים זמינים (חופשים/אילוצים/מכסות דירוג)');
         chosen.forEach(e=>{
-          const [st,en] = SC.times(part);
+          const [st,en] = SC.autoTimes(part, dept, dow);   // שעות המחלקה ליום, אחרת של חלק היום
           state.shifts.push({ _id:SID++, date:di, employee:e.name, dept, start:st, end:en });
           busy.add(e.name+'|'+di+'|'+part);
           pushW(e.name, di);
@@ -2943,11 +2952,11 @@ function fillSwapTargets(){
   const s = state.shifts.find(x=>x._id===sid);
   const tsel = document.getElementById('swTarget');
   if(!s){ tsel.innerHTML='<option value="">—</option>'; return; }
-  const part = partOf(s.start);
+  const part = shiftPart(s);
   const cands = state.employees.filter(e=>{
     if(!e.active || e.name===state.emp.name) return false;
     if(!e.depts.includes(s.dept)) return false;                       // אותה מחלקה
-    const sameCell = state.shifts.some(x=>x.employee===e.name && x.date===s.date && x.dept===s.dept && x.dept!==UNAVAIL && partOf(x.start)===part);
+    const sameCell = state.shifts.some(x=>x.employee===e.name && x.date===s.date && x.dept===s.dept && x.dept!==UNAVAIL && shiftPart(x)===part);
     if(sameCell) return false;                                        // כבר באותה משמרת בדיוק
     if(unavailOf(e.name, s.date)[part]) return false;
     const fo = fixedOff(e, new Date(s.date+'T00:00:00').getDay());

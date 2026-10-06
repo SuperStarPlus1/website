@@ -1,9 +1,10 @@
-// The shift settings window (admin; same file in Superstar and Sidurit) — "🕒 הגדרת משמרות" in the schedule menu and
-// in the auto-assign window:
-//   parts of the day  name, icon, from what hour a shift belongs to it, and the hours auto-assign gives it (up to 4)
-//   ready-made shifts name + hours, for every department or only some — the buttons of the shift window
-// Saved with saveShiftConfig (api/scheduling.ts); a renamed part takes its standard, fixed days off and coming
-// constraints along. Uses the app's globals: apiPost, mgrAuth, state, toast, load. SC: shift-config.js.
+// The shift settings windows (admin; same file in Superstar and Sidurit), in the schedule menu:
+//   🕒 הגדרת משמרות      the company's parts of the day (name, icon, from what hour a shift belongs to it, the hours
+//                         auto-assign gives it; up to 4) and its ready-made shifts for every department
+//                         → saveShiftConfig; a renamed part takes its standard, fixed days off and coming constraints along
+//   🗂 משמרות לפי מחלקה  each department's shifts on each day of the week — any name (בוקר / אמצע / ערב / לילה / other),
+//                         hours, the part of the day it counts as, and which one auto-assign uses → saveShiftTemplates
+// Uses the app's globals: apiPost, mgrAuth, state, toast, load, effectiveBranch, DAY_NAMES. SC: shift-config.js.
 (function () {
   'use strict';
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,8 +24,6 @@
       '#scOverlay .sc-type{grid-template-columns:1fr 118px 118px 38px;border-top:1px dashed var(--line,#e5e7eb);padding-top:6px}' +
       '#scOverlay .sc-cols{font-size:11px;color:var(--muted,#64748b);font-weight:700;margin-bottom:2px}' +
       '#scOverlay .sc-depts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px}' +
-      '#scOverlay .sc-dep{border:1.5px solid var(--line,#e5e7eb);background:#f8fafc;border-radius:99px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}' +
-      '#scOverlay .sc-dep.on{background:var(--brand,#2563eb);border-color:var(--brand,#2563eb);color:#fff}' +
       '@media (max-width:560px){#scOverlay .sc-part{grid-template-columns:46px 1fr 1fr 38px}#scOverlay .sc-part .sc-auto{grid-column:span 1}' +
       '#scOverlay .sc-type{grid-template-columns:1fr 1fr 1fr 38px}}' +
       '</style>');
@@ -39,7 +38,8 @@
       '<div id="scParts"></div>' +
       '<button type="button" class="btn plain" id="scAddPart">+ חלק יום</button>' +
       '<div class="sc-h" style="margin-top:16px">משמרות מוכנות</div>' +
-      '<p class="sc-note">הכפתורים בחלון המשמרת. בלי מחלקה מסומנת — לכל המחלקות; עם מחלקות — רק בהן.</p>' +
+      '<p class="sc-note">הכפתורים בחלון המשמרת, לכל המחלקות. משמרות של מחלקה מסוימת, ושעות שונות לפי יום בשבוע — ב-' +
+      '<a href="#" id="scToDept">🗂 משמרות לפי מחלקה</a>.</p>' +
       '<div id="scTypes"></div>' +
       '<button type="button" class="btn plain" id="scAddType">+ משמרת</button>' +
       '</div>' +
@@ -56,6 +56,7 @@
     document.getElementById('scAddType').addEventListener('click', () => addType({ name: '', start: '', end: '', depts: [] }));
     document.getElementById('scDefaults').addEventListener('click', () => fill(SC.DEF, false));
     document.getElementById('scSave').addEventListener('click', save);
+    document.getElementById('scToDept').addEventListener('click', (ev) => { ev.preventDefault(); ov.classList.add('hidden'); openDept(); });
   }
 
   function addPart(p, was) {
@@ -73,24 +74,17 @@
     document.getElementById('scParts').appendChild(row);
   }
 
-  function deptList(extra) {
-    const s = appState();
-    return [...new Set([...((s && s.departments) || []), ...(extra || [])])];
-  }
   function addType(t) {
     const row = document.createElement('div');
     row.className = 'sc-row sc-type';
-    const on = new Set(t.depts || []);
+    row.dataset.depts = JSON.stringify(t.depts || []);   // older settings: a shift for some departments only (kept as is)
     row.innerHTML =
       '<input class="sc-name" maxlength="20" value="' + e(t.name) + '" placeholder="שם המשמרת" aria-label="שם המשמרת" style="' + IN + '">' +
       '<input class="sc-start" type="time" step="300" value="' + e(t.start) + '" aria-label="התחלה" style="' + IN + '">' +
       '<input class="sc-end" type="time" step="300" value="' + e(t.end) + '" aria-label="סיום" style="' + IN + '">' +
       '<button type="button" class="btn plain sc-del" title="הסרה" aria-label="הסרה" style="padding:6px 0">🗑</button>' +
-      '<div class="sc-depts"><span>מחלקות:</span>' + deptList(t.depts).map((d) =>
-        '<button type="button" class="sc-dep' + (on.has(d) ? ' on' : '') + '" data-d="' + e(d) + '">' + e(d) + '</button>').join('') +
-      (deptList(t.depts).length ? '' : '<span style="color:var(--muted,#64748b)">(בחרו סניף כדי לסמן מחלקות)</span>') + '</div>';
+      ((t.depts || []).length ? '<div class="sc-depts">רק ב: ' + e(t.depts.join(', ')) + '</div>' : '');
     row.querySelector('.sc-del').addEventListener('click', () => row.remove());
-    row.querySelectorAll('.sc-dep').forEach((b) => b.addEventListener('click', () => b.classList.toggle('on')));
     document.getElementById('scTypes').appendChild(row);
   }
 
@@ -120,7 +114,7 @@
     }));
     const types = [...document.querySelectorAll('#scTypes .sc-type')].map((r) => ({
       name: r.querySelector('.sc-name').value.trim(), start: r.querySelector('.sc-start').value, end: r.querySelector('.sc-end').value,
-      depts: [...r.querySelectorAll('.sc-dep.on')].map((b) => b.dataset.d),
+      depts: JSON.parse(r.dataset.depts || '[]'),
     })).filter((t) => t.name || t.start || t.end);
     if (!parts.length) { err.textContent = 'צריך לפחות חלק יום אחד'; return; }
     if (parts.some((p) => !p.key || !p.from || !p.start || !p.end)) { err.textContent = 'בכל חלק יום: שם, מ-שעה, ושעות השיבוץ'; return; }
@@ -144,14 +138,181 @@
   }
   window.openShiftConfig = open;
 
+  /* ---------- 🗂 shifts per department and day of the week ---------- */
+  const NAMES = ['בוקר', 'אמצע', 'ערב', 'לילה', 'אחר'];
+  const dayName = (i) => (typeof DAY_NAMES !== 'undefined' ? DAY_NAMES[i] : 'אבגדהוש'[i]);
+  const branchNow = () => (typeof effectiveBranch === 'function' ? effectiveBranch() : '') || '';
+  let deptDirty = false;
+
+  function ensureDeptModal() {
+    if (document.getElementById('sdOverlay')) return;
+    document.head.insertAdjacentHTML('beforeend', '<style>' +
+      '#sdOverlay .sd-day{border:1px solid var(--line,#e5e7eb);border-radius:10px;padding:8px;margin-bottom:8px}' +
+      '#sdOverlay .sd-dh{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;margin-bottom:6px}' +
+      '#sdOverlay .sd-dh .sp{flex:1}' +
+      '#sdOverlay .sd-row{display:grid;grid-template-columns:1fr 112px 112px 104px 66px 34px;gap:5px;align-items:center;margin-bottom:5px}' +
+      '#sdOverlay .sd-row label{font-size:11.5px;display:flex;align-items:center;gap:3px;white-space:nowrap}' +
+      '#sdOverlay .sd-none{font-size:12px;color:var(--muted,#64748b);margin-bottom:4px}' +
+      '#sdOverlay .sd-tools{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}' +
+      '#sdOverlay .sd-tools .btn{font-size:12px;padding:5px 10px}' +
+      '@media (max-width:560px){#sdOverlay .sd-row{grid-template-columns:1fr 1fr 1fr;}}' +
+      '</style>');
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="overlay hidden" id="sdOverlay"><div class="modal wide" style="max-width:780px">' +
+      '<header><h3>🗂 משמרות לפי מחלקה</h3><p id="sdSub">המשמרות של כל מחלקה בכל יום בשבוע — בוקר, אמצע, ערב, לילה או כל שם אחר</p></header>' +
+      '<div class="mbody">' +
+      '<div class="mrow"><label>מחלקה</label><select id="sdDept"></select></div>' +
+      '<p class="sc-note" style="font-size:12px;color:var(--muted,#64748b);line-height:1.5;margin:4px 0">' +
+      'מגדירים רק מה שיש: מחלקה של בוקר בלבד, של לילה בלבד, או משולבת. השיבוץ האוטומטי משבץ רק בחלקי היום שיש בהם משמרת באותו יום; ' +
+      'ביום בלי משמרות — לא משבץ. <b>נחשבת כ-</b>: חלק היום שהמשמרת נספרת בו (תקן העובדים, אילוצים, אי-זמינות). ' +
+      '<b>לשיבוץ</b>: כשיש כמה משמרות באותו חלק יום — זו שהשיבוץ האוטומטי נותן (בלי סימון — הראשונה). ' +
+      'מחלקה בלי משמרות כאן — משתמשת במשמרות הכלליות ובשעות חלקי היום מ"🕒 הגדרת משמרות".</p>' +
+      '<div class="sd-tools"><button type="button" class="btn plain" id="sdCopyWeek">העתק את יום א׳ לימים ב׳–ה׳</button>' +
+      '<button type="button" class="btn plain" id="sdCopyAll">העתק את יום א׳ לכל השבוע</button>' +
+      '<button type="button" class="btn plain" id="sdClear">ניקוי כל השבוע</button></div>' +
+      '<div id="sdDays"></div>' +
+      '<datalist id="sdNames"></datalist>' +
+      '</div>' +
+      '<div class="merr" id="sdErr" style="padding:0 18px"></div>' +
+      '<div class="mfoot"><button class="btn primary" id="sdSave">שמירה</button><span class="spacer"></span>' +
+      '<button class="btn plain" id="sdClose">סגירה</button></div></div></div>');
+    const ov = document.getElementById('sdOverlay');
+    document.getElementById('sdClose').addEventListener('click', () => {
+      if (deptDirty && !confirm('יש שינויים שלא נשמרו. לסגור בלי לשמור?')) return;
+      ov.classList.add('hidden');
+    });
+    let shown = '';
+    document.getElementById('sdDept').addEventListener('focus', (ev) => { shown = ev.target.value; });
+    document.getElementById('sdDept').addEventListener('change', (ev) => {
+      if (deptDirty && !confirm('יש שינויים שלא נשמרו במחלקה הקודמת. לעבור בלי לשמור?')) { ev.target.value = shown; return; }
+      shown = ev.target.value; drawDept();
+    });
+    document.getElementById('sdDays').addEventListener('input', () => { deptDirty = true; });
+    document.getElementById('sdCopyWeek').addEventListener('click', () => copyDay0([1, 2, 3, 4]));
+    document.getElementById('sdCopyAll').addEventListener('click', () => copyDay0([1, 2, 3, 4, 5, 6]));
+    document.getElementById('sdClear').addEventListener('click', () => {
+      if (!confirm('למחוק את כל המשמרות של המחלקה מהמסך? (נשמר רק בלחיצה על "שמירה")')) return;
+      document.querySelectorAll('#sdDays .sd-list').forEach((l) => { l.innerHTML = ''; });
+      document.querySelectorAll('#sdDays .sd-day').forEach(markEmpty);
+      deptDirty = true;
+    });
+    document.getElementById('sdSave').addEventListener('click', saveDept);
+  }
+
+  function partOptions(sel) {
+    return SC.parts().map((p) => '<option value="' + e(p.key) + '"' + (p.key === sel ? ' selected' : '') + '>' + e((p.icon ? p.icon + ' ' : '') + p.key) + '</option>').join('');
+  }
+  function markEmpty(day) {
+    const none = day.querySelector('.sd-none');
+    none.style.display = day.querySelectorAll('.sd-row').length ? 'none' : '';
+  }
+  function addRow(dow, t) {
+    const day = document.querySelector('#sdDays .sd-day[data-dow="' + dow + '"]');
+    const row = document.createElement('div');
+    row.className = 'sd-row';
+    const part = t.part && SC.has(t.part) ? t.part : (t.start ? SC.partOf(t.start) : SC.keys()[0]);
+    row.innerHTML =
+      '<input class="sd-name" list="sdNames" maxlength="20" value="' + e(t.name) + '" placeholder="שם (בוקר / אמצע / ערב / אחר…)" aria-label="שם המשמרת" style="' + IN + '">' +
+      '<input class="sd-start" type="time" step="300" value="' + e(t.start) + '" aria-label="התחלה" style="' + IN + '">' +
+      '<input class="sd-end" type="time" step="300" value="' + e(t.end) + '" aria-label="סיום" style="' + IN + '">' +
+      '<select class="sd-part" aria-label="נחשבת כ" title="נחשבת כ-: חלק היום של המשמרת" style="' + IN + '">' + partOptions(part) + '</select>' +
+      '<label title="כשיש כמה משמרות באותו חלק יום — זו שהשיבוץ האוטומטי נותן"><input type="checkbox" class="sd-auto"' + (t.auto ? ' checked' : '') + '>לשיבוץ</label>' +
+      '<button type="button" class="btn plain" title="הסרה" aria-label="הסרה" style="padding:5px 0">🗑</button>';
+    // the part follows the start hour until it is picked by hand
+    let partByHand = !!t.part;
+    row.querySelector('.sd-part').addEventListener('change', () => { partByHand = true; });
+    row.querySelector('.sd-start').addEventListener('change', (ev) => { if (!partByHand && ev.target.value) row.querySelector('.sd-part').value = SC.partOf(ev.target.value); });
+    // one "for auto-assign" per day and part
+    row.querySelector('.sd-auto').addEventListener('change', (ev) => {
+      if (!ev.target.checked) return;
+      const p = row.querySelector('.sd-part').value;
+      day.querySelectorAll('.sd-row').forEach((r) => { if (r !== row && r.querySelector('.sd-part').value === p) r.querySelector('.sd-auto').checked = false; });
+    });
+    row.querySelector('button').addEventListener('click', () => { row.remove(); markEmpty(day); deptDirty = true; });
+    day.querySelector('.sd-list').appendChild(row);
+    markEmpty(day);
+    return row;
+  }
+  function rowsOf(dow) {
+    return [...document.querySelectorAll('#sdDays .sd-day[data-dow="' + dow + '"] .sd-row')].map((r) => ({
+      dow, name: r.querySelector('.sd-name').value.trim(), start: r.querySelector('.sd-start').value, end: r.querySelector('.sd-end').value,
+      part: r.querySelector('.sd-part').value, auto: r.querySelector('.sd-auto').checked,
+    }));
+  }
+  function copyDay0(days) {
+    const src = rowsOf(0);
+    if (!src.length) { say('אין משמרות ביום א׳ להעתקה', 'err'); return; }
+    days.forEach((d) => {
+      const day = document.querySelector('#sdDays .sd-day[data-dow="' + d + '"]');
+      day.querySelector('.sd-list').innerHTML = '';
+      src.forEach((t) => addRow(d, { ...t, dow: d }));
+      markEmpty(day);
+    });
+    deptDirty = true;
+  }
+  function drawDept() {
+    const dept = document.getElementById('sdDept').value, branch = branchNow();
+    document.getElementById('sdNames').innerHTML = [...new Set([...SC.keys(), ...NAMES])].map((n) => '<option value="' + e(n) + '">').join('');
+    const mine = ((appState() && appState().shiftTemplates) || []).filter((t) => t.dept === dept && (!t.branch || t.branch === branch));
+    document.getElementById('sdDays').innerHTML = [0, 1, 2, 3, 4, 5, 6].map((d) =>
+      '<div class="sd-day" data-dow="' + d + '"><div class="sd-dh">יום ' + e(dayName(d)) + '<span class="sp"></span>' +
+      '<button type="button" class="btn plain sd-add" style="font-size:12px;padding:4px 10px">+ משמרת</button></div>' +
+      '<div class="sd-none">אין משמרות ביום הזה</div><div class="sd-list"></div></div>').join('');
+    document.querySelectorAll('#sdDays .sd-day').forEach((day) => {
+      const d = Number(day.dataset.dow);
+      day.querySelector('.sd-add').addEventListener('click', () => { addRow(d, { name: '', start: '', end: '', part: '', auto: false }).querySelector('.sd-name').focus(); deptDirty = true; });
+    });
+    mine.forEach((t) => addRow(t.dow, t));
+    document.querySelectorAll('#sdDays .sd-day').forEach(markEmpty);
+    document.getElementById('sdErr').textContent = '';
+    deptDirty = false;
+  }
+
+  function openDept() {
+    if (!isAdmin()) { say('משמרות לפי מחלקה — אדמין בלבד', 'err'); return; }
+    const branch = branchNow(), deps = (appState() && appState().departments) || [];
+    if (!branch || !deps.length) { say('בחרו סניף בראש המסך — המשמרות מוגדרות לכל מחלקה בסניף', 'err'); return; }
+    ensureDeptModal();
+    const sel = document.getElementById('sdDept'), keep = sel.value;
+    sel.innerHTML = deps.map((d) => '<option value="' + e(d) + '">' + e(d) + (SC.hasTpl(d) ? ' ✓' : '') + '</option>').join('');
+    if (deps.includes(keep)) sel.value = keep;
+    document.getElementById('sdSub').textContent = 'סניף ' + branch + ' · המשמרות של כל מחלקה בכל יום בשבוע — בוקר, אמצע, ערב, לילה או כל שם אחר';
+    drawDept();
+    document.getElementById('sdOverlay').classList.remove('hidden');
+  }
+
+  async function saveDept() {
+    const err = document.getElementById('sdErr');
+    const rows = [0, 1, 2, 3, 4, 5, 6].flatMap(rowsOf).filter((r) => r.name || r.start || r.end);
+    const bad = rows.find((r) => !r.name || !r.start || !r.end);
+    if (bad) { err.textContent = 'ביום ' + dayName(bad.dow) + ': לכל משמרת צריך שם, התחלה וסיום'; return; }
+    const dept = document.getElementById('sdDept').value;
+    const btn = document.getElementById('sdSave');
+    btn.disabled = true; err.textContent = 'שומר…';
+    try {
+      const r = await apiPost({ action: 'saveShiftTemplates', ...mgrAuth(), branch: branchNow(), department: dept, rows });
+      if (!r.ok) { err.textContent = r.error || 'שגיאה'; return; }
+      appState().shiftTemplates = r.shiftTemplates || [];
+      err.textContent = '';
+      deptDirty = false;
+      const opt = [...document.getElementById('sdDept').options].find((o) => o.value === dept);
+      if (opt) opt.textContent = dept + (rows.length ? ' ✓' : '');
+      say('המשמרות של ' + dept + ' נשמרו', 'ok');
+      if (typeof render === 'function') render();
+    } catch (ex) { err.textContent = 'שגיאה: ' + ex.message; }
+    finally { btn.disabled = false; }
+  }
+  window.openDeptShifts = openDept;
+
   function start() {
     const drop = document.getElementById('menuSchedDrop');
     if (drop && !document.getElementById('scMenuBtn')) {
-      drop.insertAdjacentHTML('beforeend', '<button id="scMenuBtn">🕒 הגדרת משמרות</button>');
+      drop.insertAdjacentHTML('beforeend', '<button id="scMenuBtn">🕒 הגדרת משמרות</button><button id="sdMenuBtn">🗂 משמרות לפי מחלקה</button>');
       document.getElementById('scMenuBtn').addEventListener('click', open);
+      document.getElementById('sdMenuBtn').addEventListener('click', openDept);
       // admins only: the menu is shown to every manager
       document.getElementById('menuSchedBtn')?.addEventListener('click', () => {
-        document.getElementById('scMenuBtn').style.display = isAdmin() ? '' : 'none';
+        ['scMenuBtn', 'sdMenuBtn'].forEach((id) => { document.getElementById(id).style.display = isAdmin() ? '' : 'none'; });
       }, true);
     }
     const legend = document.getElementById('aaLegend');
