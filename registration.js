@@ -82,6 +82,8 @@
     if (!r.enabled) { body.innerHTML = '<p>ההרשמה העצמית ב<b>' + e(r.company) + '</b> כבויה — המנהל/ת יוסיף/תוסיף אותך למערכת.</p>'; return; }
     stepForm();
   }
+  // Sidurit signs in with the e-mail (window.LOGIN_BY_EMAIL, set by the app): no username to pick; Superstar keeps it
+  const byEmail = () => window.LOGIN_BY_EMAIL === true;
   function stepForm() {
     const r = reg.info;
     const body = overlay('rgOverlay', '✍ הרשמה ל' + r.company, 'אחרי אימות המייל הבקשה עוברת לאישור המנהל/ת. עד האישור אין גישה למערכת.');
@@ -89,10 +91,10 @@
     body.innerHTML = '<div class="rg-f">' +
       '<label>שם מלא<input id="rgName" autocomplete="name" maxlength="60" placeholder="שם פרטי ושם משפחה"></label>' +
       '<div class="rg-2"><label>טלפון נייד<input id="rgPhone" type="tel" dir="ltr" autocomplete="tel" maxlength="20"></label>' +
-      '<label>מייל<input id="rgEmail" type="email" dir="ltr" autocomplete="email" maxlength="120"></label></div>' +
+      '<label>' + (byEmail() ? 'מייל (לכניסה למערכת)' : 'מייל') + '<input id="rgEmail" type="email" dir="ltr" autocomplete="email" maxlength="120"></label></div>' +
       '<div class="rg-2"><label>סניף<select id="rgBranch">' + (r.branches.length > 1 ? '<option value="">— בחירה —</option>' : '') + brOpts + '</select></label>' +
       '<label>מחלקה (לא חובה)<select id="rgDept"></select></label></div>' +
-      '<label>שם משתמש לכניסה<input id="rgUser" dir="ltr" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="באנגלית, למשל noa.levi"></label>' +
+      (byEmail() ? '' : '<label>שם משתמש לכניסה<input id="rgUser" dir="ltr" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="באנגלית, למשל noa.levi"></label>') +
       '<div class="rg-2"><label>סיסמה (לפחות 4 תווים)<input id="rgPw" type="password" autocomplete="new-password"></label>' +
       '<label>אימות סיסמה<input id="rgPw2" type="password" autocomplete="new-password"></label></div>' +
       '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" id="rgConsent" style="width:auto;margin-top:3px">' +
@@ -106,7 +108,7 @@
     $('rgBranch').addEventListener('change', fillDepts);
     fillDepts();
     $('rgSend').addEventListener('click', async () => {
-      const v = (id) => $(id).value.trim();
+      const v = (id) => ($(id) ? $(id).value.trim() : '');
       const err = (m) => { $('rgErr').textContent = m; };
       if (v('rgName').split(' ').filter(Boolean).length < 2) return err('יש להזין שם פרטי ושם משפחה');
       if (!v('rgBranch')) return err('יש לבחור סניף');
@@ -117,7 +119,7 @@
         department: v('rgDept'), username: v('rgUser'), password: $('rgPw').value, consent: true });
       $('rgSend').disabled = false;
       if (!x.ok) return err(x.error || 'שגיאה');
-      reg.token = x.token; reg.hint = x.hint; reg.username = v('rgUser');
+      reg.token = x.token; reg.hint = x.hint; reg.username = byEmail() ? v('rgEmail') : v('rgUser');
       stepCode();
     });
     setTimeout(() => $('rgName').focus(), 100);
@@ -147,7 +149,7 @@
   function stepDone() {
     const body = overlay('rgOverlay', '✅ הבקשה נשלחה', '');
     body.innerHTML = '<div class="rg-ok"><div style="font-size:34px">⏳</div><b>הבקשה ממתינה לאישור המנהל/ת</b>' +
-      '<p class="rg-note">כשהחשבון יאושר נשלח לך מייל, ואז אפשר להיכנס עם שם המשתמש <b dir="ltr">' + e(reg.username) + '</b> והסיסמה שבחרת' +
+      '<p class="rg-note">כשהחשבון יאושר נשלח לך מייל, ואז אפשר להיכנס עם ' + (byEmail() ? 'המייל' : 'שם המשתמש') + ' <b dir="ltr">' + e(reg.username) + '</b> והסיסמה שבחרת' +
       (MULTI ? ' (חברה: ' + e(reg.companyName) + ')' : '') + '.</p></div>';
   }
 
@@ -185,7 +187,7 @@
     const brs = data.branches.map((b) => '<option' + (b === x.branch ? ' selected' : '') + '>' + e(b) + '</option>').join('');
     return '<div class="rg-card" data-id="' + x.id + '"><div class="hd"><span><b>' + e(x.fullName) + '</b> <span class="rg-chip">ממתין לאישור</span></span>' +
       '<span class="rg-note">נרשם/ה ' + e(new Date(x.verifiedAt || x.createdAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + '</span></div>' +
-      '<div class="rg-note">📧 <span dir="ltr">' + e(x.email) + '</span>' + (x.phone ? ' · 📱 <span dir="ltr">' + e(x.phone) + '</span>' : '') + ' · 👤 <span dir="ltr">' + e(x.username) + '</span></div>' +
+      '<div class="rg-note">📧 <span dir="ltr">' + e(x.email) + '</span>' + (x.phone ? ' · 📱 <span dir="ltr">' + e(x.phone) + '</span>' : '') + (x.username && x.username !== x.email ? ' · 👤 <span dir="ltr">' + e(x.username) + '</span>' : '') + '</div>' +
       '<div class="rg-grid">' +
       '<label>שם במערכת<input data-f="name" value="' + e(x.fullName) + '"></label>' +
       '<label>סניף<select data-f="branch"' + (data.isAdmin ? '' : ' disabled') + '>' + brs + '</select></label>' +
