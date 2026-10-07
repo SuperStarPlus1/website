@@ -51,8 +51,10 @@
     '.sx-foot button{border:0;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}' +
     '.sx-foot .sx-done{background:#1b2a4a;color:#fff}' +
     '.sx-foot .sx-edit{background:#f1f5f9;color:#1f2937}' +
-    '@media (max-width:560px){.sx-pop.sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;' +
-      'border-radius:16px 16px 0 0;max-height:72vh!important}}' +
+    // phones: a sheet at the top of the part of the screen the keyboard leaves (placed by placeSheet), its height fixed — at
+    // the bottom with the height of its results, a short list slid under the iPhone keyboard (it "closed" after 2 letters)
+    '@media (max-width:560px){.sx-pop.sheet{left:8px!important;right:8px!important;bottom:auto!important;width:auto!important;' +
+      'border-radius:14px;max-height:none!important}}' +
     '</style>');
 
   /* ---------- the search popup (one at a time) ---------- */
@@ -65,6 +67,7 @@
     document.removeEventListener('touchstart', p.outside, true);
     window.removeEventListener('resize', p.place);
     document.removeEventListener('scroll', p.scroll, true);
+    if (window.visualViewport) { window.visualViewport.removeEventListener('resize', p.place); window.visualViewport.removeEventListener('scroll', p.place); }
     if (p.onClose) p.onClose();
   }
   /**
@@ -125,8 +128,15 @@
       else if (ev.key === 'Tab') closePop();
     });
     const sheet = window.innerWidth <= 560;
+    /** phones: the top of the visible area (above the keyboard), the whole height it leaves (at most 80% of the screen) */
+    function placeSheet() {
+      const vv = window.visualViewport;
+      const top = vv ? vv.offsetTop : 0, h = vv ? vv.height : window.innerHeight;
+      el.style.setProperty('top', Math.round(top + 8) + 'px', 'important');
+      el.style.setProperty('height', Math.round(Math.max(180, Math.min(h - 16, window.innerHeight * 0.8))) + 'px', 'important');
+    }
     function place() {
-      if (sheet) return;
+      if (sheet) { placeSheet(); return; }
       const r = anchor.getBoundingClientRect();
       const w = Math.min(Math.max(r.width, 250), window.innerWidth - 16);
       let right = window.innerWidth - r.right;                       // RTL: the popup lines up with the field's right edge
@@ -150,6 +160,7 @@
     document.addEventListener('touchstart', outside, true);
     window.addEventListener('resize', place);
     document.addEventListener('scroll', scroll, true);
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', place); window.visualViewport.addEventListener('scroll', place); }   // the keyboard
     if (o.bindFoot) o.bindFoot(el);
     const cur = o.items.findIndex((it) => !o.multi && selected.has(it.value));
     act = cur; draw();
