@@ -3069,15 +3069,16 @@ function showEmpHome(){
   refreshAttToday().then(()=>{ renderHomePunch(); loadNextShift(); });
   /* sites removed */
   initPushButton();
-  attGetPos().then(p=>{
-    attState.pos = p;
+  attGetPosQuiet().then(p=>{   // בפתיחת האפליקציה — בלי בקשת הרשאה (באייפון היא חזרה בכל כניסה)
+    attState.pos = p || null;
     // טען מיקום חנות מה-GAS settings
     if(!attState.storePos){
       apiPost({action:'getSettings',...(state.emp?{username:state.emp.username,password:state.emp.pw}:{})}).then(r=>{
         if(r && r.storeLocation){ const loc=r.storeLocation.split(','); if(loc.length>=2&&Number(loc[0])) attState.storePos={lat:Number(loc[0]),lng:Number(loc[1])}; }
       }).catch(()=>{});
     }
-    document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
+    document.getElementById('ehGps').textContent = p ? '📍 מיקום פעיל (דיוק ~'+p.acc+' מ׳)'
+      : p === undefined ? '📍 המיקום ייבדק בעת ההחתמה' : '⚠ שירותי מיקום כבויים — מומלץ להפעיל';
   });
 }
 async function initPushButton(){
@@ -3361,6 +3362,15 @@ function renderAttButtons(){
     st==='out' ? (last&&last.type==='יציאה' ? '✔ המשמרת הסתיימה ('+last.time+')' : 'מחוץ למשמרת — טרם דווחה כניסה היום')
     : st==='break' ? '⏸ בהפסקה מ-'+(last?last.time:'')
     : '🟢 במשמרת מ-'+((attState.todayEvents.find(e=>e.type==='כניסה')||{}).time||'');
+}
+/** המיקום בלי לבקש הרשאה: רק אם כבר ניתנה (undefined = לא ניתנה עדיין — המיקום יתבקש בעת ההחתמה) */
+async function attGetPosQuiet(){
+  try{
+    if(!navigator.permissions || !navigator.permissions.query) return undefined;
+    const st = await navigator.permissions.query({ name:'geolocation' });
+    if(st.state !== 'granted') return undefined;
+  }catch(e){ return undefined; }
+  return attGetPos();
 }
 function attGetPos(){
   return new Promise(res=>{
