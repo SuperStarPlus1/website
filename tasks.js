@@ -2,10 +2,11 @@
 // rules: _shared/tasks-core.ts):
 //   employee  "📋 המשימות שלי" on the home screen (with a count): today's tasks; a task opens its form — checks, yes / no,
 //             readings (temperatures…), text, a list, photos (taken with the camera, made smaller, uploaded one by one)
-//   manager   "📋 משימות" (menu): ✔ ביצוע — what came, what was done / missed, day by day, and each report with photos;
+//   manager   "📋 משימות" (menu): ✔ ביצוע — what came, what was done / missed, day by day, and each report with photos
+//             (📄 PDF — the report with all its photos, as the managers got it by mail);
 //             📋 משימות — who, when (once / daily / days of the week / day of the month, until an hour), which form;
 //             🧾 טפסים — the form builder
-// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch.
+// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -296,7 +297,8 @@
       if (f.type === 'photo') return '';
       return a.value || '—';
     };
-    body.innerHTML = ((run.flags || []).length ? '<div class="tk-flags"><b>⚠ דורש תשומת לב:</b> ' + run.flags.map((f) => e(f.label) + ': ' + e(f.value)).join(' · ') + '</div>' : '') +
+    body.innerHTML = '<div class="tk-tools"><button class="tk-btn light" id="tkRunPdf">📄 PDF עם כל התמונות</button></div>' +
+      ((run.flags || []).length ? '<div class="tk-flags"><b>⚠ דורש תשומת לב:</b> ' + run.flags.map((f) => e(f.label) + ': ' + e(f.value)).join(' · ') + '</div>' : '') +
       (run.note ? '<p><b>הערה:</b> ' + e(run.note) + '</p>' : '') +
       fields.map((f) => {
         const a = run.answers[f.id] || {};
@@ -304,6 +306,15 @@
         return '<div class="tk-f' + (flagged.has(f.id) ? ' bad' : '') + '"><div class="lbl">' + e(f.label) + '</div><div style="font-weight:700;color:' + (flagged.has(f.id) ? '#b91c1c' : '#166534') + '">' + e(txt(f, a)) + '</div>' +
           (pics ? '<div class="tk-pics">' + pics + '</div>' : '') + '</div>';
       }).join('');
+    $('tkRunPdf').addEventListener('click', async () => {
+      const b = $('tkRunPdf'); b.disabled = true; b.textContent = 'מכין PDF…';
+      try {
+        const x = await apiPost({ action: 'taskRunPdf', ...mAuth(), id });
+        if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+        if (typeof openBlobPdf === 'function') openBlobPdf(x.pdf, x.filename, 'application/pdf');
+      } catch (err) { say('שגיאה: ' + err.message, 'err'); }
+      finally { b.disabled = false; b.textContent = '📄 PDF עם כל התמונות'; }
+    });
   }
 
   /* ---------- 📋 tasks ---------- */
