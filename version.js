@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.6.3',
-  date: '07/10/2026',
+  version: '2.7',
+  date: '08/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'משימות וטפסים: משימות חוזרות ומזדמנות, צ׳קליסטים עם צילומים וטמפרטורות, דוח למנהל והתראה על משימה שלא בוצעה',
     'האפליקציה לא מבקשת הרשאת מיקום בכל כניסה — רק בעת ההחתמה',
     'תיקון: חיפוש עובדים ומחלקות בטלפון — הרשימה לא נעלמת יותר מאחורי המקלדת אחרי האות השנייה',
     'כפתור 💾 שמור פעיל רק כשיש שינויים שלא נשמרו; אחרי שמירה — הודעת "נשמר בהצלחה" עם כפתור אישור',
