@@ -449,7 +449,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
         <button id="attBtn">⏱ דוח חודשי</button>
         <button id="sickMgrBtn">🤒 אישורי מחלה</button>
         <hr>
-        <button id="consBtn">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
+        <button id="consBtn" style="display:none">🖐 בקשות <span id="consBadge" class="badge-dirty hidden"></span></button>
+        <button id="reqVacBtn">🏖 בקשות חופשה <span id="reqVacBadge" class="badge-dirty hidden"></span></button>
+        <button id="reqConsBtn">🖐 אילוצים <span id="reqConsBadge" class="badge-dirty hidden"></span></button>
+        <button id="reqSwapBtn">🔁 בקשות החלפה <span id="reqSwapBadge" class="badge-dirty hidden"></span></button>
       </div>
     </div>
     <!-- תפריט 2: סידור -->
@@ -5606,6 +5609,11 @@ function updateConsBadge(){
           + state.vacations.filter(v=>v.status==='ממתין').length;
   const b = document.getElementById('consBadge');
   b.textContent = n; b.classList.toggle('hidden', !n);
+  // לכל סוג בקשה — כמה ממתינות (מכל השבועות)
+  [['reqVacBadge', (state.vacationsPending||[]).filter(v=>v.status==='ממתין').length],
+   ['reqConsBadge', (state.constraintsPending||[]).filter(c=>c.status==='ממתין').length],
+   ['reqSwapBadge', (state.swapsPending||[]).filter(s=>s.status==='ממתין').length]].forEach(([id,k])=>{
+    const x = document.getElementById(id); if(x){ x.textContent = k; x.classList.toggle('hidden', !k); } });
 }
 
 // --- עובד ---
@@ -5817,8 +5825,12 @@ function openConsReview(){
   const sickHtml = '<div style="font-weight:700;font-size:13px;margin:14px 0 6px">🤒 בקשות מחלה</div>' +
     '<div id="sickReviewList"><div style="color:var(--muted);font-size:12.5px">טוען…</div></div>';
 
-  document.getElementById('consList').innerHTML = vacsHtml + '<div style="margin-top:14px"></div>' + swapsHtml + consHtml + sickHtml;
-  loadSickReview();
+  // סוג אחד (מהתפריט: חופשה / אילוצים / החלפות), או הכל יחד כמו קודם
+  const K = state._reqKind || '';
+  const ONE = { vac: vacsHtml, swap: swapsHtml, cons: consHtml }, TITLE = { vac:'🏖 בקשות חופשה', swap:'🔁 בקשות החלפה', cons:'🖐 אילוצים' };
+  document.getElementById('consList').innerHTML = K ? ONE[K] : vacsHtml + '<div style="margin-top:14px"></div>' + swapsHtml + consHtml + sickHtml;
+  const h3 = document.querySelector('#consOverlay h3'); if(h3) h3.textContent = K ? TITLE[K] : '🖐 בקשות ממתינות לאישור';
+  if(!K) loadSickReview();
 
   document.querySelectorAll('#consList .cons-item.vac .acts button').forEach(b=>b.addEventListener('click', async ()=>{
     const it = b.closest('.cons-item');
@@ -5886,7 +5898,9 @@ async function loadSickReview(){
     if(r2.ok) openBlobPdf(r2.data, r2.filename); else toast(r2.error||'שגיאה','err');
   }));
 }
-document.getElementById('consBtn').addEventListener('click', openConsReview);
+document.getElementById('consBtn').addEventListener('click', ()=>{ state._reqKind=''; openConsReview(); });
+[['reqVacBtn','vac'],['reqConsBtn','cons'],['reqSwapBtn','swap']].forEach(([id,k])=>
+  document.getElementById(id).addEventListener('click', ()=>{ state._reqKind=k; openConsReview(); }));
 document.getElementById('consToggleHistory').addEventListener('click', ()=>{
   state._showAllRequests = !state._showAllRequests;
   const btn = document.getElementById('consToggleHistory');

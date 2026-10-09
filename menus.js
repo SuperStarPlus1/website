@@ -1,7 +1,7 @@
 // The managers' menus, arranged (same file in the Sidurit template web/app/ and on the Superstar site; loaded LAST — the
 // other modules add their buttons first, and this file moves them; a moved button keeps its own behaviour):
 //   📍 נוכחות            real time and reports: בזמן אמת · דוח חודשי · אישורי שעות · לא התייצבו
-//   ✅ בקשות ואישורים    every request waiting for someone: בקשות (אילוצים / החלפות / חופשות) · אישורי מחלה · בקשות הצטרפות ·
+//   ✅ בקשות ואישורים    every request waiting for someone: בקשות חופשה · אילוצים · בקשות החלפה · אישורי מחלה · בקשות הצטרפות ·
 //                        שרשרת אישורים
 //   📅 סידור             as it was
 //   ⚙ ניהול              (was "אדמין"): עובדים · הודעה · לוח הודעות · מחלה / חופשה לעובד · לוח חגים · תמרוץ · הגדרות חברה · חיוב
@@ -19,7 +19,7 @@
   ];
   const PLAN = {
     menuAttDrop: ['liveBtn', 'attBtn', 'haMgrBtn', 'nsMenuBtn'],
-    menuReqDrop: ['consBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn'],
+    menuReqDrop: ['reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
     menuAdminDrop: ['empMgr', 'msgBtn', 'annBtn', 'meSickBtn', 'meVacBtn', 'holBtn', 'incMgrBtn', 'coSetBtn', 'coBillBtn'],
     menuDocsDrop: ['payBtn', 'f101AdminBtn', 'f106AllBtn'],
     menuMeDrop: ['mpwBtn', 'myAlertsBtn', 'mgrPushBtn2'],
