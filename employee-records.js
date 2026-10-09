@@ -136,12 +136,13 @@
   const h4 = (t) => '<h4 style="margin:16px 0 6px;color:var(--navy)">' + t + '</h4>';
   const BANK_CHECK = { match: '✅ תואם לאישור שהועלה', mismatch: '⚠ לא נמצא באישור שהועלה — לבדוק מול הקובץ', unreadable: 'ℹ האישור הוא תמונה / סריקה — לבדוק מול הקובץ' };
 
-  async function openDetails(emp) {
+  async function openDetails(emp, into) {
     if (!emp) return;
-    $('empDetBody').innerHTML = 'טוען…'; $('empDetOverlayErr').textContent = '';
-    show('empDetOverlay');
+    const B = into || $('empDetBody');
+    B.innerHTML = 'טוען…';
+    if (!into) { $('empDetOverlayErr').textContent = ''; show('empDetOverlay'); }
     const r = await apiPost({ action: 'employeeDetails', ...mgrAuth(), employee: emp });
-    if (!r.ok) { $('empDetBody').innerHTML = ''; $('empDetOverlayErr').textContent = r.error || 'שגיאה'; return; }
+    if (!r.ok) { B.innerHTML = into ? '<p class="merr">' + e(r.error || 'שגיאה') + '</p>' : ''; if (!into) $('empDetOverlayErr').textContent = r.error || 'שגיאה'; return; }
     const p = r.profile;
     let html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">' +
       (r.avatarUrl ? '<img src="' + e(r.avatarUrl) + '" alt="" id="empDetPhoto" style="width:64px;height:64px;border-radius:50%;object-fit:cover;cursor:zoom-in" title="הגדלה">' : '') +
@@ -181,21 +182,21 @@
       '<input type="file" id="f106File" accept="application/pdf" aria-label="קובץ טופס 106 (PDF)">' +
       '<label style="font-size:13px"><input type="checkbox" id="f106Notify" checked> לשלוח לעובד במייל</label>' +
       '<button class="btn primary" id="f106Upload">⬆ העלאה</button></div>';
-    $('empDetBody').innerHTML = html;
+    B.innerHTML = html;
     const photo = $('empDetPhoto');
     if (photo) photo.addEventListener('click', () => window.showPhoto(r.avatarUrl, r.employee));
-    $('empDetBody').querySelectorAll('[data-f101]').forEach((b) => b.addEventListener('click', async () => {
+    B.querySelectorAll('[data-f101]').forEach((b) => b.addEventListener('click', async () => {
       const x = await apiPost({ action: 'getF101File', ...mgrAuth(), fileId: r.f101.fileId, kind: b.dataset.f101 || undefined });
       if (x.ok) openBlobPdf(x.data, x.filename, x.mimeType); else toast(x.error || 'שגיאה', 'err');
     }));
-    $('empDetBody').querySelectorAll('[data-f106]').forEach((b) => b.addEventListener('click', async () => {
+    B.querySelectorAll('[data-f106]').forEach((b) => b.addEventListener('click', async () => {
       const x = await apiPost({ action: 'getForm106', ...mgrAuth(), employee: emp, id: b.dataset.f106 });
       if (x.ok) openBlobPdf(x.data, x.filename, x.mimeType); else toast(x.error || 'שגיאה', 'err');
     }));
-    $('empDetBody').querySelectorAll('[data-f106del]').forEach((b) => b.addEventListener('click', async () => {
+    B.querySelectorAll('[data-f106del]').forEach((b) => b.addEventListener('click', async () => {
       if (!confirm('למחוק את טופס 106?')) return;
       const x = await apiPost({ action: 'deleteForm106', ...mgrAuth(), employee: emp, id: b.dataset.f106del });
-      if (x.ok) openDetails(emp); else toast(x.error || 'שגיאה', 'err');
+      if (x.ok) openDetails(emp, into); else toast(x.error || 'שגיאה', 'err');
     }));
     $('f106Upload').addEventListener('click', async () => {
       const f = $('f106File').files[0];
@@ -207,21 +208,23 @@
       $('f106Upload').disabled = false;
       if (!x.ok) { toast(x.error || 'שגיאה', 'err'); return; }
       toast('טופס 106 לשנת ' + x.year + ' הועלה' + (x.notified ? ' ונשלח לעובד' : '') + ' ✓', 'ok');
-      openDetails(emp);
+      openDetails(emp, into);
     });
   }
 
   let conEmp = '';
-  async function openContract(emp) {
+  async function openContract(emp, into) {
     if (!emp) return;
     conEmp = emp;
-    $('empConBody').innerHTML = 'טוען…'; $('empConOverlayErr').textContent = '';
-    show('empConOverlay');
+    const B = into || $('empConBody');
+    if (!into) $('empConBody').innerHTML = '';   // one contract form on the page at a time (the same ids)
+    B.innerHTML = 'טוען…';
+    if (!into) { $('empConOverlayErr').textContent = ''; show('empConOverlay'); }
     const r = await apiPost({ action: 'employeeDetails', ...mgrAuth(), employee: emp });
-    if (!r.ok) { $('empConBody').innerHTML = ''; $('empConOverlayErr').textContent = r.error || 'שגיאה'; return; }
+    if (!r.ok) { B.innerHTML = into ? '<p class="merr">' + e(r.error || 'שגיאה') + '</p>' : ''; if (!into) $('empConOverlayErr').textContent = r.error || 'שגיאה'; return; }
     const c = r.contract, L = r.rules;
     const opt = (v, cur, label) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + label + '</option>';
-    $('empConBody').innerHTML =
+    B.innerHTML =
       '<div style="font-weight:800;margin-bottom:8px">' + e(emp) + (r.contractSaved ? '' : ' <small style="color:var(--muted);font-weight:400">— לא הוגדר חוזה, מוצגות ברירות המחדל</small>') + '</div>' +
       '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
       '<label class="mrow">סוג העסקה<select id="conType">' + opt('hourly', c.type, 'שעתי') + opt('monthly', c.type, 'חודשי') + opt('global', c.type, 'גלובלי (כולל שעות נוספות)') + '</select></label>' +
@@ -241,17 +244,25 @@
       if ($('conType').value === 'global') $('conOt').checked = false;
       $('conOt').disabled = $('conType').value === 'global';
     };
+    if (into) {
+      B.insertAdjacentHTML('beforeend', '<div class="merr" id="conErrIn"></div><button class="btn primary" id="conSaveIn">💾 שמירת החוזה</button>');
+      $('conSaveIn').addEventListener('click', () => saveContract($('conErrIn'), () => toast('החוזה נשמר ✓', 'ok')));
+    }
     ['conWeekly', 'conType'].forEach((id) => $(id).addEventListener('input', scope));
     $('conDays').addEventListener('change', () => { $('conDaily').value = $('conDays').value === '6' ? L.dailyRegular6 : L.dailyRegular5; });
     scope();
   }
-  $('empConSave').addEventListener('click', async () => {
+  async function saveContract(errEl, done) {
     const contract = { type: $('conType').value, daysPerWeek: Number($('conDays').value), weeklyHours: Number($('conWeekly').value),
       dailyHours: Number($('conDaily').value), restDay: Number($('conRest').value), overtime: $('conOt').checked };
     const r = await apiPost({ action: 'saveEmployeeContract', ...mgrAuth(), employee: conEmp, contract });
-    if (!r.ok) { $('empConOverlayErr').textContent = r.error || 'שגיאה'; return; }
-    $('empConOverlay').classList.add('hidden'); toast('החוזה נשמר ✓', 'ok');
-  });
+    if (!r.ok) { errEl.textContent = r.error || 'שגיאה'; return; }
+    errEl.textContent = ''; done();
+  }
+  $('empConSave').addEventListener('click', () => saveContract($('empConOverlayErr'), () => { $('empConOverlay').classList.add('hidden'); toast('החוזה נשמר ✓', 'ok'); }));
+  // the full employee card (hr.js) shows these inside its tabs
+  window.renderEmpDetails = openDetails;
+  window.renderEmpContract = openContract;
 
   /* ---------- 3b. admin menu: Form 106 of all employees (by tax year) ---------- */
   addOverlay('f106AllOverlay', '📄 טפסי 106', 'טופס 106 לכל עובד פעיל, לפי שנת מס · אדמין בלבד', 'f106AllBody');

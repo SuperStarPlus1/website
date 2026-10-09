@@ -5,7 +5,8 @@
 //                              a reason, history, "התקבל/ה" → terms + the employer's signature → the employee's account
 //                              and the contract) · הסכמי העסקה
 //   the employee:  a pending contract → a banner on the home screen and "📝 הסכם העסקה" — read, agree, sign on screen
-//   the employee card (admin): "📂 מסמכים" — contract, CV, payslips, 101, 106 in one list
+//   the documents list (renderEmployeeDocs) — contract, CV, payslips, 101, 106, HR letters: a tab of the full employee
+//   card (hr.js)
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, openBlobFile.
 (function () {
   'use strict';
@@ -184,7 +185,9 @@
       if (!$('rcList')) return;
       if (!r.ok) { $('rcList').innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
       $('rcList').innerHTML = r.items.length ? r.items.map((x) => '<div class="rc-card" data-c="' + x.candidateId + '"><div class="t">' + e(x.name) + ' ' + chip(x.status, x.statusHe) +
-        (x.source === 'link' ? ' <span class="rc-meta">🔗 מהקישור</span>' : '') + (x.hasCv ? ' <span class="rc-meta">📎 קו"ח</span>' : '') + '</div>' +
+        (x.source === 'link' ? ' <span class="rc-meta">🔗 מהקישור</span>' : '') + (x.hasCv ? ' <span class="rc-meta">📎 קו"ח</span>' : '') +
+        (x.rejectedBefore ? ' <span class="rc-st" style="background:#fee2e2;color:#991b1b">❌ נפסל/ה בעבר</span>' : '') +
+        (x.former && x.status !== 'hired' ? ' <span class="rc-st" style="background:#fef3c7;color:#92400e">👷 ' + (x.former.active ? 'עובד/ת בחברה' : 'עובד/ת לשעבר') + '</span>' : '') + '</div>' +
         '<div class="rc-meta">' + e(x.job) + ' · ' + e(x.phone || x.email) + (x.city ? ' · ' + e(x.city) : '') + ' · ' + scoreBar(x.score) +
         (x.missingRequired.length ? ' <span class="rc-req">חסר חובה: ' + e(x.missingRequired.join(', ')) + '</span>' : '') +
         (x.reason ? '<br>סיבה: ' + e(x.reason) : '') + '</div></div>').join('')
@@ -223,15 +226,26 @@
     };
     $('ncSave').addEventListener('click', () => send({}));
   }
+  function historyHtml(former, rejections) {
+    return (former ? '<div class="rc-warn">👷 <b>' + (former.active ? 'עובד/ת בחברה כיום' : 'עבד/ה בחברה בעבר') + ': ' + e(former.name) + '</b> · ' + e(former.department) +
+        (former.branch ? ' · ' + e(former.branch) : '') + (former.start ? ' · מ-' + e(dmy(former.start)) : '') + (former.end ? ' עד ' + e(dmy(former.end)) : '') +
+        ' <span class="rc-meta">(זוהה לפי ' + e(former.by.join(', ')) + ')</span></div>' : '') +
+      (rejections && rejections.length ? '<div class="rc-warn" style="background:#fee2e2;color:#991b1b"><b>❌ נפסל/ה בעבר' + (rejections.length > 1 ? ' (' + rejections.length + ' פעמים)' : '') + ':</b>' +
+        rejections.map((r) => '<br>• ' + e(r.job) + (r.branch ? ' · ' + e(r.branch) : '') + ' — ' + e(r.reason || 'ללא סיבה') + ' <span class="rc-meta">' + e(when(r.at)) + '</span>').join('') + '</div>' : '');
+  }
   function showDup(d, send) {
-    $('ncDup').innerHTML = '<div class="rc-warn"><b>⚠ מועמד/ת חוזר/ת — ' + e(d.name) + '</b> (זוהה לפי ' + e(d.by.join(', ')) + ')' +
-      (d.employee ? '<br>👷 עובד/ת בחברה בשם: ' + e(d.employee) : '') + '<br>במערכת מאז ' + e(when(d.since)) +
-      (d.applications.length ? '<ul style="margin:5px 0;padding-inline-start:18px">' + d.applications.map((a) => '<li>' + e(a.job) + ' — ' + e(a.status) + (a.reason ? ' (' + e(a.reason) + ')' : '') + ' · ' + e(when(a.at)) + '</li>').join('') + '</ul>' : '') +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn primary" id="dupJoin">צירוף לרשומה הקיימת</button>' +
-      '<button class="btn plain" id="dupView">פתיחת הכרטיס הקיים</button><button class="btn plain" id="dupNew">זה אדם אחר — רשומה חדשה</button></div></div>';
-    $('dupJoin').addEventListener('click', () => send({ existingId: d.id }));
+    const rej = d.applications.filter((a) => a.rejected);
+    $('ncDup').innerHTML = '<div class="rc-warn"><b>⚠ ' + (d.id ? 'מועמד/ת חוזר/ת' : 'האדם כבר מוכר במערכת') + ' — ' + e(d.name) + '</b> (זוהה לפי ' + e(d.by.join(', ')) + ')' +
+      (d.since ? '<br>במערכת הגיוס מאז ' + e(when(d.since)) : '') +
+      (d.applications.some((a) => !a.rejected) ? '<ul style="margin:5px 0;padding-inline-start:18px">' + d.applications.filter((a) => !a.rejected).map((a) => '<li>' +
+        e(a.job) + ' — ' + e(a.status) + ' · ' + e(when(a.at)) + '</li>').join('') + '</ul>' : '') + '</div>' +
+      historyHtml(d.former, rej.map((a) => ({ job: a.job, reason: a.reason, at: a.at }))) +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+      (d.id ? '<button class="btn primary" id="dupJoin">צירוף לרשומה הקיימת</button><button class="btn plain" id="dupView">פתיחת הכרטיס הקיים</button>' +
+        '<button class="btn plain" id="dupNew">זה אדם אחר — רשומה חדשה</button>'
+        : '<button class="btn primary" id="dupNew">המשך — הוספת המועמד/ת</button>') + '</div>';
+    if (d.id) { $('dupJoin').addEventListener('click', () => send({ existingId: d.id })); $('dupView').addEventListener('click', () => openCand(d.id)); }
     $('dupNew').addEventListener('click', () => send({ force: true }));
-    $('dupView').addEventListener('click', () => openCand(d.id));
   }
 
   async function openCand(id) {
@@ -244,6 +258,8 @@
     pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה למועמדים</button>' +
       '<h3 style="margin:8px 0 2px">' + e(c.fullName) + (c.employee ? ' <span class="rc-st" style="background:#dcfce7;color:#166534">👷 ' + e(c.employee) + '</span>' : '') + '</h3>' +
       '<div class="rc-meta">' + [c.phone, c.email, c.idNumber && 'ת.ז. ' + c.idNumber, c.city].filter(Boolean).map(e).join(' · ') + ' · במערכת מאז ' + e(when(c.createdAt)) + '</div>' +
+      historyHtml(r.former && !(c.employee && r.former.name === c.employee && r.former.by[0] === 'התקבל/ה דרך הגיוס') ? r.former : null,
+        (r.rejections || []).filter((x) => !r.applications.some((a) => a.appId === x.appId && a.status === 'unsuitable'))) +
       (c.hasCv ? '<button class="btn plain" id="rcCv" style="margin-top:6px;font-size:12.5px">📎 ' + e(c.cvName || 'קורות חיים') + '</button>' : '') +
       (c.summary ? '<p style="white-space:pre-wrap;background:#f8fafc;border-radius:10px;padding:8px 10px;font-size:13.5px">' + e(c.summary) + '</p>' : '') +
       r.applications.map((a) => '<div class="rc-card" style="cursor:default" data-app="' + a.appId + '"><div class="t">' + e(a.job.title) + ' ' + chip(a.status, statusHe(a.status)) +
@@ -407,10 +423,11 @@
     f106: (d, emp) => ({ action: 'getForm106', employee: emp, id: d.id }),
     contract: (d) => ({ action: 'contractPdf', id: d.id }),
     cv: (d) => ({ action: 'candidateCv', id: d.id }),
+    hr: (d) => ({ action: 'hrDocPdf', id: d.id }),
   };
-  const DOC_IC = { contract: '📝', cv: '📎', payslip: '🧾', f101: '📋', f106: '📄' };
-  async function openDocs(emp) {
-    const body = overlay('rcDocsOverlay', '📂 מסמכים — ' + emp, 'הסכם העסקה, קורות חיים, תלושים, טפסי 101 ו-106', 640);
+  const DOC_IC = { contract: '📝', cv: '📎', payslip: '🧾', f101: '📋', f106: '📄', hr: '⚖' };
+  async function openDocs(emp, into) {
+    const body = into || overlay('rcDocsOverlay', '📂 מסמכים — ' + emp, 'הסכם העסקה, קורות חיים, תלושים, טפסי 101 ו-106', 640);
     body.innerHTML = '<p class="rc-meta">טוען…</p>';
     const r = await apiPost({ action: 'employeeDocuments', ...mAuth(), employee: emp });
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
@@ -431,14 +448,6 @@
       drop.insertAdjacentHTML('beforeend', '<button id="rcMgrBtn">🧲 גיוס עובדים</button>');
       $('rcMgrBtn').addEventListener('click', openMgr);
     }
-    const recBtns = $('empRecBtns');
-    if (recBtns && !$('empDocsBtn')) {
-      recBtns.insertAdjacentHTML('beforeend', '<button type="button" class="btn plain" id="empDocsBtn" style="padding:5px 10px;font-size:12.5px">📂 מסמכים</button>');
-      $('empDocsBtn').addEventListener('click', () => {
-        const cur = typeof _currentEmp !== 'undefined' && _currentEmp ? _currentEmp.name : ($('empCardName') ? $('empCardName').textContent.trim() : '');
-        if (cur) openDocs(cur);
-      });
-    }
     const links = document.querySelector('#empHome .eh-links');
     if (links && !$('ehContract')) {
       links.insertAdjacentHTML('beforeend', '<button data-go="contract" id="ehContract" style="display:none"><span class="ic">📝</span>הסכם העסקה</button>');
@@ -454,6 +463,10 @@
   }
   window.openRecruit = openMgr;
   window.openEmployeeDocs = openDocs;
+  window.renderEmployeeDocs = openDocs;
+  window.rcSigPad = (canvasId) => mountSig(canvasId);   // hr.js: the same signature pad
+  window.rcSigHtml = sigHtml;
+  window.rcContentHtml = contractHtml;
   window.openMyContract = openMine;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
