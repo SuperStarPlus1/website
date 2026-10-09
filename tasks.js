@@ -6,7 +6,10 @@
 //             (📄 PDF — the report with all its photos, as the managers got it by mail);
 //             📋 משימות — who, when (once / daily / days of the week / day of the month, until an hour), which form;
 //             🧾 טפסים — the form builder
-// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf.
+//   the board  (managers) every employee's tasks of the day in his cell, with the status: ✅ done (a click — the
+//             report), ☑ done by another employee of the task, ⏳ open until its hour, ❌ not done; the coming days show
+//             what is planned. Not in the schedule's PDF.
+// Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf, render, weekDates, iso, isMgr.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -52,6 +55,11 @@
     '.tk-btn.light{background:#f1f5f9;color:#1f2937}.tk-btn.red{background:#fee2e2;color:#991b1b}' +
     '.tk-flags{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:8px 12px;color:#991b1b;font-size:13px}' +
     '@media (max-width:560px){.tk-row .hd{grid-template-columns:1fr}}' +
+    '.tk-bchip{display:block;margin-top:3px;border-radius:7px;padding:2px 5px;font-size:10.5px;font-weight:700;line-height:1.25;text-align:start;cursor:default;' +
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;border:1px solid transparent}' +
+    '.tk-bchip.done{background:#dcfce7;color:#166534;border-color:#86efac;cursor:pointer}.tk-bchip.other{background:#f1f5f9;color:#64748b;border-color:#e2e8f0}' +
+    '.tk-bchip.open{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}.tk-bchip.missed{background:#fee2e2;color:#991b1b;border-color:#fca5a5}' +
+    '#pdfStage .tk-bchip{display:none!important}' +
     '</style>');
 
   function overlay(id, title, wide) {
@@ -378,7 +386,7 @@
       $('tkTErr').textContent = 'שומר…';
       const r = await apiPost({ action: 'saveTask', ...mAuth(), task });
       if (!r.ok) { $('tkTErr').textContent = r.error || 'שגיאה'; return; }
-      adm.tasks = r.tasks; say('המשימה נשמרה ✓', 'ok'); drawTasks();
+      adm.tasks = r.tasks; say('המשימה נשמרה ✓', 'ok'); drawTasks(); loadBoardTasks(true);
     });
     if (t) $('tkTDel').addEventListener('click', async () => {
       if (!confirm('למחוק את המשימה "' + t.title + '"? (משימה שכבר בוצעה — נשארת בהיסטוריה כלא פעילה)')) return;
@@ -457,6 +465,53 @@
     });
   }
 
+
+  /* ================= the board: each employee's tasks in his cell ================= */
+  let boardKey = '', boardRuns = null, boardLoading = '', boardAt = 0;
+  const weekRange = () => { try { const d = weekDates(); return [iso(d[0]), iso(d[6])]; } catch (_) { return null; } };
+  const boardBranch = () => (typeof effectiveBranch === 'function' ? effectiveBranch() : '') || '';
+  async function loadBoardTasks(force) {
+    const r = weekRange(), s = appState();
+    if (!r || !s || !s.mgr) return;
+    const key = r[0] + '|' + boardBranch();
+    if (!force && (key === boardLoading || (key === boardKey && Date.now() - boardAt < 120000))) return;   // fresh for 2 minutes
+    boardLoading = key;
+    try {
+      const x = await apiPost({ action: 'taskRuns', ...mAuth(), from: r[0], to: r[1], branch: boardBranch() || undefined });
+      if (x && x.ok) { boardRuns = x.runs; boardKey = key; boardAt = Date.now(); }
+    } catch (_) { /* offline — the board without tasks */ }
+    finally { if (boardLoading === key) boardLoading = ''; }
+    decorateBoard();
+  }
+  function decorateBoard() {
+    const s = appState(), r = weekRange();
+    document.querySelectorAll('#board .tk-bchip').forEach((c) => c.remove());
+    if (!s || !s.mgr || !boardRuns || !r || boardKey !== r[0] + '|' + boardBranch()) return;
+    const firstCell = (emp, date) => document.querySelector('#board td.cell[data-emp="' + CSS.escape(emp) + '"][data-date="' + date + '"]');
+    for (const x of boardRuns) {
+      for (const emp of x.assignees) {
+        const td = firstCell(emp, x.date);       // an employee in two departments: his first row
+        if (!td) continue;
+        let cls, txt, tip;
+        if (x.status === 'done' && x.employee === emp) { cls = 'done'; txt = '✅ ' + x.title; tip = 'בוצעה ' + hm(x.doneAt) + (x.late ? ' · באיחור' : '') + (x.flags ? ' · ' + x.flags + ' חריגות' : '') + ' — לחיצה לדוח'; }
+        else if (x.status === 'done') { cls = 'other'; txt = '☑ ' + x.title; tip = 'בוצעה ע"י ' + x.employee + ' ' + hm(x.doneAt); }
+        else if (x.status === 'missed') { cls = 'missed'; txt = '❌ ' + x.title; tip = 'לא בוצעה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : ''); }
+        else { cls = 'open'; txt = '⏳ ' + x.title + (x.time && x.time !== '23:59' ? ' ' + x.time : ''); tip = 'משימה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : '') + (x.assignees.length > 1 ? ' · ' + x.assignees.join(', ') : ''); }
+        const chip = document.createElement('span');
+        chip.className = 'tk-bchip ' + cls;
+        chip.textContent = txt + (x.flags && cls === 'done' ? ' ⚠' + x.flags : '');
+        chip.title = tip;
+        chip.addEventListener('click', (ev) => {
+          ev.stopPropagation();                      // a task chip never opens the shift window
+          if (x.runId && x.status === 'done') openRun(x.runId);
+        });
+        const hint = td.querySelector('.addhint');
+        if (hint) hint.remove();
+        td.appendChild(chip);
+      }
+    }
+  }
+
   /* ================= wiring ================= */
   function start() {
     const drop = $('menuOpsDrop') || $('menuSchedDrop');
@@ -475,6 +530,12 @@
       if (shown) fetchMine();
       new MutationObserver(() => { const now = !home.classList.contains('hidden'); if (now && !shown) fetchMine(); shown = now; })
         .observe(home, { attributes: true, attributeFilter: ['class'] });
+    }
+    // the board: after each drawing, the week's tasks in the cells (fetched once per week and branch)
+    if (typeof window.render === 'function' && !window.render._tk) {
+      const draw = window.render;
+      window.render = function () { const out = draw.apply(this, arguments); decorateBoard(); loadBoardTasks(); return out; };
+      window.render._tk = true;
     }
   }
   window.openMyTasks = openMine;
