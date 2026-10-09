@@ -6,9 +6,10 @@
 //             (📄 PDF — the report with all its photos, as the managers got it by mail);
 //             📋 משימות — who, when (once / daily / days of the week / day of the month, until an hour), which form;
 //             🧾 טפסים — the form builder
-//   the board  (managers) every employee's tasks of the day in his cell, with the status: ✅ done (a click — the
-//             report), ☑ done by another employee of the task, ⏳ open until its hour, ❌ not done; the coming days show
-//             what is planned. Not in the schedule's PDF.
+//   the board  every employee's tasks of the day in his cell, with the status: ✅ done (managers: a click — the report),
+//             ☑ done by another employee of the task, ⏳ open until its hour, ❌ not done; the coming days show what is
+//             planned. Managers see every task (🔒 = a managers' task); employees see everyone's tasks but the managers'
+//             ones (unless it is their own) — boardTasks. Not in the schedule's PDF.
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, effectiveBranch, openBlobPdf, render, weekDates, iso, isMgr.
 (function () {
   'use strict';
@@ -330,7 +331,7 @@
     const pane = $('tkPane');
     const forms = new Map(adm.forms.map((f) => [f.id, f.name]));
     pane.innerHTML = '<div class="tk-tools"><button class="tk-btn" id="tkNewTask">+ משימה חדשה</button></div>' +
-      (adm.tasks.length ? adm.tasks.map((t) => '<div class="tk-card" data-id="' + t.id + '"' + (t.active ? '' : ' style="opacity:.55"') + '><div><div class="t">' + e(t.title) +
+      (adm.tasks.length ? adm.tasks.map((t) => '<div class="tk-card" data-id="' + t.id + '"' + (t.active ? '' : ' style="opacity:.55"') + '><div><div class="t">' + (t.managersOnly ? '🔒 ' : '') + e(t.title) +
         (t.active ? '' : ' <span class="tk-chip missed">לא פעילה</span>') + '</div><div class="tk-meta">' + e(t.when) + ' · ' + (t.assignees.length ? e(t.assignees.join(', ')) : 'אין עובדים') +
         (t.formId ? ' · 🧾 ' + e(forms.get(t.formId) || '') : '') + (adm.branches.length > 1 ? ' · ' + e(t.branch) : '') + '</div></div><span class="tk-meta">עריכה ›</span></div>').join('')
         : '<p class="tk-meta">אין משימות עדיין.</p>');
@@ -351,6 +352,7 @@
       '<label>עובדים <span class="tk-meta">(המשימה מופיעה אצלם; מי שמבצע ראשון — סוגר אותה)</span><input class="tk-in" id="tkEmpQ" placeholder="חיפוש עובד…"><div class="tk-chips" id="tkEmps" style="max-height:170px;overflow:auto"></div></label>' +
       '<label>טופס<select class="tk-in" id="tkForm"><option value="">— ללא טופס (משימה עם תיאור) —</option>' + adm.forms.map((f) => '<option value="' + f.id + '"' + (t && t.formId === f.id ? ' selected' : '') + '>' + e(f.name) + ' (' + f.fields.length + ' סעיפים)</option>').join('') + '</select></label>' +
       '<label>תיאור / הוראות<textarea class="tk-in" id="tkDesc" rows="3">' + e(t ? t.description : '') + '</textarea></label>' +
+      '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkMgrOnly"' + (t && t.managersOnly ? ' checked' : '') + '> 🔒 משימת מנהלים <span class="tk-meta">— בלוח הסידור רק מנהלים (והעובדים שהיא שלהם) רואים אותה</span></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkActive"' + (!t || t.active ? ' checked' : '') + '> פעילה</label>' +
       '<div class="merr" id="tkTErr"></div><div class="tk-tools"><button class="tk-btn" id="tkTSave">שמירה</button><button class="tk-btn light" id="tkTBack">חזרה</button>' +
       (t ? '<span style="flex:1"></span><button class="tk-btn red" id="tkTDel">מחיקה</button>' : '') + '</div></div>';
@@ -382,7 +384,8 @@
       if (freq === 'weekly') schedule.days = [...days];
       if (freq === 'monthly') schedule.monthDay = Number($('tkMDay').value);
       const task = { id: t ? t.id : 0, title: $('tkTitle').value.trim(), branch: $('tkBranch') ? $('tkBranch').value : branch0, schedule,
-        assignees: [...picked], formId: Number($('tkForm').value) || null, description: $('tkDesc').value.trim(), active: $('tkActive').checked };
+        assignees: [...picked], formId: Number($('tkForm').value) || null, description: $('tkDesc').value.trim(), active: $('tkActive').checked,
+        managersOnly: $('tkMgrOnly').checked };
       $('tkTErr').textContent = 'שומר…';
       const r = await apiPost({ action: 'saveTask', ...mAuth(), task });
       if (!r.ok) { $('tkTErr').textContent = r.error || 'שגיאה'; return; }
@@ -472,12 +475,13 @@
   const boardBranch = () => (typeof effectiveBranch === 'function' ? effectiveBranch() : '') || '';
   async function loadBoardTasks(force) {
     const r = weekRange(), s = appState();
-    if (!r || !s || !s.mgr) return;
+    if (!r || !s || (!s.mgr && !s.emp)) return;
     const key = r[0] + '|' + boardBranch();
     if (!force && (key === boardLoading || (key === boardKey && Date.now() - boardAt < 120000))) return;   // fresh for 2 minutes
     boardLoading = key;
     try {
-      const x = await apiPost({ action: 'taskRuns', ...mAuth(), from: r[0], to: r[1], branch: boardBranch() || undefined });
+      const x = s.mgr ? await apiPost({ action: 'taskRuns', ...mAuth(), from: r[0], to: r[1], branch: boardBranch() || undefined })
+        : await apiPost({ action: 'boardTasks', ...empAuth(), from: r[0], to: r[1] });   // an employee: managers' tasks left out by the server
       if (x && x.ok) { boardRuns = x.runs; boardKey = key; boardAt = Date.now(); }
     } catch (_) { /* offline — the board without tasks */ }
     finally { if (boardLoading === key) boardLoading = ''; }
@@ -486,24 +490,27 @@
   function decorateBoard() {
     const s = appState(), r = weekRange();
     document.querySelectorAll('#board .tk-bchip').forEach((c) => c.remove());
-    if (!s || !s.mgr || !boardRuns || !r || boardKey !== r[0] + '|' + boardBranch()) return;
+    if (!s || (!s.mgr && !s.emp) || !boardRuns || !r || boardKey !== r[0] + '|' + boardBranch()) return;
+    const lock = (x) => (x.managersOnly && s.mgr ? '🔒 ' : '');
     const firstCell = (emp, date) => document.querySelector('#board td.cell[data-emp="' + CSS.escape(emp) + '"][data-date="' + date + '"]');
     for (const x of boardRuns) {
       for (const emp of x.assignees) {
         const td = firstCell(emp, x.date);       // an employee in two departments: his first row
         if (!td) continue;
         let cls, txt, tip;
-        if (x.status === 'done' && x.employee === emp) { cls = 'done'; txt = '✅ ' + x.title; tip = 'בוצעה ' + hm(x.doneAt) + (x.late ? ' · באיחור' : '') + (x.flags ? ' · ' + x.flags + ' חריגות' : '') + ' — לחיצה לדוח'; }
-        else if (x.status === 'done') { cls = 'other'; txt = '☑ ' + x.title; tip = 'בוצעה ע"י ' + x.employee + ' ' + hm(x.doneAt); }
-        else if (x.status === 'missed') { cls = 'missed'; txt = '❌ ' + x.title; tip = 'לא בוצעה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : ''); }
-        else { cls = 'open'; txt = '⏳ ' + x.title + (x.time && x.time !== '23:59' ? ' ' + x.time : ''); tip = 'משימה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : '') + (x.assignees.length > 1 ? ' · ' + x.assignees.join(', ') : ''); }
+        if (x.status === 'done' && x.employee === emp) { cls = 'done'; txt = '✅ ' + lock(x) + x.title; tip = 'בוצעה ' + hm(x.doneAt) + (x.late ? ' · באיחור' : '') + (x.flags ? ' · ' + x.flags + ' חריגות' : '') + (s.mgr ? ' — לחיצה לדוח' : ''); }
+        else if (x.status === 'done') { cls = 'other'; txt = '☑ ' + lock(x) + x.title; tip = 'בוצעה ע"י ' + x.employee + ' ' + hm(x.doneAt); }
+        else if (x.status === 'missed') { cls = 'missed'; txt = '❌ ' + lock(x) + x.title; tip = 'לא בוצעה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : ''); }
+        else { cls = 'open'; txt = '⏳ ' + lock(x) + x.title + (x.time && x.time !== '23:59' ? ' ' + x.time : ''); tip = 'משימה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : '') + (x.assignees.length > 1 ? ' · ' + x.assignees.join(', ') : ''); }
+        if (x.managersOnly && s.mgr) tip += ' · משימת מנהלים — עובדים אחרים לא רואים אותה';
         const chip = document.createElement('span');
         chip.className = 'tk-bchip ' + cls;
         chip.textContent = txt + (x.flags && cls === 'done' ? ' ⚠' + x.flags : '');
         chip.title = tip;
+        if (!s.mgr) chip.style.cursor = 'default';
         chip.addEventListener('click', (ev) => {
           ev.stopPropagation();                      // a task chip never opens the shift window
-          if (x.runId && x.status === 'done') openRun(x.runId);
+          if (s.mgr && x.runId && x.status === 'done') openRun(x.runId);
         });
         const hint = td.querySelector('.addhint');
         if (hint) hint.remove();
