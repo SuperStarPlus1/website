@@ -3738,6 +3738,16 @@ document.getElementById('attMgrLoad').addEventListener('click', async ()=>{
 });
 
 /* --- מסך נוכחות בזמן אמת (מנהל) --- */
+let liveFilter = 'all';   // הכל (ברירת מחדל) / נמצאים עכשיו / לא הגיעו / יצאו
+const LIVE_FILTERS = [['all','הכל'],['on','🟢 נמצאים עכשיו'],['miss','⚠ לא הגיעו'],['out','✔ יצאו']];
+const LIVE_OF = { all: ()=>true, on: l=>l.status==='במשמרת'||l.status==='בהפסקה', miss: l=>l.status==='לא הגיע', out: l=>l.status==='יצא' };
+function liveChips(lines){
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + LIVE_FILTERS.map(([k,t])=>
+    `<button type="button" data-lf="${k}" style="border:1.5px solid ${liveFilter===k?'#1b2a4a':'#d1d5db'};background:${liveFilter===k?'#1b2a4a':'#fff'};color:${liveFilter===k?'#fff':'#1f2937'};border-radius:99px;padding:5px 13px;font:inherit;font-size:13px;font-weight:700;cursor:pointer">${t} (${lines.filter(LIVE_OF[k]).length})</button>`).join('') + '</div>';
+}
+function bindLiveChips(box){
+  box.querySelectorAll('[data-lf]').forEach(b=>b.addEventListener('click',()=>{ liveFilter=b.dataset.lf; renderLive(); }));
+}
 async function renderLive(){
   const box=document.getElementById('liveList');
   box.innerHTML='טוען…';
@@ -3771,7 +3781,12 @@ async function renderLive(){
       status:!hasIn?'לא הגיע':hasOut?'יצא':breakOn?'בהפסקה':'במשמרת',
       lateIn, lateMiss, dur, durFinal:hasOut, events:d.events||[]});
   });
-  if(!lines.length){ box.innerHTML='<div style="color:var(--muted)">אין עובדים במשמרת כרגע</div>'; return; }
+  const all = lines.slice();
+  lines.splice(0, lines.length, ...all.filter(LIVE_OF[liveFilter] || LIVE_OF.all));
+  if(!lines.length){
+    box.innerHTML = liveChips(all) + '<div style="color:var(--muted)">' + (all.length ? 'אין עובדים בסינון הזה' : 'אין עובדים במשמרת כרגע') + '</div>';
+    bindLiveChips(box); return;
+  }
   const now2=new Date().toTimeString().slice(0,5);
   const liveEvIcon = { 'כניסה':'▶', 'הפסקה':'⏸', 'חזרה':'↩', 'יציאה':'⏹', 'נוכחות':'📍' };
   const liveEvLbl  = { 'כניסה':'כניסה', 'הפסקה':'יציאה להפסקה', 'חזרה':'חזרה מהפסקה', 'יציאה':'סיום משמרת', 'נוכחות':'נוכחות באתר' };
@@ -3808,7 +3823,8 @@ async function renderLive(){
   } else {
     bodyHtml = `<table class="att-table" style="min-width:720px;width:100%">${tableHdr}${rowsHtml(lines)}</table>`;
   }
-  box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2} · לחיצה על השעות בכל שורה מציגה פירוט כניסות</div><div style="overflow-x:auto">${bodyHtml}</div>`;
+  box.innerHTML=liveChips(all) + `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">עדכון: ${now2} · לחיצה על השעות בכל שורה מציגה פירוט כניסות</div><div style="overflow-x:auto">${bodyHtml}</div>`;
+  bindLiveChips(box);
   box.querySelectorAll('.live-dur').forEach(td=>td.addEventListener('click',()=>{
     document.getElementById(td.dataset.target).classList.toggle('hidden');
   }));
@@ -6499,6 +6515,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="shift-settings.js"></script>
 <script src="tasks.js"></script>
 <script src="incentive.js"></script>
+<script src="noshow.js"></script>
 <script src="version.js"></script>
 <script src="about.js"></script>
 </body>
