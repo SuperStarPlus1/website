@@ -1,8 +1,10 @@
 // Publishing channels (same file in the Sidurit template web/app/ and on the Superstar site; server:
 // _shared/publish-handlers.ts, rules and the waiver's text: _shared/publish-core.ts). Admin only.
 //   ⚙ ניהול ← 📣 ערוצי פרסום: (1) the publishing authorization and liability waiver — read, name + role, accept (a new
-//   version — accepted again); (2) the channels: Facebook page · Instagram · WordPress · webhook — the details are typed,
-//   checked live, sealed on the server and never shown again (only "connected", the page's name, ••••last 4);
+//   version — accepted again); (2) the channels — connected by SIGNING IN, nothing technical typed: "Connect with Facebook" (Facebook's own
+//   window: sign in, approve, pick the page — its Instagram comes with it) · WordPress (the site's address → the site's
+//   own "authorize application" screen) · webhook only under "advanced" (for site developers). The window comes back
+//   to oauth.html, which tells this screen (postMessage). The details are sealed on the server, never shown again;
 //   (3) the company's jobs page and the code to embed it in a website.
 // Publishing a job is in the job itself (recruit.js). Uses the app's own globals: apiPost, mgrAuth, state, toast.
 (function () {
@@ -15,14 +17,8 @@
   const mAuth = () => (typeof mgrAuth === 'function' ? mgrAuth() : {});
   const when = (d) => { if (!d) return ''; const t = new Date(d); return isNaN(t) ? String(d) : t.toLocaleDateString('he-IL') + ' ' + t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
 
-  // the fields of each channel (all write-only), and where to find them
+  // the webhook's fields (the only channel still typed — for site developers, under "advanced")
   const FORM = {
-    facebook: { fields: [['pageId', 'מזהה העמוד (Page ID)', 'ltr'], ['accessToken', 'אסימון גישה לעמוד (Page access token)', 'ltr', true]],
-      help: 'מזהה העמוד: בעמוד הפייסבוק ← "אודות" ← "שקיפות הדף". אסימון קבוע: Meta Business Suite ← הגדרות העסק ← משתמשי מערכת ← "יצירת אסימון", עם ההרשאות pages_manage_posts ו-pages_read_engagement, ללא תפוגה.' },
-    instagram: { fields: [['igUserId', 'מזהה חשבון האינסטגרם (IG user ID)', 'ltr'], ['accessToken', 'אסימון גישה (אותו אסימון של העמוד המקושר)', 'ltr', true]],
-      help: 'חשבון אינסטגרם עסקי או של יוצר/ת, מקושר לעמוד הפייסבוק. באסימון צריכות להיות גם ההרשאות instagram_basic ו-instagram_content_publish. באינסטגרם חובה תמונה למשרה.' },
-    wordpress: { fields: [['siteUrl', 'כתובת האתר', 'ltr'], ['username', 'שם משתמש', 'ltr'], ['appPassword', 'סיסמת אפליקציה (Application Password)', 'ltr', true], ['categoryId', 'מזהה קטגוריה לפוסטים (לא חובה)', 'ltr']],
-      help: 'בניהול האתר: משתמשים ← הפרופיל שלך ← "סיסמאות אפליקציה" ← הוספה. משתמש עם הרשאת מחבר/ת או עורך/ת. כל פרסום יוצר פוסט עם התמונה וכפתור "להגשת מועמדות".' },
     webhook: { fields: [['url', 'כתובת ה-Webhook', 'ltr'], ['secret', 'מפתח חתימה (לפחות 16 תווים)', 'ltr', true]],
       help: 'לאתר שבנוי אצלכם: בכל פרסום נשלחת בקשת POST עם פרטי המשרה (JSON) וכותרת X-Signature: HMAC-SHA256 של הגוף עם המפתח — האתר בודק אותה. גם "ping" בחיבור ו-"job.closed" בהסרה.' },
   };
@@ -39,6 +35,27 @@
     return $('jpBody');
   }
   let S = null;
+  /** the button that connects a channel by signing in */
+  function connectBtn(c, ok, again) {
+    const off = !(ok && S.keyReady) ? ' disabled title="קודם — אישור ההרשאה וכתב הוויתור"' : '';
+    if (c.channel === 'facebook' || c.channel === 'instagram') {
+      if (!S.meta.ready) return again ? '' : '<span class="rc-meta">החיבור לפייסבוק עוד לא הופעל במערכת' + (S.meta.editable ? ' — ההגדרה למטה.' : ' — פנו לתמיכה.') + '</span>';
+      return '<button class="btn ' + (again ? 'plain' : 'primary') + '" data-connect="meta" style="font-size:12.5px;' + (again ? '' : 'background:#1877f2;border-color:#1877f2') + '"' + off + '>' +
+        (again ? 'החלפת עמוד' : 'התחברות עם פייסבוק') + '</button>' + (c.channel === 'instagram' && !again ? ' <span class="rc-meta">— האינסטגרם העסקי המקושר לעמוד מתחבר יחד איתו</span>' : '');
+    }
+    if (c.channel === 'wordpress') return again ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input class="rc-in" data-site placeholder="כתובת האתר, למשל www.my-company.co.il" dir="ltr" style="max-width:300px">' +
+      '<button class="btn primary" data-connect="wordpress" style="font-size:12.5px"' + off + '>חיבור האתר</button></div><p class="rc-meta" style="margin:4px 0 0">האתר יבקש מכם להיכנס ולאשר — זהו. (אתרי WordPress)</p>';
+    return '';
+  }
+  /** opens the other service's own sign-in / approve window; it comes back to oauth.html, which tells us */
+  async function connect(kind, card) {
+    const win = window.open('', 'publish-connect', 'width=620,height=760');   // opened now — after the await a browser would block it
+    const r = kind === 'meta' ? await apiPost({ action: 'metaConnectStart', ...mAuth() })
+      : await apiPost({ action: 'wpConnectStart', ...mAuth(), siteUrl: (card.querySelector('[data-site]') || {}).value || '' });
+    if (!r.ok) { if (win) win.close(); say(r.error || 'שגיאה', 'err'); return; }
+    if (win) win.location.href = r.url; else location.href = r.url;
+  }
+  window.addEventListener('message', (ev) => { if (ev.data && ev.data.type === 'publish-connected' && $('jpOverlay') && !$('jpOverlay').classList.contains('hidden')) { say('הערוץ חובר ✓', 'ok'); open(); } });
   async function open() {
     if (!isAdmin()) { say('אדמין בלבד', 'err'); return; }
     const body = overlay();
@@ -61,14 +78,20 @@
         '<label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-weight:700;font-size:13.5px"><input type="checkbox" id="jpAgree" style="margin-top:3px"> קראתי, אני מוסמך/ת לחייב את החברה, ואני מאשר/ת את ההרשאה ואת כתב הוויתור בשם החברה</label>' +
         '<div class="merr" id="jpCErr"></div><button class="btn primary" id="jpAccept">✍ אישור</button>') + '</details>' +
       '<h4 style="margin:14px 0 6px">2. הערוצים</h4>' +
-      S.channels.map((c) => '<div class="rc-card" style="cursor:default" data-c="' + c.channel + '"><div class="t">' + e(c.label) + ' ' +
+      S.channels.filter((c) => c.channel !== 'webhook' || c.connected).map((c) => '<div class="rc-card" style="cursor:default" data-c="' + c.channel + '"><div class="t">' + e(c.label) + ' ' +
         (c.connected ? '<span class="rc-st" style="background:#dcfce7;color:#166534">מחובר' + (c.meta.name ? ' — ' + e(c.meta.name) : '') + '</span>' : '<span class="rc-st" style="background:#f3f4f6;color:#4b5563">לא מחובר</span>') + '</div>' +
-        (c.connected ? '<div class="rc-meta">' + Object.entries(c.meta).filter(([k]) => k !== 'name').map(([k, v]) => e(k) + ': <span dir="ltr">' + e(v) + '</span>').join(' · ') +
-          '<br>חובר ע"י ' + e(c.by) + ' · ' + e(when(c.at)) + (c.lastError ? '<br><span style="color:#b91c1c">שגיאה אחרונה: ' + e(c.lastError) + '</span>' : '') + '</div>' +
-          '<div style="display:flex;gap:6px;margin-top:6px"><button class="btn plain" data-test style="font-size:12.5px">🔄 בדיקת חיבור</button><button class="btn plain" data-form style="font-size:12.5px">החלפת פרטים</button>' +
+        (c.connected ? '<div class="rc-meta">' + (c.meta.site ? '<span dir="ltr">' + e(c.meta.site) + '</span> · ' : '') + 'חובר ע"י ' + e(c.by) + ' · ' + e(when(c.at)) + (c.lastError ? '<br><span style="color:#b91c1c">שגיאה אחרונה: ' + e(c.lastError) + '</span>' : '') + '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn plain" data-test style="font-size:12.5px">🔄 בדיקת חיבור</button>' + connectBtn(c, ok, true) +
           '<button class="btn plain" data-rm style="font-size:12.5px;color:#b91c1c">ניתוק</button></div>'
-          : '<button class="btn plain" data-form style="font-size:12.5px;margin-top:6px"' + (ok && S.keyReady ? '' : ' disabled title="קודם — אישור ההרשאה"') + '>➕ חיבור</button>') +
+          : '<div style="margin-top:6px">' + connectBtn(c, ok, false) + '</div>') +
         '<div data-box></div></div>').join('') +
+      '<details style="margin-top:6px"><summary class="rc-meta" style="cursor:pointer">מתקדם — חיבור אתר שנבנה במיוחד (למפתחי אתרים)</summary>' +
+      '<div class="rc-card" style="cursor:default" data-c="webhook"><div class="t">' + e(S.channels.find((c) => c.channel === 'webhook').label) + '</div>' +
+      '<button class="btn plain" data-form style="font-size:12.5px;margin-top:6px"' + (ok && S.keyReady ? '' : ' disabled') + '>הגדרה</button><div data-box></div></div></details>' +
+      (S.meta.editable ? '<details style="margin-top:6px"' + (S.meta.ready ? '' : ' open') + '><summary class="rc-meta" style="cursor:pointer">הגדרת החיבור לפייסבוק — פעם אחת, למפעיל המערכת</summary>' +
+        '<div class="hr-legal" style="font-size:12.5px">אפליקציית Meta של המערכת — מה שמאפשר את הכפתור "התחברות עם פייסבוק". כתובת החזרה לרישום באפליקציה: <b dir="ltr">' + e(S.oauthReturn) + '</b></div>' +
+        '<div class="rc-f"><label>מזהה האפליקציה (App ID)<input id="jpAppId" dir="ltr" value="' + e(S.meta.appId) + '"></label><label>המפתח הסודי (App Secret)<input id="jpAppSecret" type="password" dir="ltr" autocomplete="new-password" placeholder="' + (S.meta.ready ? 'נשמר — להחלפה בלבד' : '') + '"></label></div>' +
+        '<div class="merr" id="jpAppErr"></div><button class="btn plain" id="jpAppSave" style="font-size:12.5px">שמירה</button></details>' : '') +
       '<h4 style="margin:14px 0 6px">3. דף המשרות באתר</h4>' +
       '<p class="rc-meta">כל משרה פעילה מופיעה אוטומטית בדף המשרות של החברה, עם התמונה וכפתור הגשה: <a href="' + e(S.jobsPage) + '" target="_blank" rel="noopener" dir="ltr">' + e(S.jobsPage) + '</a></p>' +
       '<p class="rc-meta">להצגה בתוך אתר החברה — מדביקים את הקוד בעמוד "דרושים":</p><textarea class="rc-in" id="jpEmbed" rows="3" readonly dir="ltr">' + e(S.embed) + '</textarea>' +
@@ -80,6 +103,13 @@
       say('ההרשאה אושרה ✓', 'ok'); open();
     });
     $('jpCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('jpEmbed').value); say('הקוד הועתק ✓', 'ok'); } catch (_) { $('jpEmbed').select(); } });
+    if ($('jpAppSave')) $('jpAppSave').addEventListener('click', async () => {
+      const r = await apiPost({ action: 'saveMetaApp', ...mAuth(), appId: $('jpAppId').value, secret: $('jpAppSecret').value });
+      $('jpAppSecret').value = '';
+      if (!r.ok) { $('jpAppErr').textContent = r.error || 'שגיאה'; return; }
+      say('נשמר ✓', 'ok'); open();
+    });
+    body.querySelectorAll('[data-connect]').forEach((b) => b.addEventListener('click', () => connect(b.dataset.connect, b.closest('[data-c]'))));
     body.querySelectorAll('[data-c]').forEach((card) => {
       const ch = card.dataset.c, box = card.querySelector('[data-box]');
       const fb = card.querySelector('[data-form]');

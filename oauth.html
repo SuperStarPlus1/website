@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>חיבור ערוץ פרסום</title>
+<!-- The return page of the "connect by signing in" windows (same file in Sidurit web/app/ and on the Superstar site
+     root — there the config line below is replaced). Facebook comes back with ?code&state, a WordPress site with
+     ?wp=1&state&site_url&user_login&password. The address is cleaned at once; the server (publish-handlers.ts)
+     finishes the connection, the person picks a page, and the window tells the app (postMessage) and closes. -->
+<script>window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' }; window.companySlug = () => '';</script>
+<style>
+  :root{--navy:#1b2a4a;--line:#e5e7eb;--muted:#6b7280;--bg:#f4f6fb;--card:#fff;--err:#b91c1c;--ok:#166534}
+  @media (prefers-color-scheme: dark){:root{--navy:#c7d2fe;--line:#334155;--muted:#94a3b8;--bg:#0f172a;--card:#1e293b;--err:#fca5a5;--ok:#86efac}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--navy);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.55}
+  main{max-width:480px;margin:0 auto;padding:28px 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  h1{font-size:20px;margin:0 0 10px}
+  label.pg{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  label.pg small{color:var(--muted);display:block}
+  button{background:#1b2a4a;color:#fff;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:800;width:100%;cursor:pointer;margin-top:8px}
+  .err{color:var(--err);font-weight:700}.ok{color:var(--ok);font-weight:800;font-size:17px}.muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<main><div class="card" id="box"><p class="muted">מחבר…</p></div></main>
+<script>
+(function () {
+  'use strict';
+  const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const q = new URLSearchParams(location.search);
+  try { history.replaceState(null, '', location.pathname); } catch (_) { /* old browser */ }   // the password / code leave the address bar
+  const state = q.get('state') || '';
+  const company = state.includes('.') ? state.split('.')[0] : '';
+  const box = document.getElementById('box');
+  const api = async (body) => {
+    try {
+      const r = await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(Object.assign(company ? { company } : {}, body)) });
+      return await r.json();
+    } catch (_) { return { ok: false, error: 'אין חיבור לשרת — נסו שוב' }; }
+  };
+  const fail = (msg) => { box.innerHTML = '<h1>החיבור לא הושלם</h1><p class="err">' + e(msg) + '</p><p class="muted">אפשר לסגור את החלון ולנסות שוב מתוך המערכת.</p>'; };
+  const done = (list) => {
+    box.innerHTML = '<p class="ok">✅ חובר בהצלחה</p>' + (list || []).map((x) => '<p>' + e(x) + '</p>').join('') + '<p class="muted">החלון ייסגר מעצמו. אם לא — אפשר לסגור אותו ולחזור למערכת.</p>';
+    try { if (window.opener) window.opener.postMessage({ type: 'publish-connected' }, '*'); } catch (_) { /* no opener */ }
+    setTimeout(() => { try { window.close(); } catch (_) { /* stays open */ } }, 1800);
+  };
+  if (!state) { fail('הקישור חסר. יש להתחיל את החיבור מתוך המערכת.'); return; }
+
+  (async () => {
+    if (q.get('wp') === '1') {
+      const r = await api({ action: 'wpConnectFinish', state, rejected: q.get('rejected') === '1' || undefined,
+        siteUrl: q.get('site_url') || '', userLogin: q.get('user_login') || '', password: q.get('password') || '' });
+      return r.ok ? done(r.connected) : fail(r.error || 'שגיאה');
+    }
+    const r = await api({ action: 'metaConnectFinish', state, code: q.get('code') || '', error: q.get('error') || '' });
+    if (!r.ok) return fail(r.error || 'שגיאה');
+    box.innerHTML = '<h1>איזה עמוד לחבר?</h1>' + r.pages.map((p, i) => '<label class="pg"><input type="radio" name="pg" value="' + e(p.id) + '"' + (i === 0 ? ' checked' : '') + '>' +
+      '<span><b>' + e(p.name) + '</b>' + (p.instagram ? '<small>אינסטגרם מקושר: ' + e(p.instagram) + '</small>' : '<small>אין חשבון אינסטגרם עסקי מקושר</small>') + '</span></label>').join('') +
+      '<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ig" checked> לחבר גם את האינסטגרם המקושר (אם יש)</label>' +
+      '<button id="go">חיבור</button><p class="err" id="err"></p>';
+    document.getElementById('go').addEventListener('click', async () => {
+      const pageId = (document.querySelector('input[name=pg]:checked') || {}).value;
+      const x = await api({ action: 'metaConnectChoose', state, pageId, instagram: document.getElementById('ig').checked });
+      if (!x.ok) { document.getElementById('err').textContent = x.error || 'שגיאה'; return; }
+      done(x.connected);
+    });
+  })();
+})();
+</script>
+</body>
+</html>
