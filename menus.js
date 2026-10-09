@@ -4,7 +4,7 @@
 //   ✅ בקשות ואישורים    every request waiting for someone: בקשות חופשה · אילוצים · בקשות החלפה · אישורי מחלה · בקשות הצטרפות ·
 //                        שרשרת אישורים
 //   📅 סידור             as it was
-//   ⚙ ניהול              (was "אדמין"): עובדים · כרטיס עובד · גיוס עובדים · ערוצי פרסום · הודעה · לוח הודעות · מחלה / חופשה לעובד · לוח חגים · תמרוץ · הגדרות חברה · חיוב
+//   ⚙ ניהול              (was "אדמין"): עובדים · כרטיס עובד · גיוס עובדים · ערוצי פרסום · הודעה · לוח הודעות · מחלה / חופשה לעובד · לוח חגים · שעון נוכחות · תמרוץ · הגדרות חברה · חיוב
 //   📁 טפסים ותלושים     תלושים · טפסי 101 · טפסי 106
 //   👤 אזור אישי         the manager's own: החלפת סיסמה · ההתראות שלי · Push
 // A menu with nothing the signed-in manager may see (e.g. the documents for a shift manager) is not shown.
@@ -20,7 +20,7 @@
   const PLAN = {
     menuAttDrop: ['liveBtn', 'attBtn', 'haMgrBtn', 'nsMenuBtn'],
     menuReqDrop: ['reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
-    menuAdminDrop: ['empMgr', 'hrMenuBtn', 'msgBtn', 'annBtn', 'meSickBtn', 'meVacBtn', 'holBtn', 'incMgrBtn', 'rcMgrBtn', 'pubMenuBtn', 'coSetBtn', 'coBillBtn'],
+    menuAdminDrop: ['empMgr', 'hrMenuBtn', 'msgBtn', 'annBtn', 'meSickBtn', 'meVacBtn', 'holBtn', 'clkMenuBtn', 'incMgrBtn', 'rcMgrBtn', 'pubMenuBtn', 'coSetBtn', 'coBillBtn'],
     menuDocsDrop: ['payBtn', 'f101AdminBtn', 'f106AllBtn'],
     menuMeDrop: ['mpwBtn', 'myAlertsBtn', 'mgrPushBtn2'],
   };
