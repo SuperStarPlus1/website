@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.9.2',
-  date: '08/10/2026',
+  version: '2.10',
+  date: '09/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'גיוס עובדים: משרות עם קריטריונים וציון התאמה, קישור ציבורי להגשה, מועמד חוזר מזוהה, קבלה לעבודה עם הסכם העסקה בחתימה דיגיטלית · מסמכי העובד בכרטיס העובד',
     'בקשות ואישורים: חופשה, אילוצים והחלפות — כל סוג בתפריט משלו עם מספר הממתינות',
     'תפריטי המנהלים מסודרים מחדש: בקשות ואישורים, ניהול, טפסים ותלושים, ואזור אישי למנהל',
     'נוכחות בזמן אמת: סינון מי נמצא עכשיו במשמרת · "לא התייצב למשמרת" — יום חופש אוטומטי (אדמין מפעיל, עם פטורים ותצוגה מקדימה)',
