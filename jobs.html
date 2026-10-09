@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>משרות פתוחות</title>
+<!-- The company's jobs page (same file in Sidurit web/app/ and on the Superstar site root — there the config line below
+     is replaced). Every ACTIVE job, with its picture and an "apply" button (apply.html). ?embed=1 — inside another
+     site (an iframe): no header, transparent. Server: publicJobs in _shared/publish-handlers.ts. -->
+<script>window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' }; window.companySlug = () => '';</script>
+<style>
+  :root{--navy:#1b2a4a;--line:#e5e7eb;--muted:#6b7280;--bg:#f4f6fb;--card:#fff;--accent:#1b2a4a}
+  @media (prefers-color-scheme: dark){:root:not(.embed){--navy:#c7d2fe;--line:#334155;--muted:#94a3b8;--bg:#0f172a;--card:#1e293b;--accent:#4f46e5}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--navy);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.5}
+  .embed body,body.embed{background:transparent}
+  main{max-width:880px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:24px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .job{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .job img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#e5e7eb}
+  .job .b{padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .job h2{font-size:17px;margin:0}.meta{color:var(--muted);font-size:13px}
+  .desc{font-size:14px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+  .go{margin-top:auto;display:block;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:800;border-radius:10px;padding:10px}
+  .empty{color:var(--muted);text-align:center;padding:30px 0}
+</style>
+</head>
+<body>
+<main><div id="box"><p class="sub">טוען…</p></div></main>
+<script>
+(function () {
+  'use strict';
+  const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const embed = new URLSearchParams(location.search).get('embed') === '1';
+  if (embed) { document.documentElement.classList.add('embed'); document.body.classList.add('embed'); }
+  const company = (window.companySlug && window.companySlug()) || '';
+  (async () => {
+    let r;
+    try {
+      const res = await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(Object.assign(company ? { company } : {}, { action: 'publicJobs' })) });
+      r = await res.json();
+    } catch (_) { r = { ok: false }; }
+    const box = document.getElementById('box');
+    if (!r.ok) { box.innerHTML = '<p class="empty">לא ניתן לטעון את המשרות כרגע.</p>'; return; }
+    document.title = 'משרות פתוחות — ' + r.company;
+    box.innerHTML = (embed ? '' : '<h1>משרות פתוחות</h1><p class="sub">' + e(r.company) + '</p>') +
+      (r.jobs.length ? '<div class="grid">' + r.jobs.map((j) => '<article class="job">' + (j.imageUrl ? '<img src="' + e(j.imageUrl) + '" alt="' + e(j.title) + '" loading="lazy">' : '') +
+        '<div class="b"><h2>' + e(j.title) + '</h2><div class="meta">' + e([j.department, j.branch].filter(Boolean).join(' · ')) + '</div>' +
+        (j.description ? '<div class="desc">' + e(j.description) + '</div>' : '') +
+        '<a class="go" href="' + e(j.applyUrl) + '" target="_blank" rel="noopener">להגשת מועמדות</a></div></article>').join('') + '</div>'
+        : '<p class="empty">אין כרגע משרות פתוחות.</p>');
+  })();
+})();
+</script>
+</body>
+</html>

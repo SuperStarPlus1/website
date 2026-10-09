@@ -48,6 +48,12 @@
     '.rc-tb{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin:8px 0}.rc-tb div{padding:5px 9px;border-bottom:1px solid #eef0f4;display:flex;flex-direction:column}' +
     '.rc-tb span{color:#6b7280;font-size:11.5px}.rc-tb b{font-size:13.5px;font-weight:600}@media(max-width:560px){.rc-tb{grid-template-columns:1fr}}' +
     '.rc-ct h4{margin:12px 0 4px}.rc-ct p{margin:3px 0;font-size:13.5px;line-height:1.55}' +
+    '.rc-sw{position:relative;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;user-select:none}' +
+    '.rc-sw i{width:38px;height:21px;border-radius:99px;background:#cbd5e1;position:relative;transition:.15s}.rc-sw i::after{content:"";position:absolute;top:2px;right:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.15s}' +
+    '.rc-sw.on i{background:#16a34a}.rc-sw.on i::after{right:19px}' +
+    '.rc-img{max-width:220px;max-height:220px;border-radius:10px;border:1px solid #e5e7eb;display:block;margin:6px 0}' +
+    '.rc-jobrow{display:flex;gap:10px;align-items:center}.rc-jobrow img{width:54px;height:54px;object-fit:cover;border-radius:8px;flex:0 0 54px}' +
+    '.rc-pub{border:1.5px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-top:14px;background:#fafbff}' +
     '#rcBanner{background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:12px;padding:10px 12px;margin:10px 0;font-weight:700;cursor:pointer}' +
     '</style>');
 
@@ -106,7 +112,7 @@
   const statusHe = (s) => (A.statuses.find((x) => x[0] === s) || [s, s])[1];
   function applyLink(job) {
     const c = window.APP_CONFIG;
-    if (c && c.APP_BASE_URL) return c.APP_BASE_URL.replace(/\/$/, '') + '/app/apply.html?c=' + encodeURIComponent(window.COMPANY || '') + '&job=' + job.token;
+    if (c && c.APP_BASE_URL) return c.APP_BASE_URL.replace(/\/$/, '') + '/app/apply?c=' + encodeURIComponent(window.COMPANY || '') + '&job=' + job.token;
     return location.origin + '/apply.html?job=' + job.token;
   }
 
@@ -116,13 +122,48 @@
     pane.innerHTML = '<button class="btn primary" id="rcNewJob">➕ משרה חדשה</button><div style="margin-top:10px">' +
       (A.jobs.length ? A.jobs.map((j) => {
         const total = Object.values(j.counts).reduce((s, n) => s + n, 0);
-        return '<div class="rc-card" data-j="' + j.id + '"><div class="t">' + e(j.title) + ' ' + (j.status === 'closed' ? chip('withdrawn', 'סגורה') : chip('hired', 'פתוחה')) + '</div>' +
+        return '<div class="rc-card rc-jobrow" data-j="' + j.id + '">' + (j.imageUrl ? '<img src="' + e(j.imageUrl) + '" alt="">' : '') + '<div style="flex:1"><div class="t">' + e(j.title) + '</div>' +
           '<div class="rc-meta">' + e(j.department) + ' · ' + e(j.branch) + ' · ' + j.criteria.length + ' קריטריונים · ' + total + ' מועמדים' +
-          (j.counts.new ? ' · <b style="color:#3730a3">' + j.counts.new + ' חדשים</b>' : '') + '</div></div>';
-      }).join('') : '<p class="rc-meta">עדיין אין משרות. פותחים משרה, מגדירים קריטריונים — ואז מוסיפים מועמדים או שולחים את הקישור להגשה.</p>') + '</div>';
+          (j.counts.new ? ' · <b style="color:#3730a3">' + j.counts.new + ' חדשים</b>' : '') + '</div></div>' +
+          '<span class="rc-sw' + (j.status === 'open' ? ' on' : '') + '" data-sw="' + j.id + '" title="מועמדים יכולים להגיש רק למשרה פעילה"><i></i>' + (j.status === 'open' ? 'פעילה' : 'לא פעילה') + '</span></div>';
+      }).join('') : '<p class="rc-meta">עדיין אין משרות. פותחים משרה, מגדירים קריטריונים — ואז מוסיפים מועמדים או שולחים את הקישור להגשה.</p>') + '</div>' +
+      (A.jobs.length ? '<p class="rc-meta">משרה נשמרת כתבנית: מסמנים "פעילה" כשמגייסים ו"לא פעילה" כשלא — המועמדים, ההיסטוריה והפרסומים נשמרים. רק למשרה פעילה אפשר להגיש מועמדות.</p>' : '');
     $('rcNewJob').addEventListener('click', () => editJob(null));
     pane.querySelectorAll('[data-j]').forEach((c) => c.addEventListener('click', () => editJob(A.jobs.find((j) => j.id === Number(c.dataset.j)))));
+    pane.querySelectorAll('[data-sw]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); toggleJob(A.jobs.find((j) => j.id === Number(b.dataset.sw)), drawJobs); }));
   }
+  /** active ⇄ not active; turning off may also take the posts down */
+  async function toggleJob(job, after) {
+    const to = job.status === 'open' ? 'closed' : 'open';
+    const r = await apiPost({ action: 'setJobStatus', ...mAuth(), id: job.id, status: to });
+    if (!r.ok) { say(r.error || 'שגיאה', 'err'); return; }
+    job.status = r.status;
+    say(to === 'open' ? 'המשרה פעילה — אפשר להגיש מועמדות ✓' : 'המשרה לא פעילה — לא ניתן להגיש מועמדות', 'ok');
+    if (to === 'closed') {
+      const p = await apiPost({ action: 'jobPosts', ...mAuth(), jobId: job.id });
+      const live = p.ok ? p.posts.filter((x) => x.status === 'published') : [];
+      if (live.length && confirm('למשרה יש ' + live.length + ' פרסומים פעילים (' + [...new Set(live.map((x) => x.label))].join(', ') + '). להסיר אותם?')) await unpublish(job.id);
+    }
+    await reload(); after();
+  }
+  async function unpublish(jobId) {
+    const r = await apiPost({ action: 'unpublishJob', ...mAuth(), jobId });
+    if (!r.ok) { say(r.error || 'שגיאה', 'err'); return; }
+    const bad = r.results.filter((x) => !x.ok);
+    say(bad.length ? 'הוסר חלקית: ' + bad.map((x) => x.label + ' — ' + x.error).join(' · ') : 'הפרסומים הוסרו ✓', bad.length ? 'err' : 'ok');
+  }
+  /** a picture → JPEG (at most 1600px) — what Instagram accepts */
+  const toJpeg = (file) => new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg', 0.88).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    img.src = url;
+  });
   function editJob(job) {
     const j = job || { title: '', branch: A.branches[0] || '', department: '', description: '', criteria: [], status: 'open' };
     let crit = j.criteria.map((c) => ({ ...c }));
@@ -134,11 +175,13 @@
       '<label>סניף<select id="rjBranch">' + A.branches.map((b) => '<option' + (b === j.branch ? ' selected' : '') + '>' + e(b) + '</option>').join('') + '</select></label>' +
       '<label>מחלקה<select id="rjDept">' + depts(j.branch) + '</select></label>' +
       '<label class="wide">תיאור (מוצג גם בדף ההגשה)<textarea id="rjDesc" rows="3" maxlength="4000">' + e(j.description) + '</textarea></label>' +
-      '<label>סטטוס<select id="rjStatus"><option value="open">פתוחה — מקבלת מועמדים</option><option value="closed"' + (j.status === 'closed' ? ' selected' : '') + '>סגורה</option></select></label></div>' +
+      '<label>סטטוס<select id="rjStatus"><option value="open">פעילה — מקבלת מועמדים</option><option value="closed"' + (j.status === 'closed' ? ' selected' : '') + '>לא פעילה — נשמרת כתבנית</option></select></label></div>' +
+      '<h4 style="margin:14px 0 4px">תמונת הפרסום</h4>' + (job ? '<div id="rjImg"></div>' : '<p class="rc-meta">אחרי השמירה הראשונה אפשר לצרף תמונה ולפרסם.</p>') +
       '<h4 style="margin:14px 0 4px">קריטריונים להתאמה</h4><p class="rc-meta" style="margin:0 0 6px">משקל 1–5: כמה הקריטריון חשוב. ציון ההתאמה = סכום המשקלים שהמועמד עומד בהם מתוך הכול. "חובה" — מסומן אם חסר.</p>' +
       '<div id="rjCrit"></div><button type="button" class="btn plain" id="rjAdd" style="font-size:12.5px">➕ קריטריון</button>' +
       (job ? '<h4 style="margin:14px 0 4px">קישור להגשת מועמדות</h4><div style="display:flex;gap:6px"><input class="rc-in" id="rjLink" readonly value="' + e(applyLink(job)) + '" dir="ltr"><button type="button" class="btn plain" id="rjCopy">📋 העתקה</button></div>' +
-        '<p class="rc-meta">שולחים בוואטסאפ, מפרסמים ברשתות — מי שממלא נכנס לרשימת המועמדים של המשרה (מקור: קישור).</p>' : '');
+        '<p class="rc-meta">שולחים בוואטסאפ, מפרסמים ברשתות — מי שממלא נכנס לרשימת המועמדים של המשרה (מקור: קישור).</p>' +
+        '<div class="rc-pub" id="rjPub"><p class="rc-meta">טוען את הפרסום…</p></div>' : '');
     const drawCrit = () => {
       $('rjCrit').innerHTML = crit.map((c, i) => '<div class="rc-crit" data-i="' + i + '"><input class="rc-in" data-k="label" value="' + e(c.label) + '" placeholder="למשל: ניסיון בקופה" maxlength="120">' +
         '<select class="rc-in" data-k="weight">' + [1, 2, 3, 4, 5].map((w) => '<option value="' + w + '"' + (w === Number(c.weight || 3) ? ' selected' : '') + '>משקל ' + w + '</option>').join('') + '</select>' +
@@ -157,6 +200,7 @@
     $('rjBranch').addEventListener('change', () => { j.department = ''; $('rjDept').innerHTML = depts($('rjBranch').value); });
     $('rcBack').addEventListener('click', drawJobs);
     if (job) $('rjCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('rjLink').value); say('הקישור הועתק ✓', 'ok'); } catch (_) { $('rjLink').select(); } });
+    if (job) { drawImage(job); drawPublish(job); }
     $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove());
     foot('rcOverlay', '<button class="btn primary" data-x id="rjSave">💾 שמירת המשרה</button>');
     $('rjSave').addEventListener('click', async () => {
@@ -165,8 +209,70 @@
         description: $('rjDesc').value, status: $('rjStatus').value, criteria: crit.filter((c) => String(c.label).trim()) } });
       if (!r.ok) { $('rcOverlayE').textContent = r.error || 'שגיאה'; return; }
       $('rcOverlayE').textContent = ''; $('rjSave').remove();
-      say('המשרה נשמרה ✓', 'ok'); await reload(); drawJobs();
+      say('המשרה נשמרה ✓', 'ok'); await reload();
+      if (job) { drawJobs(); return; }
+      // a new job: straight on to its picture and publishing
+      const fresh = A.jobs.filter((x) => x.title === $('rjTitle').value.trim()).sort((a, b) => b.id - a.id)[0];
+      if (fresh) editJob(fresh); else drawJobs();
     });
+  }
+  function drawImage(job) {
+    const box = $('rjImg');
+    if (!box) return;
+    box.innerHTML = (job.imageUrl ? '<img class="rc-img" src="' + e(job.imageUrl) + '" alt="תמונת המשרה">' : '<p class="rc-meta">אין תמונה. תמונה מושכת יותר מועמדים — ובאינסטגרם היא חובה.</p>') +
+      '<label class="btn plain" style="font-size:12.5px;cursor:pointer">📷 ' + (job.imageUrl ? 'החלפת התמונה' : 'צירוף תמונה') + '<input type="file" id="rjImgFile" accept="image/*" hidden></label>' +
+      (job.imageUrl ? ' <button type="button" class="btn plain" id="rjImgDel" style="font-size:12.5px;color:#b91c1c">הסרה</button>' : '');
+    $('rjImgFile').addEventListener('change', async () => {
+      const f = $('rjImgFile').files[0];
+      if (!f) return;
+      let data;
+      try { data = await toJpeg(f); } catch (_) { say('לא ניתן לקרוא את התמונה', 'err'); return; }
+      say('מעלה…');
+      const r = await apiPost({ action: 'uploadJobImage', ...mAuth(), jobId: job.id, data });
+      if (!r.ok) { say(r.error || 'שגיאה', 'err'); return; }
+      job.imageUrl = r.imageUrl; say('התמונה נשמרה ✓', 'ok'); drawImage(job);
+    });
+    if ($('rjImgDel')) $('rjImgDel').addEventListener('click', async () => {
+      if (!confirm('להסיר את התמונה?')) return;
+      const r = await apiPost({ action: 'removeJobImage', ...mAuth(), jobId: job.id });
+      if (r.ok) { job.imageUrl = null; drawImage(job); }
+    });
+  }
+  async function drawPublish(job) {
+    const box = $('rjPub');
+    if (!box) return;
+    const r = await apiPost({ action: 'jobPosts', ...mAuth(), jobId: job.id });
+    if (!$('rjPub')) return;
+    if (!r.ok) { box.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const live = r.posts.filter((p) => p.status === 'published');
+    box.innerHTML = '<b>📣 פרסום המשרה</b>' +
+      '<p class="rc-meta" style="margin:4px 0">דף המשרות של החברה מציג אוטומטית כל משרה פעילה: <a href="' + e(r.jobsPage) + '" target="_blank" rel="noopener">' + e(r.jobsPage) + '</a></p>' +
+      (!r.consentOk ? '<p class="rc-warn">לפני פרסום ברשתות, אדמין צריך/ה לאשר את הרשאת הפרסום וכתב הוויתור: ⚙ ניהול ← 📣 ערוצי פרסום.</p>'
+        : !r.channels.length ? '<p class="rc-warn">אין ערוצים מחוברים. אדמין מחבר/ת פייסבוק, אינסטגרם או את אתר החברה ב-⚙ ניהול ← 📣 ערוצי פרסום.</p>'
+        : job.status !== 'open' ? '<p class="rc-warn">המשרה לא פעילה — מפעילים אותה כדי לפרסם.</p>'
+        : '<div style="display:flex;gap:12px;flex-wrap:wrap;margin:6px 0">' + r.channels.map((c) => '<label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:13px"><input type="checkbox" data-ch="' + c.channel + '" checked> ' +
+            e(c.label) + (c.name ? ' <span class="rc-meta">(' + e(c.name) + ')</span>' : '') + '</label>').join('') + '</div>' +
+          '<label class="rc-f" style="display:block"><span style="font-size:12.5px;font-weight:700">נוסח הפרסום</span><textarea class="rc-in" id="rjText" rows="7">' + e(r.caption) + '</textarea></label>' +
+          (!job.imageUrl ? '<p class="rc-meta">⚠ אין תמונה — באינסטגרם לא ניתן לפרסם בלי תמונה.</p>' : '') +
+          '<label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:13px;font-weight:700"><input type="checkbox" id="rjConfirm" style="margin-top:3px"> אני מאשר/ת לפרסם את המשרה בשם החברה, בהתאם להרשאת הפרסום. האחריות לתוכן הפרסום חלה על החברה.</label>' +
+          '<button class="btn primary" id="rjGo">📣 פרסום עכשיו</button> <span id="rjRes"></span>') +
+      (r.posts.length ? '<div style="margin-top:10px"><b style="font-size:13px">פרסומים</b>' + r.posts.map((p) => '<div class="rc-ev">' + e(p.label) + ' · ' +
+        (p.status === 'published' ? '<span style="color:#166534;font-weight:700">פורסם</span>' + (p.url ? ' <a href="' + e(p.url) + '" target="_blank" rel="noopener">לפוסט</a>' : '')
+          : p.status === 'removed' ? 'הוסר' : '<span style="color:#b91c1c">נכשל: ' + e(p.error) + '</span>') + ' <span class="rc-meta">' + e(when(p.at)) + ' · ' + e(p.by) + '</span></div>').join('') +
+        (live.length ? '<button class="btn plain" id="rjDown" style="font-size:12.5px;margin-top:6px">הסרת הפרסומים</button>' : '') + '</div>' : '');
+    if ($('rjGo')) $('rjGo').addEventListener('click', async () => {
+      const channels = [...box.querySelectorAll('[data-ch]')].filter((x) => x.checked).map((x) => x.dataset.ch);
+      if (!channels.length) { $('rjRes').textContent = 'יש לבחור ערוץ'; return; }
+      if (!$('rjConfirm').checked) { $('rjRes').textContent = 'יש לאשר את הפרסום בשם החברה'; return; }
+      $('rjGo').disabled = true; $('rjRes').textContent = 'מפרסם…';
+      const x = await apiPost({ action: 'publishJob', ...mAuth(), jobId: job.id, channels, text: $('rjText').value, confirm: true });
+      $('rjGo').disabled = false;
+      if (!x.ok) { $('rjRes').textContent = x.error || 'שגיאה'; return; }
+      const bad = x.results.filter((y) => !y.ok);
+      say(bad.length ? 'חלק מהפרסומים נכשלו — הפרטים ברשימה' : 'פורסם ✓', bad.length ? 'err' : 'ok');
+      drawPublish(job);
+    });
+    if ($('rjDown')) $('rjDown').addEventListener('click', async () => { if (confirm('להסיר את הפרסומים של המשרה?')) { await unpublish(job.id); drawPublish(job); } });
   }
 
   /* ---------- candidates ---------- */

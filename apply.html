@@ -27,6 +27,7 @@
   .err{color:var(--err);font-weight:700;min-height:20px;margin:6px 0}.ok{color:var(--ok);font-weight:800;font-size:17px;text-align:center;padding:20px 0}
   .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
   .muted{color:var(--muted);font-size:12.5px}
+  .pic{width:100%;border-radius:12px;display:block;margin:0 0 12px}
 </style>
 </head>
 <body>
@@ -52,9 +53,10 @@
     const box = $('box');
     if (!token) { box.innerHTML = '<p class="err">הקישור חסר — בקש/י את הקישור המלא למשרה.</p>'; return; }
     const j = await api({ action: 'jobPublic', token });
-    if (!j.ok) { box.innerHTML = '<p class="err">' + e(j.error || 'המשרה לא נמצאה') + '</p>'; return; }
+    if (!j.ok) { box.innerHTML = (j.closed ? '<h1>' + e(j.title) + '</h1><div class="co">' + e(j.company) + '</div>' : '') + '<p class="err">' + e(j.error || 'המשרה לא נמצאה') + '</p>' +
+      (j.jobsUrl ? '<p><a href="' + e(j.jobsUrl) + '">למשרות הפעילות ←</a></p>' : ''); return; }
     document.title = 'הגשת מועמדות — ' + j.title;
-    box.innerHTML = '<h1>' + e(j.title) + '</h1><div class="co">' + e(j.company) + ' · ' + e(j.department) + ' · ' + e(j.branch) + '</div>' +
+    box.innerHTML = (j.imageUrl ? '<img class="pic" src="' + e(j.imageUrl) + '" alt="">' : '') + '<h1>' + e(j.title) + '</h1><div class="co">' + e(j.company) + ' · ' + e(j.department) + ' · ' + e(j.branch) + '</div>' +
       (j.description ? '<div class="desc">' + e(j.description) + '</div>' : '') +
       '<form id="f" novalidate>' +
       '<label>שם מלא<input id="fullName" autocomplete="name" required maxlength="80"></label>' +
