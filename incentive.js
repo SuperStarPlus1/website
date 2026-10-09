@@ -3,7 +3,7 @@
 //   employee  a card on the home screen (the year's count, percent, a bar) → "🏆 היעד שלי": the percent, the money at
 //             the target, how many are left, the pace (where an even pace would be by today, where the year ends at
 //             this pace), evenings / Saturdays / holidays, month by month, the last counted days; earlier years
-//   manager   "⚙ אדמין ← 🏆 תמרוץ משמרות": every employee's standing, who reached the target, the year's cost;
+//   manager   "⚙ ניהול ← 🏆 תמרוץ משמרות": every employee's standing, who reached the target, the year's cost;
 //             (admin) the settings — on / off, the target, the amount, the year's first month, what counts, who is out
 // Uses the app's own globals: apiPost, mgrAuth, state, toast.
 (function () {

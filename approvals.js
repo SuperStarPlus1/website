@@ -5,7 +5,7 @@
 //             "⏳ בקשות בטיפול" — where each of my requests waits now, and the way it went
 //   manager   "נוכחות ← 🧭 שרשרת אישורים" — each employee's direct manager (any employee, any branch; bulk set), the
 //             requests open in the chain, and (admin) the hours before a request moves one up
-//             "⚙ אדמין ← 👥 עובדים" — the same direct manager on the employee's card (one field: employees.reports_to)
+//             "⚙ ניהול ← 👥 עובדים" — the same direct manager on the employee's card (one field: employees.reports_to)
 // Uses the app's own globals: apiPost, mgrAuth, state, toast, openBlobPdf.
 (function () {
   'use strict';

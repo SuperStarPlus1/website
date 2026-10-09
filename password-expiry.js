@@ -61,7 +61,7 @@
       const r = await apiPost({ action: 'mgrPasswordStatus', ...mgrAuth() });
       if (!r || !r.ok || !r.managed) return;
       if (r.expired) open(true);
-      else if (r.warn) say('🔑 הסיסמה שלך תפוג בעוד ' + r.daysLeft + ' ימים — אפשר להחליף בתפריט נוכחות ← החלפת סיסמה', 'err');
+      else if (r.warn) say('🔑 הסיסמה שלך תפוג בעוד ' + r.daysLeft + ' ימים — אפשר להחליף ב-👤 אזור אישי ← החלפת סיסמה', 'err');
     } catch (_) { checkedFor = ''; }
   }
 

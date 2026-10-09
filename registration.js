@@ -2,7 +2,7 @@
 // server: api/registration.ts):
 //   login screen  "עובד/ת חדש/ה? הרשמה" → company (template: name or number, as for signing in) → form → e-mail code
 //                 → "waiting for approval"; no access and no billing until a manager approves
-//   managers      "⚙ אדמין ← 📝 בקשות הצטרפות" (count on the menu): approve with employee number, type, department,
+//   managers      "✅ בקשות ואישורים ← 📝 בקשות הצטרפות" (count on the menu): approve with employee number, type, department,
 //                 direct manager — or reject with a reason; the admin switches self-registration on / off
 // Uses the app's own globals: apiPost, mgrAuth, state, toast.
 (function () {

@@ -1,4 +1,4 @@
-// The holiday table (admin; same file in shiftfloo web/app/ and on the Superstar site): "⚙ אדמין ← 📅 לוח חגים"
+// The holiday table (admin; same file in shiftfloo web/app/ and on the Superstar site): "⚙ ניהול ← 📅 לוח חגים"
 //   which calendars the company follows (national always + Jewish / Muslim / Christian), the holidays of a year
 //   (counted as a rest day or not), import 5 years ahead, add by hand, delete.
 // Server: api/holidays.ts. Uses the app's own globals: apiPost, mgrAuth, state, toast.
