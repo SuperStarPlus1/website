@@ -53,8 +53,12 @@
     const r = kind === 'meta' ? await apiPost({ action: 'metaConnectStart', ...mAuth() })
       : await apiPost({ action: 'wpConnectStart', ...mAuth(), siteUrl: (card.querySelector('[data-site]') || {}).value || '' });
     if (!r.ok) { if (win) win.close(); say(r.error || 'שגיאה', 'err'); return; }
+    connecting = Date.now();
     if (win) win.location.href = r.url; else location.href = r.url;
   }
+  // a phone opens the sign-in in another tab / app: when coming back here — fresh status
+  let connecting = 0;
+  window.addEventListener('focus', () => { if (connecting && Date.now() - connecting < 30 * 60000 && $('jpOverlay') && !$('jpOverlay').classList.contains('hidden')) { connecting = 0; open(); } });
   window.addEventListener('message', (ev) => { if (ev.data && ev.data.type === 'publish-connected' && $('jpOverlay') && !$('jpOverlay').classList.contains('hidden')) { say('הערוץ חובר ✓', 'ok'); open(); } });
   async function open() {
     if (!isAdmin()) { say('אדמין בלבד', 'err'); return; }

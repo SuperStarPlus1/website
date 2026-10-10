@@ -31,7 +31,12 @@
 (function () {
   'use strict';
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const q = new URLSearchParams(location.search);
+  // the answer: in the address (?…), or in the part after # (some sign-in flows), or — when this page was loaded a second
+  // time (switching between the Facebook app and the browser) — what the first load kept for this tab
+  let q = new URLSearchParams(location.search);
+  if (!q.get('state') && location.hash.length > 3) q = new URLSearchParams(location.hash.slice(1).replace(/^_=_&?/, ''));
+  if (q.get('state')) { try { sessionStorage.setItem('oauth_q', q.toString()); } catch (_) { /* private mode */ } }
+  else { try { const kept = sessionStorage.getItem('oauth_q'); if (kept) q = new URLSearchParams(kept); } catch (_) { /* private mode */ } }
   try { history.replaceState(null, '', location.pathname); } catch (_) { /* old browser */ }   // the password / code leave the address bar
   const state = q.get('state') || '';
   const company = state.includes('.') ? state.split('.')[0] : '';
@@ -45,10 +50,11 @@
   const fail = (msg) => { box.innerHTML = '<h1>החיבור לא הושלם</h1><p class="err">' + e(msg) + '</p><p class="muted">אפשר לסגור את החלון ולנסות שוב מתוך המערכת.</p>'; };
   const done = (list) => {
     box.innerHTML = '<p class="ok">✅ חובר בהצלחה</p>' + (list || []).map((x) => '<p>' + e(x) + '</p>').join('') + '<p class="muted">החלון ייסגר מעצמו. אם לא — אפשר לסגור אותו ולחזור למערכת.</p>';
+    try { sessionStorage.removeItem('oauth_q'); } catch (_) { /* private mode */ }
     try { if (window.opener) window.opener.postMessage({ type: 'publish-connected' }, '*'); } catch (_) { /* no opener */ }
     setTimeout(() => { try { window.close(); } catch (_) { /* stays open */ } }, 1800);
   };
-  if (!state) { fail('הקישור חסר. יש להתחיל את החיבור מתוך המערכת.'); return; }
+  if (!state) { fail('פייסבוק לא החזירה את פרטי החיבור' + (q.get('error_description') ? ': ' + q.get('error_description') : '') + '. יש להתחיל שוב מתוך המערכת.'); return; }
 
   (async () => {
     if (q.get('wp') === '1') {
