@@ -259,7 +259,29 @@
       (r.posts.length ? '<div style="margin-top:10px"><b style="font-size:13px">פרסומים</b>' + r.posts.map((p) => '<div class="rc-ev">' + e(p.label) + ' · ' +
         (p.status === 'published' ? '<span style="color:#166534;font-weight:700">פורסם</span>' + (p.url ? ' <a href="' + e(p.url) + '" target="_blank" rel="noopener">לפוסט</a>' : '')
           : p.status === 'removed' ? 'הוסר' : '<span style="color:#b91c1c">נכשל: ' + e(p.error) + '</span>') + ' <span class="rc-meta">' + e(when(p.at)) + ' · ' + e(p.by) + '</span></div>').join('') +
-        (live.length ? '<button class="btn plain" id="rjDown" style="font-size:12.5px;margin-top:6px">הסרת הפרסומים</button>' : '') + '</div>' : '');
+        (live.length ? '<button class="btn plain" id="rjDown" style="font-size:12.5px;margin-top:6px">הסרת הפרסומים</button>' : '') + '</div>' : '') +
+      // sharing by hand — works without any connected channel (a company before Meta's approval, WhatsApp groups)
+      (job.status === 'open' ? '<div style="margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:10px"><b style="font-size:13px">שיתוף ידני</b> <span class="rc-meta">— בלי חיבור: בוחרים איפה לשתף</span>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+        '<button class="btn plain" data-share="wa" style="font-size:12.5px">💬 וואטסאפ</button>' +
+        '<button class="btn plain" data-share="fb" style="font-size:12.5px">📘 פייסבוק</button>' +
+        '<button class="btn plain" data-share="copy" style="font-size:12.5px">📋 העתקת הנוסח</button>' +
+        (job.imageUrl ? '<button class="btn plain" data-share="img" style="font-size:12.5px">🖼 הורדת התמונה</button>' : '') + '</div>' +
+        '<p class="rc-meta" style="margin:4px 0 0">באינסטגרם: מעתיקים את הנוסח, מורידים את התמונה ומעלים פוסט באפליקציה.</p></div>' : '');
+    const shareText = () => ($('rjText') ? $('rjText').value : r.caption);
+    box.querySelectorAll('[data-share]').forEach((b) => b.addEventListener('click', async () => {
+      const k = b.dataset.share;
+      if (k === 'wa') window.open('https://wa.me/?text=' + encodeURIComponent(shareText()), '_blank', 'noopener');
+      else if (k === 'fb') window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(r.applyUrl), '_blank', 'noopener,width=640,height=560');
+      else if (k === 'copy') { try { await navigator.clipboard.writeText(shareText()); say('הנוסח הועתק ✓ — מדביקים בפוסט', 'ok'); } catch (_) { say('לא ניתן להעתיק — מסמנים את הנוסח ומעתיקים ידנית', 'err'); } }
+      else if (k === 'img') {
+        try {
+          const blob = await (await fetch(job.imageUrl)).blob();
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (job.title || 'משרה') + '.jpg';
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        } catch (_) { window.open(job.imageUrl, '_blank', 'noopener'); }
+      }
+    }));
     if ($('rjGo')) $('rjGo').addEventListener('click', async () => {
       const channels = [...box.querySelectorAll('[data-ch]')].filter((x) => x.checked).map((x) => x.dataset.ch);
       if (!channels.length) { $('rjRes').textContent = 'יש לבחור ערוץ'; return; }
