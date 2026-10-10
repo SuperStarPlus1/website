@@ -237,5 +237,6 @@
     }
   }
   window.openMfaSettings = open;
+  window.__mfaRunLogin = runLogin;   // the guide's screenshots (scripts/guides/guide_shots.py)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
