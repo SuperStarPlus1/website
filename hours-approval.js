@@ -16,6 +16,7 @@
   const empAuth = () => { const s = appState(); return s && s.emp ? { username: s.emp.username, password: s.emp.pw } : {}; };
   const DAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const fmtD = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '');
+  const when = (iso) => (iso ? new Date(iso).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');   // submitted at
   const fmtM = (m) => (m ? m.slice(5, 7) + '/' + m.slice(0, 4) : '');
   const hm = (min) => Math.floor((min || 0) / 60) + ':' + String((min || 0) % 60).padStart(2, '0');
   const dow = (d) => DAYS[new Date(d + 'T00:00:00').getDay()];
@@ -133,6 +134,7 @@
       (c.entry ? ' · כניסה ' + e(c.entry) : '') + (c.exit ? ' · יציאה ' + e(c.exit) : '') + ' · ' + (C_CHIP[c.status] || '') +
       (c.status === 'ממתין' && open ? ' <button type="button" class="ha-btn plain sm" data-del="' + c.id + '">מחיקה</button>' : '') + '</div>' +
       '<div style="color:#374151">' + e(c.note) + '</div>' +
+      (c.createdAt ? '<div style="color:#6b7280;font-size:12px">הוגשה ' + e(when(c.createdAt)) + '</div>' : '') +
       (c.reviewNote ? '<div style="color:#6b7280">הערת המנהל: ' + e(c.reviewNote) + '</div>' : '') + '</div>').join('') : '';
     const approveLabel = whole ? '✅ אני מאשר/ת את שעות כל החודש' : '✅ אני מאשר/ת את השעות עד ' + fmtD(a.approvable);
     body.innerHTML =
@@ -242,7 +244,8 @@
         ' <button type="button" class="ha-btn plain sm" data-pdf="' + e(a.employee) + '">📄 PDF</button></b><span>' +
         (STATUS_CHIP[a.status] || '') + ' <span style="font-size:12px;color:#6b7280">' + hm(a.minutes) + ' ש׳ בדוח שנשלח' +
         (a.status === 'ממתין' ? (a.approvedThrough ? ' · אישר עד ' + fmtD(a.approvedThrough) : '') + ' · עד ' + fmtD(a.deadline) : '') + '</span></span></div>' +
-        a.corrections.map((c) => '<div class="ha-corr" data-cid="' + c.id + '"><div>' + dow(c.date) + ' ' + fmtD(c.date) + ' · <b>' + e(c.kind) + '</b> · ' + (C_CHIP[c.status] || '') + '</div>' +
+        a.corrections.map((c) => '<div class="ha-corr" data-cid="' + c.id + '"><div>' + dow(c.date) + ' ' + fmtD(c.date) + ' · <b>' + e(c.kind) + '</b> · ' + (C_CHIP[c.status] || '') +
+          (c.createdAt ? ' <span style="color:#6b7280;font-size:12px">· הוגשה ' + e(when(c.createdAt)) + '</span>' : '') + '</div>' +
           (c.kind !== 'הערה' ? '<div>' + (c.kind === 'יום חסר' ? 'מבוקש: ' : 'בדוח: ' + e(c.current.entry || '—') + '–' + e(c.current.exit || '—') + ' ← מבוקש: ') +
             '<b>' + e(c.entry || c.current.entry || '—') + '–' + e(c.exit || c.current.exit || '—') + '</b></div>' : '') +
           '<div style="color:#374151">' + e(c.note) + '</div>' +

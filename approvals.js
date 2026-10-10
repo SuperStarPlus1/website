@@ -102,7 +102,7 @@
     body.innerHTML = (team.team.length ? '<p class="ap-meta">הצוות שלך: ' + team.team.map(e).join(', ') + (hrs ? '<br>' + hrs : '') + '</p>' : '') +
       (team.items.length ? team.items.map((x) =>
         '<div class="ap-card" data-id="' + x.id + '"><div class="top"><span><span class="who">' + e(x.employee) + '</span> · <span class="ap-chip k">' +
-        (KIND_IC[x.kind] || '') + ' ' + e(x.kindLabel) + '</span></span><span class="ap-meta">ממתין/ה ' + e(ago(x.since)) + '</span></div>' +
+        (KIND_IC[x.kind] || '') + ' ' + e(x.kindLabel) + '</span></span><span class="ap-meta">' + (x.createdAt ? 'הוגשה ' + e(new Date(x.createdAt).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })) + ' · ' : '') + 'ממתין/ה ' + e(ago(x.since)) + '</span></div>' +
         '<div class="what">' + e(x.summary) + '</div>' + stepsHtml(x.steps) +
         '<div class="ap-acts">' + (x.hasCert ? '<button class="ap-btn plain sm" data-cert>📎 האישור הרפואי</button>' : '') +
         '<input class="ap-note" placeholder="הערה (לא חובה)" maxlength="300">' +
