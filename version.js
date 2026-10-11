@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.3',
-  date: '11/10/2026',
+  version: '2.16.4',
+  date: '12/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'תיקון: מחיקה ועריכה של החתמה בדוח המפורט עובדות גם כשהיא מוצגת בסוג אחר (כניסה שנייה כ"חזרה") או נשמרה כמה פעמים באותה דקה',
     '"סגירה" חוזרת צעד אחד אחורה (מכרטיס מועמד לרשימה, מעריכת שעות לבחירת העובד ועוד) · כל המיילים מעוצבים: לוגו החברה למעלה ו"נשלח באמצעות מערכת סידורית" בתחתית',
     'מיילים למועמדים מעוצבים: לוגו החברה למעלה, ובתחתית "נשלח באמצעות מערכת סידורית"',
     'גיוס עובדים: ✏ עריכת פרטי מועמד/ת — כל שינוי נרשם בהיסטוריה, עם אזהרה על פרטים של מועמד/ת אחר/ת',
