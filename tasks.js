@@ -18,6 +18,8 @@
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const say = (msg, cls) => { if (typeof toast === 'function') toast(msg, cls); };
   const empAuth = () => { const s = appState(); return s && s.emp ? { username: s.emp.username, password: s.emp.pw } : {}; };
+  // my own tasks: as the employee — or as a manager who is also an employee (the server finds that employee)
+  const meAuth = () => { const s = appState(); return s && s.emp ? empAuth() : s && s.mgr ? { mname: s.mgr.name, password: s.mgr.pw } : {}; };
   const DAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const TYPES = [['check', '☑ סימון ביצוע'], ['yesno', '✔/✘ כן / לא'], ['number', '🔢 מספר / קריאות (טמפרטורה…)'], ['text', '✍ טקסט'], ['select', '☰ בחירה מרשימה'], ['photo', '📷 צילום']];
   const dmy = (d) => (d || '').slice(8, 10) + '/' + (d || '').slice(5, 7);
@@ -80,11 +82,19 @@
     : st === 'missed' ? '<span class="tk-chip missed">❌ לא בוצעה</span>' : '<span class="tk-chip open">⏳ פתוחה</span>';
 
   /* ================= employee ================= */
-  let mine = [];
+  let mine = [], mineAt = 0;
   async function fetchMine() {
     const s = appState();
-    if (!s || !s.emp) return;
-    try { const r = await apiPost({ action: 'myTasks', ...empAuth() }); if (r && r.ok) mine = r.tasks || []; } catch (_) { /* offline */ }
+    if (!s || (!s.emp && !s.mgr)) return;
+    let linked = false;
+    try { const r = await apiPost({ action: 'myTasks', ...meAuth() }); if (r && r.ok) { mine = r.tasks || []; linked = true; } } catch (_) { /* offline */ }
+    mineAt = Date.now();
+    const mb = $('tkMgrMine');                          // the manager's menu: shown when he is also an employee
+    if (mb) {
+      const n = mine.filter((t) => t.status !== 'done').length;
+      mb.style.display = linked ? '' : 'none';
+      mb.innerHTML = '📋 המשימות שלי' + (n ? ' <span class="tk-badge">' + n + '</span>' : '');
+    }
     const b = $('ehTasks');
     const open = mine.filter((t) => t.status !== 'done').length;
     if (b) {
@@ -188,7 +198,7 @@
           let ok = false, err = null;
           for (let i = 1; i <= 3 && !ok; i++) {   // mobile networks drop a request now and then
             try {
-              const r = await apiPost({ action: 'uploadTaskPhoto', ...empAuth(), stamp, fileName: name, fileData: data.split(',')[1] });
+              const r = await apiPost({ action: 'uploadTaskPhoto', ...meAuth(), stamp, fileName: name, fileData: data.split(',')[1] });
               if (!r.ok) throw new Error(r.error || 'ההעלאה נכשלה');
               ok = true;
             } catch (x) { err = x; if (i < 3) await new Promise((r) => setTimeout(r, 1000 * i)); }
@@ -226,7 +236,7 @@
       if (notDone.length && !confirm(notDone.length + ' סעיפים לא סומנו כבוצעו — הם יופיעו בדוח למנהל. לשלוח?')) return;
       const btn = $('tkSend'); btn.disabled = true; err.textContent = 'שולח…';
       try {
-        const r = await apiPost({ action: 'submitTask', ...empAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
+        const r = await apiPost({ action: 'submitTask', ...meAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
         if (!r.ok) { err.textContent = r.error || 'שגיאה'; return; }
         $('tkFill').classList.add('hidden');
         say('המשימה נשלחה ✓' + (r.flags ? ' · ' + r.flags + ' סעיפים לתשומת לב המנהל' : ''), 'ok');
@@ -525,6 +535,8 @@
     if (drop && !$('tkMgrBtn')) {
       drop.insertAdjacentHTML('afterbegin', '<button id="tkMgrBtn">📋 משימות</button>');
       $('tkMgrBtn').addEventListener('click', openMgr);
+      $('tkMgrBtn').insertAdjacentHTML('afterend', '<button id="tkMgrMine" style="display:none">📋 המשימות שלי</button>');
+      $('tkMgrMine').addEventListener('click', openMine);
     }
     const links = document.querySelector('#empHome .eh-links');
     if (links && !$('ehTasks')) {
@@ -541,7 +553,12 @@
     // the board: after each drawing, the week's tasks in the cells (fetched once per week and branch)
     if (typeof window.render === 'function' && !window.render._tk) {
       const draw = window.render;
-      window.render = function () { const out = draw.apply(this, arguments); decorateBoard(); loadBoardTasks(); return out; };
+      window.render = function () {
+        const out = draw.apply(this, arguments); decorateBoard(); loadBoardTasks();
+        const s = appState();
+        if (s && s.mgr && !s.emp && Date.now() - mineAt > 120000) fetchMine();   // a manager's own tasks (the menu button)
+        return out;
+      };
       window.render._tk = true;
     }
   }
