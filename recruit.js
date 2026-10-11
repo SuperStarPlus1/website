@@ -387,7 +387,8 @@
     if (!r.ok) { pane.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const c = r.candidate;
     pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה למועמדים</button>' +
-      '<h3 style="margin:8px 0 2px">' + e(c.fullName) + (c.employee ? ' <span class="rc-st" style="background:#dcfce7;color:#166534">👷 ' + e(c.employee) + '</span>' : '') + '</h3>' +
+      '<h3 style="margin:8px 0 2px">' + e(c.fullName) + (c.employee ? ' <span class="rc-st" style="background:#dcfce7;color:#166534">👷 ' + e(c.employee) + '</span>' : '') +
+        ' <button class="btn plain" id="rcEditCand" style="font-size:12.5px;padding:3px 10px">✏ עריכת פרטים</button></h3>' +
       '<div class="rc-meta">' + [c.phone, c.email, c.idNumber && 'ת.ז. ' + c.idNumber, c.city].filter(Boolean).map(e).join(' · ') + ' · במערכת מאז ' + e(when(c.createdAt)) + '</div>' +
       historyHtml(r.former && !(c.employee && r.former.name === c.employee && r.former.by[0] === 'התקבל/ה דרך הגיוס') ? r.former : null,
         (r.rejections || []).filter((x) => !r.applications.some((a) => a.appId === x.appId && a.status === 'unsuitable'))) +
@@ -406,6 +407,7 @@
       '<div id="rcComm"></div>' +
       '<h4 style="margin:14px 0 4px">היסטוריה</h4>' + (r.events.map((v) => '<div class="rc-ev"><span class="rc-meta">' + e(when(v.at)) + '</span> <b>' + e(v.kind) + '</b>' + (v.job ? e(v.job) + ' · ' : '') + e(v.details) + ' <span class="rc-meta">— ' + e(v.who) + '</span></div>').join('') || '<p class="rc-meta">—</p>');
     $('rcBack').addEventListener('click', drawCands);
+    $('rcEditCand').addEventListener('click', () => editCand(c));
     // the interviews and the correspondence (recruit-comm.js)
     if (window.rcCommCard) window.rcCommCard(c, r.applications.map((a) => ({ id: a.job.id, title: a.job.title })), $('rcComm'));
     if ($('rcCv')) $('rcCv').addEventListener('click', async () => {
@@ -434,6 +436,38 @@
       });
       box.querySelector('[data-hire]').addEventListener('click', () => hire(c, a));
     });
+  }
+
+  /* ---------- correcting a candidate's details ---------- */
+  function editCand(c) {
+    const pane = $('rcPane');
+    pane.innerHTML = '<button class="btn plain" id="ecBack" style="font-size:12.5px">→ חזרה לכרטיס</button><h3 style="margin:8px 0">✏ עריכת פרטים — ' + e(c.fullName) + '</h3>' +
+      '<div class="rc-f"><label>שם מלא<input id="ecName" maxlength="80" value="' + e(c.fullName) + '"></label>' +
+      '<label>טלפון<input id="ecPhone" dir="ltr" inputmode="tel" value="' + e(c.phone) + '"></label>' +
+      '<label>מייל<input id="ecEmail" dir="ltr" type="email" value="' + e(c.email) + '"></label>' +
+      '<label>ת.ז.<input id="ecId" dir="ltr" inputmode="numeric" maxlength="9" value="' + e(c.idNumber) + '"></label>' +
+      '<label>עיר<input id="ecCity" maxlength="60" value="' + e(c.city) + '"></label>' +
+      '<label>קורות חיים חדשים (לא חובה)<input id="ecCv" type="file" accept="' + CV_ACCEPT + '"></label>' +
+      '<label class="wide">תקציר<textarea id="ecSum" rows="3" maxlength="4000">' + e(c.summary) + '</textarea></label></div>' +
+      (c.employee ? '<p class="rc-meta">👷 ' + e(c.employee) + ' כבר עובד/ת — השינוי כאן לא משנה את כרטיס העובד.</p>' : '') +
+      '<p class="rc-meta">כל שינוי נרשם בהיסטוריה (הערך הקודם והחדש).</p>' +
+      '<div style="display:flex;gap:6px;margin-top:8px"><button class="btn primary" id="ecSave">💾 שמירה</button><button class="btn plain" id="ecCancel">ביטול</button></div>';
+    $('ecBack').addEventListener('click', () => openCand(c.id));
+    $('ecCancel').addEventListener('click', () => openCand(c.id));
+    const save = async (force) => {
+      $('rcOverlayE').textContent = 'שומר…';
+      const f = $('ecCv').files[0];
+      if (f && f.size > 8 * 1024 * 1024) { $('rcOverlayE').textContent = 'הקובץ גדול מדי (עד 8MB)'; return; }
+      const cv = f ? { name: f.name, mime: f.type, data: await fileToB64(f) } : null;
+      const r = await apiPost({ action: 'updateCandidate', ...mAuth(), id: c.id, force: force === true, cv,
+        candidate: { fullName: $('ecName').value, phone: $('ecPhone').value, email: $('ecEmail').value, idNumber: $('ecId').value, city: $('ecCity').value, summary: $('ecSum').value } });
+      if (!r.ok && r.duplicate) { $('rcOverlayE').textContent = ''; if (confirm(r.error + '\n\nלשמור בכל זאת?')) save(true); return; }
+      if (!r.ok) { $('rcOverlayE').textContent = r.error || 'שגיאה'; return; }
+      $('rcOverlayE').textContent = '';
+      say(r.unchanged ? 'לא היה שינוי' : 'הפרטים עודכנו ✓', 'ok');
+      openCand(c.id);
+    };
+    $('ecSave').addEventListener('click', () => save(false));
   }
 
   /* ---------- hiring: the terms + the employer's signature ---------- */
