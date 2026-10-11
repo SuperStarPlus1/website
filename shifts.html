@@ -2919,7 +2919,15 @@ document.getElementById('publishBtn').addEventListener('click', async ()=>{
     if(!confirm('⚠ חריגת תקציב שכר משוער במחלקות הבאות:\n\n'+lines+'\n\nלפרסם בכל זאת?')) return;
   }
   if(!confirm('לפרסם את הסידור? תישלח התראה במייל לעובדים עם אימייל, ותקבל הודעה מוכנה לקבוצת הוואטסאפ.')) return;
-  const r = await apiPost({ action:'publish', ...mgrAuth(), week: iso(state.weekStart) });
+  // the schedule as a PDF, attached to the employees' e-mail (the 📄 PDF button's file; the whole week, no filter)
+  let pdfB64 = null;
+  try{
+    const keep = [state.filterEmp, state.filterDept];
+    if(keep[0] || keep[1]){ state.filterEmp = ''; state.filterDept = ''; render(); }
+    pdfB64 = await new Promise(res=>{ window._pdfForPublish = res; document.getElementById('pdfBtn').click(); setTimeout(()=>res(null), 45000); });
+    if(keep[0] || keep[1]){ state.filterEmp = keep[0]; state.filterDept = keep[1]; render(); }
+  }catch(e){ pdfB64 = null; }
+  const r = await apiPost({ action:'publish', ...mgrAuth(), week: iso(state.weekStart), pdf: pdfB64 || undefined });
   if(!r.ok){ toast(r.error||'שגיאה','err'); return; }
   const dates = weekDates();
   const link = location.href.split('#')[0];
@@ -2927,7 +2935,7 @@ document.getElementById('publishBtn').addEventListener('click', async ()=>{
     'לשבוע ' + ddmm(dates[0]) + ' – ' + ddmm(dates[6]) + '\n' +
     'לצפייה: ' + link + '\n' +
     'יש להתחבר עם שם המשתמש והסיסמה האישיים שלכם.';
-  document.getElementById('pubSub').textContent = 'נשלחו '+(r.sent||0)+' התראות במייל';
+  document.getElementById('pubSub').textContent = 'נשלחו '+(r.sent||0)+' התראות במייל' + (r.pdf ? ' — עם הסידור כקובץ PDF מצורף' : '');
   document.getElementById('pubMsg').value = msg;
   show('pubOverlay');
 });
@@ -6162,7 +6170,8 @@ document.getElementById('copyPrev').addEventListener('click',async ()=>{
 /* ============ ייצוא PDF ============ */
 document.getElementById('pdfBtn').addEventListener('click',async ()=>{
   const btn = document.getElementById('pdfBtn'); btn.disabled=true;
-  toast('מכין PDF…');
+  const forPub = window._pdfForPublish; window._pdfForPublish = null;   // publishing: the file goes to the mail, not to the disk
+  toast(forPub ? 'מכין את הסידור כקובץ PDF לצירוף למייל…' : 'מכין PDF…');
   try{
     const dates = weekDates();
     const stage = document.getElementById('pdfStage');
@@ -6183,14 +6192,15 @@ document.getElementById('pdfBtn').addEventListener('click',async ()=>{
       let w = imgW, h = canvas.height * imgW / canvas.width;
       if(h > pageH-2*margin){ h = pageH-2*margin; w = canvas.width * h / canvas.height; }
       if(!first && y + h > pageH-margin){ pdf.addPage(); y = margin; }
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', pageW-margin-w, y, w, h);
+      pdf.addImage(forPub ? canvas.toDataURL('image/jpeg', 0.85) : canvas.toDataURL('image/png'), forPub ? 'JPEG' : 'PNG', pageW-margin-w, y, w, h);
       y += h + 3; first = false;
     }
     if (window.stampPdfFooter) await stampPdfFooter(pdf, pageW, pageH);   // the Sidurit line on every page
-    pdf.save('sidur_'+iso(state.weekStart)+'.pdf');
+    if(forPub) forPub(pdf.output('datauristring').split(',')[1]);
+    else pdf.save('sidur_'+iso(state.weekStart)+'.pdf');
     stage.innerHTML='';
-    toast('קובץ ה-PDF ירד ✓','ok');
-  }catch(e){ toast('שגיאה ביצירת PDF: '+e.message,'err'); }
+    if(!forPub) toast('קובץ ה-PDF ירד ✓','ok');
+  }catch(e){ toast('שגיאה ביצירת PDF: '+e.message,'err'); if(forPub) forPub(null); }
   btn.disabled=false;
 });
 
