@@ -4169,17 +4169,22 @@ document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
         ${emps.map(e=>`<option value="${esc(e.employee)}">${esc(e.employee)}${e.branch?' · '+esc(e.branch):''}</option>`).join('')}
       </select>
     </div>`;
+  if(window._addHoursPick){   // back from the hours editor: the same employee chosen
+    const sel = dlg.querySelector('#addHoursEmp');
+    if([...sel.options].some(o=>o.value===window._addHoursPick)) sel.value = window._addHoursPick;
+    window._addHoursPick = '';
+  }
   const goBtn = dlg.querySelector('#addHoursGo');
   goBtn.disabled = false;
   goBtn.addEventListener('click', ()=>{
     const employee = dlg.querySelector('#addHoursEmp').value;
     dlg.remove();
-    openMgrMonthEdit(employee, month);
+    openMgrMonthEdit(employee, month, true);   // "סגירה" there → back to this list
   });
 });
 
 /* --- לוח עריכת שעות מלא לעובד ולחודש: יום ביומו, כניסה/הפסקה/חזרה/יציאה + סימון עבודה/חופש/מחלה --- */
-async function openMgrMonthEdit(employee, month){
+async function openMgrMonthEdit(employee, month, fromPicker){
   const dlg=document.createElement('div');
   dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">
@@ -4195,7 +4200,10 @@ async function openMgrMonthEdit(employee, month){
   document.body.appendChild(dlg);
   dlg.addEventListener('click', e => e.stopPropagation());
   let hasSaved = false; // רק אם באמת נשמר שינוי — נרענן את הדוח המלא בסגירה
-  dlg.querySelector('#monthEditClose').addEventListener('click', ()=>{ dlg.remove(); if(hasSaved) loadMgrDetailed(); });
+  dlg.querySelector('#monthEditClose').addEventListener('click', ()=>{
+    dlg.remove(); if(hasSaved) loadMgrDetailed();
+    if(fromPicker){ window._addHoursPick = employee; document.getElementById('attMgrAddHours').click(); }   // one step back: the employee list
+  });
 
   const body = dlg.querySelector('#monthEditBody');
   const err = dlg.querySelector('#monthEditErr');
@@ -6532,6 +6540,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="noshow.js"></script>
 <script src="recruit.js"></script>
 <script src="recruit-comm.js"></script>
+<script src="nav-back.js"></script>
 <script src="hr.js"></script>
 <script src="publish.js"></script>
 <script src="clock.js"></script>

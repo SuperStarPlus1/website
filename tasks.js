@@ -411,7 +411,7 @@
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkMgrOnly"' + (t && t.managersOnly ? ' checked' : '') + '> 🔒 משימת מנהלים <span class="tk-meta">— בלוח הסידור רק מנהלים (והעובדים שהיא שלהם) רואים אותה</span></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkNeedsAp"' + (t && t.needsApproval ? ' checked' : '') + '> ✔ דורש אישור מנהל <span class="tk-meta">— אחרי הדיווח מנהל מאשר, או מחזיר לעובד לתיקון</span></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkActive"' + (!t || t.active ? ' checked' : '') + '> פעילה</label>' +
-      '<div class="merr" id="tkTErr"></div><div class="tk-tools"><button class="tk-btn" id="tkTSave">שמירה</button><button class="tk-btn light" id="tkTBack">חזרה</button>' +
+      '<div class="merr" id="tkTErr"></div><div class="tk-tools"><button class="tk-btn" id="tkTSave">שמירה</button><button class="tk-btn light" id="tkTBack" data-back>חזרה</button>' +
       (t ? '<span style="flex:1"></span><button class="tk-btn red" id="tkTDel">מחיקה</button>' : '') + '</div></div>';
     const drawFreq = () => {
       $('tkFreq').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.k === freq));
@@ -470,7 +470,7 @@
     let fields = form ? JSON.parse(JSON.stringify(form.fields)) : [{ id: '', label: '', type: 'check', required: false, photo: 'none' }];
     pane.innerHTML = '<div class="tk-grid"><label>שם הטופס<input class="tk-in" id="tkFName" maxlength="60" value="' + e(form ? form.name : '') + '" placeholder="למשל: סגירת סניף"></label>' +
       '<div id="tkRows"></div><div class="tk-tools"><button class="tk-btn light" id="tkAddRow">+ סעיף</button></div>' +
-      '<div class="merr" id="tkFErr"></div><div class="tk-tools"><button class="tk-btn" id="tkFSave">שמירה</button><button class="tk-btn light" id="tkFBack">חזרה</button>' +
+      '<div class="merr" id="tkFErr"></div><div class="tk-tools"><button class="tk-btn" id="tkFSave">שמירה</button><button class="tk-btn light" id="tkFBack" data-back>חזרה</button>' +
       (form ? '<span style="flex:1"></span><button class="tk-btn red" id="tkFDel">מחיקה</button>' : '') + '</div></div>';
     const read = () => {
       pane.querySelectorAll('.tk-row').forEach((row, i) => {

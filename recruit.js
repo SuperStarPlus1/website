@@ -171,7 +171,7 @@
     let crit = j.criteria.map((c) => ({ ...c }));
     const pane = $('rcPane');
     const depts = (b) => (A.departments[b] || []).map((d) => '<option' + (d === j.department ? ' selected' : '') + '>' + e(d) + '</option>').join('');
-    pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה למשרות</button>' +
+    pane.innerHTML = '<button class="btn plain" id="rcBack" data-back style="font-size:12.5px">→ חזרה למשרות</button>' +
       '<div class="rc-f" style="margin-top:8px">' +
       '<label class="wide">שם המשרה<input id="rjTitle" value="' + e(j.title) + '" maxlength="80" placeholder="למשל: קופאי/ת משמרת ערב"></label>' +
       '<label>סניף<select id="rjBranch">' + A.branches.map((b) => '<option' + (b === j.branch ? ' selected' : '') + '>' + e(b) + '</option>').join('') + '</select></label>' +
@@ -334,7 +334,7 @@
     const open = A.jobs.filter((j) => j.status === 'open');
     if (!open.length) { say('אין משרה פתוחה — פותחים משרה קודם', 'err'); return; }
     const pane = $('rcPane');
-    pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה למועמדים</button><div class="rc-f" style="margin-top:8px">' +
+    pane.innerHTML = '<button class="btn plain" id="rcBack" data-back style="font-size:12.5px">→ חזרה למועמדים</button><div class="rc-f" style="margin-top:8px">' +
       '<label class="wide">משרה<select id="ncJob">' + open.map((j) => '<option value="' + j.id + '"' + (String(j.id) === filt.jobId ? ' selected' : '') + '>' + e(j.title + ' · ' + j.department) + '</option>').join('') + '</select></label>' +
       '<label>שם מלא<input id="ncName" maxlength="80"></label><label>טלפון<input id="ncPhone" inputmode="tel" dir="ltr"></label>' +
       '<label>מייל<input id="ncEmail" type="email" dir="ltr"></label><label>ת.ז. (לא חובה)<input id="ncId" inputmode="numeric" dir="ltr"></label>' +
@@ -386,7 +386,7 @@
     const r = await apiPost({ action: 'recruitCandidate', ...mAuth(), id });
     if (!r.ok) { pane.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const c = r.candidate;
-    pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה למועמדים</button>' +
+    pane.innerHTML = '<button class="btn plain" id="rcBack" data-back style="font-size:12.5px">→ חזרה למועמדים</button>' +
       '<h3 style="margin:8px 0 2px">' + e(c.fullName) + (c.employee ? ' <span class="rc-st" style="background:#dcfce7;color:#166534">👷 ' + e(c.employee) + '</span>' : '') +
         ' <button class="btn plain" id="rcEditCand" style="font-size:12.5px;padding:3px 10px">✏ עריכת פרטים</button></h3>' +
       '<div class="rc-meta">' + [c.phone, c.email, c.idNumber && 'ת.ז. ' + c.idNumber, c.city].filter(Boolean).map(e).join(' · ') + ' · במערכת מאז ' + e(when(c.createdAt)) + '</div>' +
@@ -441,7 +441,7 @@
   /* ---------- correcting a candidate's details ---------- */
   function editCand(c) {
     const pane = $('rcPane');
-    pane.innerHTML = '<button class="btn plain" id="ecBack" style="font-size:12.5px">→ חזרה לכרטיס</button><h3 style="margin:8px 0">✏ עריכת פרטים — ' + e(c.fullName) + '</h3>' +
+    pane.innerHTML = '<button class="btn plain" id="ecBack" data-back style="font-size:12.5px">→ חזרה לכרטיס</button><h3 style="margin:8px 0">✏ עריכת פרטים — ' + e(c.fullName) + '</h3>' +
       '<div class="rc-f"><label>שם מלא<input id="ecName" maxlength="80" value="' + e(c.fullName) + '"></label>' +
       '<label>טלפון<input id="ecPhone" dir="ltr" inputmode="tel" value="' + e(c.phone) + '"></label>' +
       '<label>מייל<input id="ecEmail" dir="ltr" type="email" value="' + e(c.email) + '"></label>' +
@@ -475,7 +475,7 @@
     $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove());
     const pane = $('rcPane');
     const mgrName = (appState().mgr && appState().mgr.name) || '';
-    pane.innerHTML = '<button class="btn plain" id="rcBack" style="font-size:12.5px">→ חזרה לכרטיס</button>' +
+    pane.innerHTML = '<button class="btn plain" id="rcBack" data-back style="font-size:12.5px">→ חזרה לכרטיס</button>' +
       '<h3 style="margin:8px 0 2px">✅ קבלה לעבודה — ' + e(c.fullName) + '</h3><p class="rc-meta">' + e(a.job.title) + ' · ' + e(a.job.department) + ' · ' + e(a.job.branch) +
       '. נפתח משתמש עובד במחלקה, ונוצר הסכם העסקה שהעובד/ת יחתום/תחתום עליו באפליקציה.</p>' +
       (!c.email && !c.phone ? '<p class="rc-warn">למועמד/ת אין מייל או טלפון — לא ניתן לפתוח משתמש.</p>' : '') +

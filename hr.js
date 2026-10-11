@@ -168,7 +168,7 @@
     const mgr = (appState().mgr && appState().mgr.name) || '';
     const ta = (id, label, val, rows) => '<label class="wide">' + label + '<textarea id="' + id + '" rows="' + (rows || 4) + '">' + e(val || '') + '</textarea></label>';
     const inp = (id, label, val, type, extra) => '<label>' + label + '<input id="' + id + '" type="' + (type || 'text') + '" value="' + e(val || '') + '"' + (extra || '') + '></label>';
-    let html = '<button class="btn plain" id="hfBack" style="font-size:12.5px">→ חזרה</button><h3 style="margin:8px 0 4px">' + ICON[kind] + ' ' + TITLES[kind] + ' — ' + e(P.name) + '</h3>';
+    let html = '<button class="btn plain" id="hfBack" data-back style="font-size:12.5px">→ חזרה</button><h3 style="margin:8px 0 4px">' + ICON[kind] + ' ' + TITLES[kind] + ' — ' + e(P.name) + '</h3>';
     if (kind === 'summons') {
       const soon = addDays(t, 3);
       html += '<div class="hr-legal">יש לתת לעובד/ת <b>זמן סביר להתכונן</b> (מקובל כמה ימים), לפרט <b>את כל הטענות</b>, ולאפשר להגיע עם מלווה. הזכויות נכתבות בזימון אוטומטית.</div>' +
