@@ -100,13 +100,15 @@
     const r = await apiPost({ action: 'recruitAdmin', ...mAuth() });
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     A = r;
-    body.innerHTML = '<div class="rc-tabs"><button data-t="cands">👤 מועמדים</button><button data-t="jobs">💼 משרות</button><button data-t="contracts">📝 הסכמי העסקה</button></div><div id="rcPane"></div>';
+    body.innerHTML = '<div class="rc-tabs"><button data-t="cands">👤 מועמדים</button><button data-t="jobs">💼 משרות</button><button data-t="contracts">📝 הסכמי העסקה</button><button data-t="cal">📅 יומן ראיונות</button></div><div id="rcPane"></div>';
     body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.t; drawTab(); }));
     drawTab();
   }
   function drawTab() {
     document.querySelectorAll('#rcOverlayB [data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
-    if (tab === 'jobs') drawJobs(); else if (tab === 'contracts') drawContracts(); else drawCands();
+    if (tab === 'jobs') drawJobs(); else if (tab === 'contracts') drawContracts();
+    else if (tab === 'cal' && window.rcCalendar) { $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove()); window.rcCalendar($('rcPane')); }   // recruit-comm.js
+    else drawCands();
   }
   const reload = async () => { const r = await apiPost({ action: 'recruitAdmin', ...mAuth() }); if (r.ok) A = r; };
   const statusHe = (s) => (A.statuses.find((x) => x[0] === s) || [s, s])[1];
@@ -314,6 +316,7 @@
       if (!r.ok) { $('rcList').innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
       $('rcList').innerHTML = r.items.length ? r.items.map((x) => '<div class="rc-card" data-c="' + x.candidateId + '"><div class="t">' + e(x.name) + ' ' + chip(x.status, x.statusHe) +
         (x.source === 'link' ? ' <span class="rc-meta">🔗 מהקישור</span>' : '') + (x.hasCv ? ' <span class="rc-meta">📎 קו"ח</span>' : '') +
+        (x.unread ? ' <span class="rc-st" style="background:#dcfce7;color:#166534" title="הודעות חדשות מהמועמד/ת">📩 ' + x.unread + '</span>' : '') +
         (x.rejectedBefore ? ' <span class="rc-st" style="background:#fee2e2;color:#991b1b">❌ נפסל/ה בעבר</span>' : '') +
         (x.former && x.status !== 'hired' ? ' <span class="rc-st" style="background:#fef3c7;color:#92400e">👷 ' + (x.former.active ? 'עובד/ת בחברה' : 'עובד/ת לשעבר') + '</span>' : '') + '</div>' +
         '<div class="rc-meta">' + e(x.job) + ' · ' + e(x.phone || x.email) + (x.city ? ' · ' + e(x.city) : '') + ' · ' + scoreBar(x.score) +
@@ -400,8 +403,11 @@
           '<label data-rwrap' + (a.status === 'unsuitable' ? '' : ' style="display:none"') + '>מה חוסר ההתאמה (חובה)<input data-reason value="' + e(a.reason) + '" maxlength="1000"></label>' +
           '<label class="wide">הערה להיסטוריה (לא חובה)<input data-note maxlength="2000"></label></div>' +
           '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn primary" data-save>💾 שמירה</button><button class="btn plain" data-hire style="border-color:#16a34a;color:#166534">✅ התקבל/ה למשרה…</button></div>') + '</div>').join('') +
+      '<div id="rcComm"></div>' +
       '<h4 style="margin:14px 0 4px">היסטוריה</h4>' + (r.events.map((v) => '<div class="rc-ev"><span class="rc-meta">' + e(when(v.at)) + '</span> <b>' + e(v.kind) + '</b>' + (v.job ? e(v.job) + ' · ' : '') + e(v.details) + ' <span class="rc-meta">— ' + e(v.who) + '</span></div>').join('') || '<p class="rc-meta">—</p>');
     $('rcBack').addEventListener('click', drawCands);
+    // the interviews and the correspondence (recruit-comm.js)
+    if (window.rcCommCard) window.rcCommCard(c, r.applications.map((a) => ({ id: a.job.id, title: a.job.title })), $('rcComm'));
     if ($('rcCv')) $('rcCv').addEventListener('click', async () => {
       const x = await apiPost({ action: 'candidateCv', ...mAuth(), id: c.id });
       if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
