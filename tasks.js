@@ -2,7 +2,8 @@
 // rules: _shared/tasks-core.ts):
 //   employee  "📋 המשימות שלי" on the home screen (with a count): today's tasks; a task opens its form — checks, yes / no,
 //             readings (temperatures…), text, a list, photos (taken with the camera, made smaller, uploaded one by one)
-//   manager   "📋 משימות" (menu): ✔ ביצוע — what came, what was done / missed, day by day, and each report with photos
+//   manager   "📋 משימות" (menu): ✔ ביצוע — what came, what was done / missed, day by day, and each report with photos;
+//             a report that waits (a task that needs approval) — ✔ approve / ↩ return for a fix; ✓ mark a task done
 //             (📄 PDF — the report with all its photos, as the managers got it by mail);
 //             📋 משימות — who, when (once / daily / days of the week / day of the month, until an hour), which form;
 //             🧾 טפסים — the form builder
@@ -30,6 +31,7 @@
     '.tk-card{border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:center;justify-content:space-between;cursor:pointer;background:#fff}' +
     '.tk-card:hover{background:#f8fafc}.tk-card .t{font-weight:800}.tk-meta{font-size:12px;color:#6b7280}' +
     '.tk-chip{border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;white-space:nowrap}' +
+    '.tk-chip.wait{background:#fef3c7;color:#92400e}.tk-chip.ret{background:#ffedd5;color:#9a3412}.tk-appr{border:1.5px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:10px 12px;margin-bottom:10px;display:grid;gap:8px}' +
     '.tk-chip.done{background:#dcfce7;color:#166534}.tk-chip.open{background:#e0e7ff;color:#3730a3}.tk-chip.late,.tk-chip.missed{background:#fee2e2;color:#991b1b}' +
     '.tk-badge{background:#dc2626;color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:0 6px;margin-inline-start:4px}' +
     '.tk-f{border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;gap:7px}' +
@@ -78,7 +80,9 @@
     $(id).classList.remove('hidden');
     return $(id + 'Body');
   }
-  const chip = (st) => st === 'done' ? '<span class="tk-chip done">✅ בוצעה</span>' : st === 'late' ? '<span class="tk-chip late">⏰ באיחור</span>'
+  const apChip = (a) => a === 'pending' ? ' <span class="tk-chip wait">🕓 ממתין לאישור</span>' : a === 'returned' ? ' <span class="tk-chip ret">↩ הוחזר לתיקון</span>'
+    : a === 'approved' ? ' <span class="tk-chip done">✔ אושר</span>' : '';
+  const chip = (st) => st === 'returned' ? '<span class="tk-chip ret">↩ לתיקון</span>' : st === 'done' ? '<span class="tk-chip done">✅ בוצעה</span>' : st === 'late' ? '<span class="tk-chip late">⏰ באיחור</span>'
     : st === 'missed' ? '<span class="tk-chip missed">❌ לא בוצעה</span>' : '<span class="tk-chip open">⏳ פתוחה</span>';
 
   /* ================= employee ================= */
@@ -109,11 +113,13 @@
     $('tkMineSub').textContent = 'היום · ' + new Date().toLocaleDateString('he-IL');
     body.innerHTML = mine.length ? mine.map((t, i) =>
       '<div class="tk-card" data-i="' + i + '"><div><div class="t">' + e(t.title) + '</div><div class="tk-meta">' + e(t.when) +
-      (t.date !== todayIso() ? ' · מ-' + dmy(t.date) : '') + (t.status === 'done' ? ' · ' + e(t.doneBy) + ' ' + hm(t.doneAt) : '') + '</div></div>' + chip(t.status) + '</div>').join('')
+      (t.date !== todayIso() ? ' · מ-' + dmy(t.date) : '') + (t.status === 'done' ? ' · ' + e(t.doneBy) + ' ' + hm(t.doneAt) : '') + '</div>' +
+      (t.status === 'returned' ? '<div class="tk-meta" style="color:#9a3412">↩ ' + e(t.approvedBy) + ': ' + e(t.approvalNote) + '</div>' : '') + '</div>' +
+      chip(t.status) + (t.status === 'done' ? apChip(t.approval) : '') + '</div>').join('')
       : '<p class="tk-meta">אין לך משימות היום 🙂</p>';
     body.querySelectorAll('.tk-card').forEach((c) => c.addEventListener('click', () => {
       const t = mine[Number(c.dataset.i)];
-      if (t.status === 'done') { say('המשימה כבר בוצעה' + (t.doneBy ? ' ע"י ' + t.doneBy : ''), 'ok'); return; }
+      if (t.status === 'done') { say(t.approval === 'pending' ? 'הדיווח נשלח וממתין לאישור מנהל' : 'המשימה כבר בוצעה' + (t.doneBy ? ' ע"י ' + t.doneBy : ''), 'ok'); return; }
       openFill(t);
     }));
   }
@@ -134,15 +140,20 @@
     });
   }
 
-  function openFill(t) {
-    const body = overlay('tkFill', '📋 ' + t.title);
-    $('tkFillSub').textContent = t.when + (t.status === 'late' ? ' · עבר מועד היעד — עדיין אפשר למלא' : '');
+  /** fill a task: the employee's report — or (mark) a manager marking it done: who did it, nothing required */
+  function openFill(t, mark) {
+    const body = overlay('tkFill', (mark ? '✓ סימון כבוצעה — ' : '📋 ') + t.title);
+    $('tkFillSub').textContent = mark ? dmy(t.date) + ' · ' + t.when : t.when + (t.status === 'late' ? ' · עבר מועד היעד — עדיין אפשר למלא' : '') +
+      (t.status === 'returned' ? ' · הוחזר לתיקון: ' + t.approvalNote : '') + (t.needsApproval ? ' · הדיווח יעבור לאישור מנהל' : '');
     const stamp = (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
     const fields = (t.form && t.form.fields) || [];
     const ans = {}; fields.forEach((f) => { ans[f.id] = { photos: [] }; });
     const pending = new Set();
     const range = (f) => (f.min != null || f.max != null) ? ' <small>(' + (f.min != null ? f.min : '…') + '–' + (f.max != null ? f.max : '…') + (f.unit || '') + ')</small>' : '';
-    body.innerHTML = (t.description ? '<p style="white-space:pre-wrap;background:#f8fafc;border-radius:10px;padding:8px 12px">' + e(t.description) + '</p>' : '') +
+    body.innerHTML = (mark ? '<div class="tk-f"><div class="lbl">מי ביצע?</div><select class="tk-in" id="tkWho">' +
+        mark.assignees.map((n) => '<option>' + e(n) + '</option>').join('') + '<option value="">אני (המנהל/ת)</option></select>' +
+        '<div class="tk-meta">יירשם "סומן ע״י ' + e(mark.by) + '". בטופס — רק מה שידוע; שום סעיף אינו חובה.</div></div>' : '') +
+      (t.description ? '<p style="white-space:pre-wrap;background:#f8fafc;border-radius:10px;padding:8px 12px">' + e(t.description) + '</p>' : '') +
       (fields.length ? '<p class="tk-meta" id="tkProg"></p>' : '') +
       fields.map((f) => {
         let ctl = '';
@@ -161,7 +172,7 @@
           (f.photo === 'required' || f.type === 'photo' ? ' (חובה)' : '') + '</button></div>' : '') + '</div>';
       }).join('') +
       '<div class="tk-f"><div class="lbl">הערה <small>(לא חובה)</small></div><textarea rows="2" id="tkNote"></textarea></div>' +
-      '<div class="merr" id="tkErr"></div><button class="tk-btn" id="tkSend" style="width:100%;padding:12px">✓ שליחה</button>';
+      '<div class="merr" id="tkErr"></div><button class="tk-btn" id="tkSend" style="width:100%;padding:12px">' + (mark ? '✓ סימון כבוצעה' : '✓ שליחה') + '</button>';
     const prog = () => {
       const p = $('tkProg'); if (!p) return;
       const done = fields.filter((f) => f.type === 'check' ? ans[f.id].done : f.type === 'number' ? (ans[f.id].values || []).filter((v) => v !== null && v !== '').length >= (f.readings || 1)
@@ -198,7 +209,7 @@
           let ok = false, err = null;
           for (let i = 1; i <= 3 && !ok; i++) {   // mobile networks drop a request now and then
             try {
-              const r = await apiPost({ action: 'uploadTaskPhoto', ...meAuth(), stamp, fileName: name, fileData: data.split(',')[1] });
+              const r = await apiPost({ action: 'uploadTaskPhoto', ...(mark ? mAuth() : meAuth()), stamp, fileName: name, fileData: data.split(',')[1] });
               if (!r.ok) throw new Error(r.error || 'ההעלאה נכשלה');
               ok = true;
             } catch (x) { err = x; if (i < 3) await new Promise((r) => setTimeout(r, 1000 * i)); }
@@ -222,7 +233,7 @@
     $('tkSend').addEventListener('click', async () => {
       const err = $('tkErr');
       if (pending.size) { err.textContent = 'רגע — תמונות עדיין עולות…'; return; }
-      const missing = fields.filter((f) => {
+      const missing = mark ? [] : fields.filter((f) => {
         const a = ans[f.id];
         if ((f.photo === 'required' || f.type === 'photo') && !a.photos.length) return true;
         if (f.type === 'check' || !f.required) return false;
@@ -233,13 +244,15 @@
       document.querySelectorAll('#tkFillBody .tk-f').forEach((b) => b.classList.toggle('bad', missing.some((f) => f.id === b.dataset.box)));
       if (missing.length) { err.textContent = 'חסר: ' + missing.map((f) => f.label).join(', '); return; }
       const notDone = fields.filter((f) => f.type === 'check' && !ans[f.id].done);
-      if (notDone.length && !confirm(notDone.length + ' סעיפים לא סומנו כבוצעו — הם יופיעו בדוח למנהל. לשלוח?')) return;
+      if (!mark && notDone.length && !confirm(notDone.length + ' סעיפים לא סומנו כבוצעו — הם יופיעו בדוח למנהל. לשלוח?')) return;
       const btn = $('tkSend'); btn.disabled = true; err.textContent = 'שולח…';
       try {
-        const r = await apiPost({ action: 'submitTask', ...meAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
+        const r = mark ? await apiPost({ action: 'markTaskDone', ...mAuth(), taskId: t.id, date: t.date, employee: $('tkWho').value, stamp, answers: ans, note: $('tkNote').value })
+          : await apiPost({ action: 'submitTask', ...meAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
         if (!r.ok) { err.textContent = r.error || 'שגיאה'; return; }
         $('tkFill').classList.add('hidden');
-        say('המשימה נשלחה ✓' + (r.flags ? ' · ' + r.flags + ' סעיפים לתשומת לב המנהל' : ''), 'ok');
+        if (mark) { say('המשימה סומנה כבוצעה ✓', 'ok'); mark.done(); return; }
+        say((r.pending ? 'הדיווח נשלח ✓ — ממתין לאישור מנהל' : 'המשימה נשלחה ✓') + (r.flags ? ' · ' + r.flags + ' סעיפים לתשומת לב המנהל' : ''), 'ok');
         await fetchMine();
         if ($('tkMine') && !$('tkMine').classList.contains('hidden')) openMine();
       } catch (x) { err.textContent = 'שגיאה: ' + x.message; }
@@ -291,13 +304,19 @@
     if (!r.ok) { box.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     if (!r.runs.length) { box.innerHTML = '<p class="tk-meta">אין משימות בטווח הזה. מוסיפים משימות בלשונית 📋 משימות.</p>'; return; }
     const cnt = (st) => r.runs.filter((x) => x.status === st).length;
-    box.innerHTML = '<p class="tk-meta">✅ ' + cnt('done') + ' בוצעו · ⏳ ' + cnt('open') + ' פתוחות · ❌ ' + cnt('missed') + ' לא בוצעו</p>' +
+    const waiting = r.runs.filter((x) => x.approval === 'pending').length;
+    box.innerHTML = '<p class="tk-meta">✅ ' + cnt('done') + ' בוצעו · ⏳ ' + cnt('open') + ' פתוחות · ❌ ' + cnt('missed') + ' לא בוצעו' +
+      (waiting ? ' · <b style="color:#92400e">🕓 ' + waiting + ' ממתינות לאישורך</b>' : '') + '</p>' +
       '<div style="overflow:auto"><table class="tk-table"><tr><th>תאריך</th><th>משימה</th><th>אחראים</th><th>מצב</th><th>בוצעה ע"י</th><th></th></tr>' +
-      r.runs.map((x) => '<tr class="' + (x.runId && x.status === 'done' ? 'click' : '') + '" data-run="' + (x.runId || '') + '"><td>' + dmy(x.date) + '</td><td><b>' + e(x.title) + '</b>' +
+      r.runs.map((x, i) => '<tr class="' + (x.runId && x.status === 'done' ? 'click' : '') + '" data-run="' + (x.runId || '') + '"><td>' + dmy(x.date) + '</td><td><b>' + e(x.title) + '</b>' +
         (x.time && x.time !== '23:59' ? ' <span class="tk-meta">עד ' + e(x.time) + '</span>' : '') + '</td><td class="tk-meta">' + e(x.assignees.join(', ')) + '</td><td>' + chip(x.status) +
-        (x.late ? ' <span class="tk-chip late">באיחור</span>' : '') + '</td><td>' + e(x.employee) + (x.doneAt ? ' <span class="tk-meta">' + hm(x.doneAt) + '</span>' : '') + '</td><td>' +
-        (x.flags ? '<span class="tk-chip missed">⚠ ' + x.flags + '</span>' : '') + (x.runId && x.status === 'done' ? ' <span class="tk-meta">פתיחה ›</span>' : '') + '</td></tr>').join('') + '</table></div>';
+        (x.late ? ' <span class="tk-chip late">באיחור</span>' : '') + (x.status === 'done' ? apChip(x.approval) : '') + '</td><td>' + e(x.employee) +
+        (x.doneAt ? ' <span class="tk-meta">' + hm(x.doneAt) + '</span>' : '') + (x.markedBy ? ' <span class="tk-meta">(סומן ע״י ' + e(x.markedBy) + ')</span>' : '') + '</td><td>' +
+        (x.flags ? '<span class="tk-chip missed">⚠ ' + x.flags + '</span>' : '') +
+        (x.runId && x.status === 'done' ? ' <span class="tk-meta">' + (x.approval === 'pending' ? 'לאישור ›' : 'פתיחה ›') + '</span>' : '') +
+        (canMark(x) ? ' <button class="tk-btn light" style="padding:4px 10px" data-mark="' + i + '">✓ סמן כבוצעה</button>' : '') + '</td></tr>').join('') + '</table></div>';
     box.querySelectorAll('tr.click').forEach((tr) => tr.addEventListener('click', () => openRun(Number(tr.dataset.run))));
+    box.querySelectorAll('[data-mark]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); openMark(r.runs[Number(b.dataset.mark)], drawRuns); }));
   }
   async function openRun(id) {
     const body = overlay('tkRun', 'דוח משימה');
@@ -306,7 +325,7 @@
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const run = r.run, fields = (run.form && run.form.fields) || [];
     $('tkRunTitle').textContent = '📋 ' + r.task.title;
-    $('tkRunSub').textContent = dmy(run.date) + ' · ' + run.employee + ' · ' + hm(run.doneAt) + (run.late ? ' · באיחור' : '');
+    $('tkRunSub').textContent = dmy(run.date) + ' · ' + run.employee + ' · ' + hm(run.doneAt) + (run.late ? ' · באיחור' : '') + (run.markedBy ? ' · סומן ע״י ' + run.markedBy : '');
     const flagged = new Set((run.flags || []).map((f) => f.field));
     const txt = (f, a) => {
       if (!a) return '—';
@@ -316,7 +335,12 @@
       if (f.type === 'photo') return '';
       return a.value || '—';
     };
-    body.innerHTML = '<div class="tk-tools"><button class="tk-btn light" id="tkRunPdf">📄 PDF עם כל התמונות</button></div>' +
+    const apBox = run.approval === 'pending' ? '<div class="tk-appr"><b>🕓 הדיווח ממתין לאישורך</b>' +
+        '<input class="tk-in" id="tkApNote" maxlength="500" placeholder="הערה לעובד (חובה בהחזרה לתיקון)">' +
+        '<div class="tk-tools" style="margin:0"><button class="tk-btn" id="tkApOk">✔ אישור</button><button class="tk-btn red" id="tkApBack">↩ החזרה לתיקון</button></div><div class="merr" id="tkApErr"></div></div>'
+      : run.approval === 'approved' ? '<p>' + apChip('approved') + ' <span class="tk-meta">' + e(run.approvedBy) + ' ' + hm(run.approvedAt) + (run.approvalNote ? ' · ' + e(run.approvalNote) : '') + '</span></p>'
+      : run.approval === 'returned' ? '<p>' + apChip('returned') + ' <span class="tk-meta">' + e(run.approvedBy) + ': ' + e(run.approvalNote) + '</span></p>' : '';
+    body.innerHTML = apBox + '<div class="tk-tools"><button class="tk-btn light" id="tkRunPdf">📄 PDF עם כל התמונות</button></div>' +
       ((run.flags || []).length ? '<div class="tk-flags"><b>⚠ דורש תשומת לב:</b> ' + run.flags.map((f) => e(f.label) + ': ' + e(f.value)).join(' · ') + '</div>' : '') +
       (run.note ? '<p><b>הערה:</b> ' + e(run.note) + '</p>' : '') +
       fields.map((f) => {
@@ -325,6 +349,16 @@
         return '<div class="tk-f' + (flagged.has(f.id) ? ' bad' : '') + '"><div class="lbl">' + e(f.label) + '</div><div style="font-weight:700;color:' + (flagged.has(f.id) ? '#b91c1c' : '#166534') + '">' + e(txt(f, a)) + '</div>' +
           (pics ? '<div class="tk-pics">' + pics + '</div>' : '') + '</div>';
       }).join('');
+    const decide = async (decision) => {
+      $('tkApErr').textContent = '';
+      const x = await apiPost({ action: 'approveTaskRun', ...mAuth(), id, decision, note: $('tkApNote').value.trim() });
+      if (!x.ok) { $('tkApErr').textContent = x.error || 'שגיאה'; return; }
+      say(decision === 'return' ? 'הדיווח הוחזר לעובד לתיקון ✓' : 'הביצוע אושר ✓', 'ok');
+      $('tkRun').classList.add('hidden');
+      if ($('tkRuns')) drawRuns();
+      loadBoardTasks(true);
+    };
+    if ($('tkApOk')) { $('tkApOk').addEventListener('click', () => decide('approve')); $('tkApBack').addEventListener('click', () => decide('return')); }
     $('tkRunPdf').addEventListener('click', async () => {
       const b = $('tkRunPdf'); b.disabled = true; b.textContent = 'מכין PDF…';
       try {
@@ -336,6 +370,18 @@
     });
   }
 
+  /* ---------- ✓ mark a task done (the manager) ---------- */
+  const canMark = (x) => (x.status !== 'done' || x.approval === 'returned') && x.date <= todayIso();
+  async function openMark(x, after) {
+    try { if (!adm) await loadAdmin(); } catch (err) { say(err.message, 'err'); return; }
+    const task = adm.tasks.find((t) => t.id === x.taskId);
+    if (!task) { say('המשימה לא נמצאה', 'err'); return; }
+    const f = task.formId ? adm.forms.find((y) => y.id === task.formId) : null;
+    const me = (appState() && appState().mgr && appState().mgr.name) || '';
+    openFill({ ...task, date: x.date, status: '', form: f ? { name: f.name, fields: f.fields } : null },
+      { assignees: task.assignees, by: me, done: () => { if ($('tkRuns') && !$('tkMgr').classList.contains('hidden')) after && after(); loadBoardTasks(true); } });
+  }
+
   /* ---------- 📋 tasks ---------- */
   function drawTasks() {
     const pane = $('tkPane');
@@ -343,7 +389,7 @@
     pane.innerHTML = '<div class="tk-tools"><button class="tk-btn" id="tkNewTask">+ משימה חדשה</button></div>' +
       (adm.tasks.length ? adm.tasks.map((t) => '<div class="tk-card" data-id="' + t.id + '"' + (t.active ? '' : ' style="opacity:.55"') + '><div><div class="t">' + (t.managersOnly ? '🔒 ' : '') + e(t.title) +
         (t.active ? '' : ' <span class="tk-chip missed">לא פעילה</span>') + '</div><div class="tk-meta">' + e(t.when) + ' · ' + (t.assignees.length ? e(t.assignees.join(', ')) : 'אין עובדים') +
-        (t.formId ? ' · 🧾 ' + e(forms.get(t.formId) || '') : '') + (adm.branches.length > 1 ? ' · ' + e(t.branch) : '') + '</div></div><span class="tk-meta">עריכה ›</span></div>').join('')
+        (t.formId ? ' · 🧾 ' + e(forms.get(t.formId) || '') : '') + (t.needsApproval ? ' · ✔ דורש אישור' : '') + (adm.branches.length > 1 ? ' · ' + e(t.branch) : '') + '</div></div><span class="tk-meta">עריכה ›</span></div>').join('')
         : '<p class="tk-meta">אין משימות עדיין.</p>');
     $('tkNewTask').addEventListener('click', () => editTask(null));
     pane.querySelectorAll('.tk-card').forEach((c) => c.addEventListener('click', () => editTask(adm.tasks.find((t) => t.id === Number(c.dataset.id)))));
@@ -363,6 +409,7 @@
       '<label>טופס<select class="tk-in" id="tkForm"><option value="">— ללא טופס (משימה עם תיאור) —</option>' + adm.forms.map((f) => '<option value="' + f.id + '"' + (t && t.formId === f.id ? ' selected' : '') + '>' + e(f.name) + ' (' + f.fields.length + ' סעיפים)</option>').join('') + '</select></label>' +
       '<label>תיאור / הוראות<textarea class="tk-in" id="tkDesc" rows="3">' + e(t ? t.description : '') + '</textarea></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkMgrOnly"' + (t && t.managersOnly ? ' checked' : '') + '> 🔒 משימת מנהלים <span class="tk-meta">— בלוח הסידור רק מנהלים (והעובדים שהיא שלהם) רואים אותה</span></label>' +
+      '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkNeedsAp"' + (t && t.needsApproval ? ' checked' : '') + '> ✔ דורש אישור מנהל <span class="tk-meta">— אחרי הדיווח מנהל מאשר, או מחזיר לעובד לתיקון</span></label>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tkActive"' + (!t || t.active ? ' checked' : '') + '> פעילה</label>' +
       '<div class="merr" id="tkTErr"></div><div class="tk-tools"><button class="tk-btn" id="tkTSave">שמירה</button><button class="tk-btn light" id="tkTBack">חזרה</button>' +
       (t ? '<span style="flex:1"></span><button class="tk-btn red" id="tkTDel">מחיקה</button>' : '') + '</div></div>';
@@ -395,7 +442,7 @@
       if (freq === 'monthly') schedule.monthDay = Number($('tkMDay').value);
       const task = { id: t ? t.id : 0, title: $('tkTitle').value.trim(), branch: $('tkBranch') ? $('tkBranch').value : branch0, schedule,
         assignees: [...picked], formId: Number($('tkForm').value) || null, description: $('tkDesc').value.trim(), active: $('tkActive').checked,
-        managersOnly: $('tkMgrOnly').checked };
+        managersOnly: $('tkMgrOnly').checked, needsApproval: $('tkNeedsAp').checked };
       $('tkTErr').textContent = 'שומר…';
       const r = await apiPost({ action: 'saveTask', ...mAuth(), task });
       if (!r.ok) { $('tkTErr').textContent = r.error || 'שגיאה'; return; }
@@ -508,7 +555,9 @@
         const td = firstCell(emp, x.date);       // an employee in two departments: his first row
         if (!td) continue;
         let cls, txt, tip;
-        if (x.status === 'done' && x.employee === emp) { cls = 'done'; txt = '✅ ' + lock(x) + x.title; tip = 'בוצעה ' + hm(x.doneAt) + (x.late ? ' · באיחור' : '') + (x.flags ? ' · ' + x.flags + ' חריגות' : '') + (s.mgr ? ' — לחיצה לדוח' : ''); }
+        if (x.status === 'done' && x.approval === 'returned') { cls = 'missed'; txt = '↩ ' + lock(x) + x.title; tip = 'הוחזר לתיקון' + (s.mgr ? ' — לחיצה לדוח' : ''); }
+        else if (x.status === 'done' && x.employee === emp && x.approval === 'pending') { cls = 'open'; txt = '🕓 ' + lock(x) + x.title; tip = 'בוצעה ' + hm(x.doneAt) + ' · ממתין לאישור מנהל' + (s.mgr ? ' — לחיצה לאישור' : ''); }
+        else if (x.status === 'done' && x.employee === emp) { cls = 'done'; txt = '✅ ' + lock(x) + x.title; tip = 'בוצעה ' + hm(x.doneAt) + (x.late ? ' · באיחור' : '') + (x.flags ? ' · ' + x.flags + ' חריגות' : '') + (s.mgr ? ' — לחיצה לדוח' : ''); }
         else if (x.status === 'done') { cls = 'other'; txt = '☑ ' + lock(x) + x.title; tip = 'בוצעה ע"י ' + x.employee + ' ' + hm(x.doneAt); }
         else if (x.status === 'missed') { cls = 'missed'; txt = '❌ ' + lock(x) + x.title; tip = 'לא בוצעה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : ''); }
         else { cls = 'open'; txt = '⏳ ' + lock(x) + x.title + (x.time && x.time !== '23:59' ? ' ' + x.time : ''); tip = 'משימה' + (x.time && x.time !== '23:59' ? ' עד ' + x.time : '') + (x.assignees.length > 1 ? ' · ' + x.assignees.join(', ') : ''); }
@@ -520,7 +569,8 @@
         if (!s.mgr) chip.style.cursor = 'default';
         chip.addEventListener('click', (ev) => {
           ev.stopPropagation();                      // a task chip never opens the shift window
-          if (s.mgr && x.runId && x.status === 'done') openRun(x.runId);
+          if (s.mgr && x.runId && x.status === 'done' && x.approval !== 'returned') openRun(x.runId);
+          else if (s.mgr && canMark(x) && confirm('לסמן את "' + x.title + '" (' + dmy(x.date) + ') כבוצעה?')) openMark(x);
         });
         const hint = td.querySelector('.addhint');
         if (hint) hint.remove();

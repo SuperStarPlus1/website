@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.14.2',
+  version: '2.15',
   date: '11/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'משימות: אישור מנהל לפי בחירה בכל משימה (✔ אישור / ↩ החזרה לתיקון), ומנהל יכול לסמן משימה כבוצעה במקום העובד',
     'מנהל שהוא גם עובד מדווח על המשימות שלו מתפריט המנהל: 📋 המשימות שלי',
     'בקשות תיקון שעות ובקשות הצוות מציגות את שעת ההגשה — במסך, בהתראה ובמייל למנהל; ההודעה מציינת שזו בקשה של העובד/ת',
     'אימות דו-שלבי למנהלים: קוד מאפליקציית Authenticator או במייל; כל חברה קובעת למי זה חובה (ברירת מחדל: אדמינים); מכשיר מוכר נזכר ל-30 יום עם "השאר אותי מחובר"',
