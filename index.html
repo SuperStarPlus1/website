@@ -116,6 +116,8 @@
         .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
+        .nav-links li { transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 160ms ease; }
+        .nav-links li:active { transform: scale(.97); }
         .nav-links li[tabindex="0"]:focus-visible { outline: 3px solid #ffcc00 !important; }
 
         main { max-width: 100%; margin: 120px auto 50px; }
@@ -319,12 +321,17 @@
         .promo-item-row .item-bc { font-size: 0.72rem; color: #999; font-family: monospace; }
 
         @media (max-width: 768px) {
-            header { height: auto; padding: 10px 0; }
-            .nav-container { flex-direction: column; height: auto; }
-            .logo img { height: 100px; margin: 0 0 10px 0; }
-            .nav-links { flex-wrap: wrap; justify-content: center; gap: 5px; }
-            .news-ticker { top: 180px; }
-            main { margin-top: 230px; }
+            header { height: auto; padding: 6px 0 2px; }
+            .nav-container { flex-direction: column; align-items: stretch; height: auto; padding: 0; }
+            body[data-lang="en"] .nav-container { flex-direction: column; }
+            .logo { display: flex; justify-content: center; }
+            .logo img, body[data-lang="en"] .logo img { height: 74px; margin: -6px 0 -8px; }
+            header nav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            header nav::-webkit-scrollbar { display: none; }
+            .nav-links { flex-wrap: nowrap; justify-content: flex-start; gap: 4px; padding: 6px 10px 6px; width: max-content; }
+            .nav-links li { padding: 7px 13px; }
+            .news-ticker { top: 120px; }
+            main { margin-top: 156px; }
             #a11y-bar { bottom: 160px; }
             #a11y-bar.open { transform: translateX(0); }
             #a11y-toggle { bottom: 115px; }
@@ -446,7 +453,7 @@
     <div id="home" class="page active" role="main">
         <div class="content-wrap">
             <div class="video-box" role="region" aria-label="סרטון פרסומי">
-                <video autoplay muted loop playsinline controls aria-label="סרטון פרסומי של סופרסטאר פלוס">
+                <video autoplay muted loop playsinline controls preload="metadata" poster="https://res.cloudinary.com/dj56w7nb9/video/upload/so_0/v1/promo_video.jpg" aria-label="סרטון פרסומי של סופרסטאר פלוס">
                     <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
                     <p data-i18n="video_fallback">הדפדפן שלך אינו תומך בהצגת וידאו. <a href="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">לחץ להורדת הסרטון</a></p>
                 </video>
@@ -1032,7 +1039,8 @@
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
             const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
             if (!window._promoData) window._promoData = [];
-            const promoNote = o.PromoNote || '';
+            // "מוגבל ל-99999 יח'" means no limit — not shown
+            const promoNote = /9{4,}/.test(o.PromoNote || '') ? '' : (o.PromoNote || '');
             // פריטים שנמכרים בקג — הצג בקג לא יחידות
             const isWeight = qty === 0.01;
             const sIdx = window._promoData.length;
