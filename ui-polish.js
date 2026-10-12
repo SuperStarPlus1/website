@@ -19,5 +19,15 @@
     '@keyframes uiRise{from{opacity:0;transform:translateY(8px) scale(.98)}}' +
     '@media (prefers-reduced-motion:reduce){.overlay:not(.hidden),.overlay:not(.hidden)>.modal{animation:none}' +
       B.split(',').map((c) => c + ':active').join(',') + '{transform:none}}' +
+    // the employee's home screen: the week, the filters and the PDF belong to the board — hidden while the home shows,
+    // so "כניסה למשמרת" is near the top of the phone (they come back with the board)
+    'body:has(#empHome:not(.hidden)) header .weeknav,body:has(#empHome:not(.hidden)) header .hsel,' +
+    'body:has(#empHome:not(.hidden)) header #showInactiveWrap,body:has(#empHome:not(.hidden)) header #pdfBtn{display:none!important}' +
+    // "add to the home screen": a small chip in the corner, not a big button over the middle of the board
+    '.ui-install{position:fixed!important;bottom:16px!important;left:16px!important;right:auto!important;transform:none!important;' +
+      'padding:9px 16px!important;font-size:13px!important;box-shadow:0 6px 16px rgba(0,0,0,.18)!important}' +
     '</style>');
+  new MutationObserver((list) => list.forEach((m) => m.addedNodes.forEach((n) => {
+    if (n.tagName === 'BUTTON' && /הוסף לדף הבית/.test(n.textContent || '')) n.classList.add('ui-install');
+  }))).observe(document.body || document.documentElement, { childList: true });
 })();
