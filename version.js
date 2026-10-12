@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.6',
+  version: '2.16.7',
   date: '12/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'יציאה אוטומטית נרשמת בחצות (בשעת סיום המשמרת) — עד אז אפשר לדווח יציאה אחרי שעות נוספות; ההתראה בסוף המשמרת לא השתנתה · הדוח היומי נשלח ב-01:00',
     'בדיקת הנוכחות כל 15 דקות (במקום 30) · צלצול בהתראות נוכחות כשהמערכת פתוחה (ההתראות שלי ← צלצול, עם השמעה לבדיקה)',
     'פרסום סידור: הסידור מצורף למייל לעובדים כקובץ PDF',
     'תיקון: מחיקה ועריכה של החתמה בדוח המפורט עובדות גם כשהיא מוצגת בסוג אחר (כניסה שנייה כ"חזרה") או נשמרה כמה פעמים באותה דקה',
