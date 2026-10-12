@@ -868,6 +868,13 @@
             const d = await r.json();
             let files = d.resources;
             if (filter) files = files.filter(f => isFresh(f.public_id));
+            // "חדש על המדף": product photos the catalog sync uploaded in the last 7 days (the tag "auto-new" is kept by
+            // the nightly job on the server); newest first — the home page shows the 12 newest
+            if (tag === 'auto-new') {
+                const since = Date.now() - 7 * 86400000;
+                files = files.filter(f => Date.parse(f.created_at) >= since).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+                if (divId === 'new-home') files = files.slice(0, 12);
+            }
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
 
             const html = files.map(f => {
@@ -1128,8 +1135,8 @@
     }
 
     async function start() {
-        loadCloud('newproducts', 'new-home', 'grid', false);
-        loadCloud('newproducts', 'new-full', 'grid', false);
+        loadCloud('auto-new', 'new-home', 'grid', false);
+        loadCloud('auto-new', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
 
         Papa.parse(getCsvUrl('he'), {
@@ -1150,8 +1157,8 @@
                 render(allItems);
 
                 // טען מחדש "חדש על המדף" עכשיו שהקטלוג טעון — כדי להציג שמות ומחירים
-                loadCloud('newproducts', 'new-home', 'grid', false);
-                loadCloud('newproducts', 'new-full', 'grid', false);
+                loadCloud('auto-new', 'new-home', 'grid', false);
+                loadCloud('auto-new', 'new-full', 'grid', false);
 
                 Papa.parse(getOffersUrl(currentLang), {
                     download: true, header: true, skipEmptyLines: true,
