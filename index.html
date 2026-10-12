@@ -957,7 +957,21 @@
             if (!(qty > 0) && amount > 0) {                       // a "purchase over" promotion
                 o.UnitPrice = ''; o.Price = '';
                 if (!notes.some(x => /מעל|فوق|over/i.test(x))) notes.unshift(over + amount);
-                if (descsByBc[nbb(o.Barcode)] && descsByBc[nbb(o.Barcode)].size > 1) { o.Barcode = ''; o.AllBarcodes = '[]'; }   // a shared item: not this deal's product
+                if (descsByBc[nbb(o.Barcode)] && descsByBc[nbb(o.Barcode)].size > 1) {
+                    // a shared item (the list of items that do not count toward the threshold): this deal's own product is
+                    // the item of that list whose catalog name matches the deal best ("כרעיים עוף 1 ק"ג..." → כרעיים עוף)
+                    let list = []; try { list = JSON.parse(o.AllBarcodes || '[]'); } catch (e) { list = []; }
+                    const words = s2 => String(s2 || '').replace(/["'״׳%,.()]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^\d/.test(w));
+                    const dw = words(o.Discreption || o.Description);
+                    let best = '', bestScore = 0;
+                    list.forEach(bc => {
+                        const it = (allItems || []).find(x => nbb(x.Barcode) === nbb(bc));
+                        const nw = words(it ? it.Name : '');
+                        const score = nw.filter(w => dw.includes(w)).length + (nw.length && dw[0] === nw[0] ? 1 : 0);
+                        if (score > bestScore) { bestScore = score; best = nbb(bc); }
+                    });
+                    o.Barcode = bestScore >= 2 ? best : ''; o.AllBarcodes = '[]';
+                }
             }
             o.PromoNote = notes.join(' | ');
             return o;
