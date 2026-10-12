@@ -940,8 +940,33 @@
         }
     }
 
+    /* Comax "purchase over" promotions (e.g. "כרעיים עוף 1 ק"ג ב 10 ש"ח" for a purchase over ₪150) come from the sync with
+       quantity 0, the purchase threshold where the price should be, "no limit" as 99999 and, as their item, one product
+       shared by all of them (it was כנפיים עוף). Shown as they are: the deal in the title, "בקנייה מעל ₪150", no price,
+       no wrong product image, and 99999 (= no limit) never shown. */
+    function normalizeOffers(offers) {
+        const nbb = b => { let s = String(b || '').trim(); if (s.endsWith('.0')) s = s.slice(0, -2); return s; };
+        const descsByBc = {};
+        offers.forEach(o => { const bc = nbb(o.Barcode); (descsByBc[bc] = descsByBc[bc] || new Set()).add(o.Discreption || o.Description || ''); });
+        const over = { he: 'בקנייה מעל ₪', ar: 'عند الشراء فوق ₪', en: 'With a purchase over ₪' }[currentLang] || 'בקנייה מעל ₪';
+        return offers.map(o0 => {
+            const o = Object.assign({}, o0);
+            const notes = String(o.PromoNote || '').split('|').map(x => x.trim()).filter(x => x && !/9{4,}/.test(x));
+            const qty = parseFloat(o.Quanity || o.Quantity || '0');
+            const amount = parseFloat(o.PriceDiscount || '0');
+            if (!(qty > 0) && amount > 0) {                       // a "purchase over" promotion
+                o.UnitPrice = ''; o.Price = '';
+                if (!notes.some(x => /מעל|فوق|over/i.test(x))) notes.unshift(over + amount);
+                if (descsByBc[nbb(o.Barcode)] && descsByBc[nbb(o.Barcode)].size > 1) { o.Barcode = ''; o.AllBarcodes = '[]'; }   // a shared item: not this deal's product
+            }
+            o.PromoNote = notes.join(' | ');
+            return o;
+        });
+    }
+
     function renderOffers(offers) {
         const t = TRANSLATIONS[currentLang];
+        offers = normalizeOffers(offers);
         window.allOffers = offers;
         // בנה מפת ברקוד → תג מבצע לשימוש בקטלוג
         const nbbMap = b => { let s=String(b||'').trim(); if(s.endsWith('.0')) s=s.slice(0,-2); return s; };
@@ -1044,7 +1069,7 @@
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = findItemByBarcode(o.Barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
-            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            const url = barcode ? `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg` : `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png`;
             if (!window._promoData) window._promoData = [];
             // "מוגבל ל-99999 יח'" means no limit — not shown
             const promoNote = /9{4,}/.test(o.PromoNote || '') ? '' : (o.PromoNote || '');
@@ -1103,7 +1128,7 @@
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
-            const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+            const url = barcode ? `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg` : `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png`;
             const promoNote = (o.PromoNote || '');
             const safeDesc = desc.replace(/'/g, '');
             let allBcs = [];
