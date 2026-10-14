@@ -181,10 +181,14 @@
         (r.inboundReady ? '' : '<p class="rcm-note">ℹ תשובות במייל עדיין לא נקלטות כאן אוטומטית — הן מגיעות לכתובת המענה הרגילה של החברה. (הפעלה בהקמת המערכת)</p>') +
         '<div class="rcm-thread" id="rcmThread">' + (r.messages.length ? r.messages.map((m) => {
           const icon = m.channel === 'sms' ? '📱' : '📧';
-          const st = m.direction === 'in' ? 'התקבל' : m.status === 'sent' ? 'נשלח' : m.status === 'failed' ? '⚠ נכשל' : 'לא נשלח';
+          // an SMS: the delivery report from the phone company (✓ delivered / ✗ not delivered / blocked; until then "sent")
+          const dlv = m.channel === 'sms' && m.direction === 'out' && m.status === 'sent' ? ({ delivered: '<span style="color:#166534">✓ נמסר</span>',
+            not_delivered: '<span style="color:#b91c1c" title="' + e(m.deliveryNote) + '">✗ לא נמסר' + (m.deliveryNote ? ' (' + e(m.deliveryNote) + ')' : '') + '</span>',
+            blocked: '<span style="color:#b91c1c">✗ נחסם</span>' }[m.delivery] || '') : '';
+          const st = m.direction === 'in' ? 'התקבל' : dlv || (m.status === 'sent' ? 'נשלח' : m.status === 'failed' ? '⚠ נכשל' : 'לא נשלח');
           const more = m.direction === 'in' && m.short !== m.body;
           return '<div class="rcm-msg ' + m.direction + (m.status === 'failed' ? ' failed' : '') + '"><div class="h">' + icon + ' ' + (m.direction === 'in' ? 'מ: ' + e(m.from) : e(m.by) + ' ← ' + e(m.to)) +
-            ' · ' + e(at(m.at)) + ' · ' + st + ' · <span title="מזהה ההודעה">' + e(m.ref) + '</span>' + (m.error ? '<br>' + e(m.error) : '') + '</div>' +
+            ' · ' + e(at(m.at)) + ' · ' + st + (m.channel === 'sms' && m.segments > 1 ? ' · ' + m.segments + ' מקטעים' : '') + ' · <span title="מזהה ההודעה">' + e(m.ref) + '</span>' + (m.error ? '<br>' + e(m.error) : '') + '</div>' +
             (m.subject ? '<div class="s">' + e(m.subject.replace(/\s*\[#[a-z2-9]{10}\]$/, '')) + '</div>' : '') +
             '<div data-txt>' + e(more ? m.short : m.body) + '</div>' + (more ? '<button class="more" data-full="' + m.id + '">הצג את כל ההודעה</button>' : '') +
             (m.files.length ? '<div class="rcm-files">' + m.files.map((f) => '<button data-file="' + m.id + ':' + f.i + '">📎 ' + e(f.name) + '</button>').join('') + '</div>' : '') + '</div>';
@@ -200,8 +204,18 @@
     const setCh = (c) => {
       ch = c;
       box.querySelectorAll('[data-ch]').forEach((b) => b.classList.toggle('on', b.dataset.ch === c));
-      if ($('rcmSubj')) { $('rcmSubj').style.display = c === 'email' ? '' : 'none'; $('rcmFilesRow').style.display = c === 'email' ? '' : 'none'; $('rcmText').maxLength = c === 'sms' ? 480 : 20000; }
+      if ($('rcmSubj')) { $('rcmSubj').style.display = c === 'email' ? '' : 'none'; $('rcmFilesRow').style.display = c === 'email' ? '' : 'none'; $('rcmText').maxLength = c === 'sms' ? 480 : 20000; smsLen(); }
     };
+    // an SMS: how many characters and parts (70 Hebrew / 160 Latin a part; longer — 67 / 153 each) — billed by parts
+    function smsLen() {
+      const t = $('rcmText'); if (!t) return;
+      let n = $('rcmSmsLen');
+      if (!n) { t.insertAdjacentHTML('afterend', '<span class="rcm-note" id="rcmSmsLen"></span>'); n = $('rcmSmsLen'); t.addEventListener('input', smsLen); }
+      if (ch !== 'sms') { n.textContent = ''; return; }
+      const v = t.value, len = [...v].length, latin = /^[\x20-\x7e\r\n]*$/.test(v);
+      const parts = !len ? 0 : latin ? (len <= 160 ? 1 : Math.ceil(len / 153)) : (len <= 70 ? 1 : Math.ceil(len / 67));
+      n.textContent = len + ' תווים · ' + parts + ' ' + (parts === 1 ? 'מקטע' : 'מקטעים') + (latin ? '' : ' (עברית: 70 תווים למקטע)');
+    }
     box.querySelectorAll('[data-ch]').forEach((b) => b.addEventListener('click', () => setCh(b.dataset.ch)));
     setCh(ch);
     $('rcmIv').addEventListener('click', () => editIv(null, { candidate: { id: cand.id, name: cand.fullName, email: cand.email, phone: cand.phone }, jobs, after: again }));

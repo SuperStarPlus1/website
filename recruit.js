@@ -100,7 +100,7 @@
     const r = await apiPost({ action: 'recruitAdmin', ...mAuth() });
     if (!r.ok) { body.innerHTML = '<p class="merr">' + e(r.error || 'שגיאה') + '</p>'; return; }
     A = r;
-    body.innerHTML = '<div class="rc-tabs"><button data-t="cands">👤 מועמדים</button><button data-t="jobs">💼 משרות</button><button data-t="contracts">📝 הסכמי העסקה</button><button data-t="cal">📅 יומן ראיונות</button></div><div id="rcPane"></div>';
+    body.innerHTML = '<div class="rc-tabs"><button data-t="cands">👤 מועמדים</button><button data-t="jobs">💼 משרות</button><button data-t="contracts">📝 הסכמי העסקה</button><button data-t="cal">📅 יומן ראיונות</button>' + (isAdmin() && window.rcSmsSettings ? '<button data-t="sms">📱 SMS</button>' : '') + '</div><div id="rcPane"></div>';
     body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.t; drawTab(); }));
     drawTab();
   }
@@ -108,6 +108,7 @@
     document.querySelectorAll('#rcOverlayB [data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
     if (tab === 'jobs') drawJobs(); else if (tab === 'contracts') drawContracts();
     else if (tab === 'cal' && window.rcCalendar) { $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove()); window.rcCalendar($('rcPane')); }   // recruit-comm.js
+    else if (tab === 'sms' && window.rcSmsSettings) { $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove()); window.rcSmsSettings($('rcPane')); }   // sms-settings.js
     else drawCands();
   }
   const reload = async () => { const r = await apiPost({ action: 'recruitAdmin', ...mAuth() }); if (r.ok) A = r; };
