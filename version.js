@@ -1,11 +1,10 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.19',
+  version: '2.16.20',
   date: '15/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
-    '📣 מועדון לקוחות — שליחת SMS (אדמין): אקסל של לקוחות ← הזמנה אישית לכל לקוח לעדכון פרטים; הטופס נפתח עם השם, הטלפון והת.ז. שכבר מוכרים; מעקב נשלחו / נמסרו / פתחו / עדכנו',
     'פרוטוקול שימוע: שדה חדש "הצגת הדברים מטעם המעסיק" — פתיחת השימוע לפני תגובת העובד/ת (מופיע במסמך בין הטענות לתגובה)',
     'העלאת תלושים: לא נשלח יותר העתק של כל תלוש במייל לאדמין שהעלה',
     'עובד לא פעיל לא יכול להיכנס למערכת (גם לא לתלושים) — התלושים נשלחים אליו במייל',
