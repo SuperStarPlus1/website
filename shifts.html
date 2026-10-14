@@ -4040,12 +4040,12 @@ async function loadMgrDetailed(){
 }
 document.getElementById('attMgrDetailed').addEventListener('click', loadMgrDetailed);
 
-function openMgrAttEdit(employee, date){
+function openMgrAttEdit(employee, date, dayEvents, onClose){
   const types=['כניסה','הפסקה','חזרה','יציאה'];
   const labels={'כניסה':'כניסה','הפסקה':'יציאה להפסקה','חזרה':'חזרה מהפסקה','יציאה':'סיום משמרת'};
   const emp = (lastMgrDetailed && lastMgrDetailed.employees||[]).find(e=>e.employee===employee);
   const day = emp && emp.days.find(d=>d.date===date);
-  const events = ((day && day.events)||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  const events = (dayEvents ? dayEvents.filter(e=>types.includes(e.type)).map(e=>({...e, time:String(e.time).slice(0,5)})) : ((day && day.events)||[]).slice()).sort((a,b)=>a.time.localeCompare(b.time));
 
   const renderRows = () => events.map((e,i)=>`<div class="mgr-ev-row" data-i="${i}" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <select class="mgr-ev-type" style="width:132px;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 4px;font-size:12.5px">
@@ -4082,7 +4082,7 @@ function openMgrAttEdit(employee, date){
   let refreshedList = false; // אם בוצע שינוי — נרענן את הדוח בסגירה
 
   // סגירת חלון העריכה תמיד מחזירה לרשימת הפירוט המעודכנת (לא סוגרת את מסך ניהול הנוכחות)
-  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); if(refreshedList) loadMgrDetailed(); });
+  dlg.querySelector('#mgrEditCancel').addEventListener('click',()=>{ dlg.remove(); if(onClose) onClose(refreshedList); else if(refreshedList) loadMgrDetailed(); });
 
   const bindDelete = () => {
     dlg.querySelectorAll('.mgr-ev-del').forEach(btn=>{
@@ -4195,9 +4195,9 @@ document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
 async function openMgrMonthEdit(employee, month, fromPicker){
   const dlg=document.createElement('div');
   dlg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">
+  dlg.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:820px;max-height:90vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">
     <div style="font-weight:800;font-size:16px;color:#1b2a4a;margin-bottom:2px">✏ עריכת שעות — ${esc(employee)}</div>
-    <div style="font-size:12px;color:#6b7280;margin-bottom:10px">${fmtMonth(month)} · שינויים בשעות/בסטטוס נשמרים בלחיצת "שמירה"</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:10px">${fmtMonth(month)} · שינויים בשעות/בסטטוס נשמרים בלחיצת "שמירה" · ✕ מוחק שעה · ☰ כל הרישומים של היום</div>
     <div id="monthEditBody" style="overflow-y:auto;flex:1;min-height:100px">טוען…</div>
     <div id="monthEditErr" style="color:#b91c1c;font-size:12px;margin-top:8px"></div>
     <div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0">
@@ -4239,7 +4239,7 @@ async function openMgrMonthEdit(employee, month, fromPicker){
           </tr>`;
         }
         return `<tr data-i="${i}">
-          <td>${label}</td>
+          <td style="white-space:nowrap">${label} <button type="button" class="me-day" title="כל הרישומים של היום — מחיקה, הוספה ושינוי סוג" style="background:#eef2ff;color:#3730a3;border:0;border-radius:6px;padding:1px 7px;cursor:pointer;font-size:12px">☰</button></td>
           <td>${selectHtml}</td>
           <td><input type="time" class="me-t" data-f="inT" value="${d.inT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
           <td><input type="time" class="me-t" data-f="breakT" value="${d.breakT||''}" style="width:88px;border:1.5px solid #e2e8f0;border-radius:6px;padding:3px"></td>
@@ -4248,6 +4248,34 @@ async function openMgrMonthEdit(employee, month, fromPicker){
         </tr>`;
       }).join('')}
     </table>`;
+    body.querySelector('table').style.minWidth = '0';                                // not the board's 860px: the יציאה column was hidden
+    body.querySelectorAll('td,th').forEach(c=>{ c.style.padding = '6px 4px'; });   // compact: all the columns fit
+    body.querySelectorAll('.me-t').forEach(inp=>{
+      const d = days[Number(inp.closest('tr').dataset.i)], had = !!d[inp.dataset.f];
+      const x = document.createElement('button');
+      x.type = 'button'; x.textContent = '✕'; x.title = 'מחיקת השעה (נשמר בלחיצת "שמירה")';
+      x.style.cssText = 'background:none;border:0;color:#b91c1c;cursor:pointer;font-size:13px;padding:0 3px;vertical-align:middle';
+      const mark = () => {
+        x.style.display = inp.value ? '' : 'none';
+        inp.style.background = had && !inp.value ? '#fee2e2' : '';   // to be deleted
+        inp.title = had && !inp.value ? 'יימחק בשמירה' : '';
+      };
+      x.onclick = () => { inp.value = ''; mark(); };
+      inp.addEventListener('input', mark);
+      inp.parentNode.style.whiteSpace = 'nowrap'; inp.style.width = '80px';
+      inp.after(x); mark();
+    });
+    body.querySelectorAll('.me-day').forEach(b=>{
+      b.onclick = () => {
+        const d = days[Number(b.closest('tr').dataset.i)];
+        openMgrAttEdit(employee, d.date, d.events||[], async (changed)=>{
+          if(!changed) return;
+          hasSaved = true;
+          const r2 = await apiPost({ action:'mgrEmpMonth', ...mgrAuth(), employee, month });
+          if(r2.ok){ days = r2.days.map(x=>({...x, _newDayType: x.dayType})); renderTable(); }
+        });
+      };
+    });
     body.querySelectorAll('.me-status').forEach(sel=>{
       sel.addEventListener('change', ()=>{
         const i = Number(sel.closest('tr').dataset.i);

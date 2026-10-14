@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.10',
-  date: '13/10/2026',
+  version: '2.16.11',
+  date: '14/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'עריכת שעות: ✕ ליד כל שעה מוחק אותה, ☰ ליד התאריך פותח את כל ההחתמות של היום (מחיקה, הוספה, שינוי סוג) · הטבלה מציגה את כל העמודות (גם יציאה) בלי גלילה הצידה',
     'מכתבי שימוע ופיטורים והסכם העסקה — עם לוגו החברה בראש העמוד',
     'מסך הבית של העובד בטלפון: כפתור "כניסה למשמרת" עלה לראש המסך (בקרת השבוע והסינונים מוסתרים במסך הבית) · "הוסף לדף הבית" — כפתור קטן בפינה',
     'עיצוב: לחיצה על כפתור מגיבה מיד, חלונות נפתחים ברכות, כפתור מושבת נראה מושבת (כבוי למי שביקש פחות תנועה)',
