@@ -111,6 +111,7 @@
 
   /* ---------- 📤 a new sending ---------- */
   const ROLES = [['phone', 'טלפון *', /טלפון|נייד|פלאפון|סלולרי|phone|mobile|tel/i], ['id', 'ת.ז. *', /ת\.?\s*ז|תעודת|זהות|^id$|id ?number/i],
+    ['card', 'מס׳ כרטיס מועדון', /כרטיס|מועדון|card|member/i],
     ['first', 'שם פרטי', /שם פרטי|first/i], ['last', 'שם משפחה', /שם משפחה|משפחה|last|surname/i], ['full', 'שם מלא (אם אין פרטי/משפחה)', /^שם$|שם מלא|שם לקוח|^name$|full ?name/i]];
   function guess() {
     map = {};
@@ -124,14 +125,14 @@
       let phone = cell(r, 'phone').replace(/[^\d+]/g, '');
       if (/^5\d{8}$/.test(phone)) phone = '0' + phone;   // Excel drops the leading 0
       const id = cell(r, 'id').replace(/\D/g, '');
-      return { row: i + 2, phone, idNumber: id, firstName: first, lastName: last, okPhone: phoneOk(phone), okId: idOk(id) };
+      return { row: i + 2, phone, idNumber: id, firstName: first, lastName: last, cardNo: cell(r, 'card').replace(/\s+/g, ''), okPhone: phoneOk(phone), okId: idOk(id) };
     });
   }
   function drawNew() {
     const p = $('csP');
     const today = new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
     p.innerHTML = '<div class="box"><h4>1. קובץ הלקוחות</h4><input type="file" id="csFile" accept=".xlsx,.xls,.csv">' +
-      '<p class="note">אקסל עם שורת כותרות. חובה: טלפון נייד ותעודת זהות; רצוי: שם פרטי ושם משפחה (או שם מלא).</p><div id="csMap"></div></div>' +
+      '<p class="note">אקסל עם שורת כותרות. חובה: טלפון נייד ותעודת זהות; רצוי: מס׳ כרטיס מועדון (מוצג ללקוח בטופס, לא לעריכה — ומשמש לעדכון קומקס), שם פרטי ושם משפחה (או שם מלא).</p><div id="csMap"></div></div>' +
       '<div class="box"><h4>2. ההודעה</h4><div class="row"><label class="c">שם השליחה (לזיהוי)<input type="text" id="csName" value="עדכון פרטים — ' + today + '"></label></div>' +
       '<label class="c" style="margin-top:8px">נוסח ה-SMS — {שם} יוחלף בשם הפרטי<textarea id="csMsg" rows="3" maxlength="400"></textarea></label>' +
       '<div class="note" id="csLen"></div><div class="note">בסוף כל הודעה נוסף אוטומטית: <span dir="ltr">' + e(LINK.trim()) + '</span> — קישור אישי לכל לקוח.' +
@@ -166,8 +167,8 @@
   }
   function preview() {
     const m = mapped();
-    $('csPrev').innerHTML = '<table style="margin-top:8px"><tr><th>שורה</th><th>שם</th><th>טלפון</th><th>ת.ז.</th></tr>' + m.slice(0, 6).map((r) =>
-      '<tr><td>' + r.row + '</td><td>' + e((r.firstName + ' ' + r.lastName).trim() || '—') + '</td><td dir="ltr" class="' + (r.okPhone ? '' : 'bad') + '">' + e(r.phone || '—') + '</td>' +
+    $('csPrev').innerHTML = '<table style="margin-top:8px"><tr><th>שורה</th><th>כרטיס</th><th>שם</th><th>טלפון</th><th>ת.ז.</th></tr>' + m.slice(0, 6).map((r) =>
+      '<tr><td>' + r.row + '</td><td dir="ltr">' + e(r.cardNo || '—') + '</td><td>' + e((r.firstName + ' ' + r.lastName).trim() || '—') + '</td><td dir="ltr" class="' + (r.okPhone ? '' : 'bad') + '">' + e(r.phone || '—') + '</td>' +
       '<td dir="ltr" class="' + (r.okId ? '' : 'bad') + '">' + e(r.idNumber ? '•••••' + r.idNumber.slice(-4) : '—') + '</td></tr>').join('') + '</table>';
     summary();
   }
@@ -183,7 +184,7 @@
     const m = mapped().filter((r) => r.phone || r.idNumber);
     $('csCreate').disabled = true; $('csRes').innerHTML = '<p class="note">יוצר…</p>';
     const x = await api({ action: 'clubInvitesImport', name: $('csName').value, message: $('csMsg').value, skipUpdated: $('csSkip').checked,
-      rows: m.map(({ row, phone, idNumber, firstName, lastName }) => ({ row, phone, idNumber, firstName, lastName })) });
+      rows: m.map(({ row, phone, idNumber, firstName, lastName, cardNo }) => ({ row, phone, idNumber, firstName, lastName, cardNo })) });
     const extra = x.invalidCount !== undefined ? '<p class="note">' + [x.invalidCount ? x.invalidCount + ' שורות לא תקינות' : '', x.dup ? x.dup + ' כפולים' : '', x.optout ? x.optout + ' ביקשו לא לקבל הודעות' : '',
       x.already ? x.already + ' כבר עדכנו פרטים' : ''].filter(Boolean).join(' · ') + (x.invalid && x.invalid.length ? '<br>שורות לא תקינות: ' + x.invalid.slice(0, 30).map((r) => r.row + ' (' + r.reason + ')').join(', ') : '') + '</p>' : '';
     if (!x.ok) { $('csRes').innerHTML = '<p class="bad">' + e(x.error || 'שגיאה') + '</p>' + extra; $('csCreate').disabled = false; return; }
@@ -278,8 +279,8 @@
     $('mStats').innerHTML = '<b>' + r.all + '</b> חברי מועדון · מאשרים דיוור במייל: <b>' + r.mailOk + '</b> · ב-SMS: <b>' + r.smsOk + '</b>' + (mq ? ' · נמצאו ' + r.total : '');
     if (!r.members.length) { $('mList').innerHTML = '<p class="note">' + (mq ? 'לא נמצאו חברים.' : 'עוד אין חברי מועדון.') + '</p>'; return; }
     const pages = Math.ceil(r.total / 50);
-    $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>שם</th><th>טלפון</th><th>עיר</th><th>ת.ז.</th><th>שפה</th><th>מייל</th><th>SMS</th><th>עודכן</th></tr>' +
-      r.members.map((m) => '<tr data-m="' + m.id + '" style="cursor:pointer"><td><b>' + e(m.name) + '</b></td><td dir="ltr">' + e(m.phone) + '</td><td>' + e(m.city) + '</td><td dir="ltr">' + e(m.id3) + '</td><td>' + (LANG[m.language] || '') +
+    $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>כרטיס</th><th>שם</th><th>טלפון</th><th>עיר</th><th>ת.ז.</th><th>שפה</th><th>מייל</th><th>SMS</th><th>עודכן</th></tr>' +
+      r.members.map((m) => '<tr data-m="' + m.id + '" style="cursor:pointer"><td dir="ltr" class="note">' + e(m.cardNo || '—') + '</td><td><b>' + e(m.name) + '</b></td><td dir="ltr">' + e(m.phone) + '</td><td>' + e(m.city) + '</td><td dir="ltr">' + e(m.id3) + '</td><td>' + (LANG[m.language] || '') +
         '</td><td>' + yes(m.mail) + '</td><td>' + yes(m.sms) + '</td><td class="note">' + e(dt(m.updated)) + '</td></tr>').join('') + '</table>' +
       (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
       '<p class="note">לחיצה על שורה — כרטיס החבר עם כל ההסכמות.</p></div><div id="mCard"></div>';
@@ -293,7 +294,7 @@
     if (!r.ok) { box.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const m = r.member, row = (k, v, ltr) => '<tr><td class="note" style="width:130px">' + k + '</td><td' + (ltr ? ' dir="ltr" style="text-align:right"' : '') + '><b>' + e(v) + '</b></td></tr>';
     box.innerHTML = '<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">👤 ' + e(m.first_name + ' ' + m.last_name) + '</h4><button class="btn" id="mClose">סגירה</button></div>' +
-      '<table style="margin-top:8px">' + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
+      '<table style="margin-top:8px">' + row('מס׳ כרטיס מועדון', m.card_no || '—', 1) + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
         row('כתובת', m.street + ' ' + m.house_no + ', ' + m.city) + row('שפת דיוור', LANG[m.language] || m.language) +
         '<tr><td class="note">דיוור כעת</td><td>מייל ' + yes(m.marketing_email) + ' · SMS ' + yes(m.marketing_sms) + '</td></tr>' + row('הצטרף/ה', dt(m.created_at)) + row('עודכן', dt(m.updated_at)) + '</table>' +
       '<h4 style="margin:14px 0 6px">📜 הסכמות והסרות (' + r.consents.length + ')</h4><div style="overflow-x:auto"><table><tr><th>מתי</th><th>מה</th><th>החלטה</th><th>היכן</th><th>גרסה</th><th>IP</th></tr>' +
@@ -311,12 +312,12 @@
       const r = await api({ action: 'clubMembersExport' });
       if (!r.ok) { say(r.error || 'שגיאה', 'err'); return; }
       await loadScript(XLSX_URL);
-      const head = ['שם פרטי', 'שם משפחה', 'ת.ז.', 'טלפון', 'מייל', 'תאריך לידה', 'עיר', 'רחוב', 'מספר בית', 'שפת דיוור', 'דיוור במייל', 'דיוור ב-SMS', 'הצטרף/ה', 'עודכן'];
-      const rows = r.members.map((m) => [m.first_name, m.last_name, m.id_number, m.phone, m.email, dmy(m.birth_date), m.city, m.street, m.house_no, LANG[m.language] || m.language,
+      const head = ['מס׳ כרטיס מועדון', 'שם פרטי', 'שם משפחה', 'ת.ז.', 'טלפון', 'מייל', 'תאריך לידה', 'עיר', 'רחוב', 'מספר בית', 'שפת דיוור', 'דיוור במייל', 'דיוור ב-SMS', 'הצטרף/ה', 'עודכן'];
+      const rows = r.members.map((m) => [m.card_no || '', m.first_name, m.last_name, m.id_number, m.phone, m.email, dmy(m.birth_date), m.city, m.street, m.house_no, LANG[m.language] || m.language,
         m.marketing_email ? 'כן' : 'לא', m.marketing_sms ? 'כן' : 'לא', dt(m.created_at), dt(m.updated_at)]);
       const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
-      ws['!cols'] = head.map((h, i) => ({ wch: [10, 12, 11, 12, 26, 11, 14, 18, 8, 9, 10, 10, 17, 17][i] }));
-      for (let i = 1; i <= rows.length; i++) for (const c of ['C', 'D']) { const cell = ws[c + (i + 1)]; if (cell) { cell.t = 's'; cell.z = '@'; } }   // the leading 0 stays
+      ws['!cols'] = head.map((h, i) => ({ wch: [12, 10, 12, 11, 12, 26, 11, 14, 18, 8, 9, 10, 10, 17, 17][i] }));
+      for (let i = 1; i <= rows.length; i++) for (const c of ['A', 'D', 'E']) { const cell = ws[c + (i + 1)]; if (cell) { cell.t = 's'; cell.z = '@'; } }   // card, ID, phone as text: the leading 0 stays
       const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
       XLSX.utils.book_append_sheet(wb, ws, 'חברי מועדון');
       XLSX.writeFile(wb, 'חברי מועדון סופרסטאר ' + new Date().toISOString().slice(0, 10) + '.xlsx');
