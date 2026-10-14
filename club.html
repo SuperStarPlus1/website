@@ -71,6 +71,8 @@
   .known small { color: var(--muted); }
   .known[hidden], .f input[hidden], .f[hidden] { display: none; }
   .known .chg { margin-inline-start: auto; background: none; border: 0; color: var(--blue); text-decoration: underline; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+  .namefix { background: #fff3e0; border: 1px solid #ffd8a8; border-radius: 12px; padding: 9px 12px; margin: 0 0 12px; font-size: 14px; color: #7c4a03; }
+  .namefix[hidden] { display: none; }
   .hello { background: #fff8db; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 15px; }
   .optout { text-align: center; color: var(--muted); font-size: 13.5px; margin: 16px 0 0; }
   .optout button { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; padding: 0; }
@@ -108,6 +110,7 @@
     <div class="sec" data-t="secMe"></div>
     <div class="f" id="cardRow" hidden style="margin-bottom:10px"><span class="lbl" data-t="cardNo"></span>
       <div class="known"><span class="ltr" id="cardNo"></span> <small data-t="cardNote"></small></div></div>
+    <p class="namefix" id="nameFix" hidden data-t="nameFix"></p>
     <div class="grid">
       <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="err" id="e-firstName"></div></div>
       <div class="f"><label for="lastName" data-t="lastName"></label><input id="lastName" autocomplete="family-name" maxlength="40" required><div class="err" id="e-lastName"></div></div>
@@ -175,6 +178,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
+      nameFix: '✏️ השם הועבר מהרישום הקיים שלנו כשם מלא אחד, וחילקנו אותו לשם פרטי ולשם משפחה. ייתכן שבזמן ההקמה נפלה בו טעות כתיב או חלוקה לא נכונה — על כך אנו מתנצלים מראש. נא לבדוק את השם ולתקן אם צריך.',
       idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', cardNo: 'מספר כרטיס מועדון', cardNote: '(לידיעתך)', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
       optoutQ: 'לא מעוניינים לקבל הודעות מסופרסטאר?', optoutBtn: 'להסרה', optoutConfirm: 'להסיר את המספר מכל ההודעות של סופרסטאר?', optoutDoneT: 'הוסרת ✓', optoutDone: 'לא נשלח למספר הזה יותר הודעות. הבקשה נרשמה.',
       wasOut: 'ביקשת בעבר לא לקבל הודעות. מילוי הטופס ואישור הדיוור יחדשו את ההסכמה.', badLink: 'הקישור אינו בתוקף — אפשר למלא את הטופס כרגיל.',
@@ -193,6 +197,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
+      nameFix: '✏️ نُقل الاسم من سجلّنا الحالي كاسم كامل واحد، وقمنا بتقسيمه إلى اسم شخصي واسم عائلة. قد يكون حدث خطأ في الكتابة أو في التقسيم أثناء الإعداد — نعتذر عن ذلك مسبقًا. يرجى التحقق من الاسم وتصحيحه عند الحاجة.',
       idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', cardNo: 'رقم بطاقة النادي', cardNote: '(للعلم)', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
       optoutQ: 'لا ترغبون بتلقي رسائل من سوبرستار؟', optoutBtn: 'للإزالة', optoutConfirm: 'إزالة الرقم من جميع رسائل سوبرستار؟', optoutDoneT: 'تمت الإزالة ✓', optoutDone: 'لن تُرسل رسائل أخرى إلى هذا الرقم. تم تسجيل الطلب.',
       wasOut: 'طلبت سابقًا عدم تلقي الرسائل. تعبئة النموذج والموافقة على الرسائل تجدّد الموافقة.', badLink: 'الرابط غير صالح — يمكنك تعبئة النموذج كالمعتاد.',
@@ -345,6 +350,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       if (r.firstName && !$('firstName').value) $('firstName').value = r.firstName;
       if (r.lastName && !$('lastName').value) $('lastName').value = r.lastName;
       if (r.cardNo) { $('cardNo').textContent = r.cardNo; $('cardRow').hidden = false; }   // shown only — it comes from Comax
+      if (r.firstName || r.lastName) $('nameFix').hidden = false;   // the name came from our old records — may be misspelt: say so, and sorry
       if (r.phoneMasked) { $('phone').hidden = true; $('phone').required = false; $('phoneMasked').textContent = r.phoneMasked; $('phoneKnown').hidden = false; }
       $('idNumber').hidden = true; $('idNumber').required = false;
       $('idMasked').textContent = r.idMasked; $('idKnown').hidden = false;
