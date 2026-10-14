@@ -180,7 +180,7 @@
       '<div class="rcm-box"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b>💬 התכתבות</b>' + (r.token ? ' <span class="rc-meta" title="המזהה של המועמד/ת — בכתובת המענה ובנושא כל מייל">מזהה: #' + e(r.token) + '</span>' : '') + '</div>' +
         (r.inboundReady ? '' : '<p class="rcm-note">ℹ תשובות במייל עדיין לא נקלטות כאן אוטומטית — הן מגיעות לכתובת המענה הרגילה של החברה. (הפעלה בהקמת המערכת)</p>') +
         '<div class="rcm-thread" id="rcmThread">' + (r.messages.length ? r.messages.map((m) => {
-          const icon = m.channel === 'sms' ? '📱' : '📧';
+          const icon = m.channel === 'sms' ? '📱' : m.channel === 'web' ? '🔗' : '📧';
           // an SMS: the delivery report from the phone company (✓ delivered / ✗ not delivered / blocked; until then "sent")
           const dlv = m.channel === 'sms' && m.direction === 'out' && m.status === 'sent' ? ({ delivered: '<span style="color:#166534">✓ נמסר</span>',
             not_delivered: '<span style="color:#b91c1c" title="' + e(m.deliveryNote) + '">✗ לא נמסר' + (m.deliveryNote ? ' (' + e(m.deliveryNote) + ')' : '') + '</span>',
@@ -212,9 +212,10 @@
       let n = $('rcmSmsLen');
       if (!n) { t.insertAdjacentHTML('afterend', '<span class="rcm-note" id="rcmSmsLen"></span>'); n = $('rcmSmsLen'); t.addEventListener('input', smsLen); }
       if (ch !== 'sms') { n.textContent = ''; return; }
-      const v = t.value, len = [...v].length, latin = /^[\x20-\x7e\r\n]*$/.test(v);
+      const v = t.value + (r.smsSuffix || ''), len = [...v].length, latin = /^[\x20-\x7e\r\n]*$/.test(v);   // + the reply link, added to every SMS
       const parts = !len ? 0 : latin ? (len <= 160 ? 1 : Math.ceil(len / 153)) : (len <= 70 ? 1 : Math.ceil(len / 67));
-      n.textContent = len + ' תווים · ' + parts + ' ' + (parts === 1 ? 'מקטע' : 'מקטעים') + (latin ? '' : ' (עברית: 70 תווים למקטע)');
+      n.textContent = len + ' תווים · ' + parts + ' ' + (parts === 1 ? 'מקטע' : 'מקטעים') + (latin ? '' : ' (עברית: 70 תווים למקטע)') +
+        (r.smsSuffix ? ' · כולל קישור התשובה האישי שנוסף בסוף' : '');
     }
     box.querySelectorAll('[data-ch]').forEach((b) => b.addEventListener('click', () => setCh(b.dataset.ch)));
     setCh(ch);

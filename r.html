@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>תשובה</title>
+<!-- A candidate's personal reply page: the link at the end of every SMS (<site>/r?t=<his token>). The reply goes into his own
+     correspondence only (api candidateReplyInfo / candidateReply — _shared/recruit-comm.ts replyInfo / fileReply).
+     The same page in Superstar (r.html there, its own API address). -->
+<script>window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' };</script>
+<style>
+  :root { --ink: #1b2a4a; --muted: #64748b; --line: #e2e8f0; --ok: #166534; --bad: #b91c1c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #f1f5f9; color: var(--ink); font: 16px/1.5 system-ui, "Segoe UI", Arial, sans-serif;
+    display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 480px; background: #fff; border-radius: 16px; box-shadow: 0 6px 24px rgba(15, 23, 42, .08); padding: 22px 20px; }
+  .logo { display: block; max-height: 56px; max-width: 180px; margin: 0 auto 12px; }
+  h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
+  p.sub { color: var(--muted); margin: 0 0 16px; text-align: center; font-size: 14.5px; }
+  textarea { width: 100%; min-height: 140px; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; font: inherit; resize: vertical; }
+  textarea:focus { outline: 2px solid var(--ink); outline-offset: 1px; border-color: transparent; }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; color: var(--muted); font-size: 13px; }
+  button { width: 100%; margin-top: 14px; background: var(--ink); color: #fff; border: 0; border-radius: 12px; padding: 13px; font: inherit; font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  .msg { margin-top: 12px; text-align: center; font-weight: 600; }
+  .msg.bad { color: var(--bad); } .msg.ok { color: var(--ok); }
+  .done { text-align: center; padding: 18px 0 6px; }
+  .done .big { font-size: 44px; line-height: 1; }
+  .foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+  .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<main class="card" id="card">
+  <p class="sub">טוען…</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  const card = document.getElementById('card');
+  const t = (new URLSearchParams(location.search).get('t') || '').trim().toLowerCase();
+  const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const api = async (body) => {
+    try {
+      const r = await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
+      return await r.json();
+    } catch { return { ok: false, error: 'אין חיבור — נסו שוב בעוד רגע' }; }
+  };
+  const fail = (m) => { card.innerHTML = '<h1>😕</h1><p class="sub">' + e(m) + '</p>'; };
+  if (!/^[a-z2-9]{10}$/.test(t)) { fail('הקישור לא תקין. אפשר להשתמש בקישור שהגיע בהודעה.'); return; }
+
+  api({ action: 'candidateReplyInfo', t }).then((info) => {
+    if (!info.ok) { fail(info.error || 'הקישור לא תקין'); return; }
+    document.title = 'תשובה ל' + info.company;
+    card.innerHTML = (info.logo ? '<img class="logo" src="' + e(info.logo) + '" alt="">' : '') +
+      '<h1>תשובה ל' + e(info.company) + '</h1>' +
+      '<p class="sub">' + (info.name ? 'שלום ' + e(info.name) + ', ' : '') + 'כתבו כאן את התשובה — היא תגיע ישירות לצוות הגיוס.</p>' +
+      '<label for="txt" class="sr">התשובה</label>' +
+      '<textarea id="txt" maxlength="2000" placeholder="התשובה שלך…"></textarea>' +
+      '<div class="row"><span id="cnt">0 / 2000</span><span></span></div>' +
+      '<button id="send" disabled>שליחה</button><div class="msg" id="msg" role="status"></div>' +
+      '<div class="foot">הקישור אישי — אין להעביר אותו לאחרים.</div>';
+    const txt = document.getElementById('txt'), send = document.getElementById('send'), msg = document.getElementById('msg');
+    txt.addEventListener('input', () => { document.getElementById('cnt').textContent = txt.value.length + ' / 2000'; send.disabled = !txt.value.trim(); });
+    txt.focus();
+    send.addEventListener('click', async () => {
+      send.disabled = true; msg.className = 'msg'; msg.textContent = 'שולח…';
+      const r = await api({ action: 'candidateReply', t, text: txt.value.trim() });
+      if (!r.ok) { msg.className = 'msg bad'; msg.textContent = r.error || 'שגיאה — נסו שוב'; send.disabled = false; return; }
+      card.innerHTML = '<div class="done"><div class="big">✓</div><h1>התשובה נשלחה</h1><p class="sub">תודה! הצוות של ' + e(info.company) + ' יקבל אותה עכשיו.</p>' +
+        '<button id="more" style="background:#fff;color:var(--ink);border:1.5px solid var(--line)">שליחת תשובה נוספת</button></div>';
+      document.getElementById('more').addEventListener('click', () => location.reload());
+    });
+  });
+})();
+</script>
+</body>
+</html>

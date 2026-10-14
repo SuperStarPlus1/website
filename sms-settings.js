@@ -1,7 +1,7 @@
 // Recruitment — the "📱 SMS" tab (admins; same file in Superstar and Sidurit). Server: _shared/recruit-comm.ts
 // smsSettings / saveSmsSender / smsSenderCheck / smsSenderOtp / smsSenderVerify; smsInbox / smsInboxAssign / smsInboxDrop.
-//   replies to assign: an SMS reply from a phone that several candidates got an SMS from — the admin chooses whose
-//   (only one of them); a reply from an unknown phone — shown to drop.
+//   replies: every SMS ends with the candidate's personal reply link (r.html) — explained here. (Dormant: replies to a
+//   virtual number held for choosing — shown only if there are any.)
 //   the sender the candidates see: 2–11 Latin letters / digits (a name — no replies), or a phone number approved with a
 //   code sent to it; empty — the system's sender. This and last month's use (messages, parts, delivered) and its price.
 // recruit.js draws the tab (window.rcSmsSettings) — and the delivery state of each SMS in the correspondence (recruit-comm.js).
@@ -47,8 +47,6 @@
         '<p class="sms-note">ריק = שם השולח של המערכת' + (r.systemSender ? ' (<span dir="ltr">' + e(r.systemSender) + '</span>)' : '') + '.</p></div>' +
       '<div class="sms-box" id="smsReplyNote"></div>' +
       '<div class="sms-box"><h4>📥 תשובות לשיוך</h4><div id="smsInbox"><p class="rc-meta">טוען…</p></div></div>' +
-      (r.inboundUrl ? '<div class="sms-box"><h4>🔗 כתובת קליטת תשובות</h4><p class="sms-note" style="margin:0 0 6px">לשלוח לתמיכה של UP Send ולבקש "קליטת הודעות נכנסות ב-PUSH (IncomingXML)" לכתובת:</p>' +
-        '<input readonly dir="ltr" value="' + e(r.inboundUrl) + '" style="width:100%;font-family:monospace;font-size:12px;border:1.5px solid #d1d5db;border-radius:8px;padding:6px" onclick="this.select()"></div>' : '') +
       '<div class="sms-box"><h4>📊 שימוש</h4><div class="sms-use">' + use(r.thisMonth) + use(r.lastMonth) + '</div>' +
         '<p class="sms-note">מקטע = 70 תווים בעברית (160 באנגלית); הודעה ארוכה נשלחת בכמה מקטעים. "נמסרו" — לפי אישור המסירה מחברת הסלולר' +
         (r.pricing ? (r.pricing.included ? '. כלולים בחודש: ' + r.pricing.included + ' מקטעים' : '') + (r.pricing.price > 0 ? '. מחיר למקטע: ₪' + r.pricing.price + ' — מופיע בחשבונית החודשית.' : '.') : '.') + '</p></div>';
@@ -57,9 +55,9 @@
       const v = $('smsSender').value.trim() || r.systemSender || '';
       $('smsPrev').innerHTML = '📱 אצל המועמד/ת: <b dir="ltr">' + e(v || '—') + '</b>';
       // replies: only to a phone number — a name cannot be answered
-      $('smsReplyNote').innerHTML = !v ? '' : isPhone(v)
-        ? '💬 <b>תשובות מועמדים ייקלטו:</b> מי שעונה ל-SMS — התשובה נכנסת להתכתבות שלו/ה. אם כמה מועמדים קיבלו הודעות מאותו מספר טלפון, התשובה ממתינה כאן לשיוך ידני — ולא נכנסת לתיק לפי ניחוש.'
-        : '💬 <b>לשם שולח אי אפשר להשיב.</b> מועמדים לא יוכלו לענות ב-SMS. כדי לקבל תשובות — השאירו ריק' + (r.systemSender && isPhone(r.systemSender) ? ' (המספר של המערכת)' : '') + ' או אשרו מספר טלפון.';
+      $('smsReplyNote').innerHTML = '💬 <b>תשובות מועמדים:</b> בסוף כל SMS מצורף קישור אישי של המועמד/ת — "לתשובה: <span dir="ltr">' + e(r.replyExample || '') + '</span>". ' +
+        'בלחיצה נפתח דף שבו כותבים תשובה, והיא נכנסת ישר ל<b>💬 התכתבות</b> שלו/ה (עם הודעה למנהלים). הקישור אישי לכל מועמד/ת — תשובה לא יכולה להגיע לתיק של מישהו אחר. ' +
+        'הקישור מוסיף כ-35 תווים להודעה (מונה המקטעים בהתכתבות כולל אותו).';
     };
     const otpFor = (v) => { $('smsOtp').style.display = isPhone(v) ? 'flex' : 'none'; };
     $('smsSender').addEventListener('input', () => { prev(); otpFor($('smsSender').value); msg(''); });
@@ -69,7 +67,7 @@
       const box = $('smsInbox'); if (!box) return;
       const x = await apiPost({ action: 'smsInbox', ...mAuth() });
       if (!x.ok) { box.innerHTML = '<p class="merr">' + e(x.error || 'שגיאה') + '</p>'; return; }
-      if (!x.items.length) { box.innerHTML = '<p class="sms-note" style="margin:0">אין תשובות שממתינות. תשובה של מועמד/ת שקיבל/ה SMS מאיתנו נכנסת ישר להתכתבות שלו/ה.</p>'; return; }
+      if (!x.items.length) { box.closest('.sms-box').style.display = 'none'; return; }
       const when = (v) => { const t = new Date(v); return isNaN(t) ? '' : t.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + ' ' + t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
       box.innerHTML = x.items.map((it) => '<div style="border-top:1px solid #f1f5f9;padding:8px 0" data-in="' + it.id + '">' +
         '<div class="sms-note" style="margin:0">📱 <span dir="ltr">' + e(it.phone) + '</span> · ' + e(when(it.at)) + '</div>' +
