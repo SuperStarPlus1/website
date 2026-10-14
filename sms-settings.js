@@ -1,5 +1,7 @@
 // Recruitment — the "📱 SMS" tab (admins; same file in Superstar and Sidurit). Server: _shared/recruit-comm.ts
-// smsSettings / saveSmsSender / smsSenderCheck / smsSenderOtp / smsSenderVerify.
+// smsSettings / saveSmsSender / smsSenderCheck / smsSenderOtp / smsSenderVerify; smsInbox / smsInboxAssign / smsInboxDrop.
+//   replies to assign: an SMS reply from a phone that several candidates got an SMS from — the admin chooses whose
+//   (only one of them); a reply from an unknown phone — shown to drop.
 //   the sender the candidates see: 2–11 Latin letters / digits (a name — no replies), or a phone number approved with a
 //   code sent to it; empty — the system's sender. This and last month's use (messages, parts, delivered) and its price.
 // recruit.js draws the tab (window.rcSmsSettings) — and the delivery state of each SMS in the correspondence (recruit-comm.js).
@@ -32,6 +34,7 @@
       (r.pricing && r.pricing.price > 0 ? '<br>לחיוב: ' + Math.max(u.segments - r.pricing.included, 0) + ' × ₪' + r.pricing.price + ' = <b style="display:inline;font-size:14px">₪' +
         (Math.max(u.segments - r.pricing.included, 0) * r.pricing.price).toFixed(2) + '</b> (לפני מע"מ)' : '') + '</div>';
     pane.innerHTML =
+      (r.waiting ? '<div class="sms-box" style="background:#fff7ed;border-color:#fed7aa">📥 <b>' + r.waiting + ' תשובות SMS ממתינות לשיוך</b> — למטה.</div>' : '') +
       (r.ready ? '' : '<div class="sms-box" style="background:#fffbeb;border-color:#fde68a">ℹ שליחת SMS עוד לא הופעלה במערכת. אפשר כבר לקבוע את שם השולח — הוא ייכנס לתוקף עם ההפעלה.</div>') +
       '<div class="sms-box"><h4>✉️ שם השולח</h4>' +
         '<p class="sms-note" style="margin:0 0 8px">כך תופיע ההודעה אצל המועמד/ת. <b>שם</b>: 2–11 אותיות באנגלית או ספרות, בלי רווחים (למשל <span dir="ltr">MyShop</span>) — למועמד/ת אי אפשר להשיב לשם. <b>מספר טלפון</b>: מאשרים פעם אחת בקוד שנשלח אליו.</p>' +
@@ -42,14 +45,52 @@
         '<div id="smsMsg" class="sms-note"></div>' +
         '<div class="sms-prev" id="smsPrev"></div>' +
         '<p class="sms-note">ריק = שם השולח של המערכת' + (r.systemSender ? ' (<span dir="ltr">' + e(r.systemSender) + '</span>)' : '') + '.</p></div>' +
+      '<div class="sms-box" id="smsReplyNote"></div>' +
+      '<div class="sms-box"><h4>📥 תשובות לשיוך</h4><div id="smsInbox"><p class="rc-meta">טוען…</p></div></div>' +
+      (r.inboundUrl ? '<div class="sms-box"><h4>🔗 כתובת קליטת תשובות</h4><p class="sms-note" style="margin:0 0 6px">לשלוח לתמיכה של UP Send ולבקש "קליטת הודעות נכנסות ב-PUSH (IncomingXML)" לכתובת:</p>' +
+        '<input readonly dir="ltr" value="' + e(r.inboundUrl) + '" style="width:100%;font-family:monospace;font-size:12px;border:1.5px solid #d1d5db;border-radius:8px;padding:6px" onclick="this.select()"></div>' : '') +
       '<div class="sms-box"><h4>📊 שימוש</h4><div class="sms-use">' + use(r.thisMonth) + use(r.lastMonth) + '</div>' +
         '<p class="sms-note">מקטע = 70 תווים בעברית (160 באנגלית); הודעה ארוכה נשלחת בכמה מקטעים. "נמסרו" — לפי אישור המסירה מחברת הסלולר' +
         (r.pricing ? (r.pricing.included ? '. כלולים בחודש: ' + r.pricing.included + ' מקטעים' : '') + (r.pricing.price > 0 ? '. מחיר למקטע: ₪' + r.pricing.price + ' — מופיע בחשבונית החודשית.' : '.') : '.') + '</p></div>';
     const msg = (html, cls) => { $('smsMsg').innerHTML = cls ? '<span class="' + cls + '">' + html + '</span>' : html; };
-    const prev = () => { const v = $('smsSender').value.trim() || r.systemSender || ''; $('smsPrev').innerHTML = '📱 אצל המועמד/ת: <b dir="ltr">' + e(v || '—') + '</b>'; };
+    const prev = () => {
+      const v = $('smsSender').value.trim() || r.systemSender || '';
+      $('smsPrev').innerHTML = '📱 אצל המועמד/ת: <b dir="ltr">' + e(v || '—') + '</b>';
+      // replies: only to a phone number — a name cannot be answered
+      $('smsReplyNote').innerHTML = !v ? '' : isPhone(v)
+        ? '💬 <b>תשובות מועמדים ייקלטו:</b> מי שעונה ל-SMS — התשובה נכנסת להתכתבות שלו/ה. אם כמה מועמדים קיבלו הודעות מאותו מספר טלפון, התשובה ממתינה כאן לשיוך ידני — ולא נכנסת לתיק לפי ניחוש.'
+        : '💬 <b>לשם שולח אי אפשר להשיב.</b> מועמדים לא יוכלו לענות ב-SMS. כדי לקבל תשובות — השאירו ריק' + (r.systemSender && isPhone(r.systemSender) ? ' (המספר של המערכת)' : '') + ' או אשרו מספר טלפון.';
+    };
     const otpFor = (v) => { $('smsOtp').style.display = isPhone(v) ? 'flex' : 'none'; };
     $('smsSender').addEventListener('input', () => { prev(); otpFor($('smsSender').value); msg(''); });
-    prev(); otpFor(r.sender);
+    prev(); otpFor(r.sender); inbox();
+
+    async function inbox() {
+      const box = $('smsInbox'); if (!box) return;
+      const x = await apiPost({ action: 'smsInbox', ...mAuth() });
+      if (!x.ok) { box.innerHTML = '<p class="merr">' + e(x.error || 'שגיאה') + '</p>'; return; }
+      if (!x.items.length) { box.innerHTML = '<p class="sms-note" style="margin:0">אין תשובות שממתינות. תשובה של מועמד/ת שקיבל/ה SMS מאיתנו נכנסת ישר להתכתבות שלו/ה.</p>'; return; }
+      const when = (v) => { const t = new Date(v); return isNaN(t) ? '' : t.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + ' ' + t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+      box.innerHTML = x.items.map((it) => '<div style="border-top:1px solid #f1f5f9;padding:8px 0" data-in="' + it.id + '">' +
+        '<div class="sms-note" style="margin:0">📱 <span dir="ltr">' + e(it.phone) + '</span> · ' + e(when(it.at)) + '</div>' +
+        '<div style="white-space:pre-wrap;margin:4px 0">' + e(it.text) + '</div>' +
+        (it.status === 'pending'
+          ? '<div class="sms-row"><span class="sms-note" style="margin:0">של מי? (קיבלו SMS מהמספר הזה):</span>' + it.candidates.map((c) => '<button class="btn plain" data-as="' + c.id + '" style="font-size:12.5px">' + e(c.name) + '</button>').join('') + '<button class="btn plain" data-drop style="font-size:12.5px;color:#b91c1c">התעלמות</button></div>'
+          : '<div class="sms-row"><span class="sms-note" style="margin:0">ממספר שלא קיבל מאיתנו SMS ב-30 הימים האחרונים.</span><button class="btn plain" data-drop style="font-size:12.5px;color:#b91c1c">הסרה</button></div>') +
+        '</div>').join('');
+      box.querySelectorAll('[data-as]').forEach((b) => b.addEventListener('click', async () => {
+        const id = Number(b.closest('[data-in]').dataset.in);
+        const y = await apiPost({ action: 'smsInboxAssign', ...mAuth(), id, candidateId: Number(b.dataset.as) });
+        if (!y.ok) { say(y.error || 'שגיאה', 'err'); return; }
+        say('שויך ל' + b.textContent + ' ✓', 'ok'); inbox();
+      }));
+      box.querySelectorAll('[data-drop]').forEach((b) => b.addEventListener('click', async () => {
+        const id = Number(b.closest('[data-in]').dataset.in);
+        const y = await apiPost({ action: 'smsInboxDrop', ...mAuth(), id });
+        if (!y.ok) { say(y.error || 'שגיאה', 'err'); return; }
+        inbox();
+      }));
+    }
     $('smsSave').addEventListener('click', async () => {
       const v = $('smsSender').value.trim();
       msg('שומר…');
