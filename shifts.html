@@ -4890,7 +4890,10 @@ async function openPay(){
     const r = await apiPost({ action:'getAdminData', ...mgrAuth() });
     if(r.ok && r.employees) payState.adminEmps = r.employees;
   }catch(e){ payState.adminEmps = []; }
-  const opts = state.employees.filter(e=>e.active).map(e=>`<option value="${esc(e.name)}">${esc(e.name)}</option>`).join('');
+  // every employee — also an inactive one (a payslip after leaving): marked, listed after the active ones
+  const payEmps = (payState.adminEmps.length ? payState.adminEmps : state.employees).filter(e=>e.name);
+  const opts = [...payEmps.filter(e=>e.active!==false), ...payEmps.filter(e=>e.active===false)]
+    .map(e=>`<option value="${esc(e.name)}">${esc(e.name)}${e.active===false?' (לא פעיל/ה)':''}</option>`).join('');
   document.getElementById('payViewEmp').innerHTML = '<option value="">— בחר עובד —</option>'+opts;
   document.getElementById('payViewList').innerHTML='';
   show('payOverlay');
@@ -4915,7 +4918,7 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
     const stripZeros = s => s.replace(/^0+/,'') || s;
     const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const byNum = {}, byAlnum = {};
-    payState.adminEmps.forEach(e=>{
+    [...payState.adminEmps.filter(e=>e.active===false), ...payState.adminEmps.filter(e=>e.active!==false)].forEach(e=>{   // active last: wins a shared number
       const k = cleanNo(e.empNo);
       if(!k) return;
       if(/^[0-9]+$/.test(k)) byNum[stripZeros(k)] = e.name;
@@ -4977,7 +4980,8 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
       payState.pages.push({ page:p, employee, ambiguous, tokens, anchoredNum });
     }
     // סקירת שיוך
-    const empOpts = payState.adminEmps.filter(e=>e.active!==false).map(e=>e.name);
+    const empOpts = [...payState.adminEmps.filter(e=>e.active!==false), ...payState.adminEmps.filter(e=>e.active===false)].map(e=>e.name);   // inactive too
+    const inactive = new Set(payState.adminEmps.filter(e=>e.active===false).map(e=>e.name));
     document.getElementById('payPages').innerHTML = payState.pages.map((pg,i)=>{
       let diag = '';
       if(!pg.employee){
@@ -4989,7 +4993,7 @@ document.getElementById('payAnalyze').addEventListener('click', async ()=>{
         <span>עמוד ${pg.page}</span>
         <select class="pay-sel" data-i="${i}" style="width:100%;border:1.5px solid ${pg.employee?'var(--line)':'#ef4444'};border-radius:8px;padding:6px">
           <option value="">— לא זוהה / דלג —</option>
-          ${empOpts.map(n=>`<option ${n===pg.employee?'selected':''}>${esc(n)}</option>`).join('')}
+          ${empOpts.map(n=>`<option value="${esc(n)}" ${n===pg.employee?'selected':''}>${esc(n)}${inactive.has(n)?' (לא פעיל/ה)':''}</option>`).join('')}
         </select>
         ${diag}
       </div>`;
