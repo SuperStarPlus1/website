@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>תעזרו לנו לשמור על קשר — מועדון סופרסטאר</title>
+<meta name="description" content="עדכון פרטי ההתקשרות במועדון הלקוחות של סופרסטאר — מבצעים, הטבות ומתנה ביום ההולדת.">
+<meta property="og:title" content="תעזרו לנו לשמור על קשר 💛 — מועדון סופרסטאר">
+<meta property="og:description" content="עדכנו את הפרטים במועדון — ותקבלו מבצעים, הטבות ומתנה ביום ההולדת.">
+<meta property="og:image" content="https://www.superstar-plus.co.il/logo.png">
+<meta name="robots" content="noindex">
+<link rel="icon" href="logo.png">
+<!-- The club's contact-details landing page (sent to the members). Server: supabase/functions/api/club.ts (clubSubmit);
+     the documents: club-terms / club-privacy; cities and streets: club-data/ (CBS, data.gov.il) — all from
+     club/build_club.py. The consent words below are written by build_club.py (between the CONSENT markers). -->
+<style>
+  :root { --blue: #0076DA; --blue-d: #005bb0; --yellow: #ffcc00; --ink: #1f2937; --muted: #64748b; --line: #dbe3ec; --bad: #c62828; --ok: #2e7d32; --bg: #eef4fa; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", Tahoma, Arial, sans-serif; }
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; max-width: 760px; margin: 0 auto; }
+  .top img { height: 46px; }
+  .lang { display: flex; background: #fff; border: 1.5px solid var(--line); border-radius: 99px; padding: 3px; }
+  .lang button { border: 0; background: none; font: inherit; font-size: 14px; padding: 5px 12px; border-radius: 99px; cursor: pointer; color: var(--muted); }
+  .lang button.on { background: var(--blue); color: #fff; font-weight: 700; }
+  .hero { max-width: 760px; margin: 0 auto; padding: 8px 16px 0; text-align: center; }
+  .hero h1 { font-size: clamp(26px, 6.4vw, 38px); line-height: 1.2; margin: 8px 0 8px; color: var(--blue-d); }
+  .hero h1 span { background: linear-gradient(transparent 62%, var(--yellow) 62%); padding: 0 4px; }
+  .hero p { margin: 0 auto; max-width: 560px; color: #334155; font-size: 17px; }
+  .perks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 760px; margin: 18px auto 0; padding: 0 16px; }
+  .perk { background: #fff; border-radius: 16px; padding: 14px 10px; text-align: center; box-shadow: 0 2px 10px rgba(0, 60, 120, .06); }
+  .perk .ic { font-size: 30px; line-height: 1; }
+  .perk b { display: block; margin: 6px 0 2px; font-size: 15px; }
+  .perk small { color: var(--muted); font-size: 13px; line-height: 1.35; display: block; }
+  @media (max-width: 520px) { .perks { grid-template-columns: 1fr; } .perk { display: grid; grid-template-columns: 44px 1fr; text-align: start; align-items: center; gap: 2px 8px; } .perk .ic { grid-row: span 2; text-align: center; } .perk b { margin: 0; } }
+  .card { max-width: 760px; margin: 18px auto 0; background: #fff; border-radius: 20px; padding: 20px 18px 22px; box-shadow: 0 8px 30px rgba(0, 60, 120, .08); }
+  @media (min-width: 800px) { .card { padding: 26px 30px 28px; } }
+  .card h2 { margin: 0 0 4px; font-size: 20px; }
+  .card .sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .sec { font-size: 13px; font-weight: 700; color: var(--blue); margin: 18px 0 8px; padding-bottom: 5px; border-bottom: 2px solid #eef2f7; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .grid .wide { grid-column: 1 / -1; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  .f label, .f .lbl { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .f input, .f select { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 11px 12px; font: inherit; background: #fff; color: var(--ink); min-height: 48px; }
+  .f input:focus, .f select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0, 118, 218, .15); }
+  .f input[aria-invalid="true"], .f select[aria-invalid="true"] { border-color: var(--bad); }
+  .f .err { color: var(--bad); font-size: 13px; min-height: 0; margin-top: 3px; }
+  .f .err:empty { display: none; }
+  .ltr { direction: ltr; text-align: right; }
+  .f .help { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .seg label { display: flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid var(--line); border-radius: 12px; min-height: 52px; cursor: pointer; font-weight: 700; font-size: 16px; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; inset: 0; width: 100% !important; height: 100% !important; min-height: 0 !important; margin: 0; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { border-color: var(--blue); background: #eaf4ff; color: var(--blue-d); }
+  .seg label:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(0, 118, 218, .25); }
+  .chk { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; margin-top: 8px; cursor: pointer; font-size: 14.5px; }
+  .chk input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--blue); }
+  .chk[aria-invalid="true"] { border-color: var(--bad); }
+  .chk a { color: var(--blue); }
+  .send { width: 100%; margin-top: 18px; background: var(--blue); color: #fff; border: 0; border-radius: 14px; padding: 15px; font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 118, 218, .28); }
+  .send:hover { background: var(--blue-d); }
+  .send:disabled { opacity: .6; cursor: default; }
+  .formerr { color: var(--bad); font-weight: 700; text-align: center; margin-top: 10px; }
+  .formerr:empty { display: none; }
+  .hp { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .done { text-align: center; padding: 26px 8px; }
+  .done .big { font-size: 56px; line-height: 1; }
+  .done h2 { color: var(--blue-d); font-size: 24px; margin: 10px 0 6px; }
+  .foot { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; text-align: center; color: var(--muted); font-size: 13px; }
+  .foot a { color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { .card, .perk { animation: up .35s ease-out both; } .perk:nth-child(2) { animation-delay: .05s; } .perk:nth-child(3) { animation-delay: .1s; } }
+  @keyframes up { from { opacity: 0; transform: translateY(8px); } }
+</style>
+</head>
+<body>
+<header class="top">
+  <img src="logo.png" alt="סופרסטאר">
+  <div class="lang" role="group" aria-label="שפה / اللغة"><button type="button" data-ui="he">עברית</button><button type="button" data-ui="ar">العربية</button></div>
+</header>
+
+<section class="hero">
+  <h1 data-t="h1"></h1>
+  <p data-t="lead"></p>
+</section>
+<section class="perks">
+  <div class="perk"><div class="ic">🎁</div><b data-t="p1"></b><small data-t="p1s"></small></div>
+  <div class="perk"><div class="ic">🏷️</div><b data-t="p2"></b><small data-t="p2s"></small></div>
+  <div class="perk"><div class="ic">📲</div><b data-t="p3"></b><small data-t="p3s"></small></div>
+</section>
+
+<main class="card" id="card">
+  <form id="form" novalidate>
+    <h2 data-t="formTitle"></h2>
+    <p class="sub" data-t="formSub"></p>
+
+    <div class="sec" data-t="secMe"></div>
+    <div class="grid">
+      <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="err" id="e-firstName"></div></div>
+      <div class="f"><label for="lastName" data-t="lastName"></label><input id="lastName" autocomplete="family-name" maxlength="40" required><div class="err" id="e-lastName"></div></div>
+      <div class="f"><label for="idNumber" data-t="idNumber"></label><input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" class="ltr" required><div class="err" id="e-idNumber"></div></div>
+      <div class="f"><span class="lbl" id="l-birth" data-t="birth"></span>
+        <div class="grid3" role="group" aria-labelledby="l-birth">
+          <select id="bDay" aria-label="יום"></select><select id="bMonth" aria-label="חודש"></select><select id="bYear" aria-label="שנה"></select>
+        </div><div class="err" id="e-birthDate"></div></div>
+    </div>
+
+    <div class="sec" data-t="secHome"></div>
+    <div class="grid">
+      <div class="f wide"><label for="city" data-t="city"></label><input id="city" list="cityList" autocomplete="off" maxlength="60" required><datalist id="cityList"></datalist><div class="err" id="e-city"></div></div>
+      <div class="f"><label for="street" data-t="street"></label><input id="street" list="streetList" autocomplete="off" maxlength="80" required><datalist id="streetList"></datalist><div class="help" id="streetHelp"></div><div class="err" id="e-street"></div></div>
+      <div class="f"><label for="houseNo" data-t="houseNo"></label><input id="houseNo" maxlength="9" class="ltr" required><div class="err" id="e-houseNo"></div></div>
+    </div>
+
+    <div class="sec" data-t="secContact"></div>
+    <div class="grid">
+      <div class="f"><label for="phone" data-t="phone"></label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" class="ltr" placeholder="05X-XXXXXXX" required><div class="err" id="e-phone"></div></div>
+      <div class="f"><label for="email" data-t="email"></label><input id="email" type="email" autocomplete="email" maxlength="120" class="ltr" placeholder="name@example.com" required><div class="err" id="e-email"></div></div>
+      <div class="f wide"><span class="lbl" id="l-lang" data-t="mailLang"></span>
+        <div class="seg" role="radiogroup" aria-labelledby="l-lang">
+          <label><input type="radio" name="language" value="he"> עברית</label><label><input type="radio" name="language" value="ar"> العربية</label>
+        </div><div class="err" id="e-language"></div></div>
+    </div>
+
+    <div class="sec" data-t="secOk"></div>
+    <label class="chk" id="c-acceptTerms"><input type="checkbox" id="acceptTerms"><span id="txtTerms"></span></label>
+    <div class="f"><div class="err" id="e-acceptTerms"></div></div>
+    <label class="chk" id="c-acceptMarketing"><input type="checkbox" id="acceptMarketing"><span id="txtMarketing"></span></label>
+    <div class="f"><div class="err" id="e-acceptMarketing"></div></div>
+
+    <div class="hp" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
+    <button class="send" id="send" type="submit" data-t="send"></button>
+    <div class="formerr" id="formErr" role="alert"></div>
+  </form>
+</main>
+
+<footer class="foot">
+  <a href="club-terms" id="lnTerms" data-t="terms"></a> · <a href="club-privacy" id="lnPrivacy" data-t="privacy"></a><br>
+  <span data-t="company"></span> · 04-9076772 · info@superstarplus.co.il
+</footer>
+
+<script>
+window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' };
+/*CONSENT*/const CONSENT = {"he": {"terms": "קראתי ואני מסכים/ה לתקנון המועדון ולמדיניות הפרטיות.", "marketing": "אני מסכים/ה לקבל מסופרסטאר (פלוס גולד אנרגיה והשקעות בע\"מ) דברי פרסומת — מבצעים, הטבות ומתנות — במייל וב-SMS, בשפה שבחרתי. אפשר להסיר את ההסכמה בכל עת בקישור שבכל הודעה."}, "ar": {"terms": "قرأت وأوافق على أنظمة النادي وسياسة الخصوصية.", "marketing": "أوافق على تلقي رسائل إعلانية من سوبرستار (بلوس جولد للطاقة والاستثمارات م.ض) — عروض وامتيازات وهدايا — بالبريد الإلكتروني وSMS، باللغة التي اخترتها. يمكن إلغاء الموافقة في أي وقت عبر الرابط الموجود في كل رسالة."}};/*END*/
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const I = {
+    he: {
+      h1: 'תעזרו לנו <span>לשמור על קשר</span> 💛', lead: 'עדכנו את הפרטים שלכם במועדון הלקוחות של סופרסטאר — ותהיו הראשונים לקבל מבצעים, הטבות בלעדיות ומתנה ביום ההולדת.',
+      p1: 'מתנה ביום ההולדת', p1s: 'מחכה לכם בחנות בחודש יום ההולדת', p2: 'הטבות ומבצעים', p2s: 'מבצעים בלעדיים לחברי המועדון', p3: 'ראשונים לדעת', p3s: 'במייל וב-SMS, בשפה שתבחרו',
+      formTitle: 'עדכון פרטים במועדון', formSub: 'כל השדות חובה. זה לוקח פחות מדקה 🙂',
+      secMe: 'הפרטים שלי', secHome: 'כתובת מגורים', secContact: 'איך ליצור קשר', secOk: 'אישורים',
+      firstName: 'שם פרטי', lastName: 'שם משפחה', idNumber: 'תעודת זהות', birth: 'תאריך לידה', city: 'עיר / יישוב', street: 'רחוב', houseNo: 'מספר בית',
+      phone: 'טלפון נייד', email: 'כתובת מייל', mailLang: 'באיזו שפה לשלוח לכם עדכונים?',
+      day: 'יום', month: 'חודש', year: 'שנה', months: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+      cityPh: 'התחילו להקליד ובחרו מהרשימה', streetPh: 'רחוב', streetNone: 'ליישוב אין רשימת רחובות רשמית — כתבו את שם הרחוב או השכונה', streetPick: 'בחרו מהרשימה או כתבו',
+      send: 'עדכון הפרטים ✓', sending: 'שולח…', terms: 'תקנון המועדון', privacy: 'מדיניות הפרטיות', company: 'פלוס גולד אנרגיה והשקעות בע"מ — רשת סופרסטאר',
+      e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
+        city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
+        language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
+      doneT: (n) => 'תודה, ' + n + '! 🎉', done1: 'הפרטים עודכנו במועדון.', done2: 'שלחנו לכם מייל אישור עם הפרטים וההסכמות. נתראה בחנות! 🛒',
+    },
+    ar: {
+      h1: 'ساعدونا <span>لنبقى على تواصل</span> 💛', lead: 'حدّثوا تفاصيلكم في نادي زبائن سوبرستار — وكونوا أول من يحصل على العروض والامتيازات الحصرية وهدية عيد الميلاد.',
+      p1: 'هدية عيد الميلاد', p1s: 'تنتظركم في المتجر في شهر ميلادكم', p2: 'امتيازات وعروض', p2s: 'عروض حصرية لأعضاء النادي', p3: 'أول من يعرف', p3s: 'بالبريد الإلكتروني وSMS، باللغة التي تختارونها',
+      formTitle: 'تحديث التفاصيل في النادي', formSub: 'جميع الحقول إلزامية. يستغرق ذلك أقل من دقيقة 🙂',
+      secMe: 'تفاصيلي', secHome: 'عنوان السكن', secContact: 'كيف نتواصل معكم', secOk: 'الموافقات',
+      firstName: 'الاسم الشخصي', lastName: 'اسم العائلة', idNumber: 'رقم الهوية', birth: 'تاريخ الميلاد', city: 'المدينة / البلدة', street: 'الشارع', houseNo: 'رقم البيت',
+      phone: 'الهاتف المحمول', email: 'البريد الإلكتروني', mailLang: 'بأي لغة نرسل لكم التحديثات؟',
+      day: 'يوم', month: 'شهر', year: 'سنة', months: ['كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران', 'تموز', 'آب', 'أيلول', 'تشرين الأول', 'تشرين الثاني', 'كانون الأول'],
+      cityPh: 'ابدأوا الكتابة واختاروا من القائمة', streetPh: 'الشارع', streetNone: 'لا توجد قائمة شوارع رسمية لهذه البلدة — اكتبوا اسم الشارع أو الحي', streetPick: 'اختاروا من القائمة أو اكتبوا',
+      send: 'تحديث التفاصيل ✓', sending: 'جارٍ الإرسال…', terms: 'أنظمة النادي', privacy: 'سياسة الخصوصية', company: 'بلوس جولد للطاقة والاستثمارات م.ض — شبكة سوبرستار',
+      e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
+        city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
+        language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
+      doneT: (n) => 'شكرًا، ' + n + '! 🎉', done1: 'تم تحديث التفاصيل في النادي.', done2: 'أرسلنا لكم بريدًا إلكترونيًا للتأكيد مع التفاصيل والموافقات. نراكم في المتجر! 🛒',
+    },
+  };
+  let ui = new URLSearchParams(location.search).get('lang') === 'ar' || (!location.search.includes('lang=') && /^ar\b/i.test(navigator.language || '')) ? 'ar' : 'he';
+  let cities = [], cityByName = new Map(), cityCode = null;
+
+  /* ---------- the page's language ---------- */
+  function paint() {
+    const t = I[ui];
+    document.documentElement.lang = ui;
+    document.querySelectorAll('[data-ui]').forEach((b) => b.classList.toggle('on', b.dataset.ui === ui));
+    document.querySelectorAll('[data-t]').forEach((el) => { const v = t[el.dataset.t]; if (typeof v === 'string') el.innerHTML = v; });
+    document.title = ui === 'ar' ? 'ساعدونا لنبقى على تواصل — نادي سوبرستار' : 'תעזרו לנו לשמור על קשר — מועדון סופרסטאר';
+    $('city').placeholder = t.cityPh; $('street').placeholder = t.streetPh;
+    const q = ui === 'ar' ? '?lang=ar' : '';
+    $('txtTerms').innerHTML = esc(CONSENT[ui].terms).replace(t.terms, '<a href="club-terms' + q + '" target="_blank" rel="noopener">' + t.terms + '</a>')
+      .replace(t.privacy, '<a href="club-privacy' + q + '" target="_blank" rel="noopener">' + t.privacy + '</a>');
+    $('txtMarketing').textContent = CONSENT[ui].marketing;
+    $('lnTerms').href = 'club-terms' + q; $('lnPrivacy').href = 'club-privacy' + q;
+    fillBirth(); streetHelp();
+    document.querySelectorAll('.err').forEach((e) => { if (e.dataset.k) e.textContent = I[ui].e[e.dataset.k]; });
+  }
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  document.querySelectorAll('[data-ui]').forEach((b) => b.addEventListener('click', () => { ui = b.dataset.ui; paint(); }));
+
+  /* ---------- birth date: three lists ---------- */
+  function fillBirth() {
+    const t = I[ui], d = $('bDay').value, m = $('bMonth').value, y = $('bYear').value;
+    const now = new Date().getFullYear();
+    $('bDay').innerHTML = '<option value="">' + t.day + '</option>' + Array.from({ length: 31 }, (_, i) => '<option>' + (i + 1) + '</option>').join('');
+    $('bMonth').innerHTML = '<option value="">' + t.month + '</option>' + t.months.map((n, i) => '<option value="' + (i + 1) + '">' + n + '</option>').join('');
+    $('bYear').innerHTML = '<option value="">' + t.year + '</option>' + Array.from({ length: 83 }, (_, i) => '<option>' + (now - 18 - i) + '</option>').join('');
+    $('bDay').value = d; $('bMonth').value = m; $('bYear').value = y;
+  }
+  const birthIso = () => {
+    const d = +$('bDay').value, m = +$('bMonth').value, y = +$('bYear').value;
+    if (!d || !m || !y) return '';
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    if (dt.getUTCMonth() !== m - 1) return '';
+    const now = new Date(), age = now.getFullYear() - y - ((now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) ? 1 : 0);
+    return age >= 18 && age <= 120 ? y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0') : '';
+  };
+
+  /* ---------- cities and streets (CBS) ---------- */
+  fetch('club-data/cities.json').then((r) => r.json()).then((list) => {
+    cities = list;
+    $('cityList').innerHTML = list.map((c) => '<option value="' + esc(c[1]) + '">').join('');
+    list.forEach((c) => cityByName.set(norm(c[1]), c));
+    onCity();
+  }).catch(() => {});
+  const norm = (s) => String(s).replace(/[׳']/g, "'").replace(/[-־]/g, ' ').replace(/\s+/g, ' ').trim();
+  let streetsFor = null;
+  function onCity() {
+    const c = cityByName.get(norm($('city').value));
+    cityCode = c ? c[0] : null;
+    if (c && $('city').value !== c[1]) $('city').value = c[1];
+    if (!c || streetsFor === c[0]) { streetHelp(); return; }
+    streetsFor = c[0]; $('streetList').innerHTML = '';
+    if (c[2]) fetch('club-data/s/' + c[0] + '.json').then((r) => r.json()).then((s) => {
+      if (streetsFor === c[0]) $('streetList').innerHTML = s.map((n) => '<option value="' + esc(n) + '">').join('');
+    }).catch(() => {});
+    streetHelp();
+  }
+  function streetHelp() {
+    const c = cityCode && cities.find((x) => x[0] === cityCode);
+    $('streetHelp').textContent = !c ? '' : c[2] ? I[ui].streetPick : I[ui].streetNone;
+  }
+  $('city').addEventListener('change', onCity);
+  $('city').addEventListener('input', () => { if (cityByName.has(norm($('city').value))) onCity(); });
+
+  /* ---------- checks (the server checks the same) ---------- */
+  const idOk = (raw) => {
+    const d = raw.replace(/\D/g, ''); if (d.length < 5 || d.length > 9) return false;
+    const id = d.padStart(9, '0'); let s = 0;
+    for (let i = 0; i < 9; i++) { let n = +id[i] * ((i % 2) + 1); if (n > 9) n -= 9; s += n; }
+    return s % 10 === 0 && id !== '000000000';
+  };
+  const NAME = /^[א-ת؀-ۿa-zA-Z'"׳״\-. ]{2,40}$/;
+  const checks = {
+    firstName: () => NAME.test($('firstName').value.trim()),
+    lastName: () => NAME.test($('lastName').value.trim()),
+    idNumber: () => idOk($('idNumber').value),
+    birthDate: () => !!birthIso(),
+    city: () => !!cityCode,
+    street: () => $('street').value.trim().length >= 2,
+    houseNo: () => /^\d{1,4}[א-תa-zA-Z]?(\/\d{1,3})?$/.test($('houseNo').value.replace(/\s+/g, '')),
+    phone: () => /^05\d{8}$/.test($('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0')),
+    email: () => /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test($('email').value.trim()),
+    language: () => !!document.querySelector('[name=language]:checked'),
+    acceptTerms: () => $('acceptTerms').checked,
+    acceptMarketing: () => $('acceptMarketing').checked,
+  };
+  const fieldEl = { birthDate: ['bDay', 'bMonth', 'bYear'], language: [], acceptTerms: ['c-acceptTerms'], acceptMarketing: ['c-acceptMarketing'] };
+  function mark(k, ok) {
+    const e = $('e-' + k);
+    e.dataset.k = ok ? '' : k; e.textContent = ok ? '' : I[ui].e[k];
+    (fieldEl[k] || [k]).forEach((id) => $(id).setAttribute('aria-invalid', ok ? 'false' : 'true'));
+    return ok;
+  }
+  Object.keys(checks).forEach((k) => {
+    const ids = fieldEl[k] ? (k === 'language' ? [] : fieldEl[k].map((x) => x.replace('c-', ''))) : [k];
+    ids.forEach((id) => $(id).addEventListener('blur', () => { if ($('e-' + k).dataset.k || $(id).value) mark(k, checks[k]()); }));
+    ids.forEach((id) => $(id).addEventListener('change', () => { if ($('e-' + k).dataset.k) mark(k, checks[k]()); }));
+  });
+  document.querySelectorAll('[name=language]').forEach((r) => r.addEventListener('change', () => mark('language', true)));
+
+  /* ---------- send ---------- */
+  $('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    onCity();
+    const bad = Object.keys(checks).filter((k) => !mark(k, checks[k]()));
+    $('formErr').textContent = '';
+    if (bad.length) {
+      $('formErr').textContent = I[ui].e.form;
+      const first = (fieldEl[bad[0]] || [bad[0]])[0] || 'form';
+      ($(first) || $('form')).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const btn = $('send'); btn.disabled = true; btn.textContent = I[ui].sending;
+    const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value,
+      firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
+      cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim(),
+      phone: $('phone').value.trim(), email: $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
+      acceptTerms: $('acceptTerms').checked, acceptMarketing: $('acceptMarketing').checked };
+    let r;
+    try { r = await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) })).json(); }
+    catch (e) { r = { ok: false, error: I[ui].e.net }; }
+    btn.disabled = false; btn.textContent = I[ui].send;
+    if (!r.ok) { (r.fields || []).forEach((k) => checks[k] && mark(k, false)); $('formErr').textContent = r.error || I[ui].e.net; return; }
+    $('card').innerHTML = '<div class="done"><div class="big">✓</div><h2>' + esc(I[ui].doneT(body.firstName)) + '</h2><p>' + I[ui].done1 + '</p><p style="color:#64748b">' + I[ui].done2 + '</p></div>';
+    window.scrollTo({ top: $('card').offsetTop - 20, behavior: 'smooth' });
+  });
+
+  paint();
+})();
+</script>
+</body>
+</html>

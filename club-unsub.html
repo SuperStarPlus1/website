@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>הסרה מדיוור — מועדון סופרסטאר</title>
+<link rel="icon" href="logo.png">
+<!-- The personal unsubscribe link of every club mailing: club-unsub?t=<club_members.unsub_token>. Server: api/club.ts
+     clubUnsubInfo / clubUnsubscribe — the withdrawal is recorded in club_consents (it cannot be changed or deleted). -->
+<style>
+  :root { --blue: #0076DA; --ink: #1f2937; --muted: #64748b; --line: #dbe3ec; --ok: #2e7d32; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #eef4fa; color: var(--ink); font: 16px/1.55 "Segoe UI", Tahoma, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px 16px; }
+  .top { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .top img { height: 42px; }
+  .top button { background: #fff; border: 1.5px solid var(--line); border-radius: 99px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+  .card { width: 100%; max-width: 480px; background: #fff; border-radius: 18px; padding: 22px 20px; box-shadow: 0 8px 30px rgba(0, 60, 120, .08); }
+  h1 { font-size: 21px; margin: 0 0 6px; }
+  p { margin: 0 0 12px; color: #334155; }
+  .opt { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: center; border: 2px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 8px; cursor: pointer; }
+  .opt input { width: 22px; height: 22px; accent-color: var(--blue); margin: 0; }
+  .opt small { display: block; color: var(--muted); }
+  .opt.off { opacity: .55; cursor: default; }
+  button.go { width: 100%; margin-top: 16px; background: var(--blue); color: #fff; border: 0; border-radius: 12px; padding: 13px; font: inherit; font-weight: 800; font-size: 17px; cursor: pointer; }
+  button.go:disabled { opacity: .55; cursor: default; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .done { text-align: center; } .done .big { font-size: 46px; color: var(--ok); line-height: 1; }
+</style>
+</head>
+<body>
+<div class="top"><img src="logo.png" alt="סופרסטאר"><button id="lg" type="button">العربية</button></div>
+<main class="card" id="card"><p>…</p></main>
+<script>
+(function () {
+  'use strict';
+  const API = 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api';
+  const qs = new URLSearchParams(location.search), t = (qs.get('t') || '').trim().toLowerCase();
+  let ui = qs.get('lang') === 'ar' ? 'ar' : 'he', info = null;
+  const I = {
+    he: { title: 'הסרה מדיוור', hi: (n) => 'שלום ' + n + ', מאיזה דיוור להסיר אותך?', email: 'מייל', sms: 'SMS', already: 'כבר הוסר', go: 'הסרה', sending: 'מעדכן…',
+      note: 'ההסרה חלה על דברי פרסומת בלבד. החברות במועדון נשארת, אבל הטבות שנשלחות בהודעות לא יגיעו אליך. אפשר להצטרף שוב בכל עת בטופס המועדון.',
+      bad: 'הקישור לא תקין. אפשר לבקש הסרה במייל info@superstarplus.co.il או בטלפון 04-9076772.', none: 'כבר הוסרת מכל הדיוור. לא יישלחו אליך דברי פרסומת.',
+      doneT: 'הוסרת מהדיוור ✓', doneP: 'לא יישלחו אליך יותר דברי פרסומת בערוץ שבחרת. הבקשה נרשמה.', err: 'שגיאה — נסו שוב', pick: 'בחרו לפחות אחד' },
+    ar: { title: 'الإزالة من الرسائل', hi: (n) => 'مرحبًا ' + n + '، من أي رسائل تريد الإزالة؟', email: 'البريد الإلكتروني', sms: 'SMS', already: 'تمت الإزالة', go: 'إزالة', sending: 'جارٍ التحديث…',
+      note: 'تسري الإزالة على الرسائل الإعلانية فقط. تبقى العضوية في النادي، لكن الامتيازات التي تُرسل عبر الرسائل لن تصلك. يمكنك الانضمام مجددًا في أي وقت عبر نموذج النادي.',
+      bad: 'الرابط غير صحيح. يمكنك طلب الإزالة عبر info@superstarplus.co.il أو بالهاتف 04-9076772.', none: 'تمت إزالتك من جميع الرسائل. لن تُرسل لك رسائل إعلانية.',
+      doneT: 'تمت إزالتك من الرسائل ✓', doneP: 'لن تُرسل لك رسائل إعلانية بعد الآن عبر القناة التي اخترتها. تم تسجيل الطلب.', err: 'خطأ — حاول مرة أخرى', pick: 'اختر واحدًا على الأقل' },
+  };
+  const card = document.getElementById('card');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const api = async (b) => { try { return await (await fetch(API, { method: 'POST', body: JSON.stringify(b) })).json(); } catch (e) { return { ok: false }; } };
+  function draw() {
+    const L = I[ui];
+    document.documentElement.lang = ui; document.title = L.title + (ui === 'ar' ? ' — نادي سوبرستار' : ' — מועדון סופרסטאר');
+    document.getElementById('lg').textContent = ui === 'ar' ? 'עברית' : 'العربية';
+    if (!info) { card.innerHTML = '<h1>' + L.title + '</h1><p>' + L.bad + '</p>'; return; }
+    if (!info.marketingEmail && !info.marketingSms) { card.innerHTML = '<div class="done"><div class="big">✓</div><h1>' + L.title + '</h1><p>' + L.none + '</p></div>'; return; }
+    const opt = (k, on, label, val) => '<label class="opt' + (on ? '' : ' off') + '"><input type="checkbox" id="o-' + k + '"' + (on ? ' checked' : ' disabled') + '><span><b>' + label + '</b><small dir="ltr" style="text-align:right">' + esc(val) + (on ? '' : ' · ' + L.already) + '</small></span></label>';
+    card.innerHTML = '<h1>' + L.title + '</h1><p>' + esc(L.hi(info.name)) + '</p>' + opt('email', info.marketingEmail, L.email, info.email) + opt('sms', info.marketingSms, L.sms, info.phone) +
+      '<button class="go" id="go">' + L.go + '</button><p class="note">' + L.note + '</p>';
+    document.getElementById('go').addEventListener('click', async () => {
+      const email = !!(document.getElementById('o-email') || {}).checked && info.marketingEmail, sms = !!(document.getElementById('o-sms') || {}).checked && info.marketingSms;
+      if (!email && !sms) { alertBox(L.pick); return; }
+      const b = document.getElementById('go'); b.disabled = true; b.textContent = L.sending;
+      const r = await api({ action: 'clubUnsubscribe', t, email, sms, uiLang: ui });
+      if (!r.ok) { b.disabled = false; b.textContent = L.go; alertBox(L.err); return; }
+      card.innerHTML = '<div class="done"><div class="big">✓</div><h1>' + L.doneT + '</h1><p>' + L.doneP + '</p></div>';
+    });
+  }
+  function alertBox(m) { let n = document.getElementById('msg'); if (!n) { n = document.createElement('p'); n.id = 'msg'; n.style.color = '#c62828'; n.style.fontWeight = '700'; n.setAttribute('role', 'alert'); card.appendChild(n); } n.textContent = m; }
+  document.getElementById('lg').addEventListener('click', () => { ui = ui === 'ar' ? 'he' : 'ar'; draw(); });
+  (async () => {
+    if (/^[0-9a-f]{32}$/.test(t)) { const r = await api({ action: 'clubUnsubInfo', t }); if (r.ok) { info = r; if (!qs.get('lang') && r.language === 'ar') ui = 'ar'; } }
+    draw();
+  })();
+})();
+</script>
+</body>
+</html>
