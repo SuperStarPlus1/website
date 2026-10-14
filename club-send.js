@@ -6,6 +6,7 @@
 //      who asked for no messages and — by choice — who already updated).
 //   📊 sendings: each with its numbers (sent / delivered / opened / filled), "▶ שליחה עכשיו" — 60 at a time until done —
 //      or "⏰ תזמון" to a date and time (Israel): the server sends it then by itself (within 5 minutes), the page may be closed.
+//   👤 members: the club's members — search, a card (details, every form, every consent / withdrawal), export to Excel.
 //   👥 allowed: the addresses that may come in.
 // Server: supabase/functions/api/club.ts. The page the customer opens: club.html?i=<token>.
 (function () {
@@ -101,11 +102,11 @@
   }
   function draw() {
     const b = $('app');
-    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="who">👥 מורשים</button></div>' +
+    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
       '<div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
-    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else drawWho();
+    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'members') drawMembers(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -251,6 +252,76 @@
     }
     say('נשלחו ' + sent + ' הודעות' + (failed ? ', ' + failed + ' נכשלו' : ''), failed ? 'err' : 'ok');
     info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+  }
+
+  /* ---------- 👤 the members ---------- */
+  let mq = '', mpage = 0;
+  const KIND = { terms: 'תקנון', privacy: 'מדיניות פרטיות', marketing_email: 'דיוור במייל', marketing_sms: 'דיוור ב-SMS' };
+  const CHANNEL = { landing: 'טופס המועדון', unsubscribe_link: 'קישור הסרה', invite_link: 'קישור ההזמנה', sms_reply: 'תשובת SMS', office: 'במשרד' };
+  const LANG = { he: 'עברית', ar: 'ערבית' };
+  const dt = (v) => (v ? new Date(v).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+  const dmy = (v) => (v ? String(v).slice(8, 10) + '/' + String(v).slice(5, 7) + '/' + String(v).slice(0, 4) : '');
+  const yes = (b) => (b ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>');
+  async function drawMembers() {
+    const p = $('csP');
+    p.innerHTML = '<div class="box"><div class="row"><label class="c" style="flex:1 1 220px">חיפוש — שם, טלפון, ת.ז., מייל או עיר<input type="text" id="mQ" value="' + e(mq) + '"></label>' +
+      '<button class="btn" id="mGo">🔍 חיפוש</button><button class="btn primary" id="mExp">📥 ייצוא לאקסל</button></div><div id="mStats" class="note" style="margin-top:6px"></div></div><div id="mList"><p class="note">טוען…</p></div>';
+    const go = () => { mq = $('mQ').value.trim(); mpage = 0; list(); };
+    $('mGo').addEventListener('click', go);
+    $('mQ').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
+    $('mExp').addEventListener('click', exportXlsx);
+    list();
+  }
+  async function list() {
+    const r = await api({ action: 'clubMembers', q: mq, page: mpage });
+    if (!r.ok) { $('mList').innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    $('mStats').innerHTML = '<b>' + r.all + '</b> חברי מועדון · מאשרים דיוור במייל: <b>' + r.mailOk + '</b> · ב-SMS: <b>' + r.smsOk + '</b>' + (mq ? ' · נמצאו ' + r.total : '');
+    if (!r.members.length) { $('mList').innerHTML = '<p class="note">' + (mq ? 'לא נמצאו חברים.' : 'עוד אין חברי מועדון.') + '</p>'; return; }
+    const pages = Math.ceil(r.total / 50);
+    $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>שם</th><th>טלפון</th><th>עיר</th><th>ת.ז.</th><th>שפה</th><th>מייל</th><th>SMS</th><th>עודכן</th></tr>' +
+      r.members.map((m) => '<tr data-m="' + m.id + '" style="cursor:pointer"><td><b>' + e(m.name) + '</b></td><td dir="ltr">' + e(m.phone) + '</td><td>' + e(m.city) + '</td><td dir="ltr">' + e(m.id3) + '</td><td>' + (LANG[m.language] || '') +
+        '</td><td>' + yes(m.mail) + '</td><td>' + yes(m.sms) + '</td><td class="note">' + e(dt(m.updated)) + '</td></tr>').join('') + '</table>' +
+      (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
+      '<p class="note">לחיצה על שורה — כרטיס החבר עם כל ההסכמות.</p></div><div id="mCard"></div>';
+    $('mList').querySelectorAll('[data-m]').forEach((tr) => tr.addEventListener('click', () => card(Number(tr.dataset.m))));
+    if ($('mPrev')) $('mPrev').addEventListener('click', () => { mpage--; list(); });
+    if ($('mNext')) $('mNext').addEventListener('click', () => { mpage++; list(); });
+  }
+  async function card(id) {
+    const box = $('mCard'); box.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubMember', id });
+    if (!r.ok) { box.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const m = r.member, row = (k, v, ltr) => '<tr><td class="note" style="width:130px">' + k + '</td><td' + (ltr ? ' dir="ltr" style="text-align:right"' : '') + '><b>' + e(v) + '</b></td></tr>';
+    box.innerHTML = '<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">👤 ' + e(m.first_name + ' ' + m.last_name) + '</h4><button class="btn" id="mClose">סגירה</button></div>' +
+      '<table style="margin-top:8px">' + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
+        row('כתובת', m.street + ' ' + m.house_no + ', ' + m.city) + row('שפת דיוור', LANG[m.language] || m.language) +
+        '<tr><td class="note">דיוור כעת</td><td>מייל ' + yes(m.marketing_email) + ' · SMS ' + yes(m.marketing_sms) + '</td></tr>' + row('הצטרף/ה', dt(m.created_at)) + row('עודכן', dt(m.updated_at)) + '</table>' +
+      '<h4 style="margin:14px 0 6px">📜 הסכמות והסרות (' + r.consents.length + ')</h4><div style="overflow-x:auto"><table><tr><th>מתי</th><th>מה</th><th>החלטה</th><th>היכן</th><th>גרסה</th><th>IP</th></tr>' +
+        r.consents.map((c) => '<tr title="' + e(c.text_shown) + '"><td class="note">' + e(dt(c.at)) + '</td><td>' + (KIND[c.kind] || c.kind) + '</td><td>' + (c.granted ? '<span class="ok">אישר/ה</span>' : '<span class="bad">ביטל/ה</span>') +
+          '</td><td>' + (CHANNEL[c.channel] || e(c.channel)) + '</td><td class="note">' + e(c.doc_version ? c.doc_version + ' · ' + String(c.doc_sha256 || '').slice(0, 8) : '') + '</td><td dir="ltr" class="note">' + e(c.ip || '') + '</td></tr>').join('') + '</table></div>' +
+      '<p class="note">מעבר עם העכבר על שורה — הנוסח המדויק שהוצג. הרישום לא ניתן לשינוי או למחיקה.</p>' +
+      '<h4 style="margin:14px 0 6px">📝 טפסים שנשלחו (' + r.submissions.length + ')</h4><table><tr><th>מתי</th><th>שפת הדף</th><th>IP</th><th>מכשיר</th></tr>' +
+        r.submissions.map((s) => '<tr><td class="note">' + e(dt(s.at)) + '</td><td>' + (LANG[s.ui_lang] || '') + '</td><td dir="ltr" class="note">' + e(s.ip || '') + '</td><td class="note" dir="ltr" style="text-align:right">' + e(String(s.user_agent || '').slice(0, 60)) + '</td></tr>').join('') + '</table></div>';
+    $('mClose').addEventListener('click', () => { box.innerHTML = ''; });
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function exportXlsx() {
+    const btn = $('mExp'); btn.disabled = true; btn.textContent = 'מכין…';
+    try {
+      const r = await api({ action: 'clubMembersExport' });
+      if (!r.ok) { say(r.error || 'שגיאה', 'err'); return; }
+      await loadScript(XLSX_URL);
+      const head = ['שם פרטי', 'שם משפחה', 'ת.ז.', 'טלפון', 'מייל', 'תאריך לידה', 'עיר', 'רחוב', 'מספר בית', 'שפת דיוור', 'דיוור במייל', 'דיוור ב-SMS', 'הצטרף/ה', 'עודכן'];
+      const rows = r.members.map((m) => [m.first_name, m.last_name, m.id_number, m.phone, m.email, dmy(m.birth_date), m.city, m.street, m.house_no, LANG[m.language] || m.language,
+        m.marketing_email ? 'כן' : 'לא', m.marketing_sms ? 'כן' : 'לא', dt(m.created_at), dt(m.updated_at)]);
+      const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
+      ws['!cols'] = head.map((h, i) => ({ wch: [10, 12, 11, 12, 26, 11, 14, 18, 8, 9, 10, 10, 17, 17][i] }));
+      for (let i = 1; i <= rows.length; i++) for (const c of ['C', 'D']) { const cell = ws[c + (i + 1)]; if (cell) { cell.t = 's'; cell.z = '@'; } }   // the leading 0 stays
+      const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+      XLSX.utils.book_append_sheet(wb, ws, 'חברי מועדון');
+      XLSX.writeFile(wb, 'חברי מועדון סופרסטאר ' + new Date().toISOString().slice(0, 10) + '.xlsx');
+      say('יוצאו ' + rows.length + ' חברים ✓', 'ok');
+    } finally { btn.disabled = false; btn.textContent = '📥 ייצוא לאקסל'; }
   }
 
   /* ---------- 👥 who may come in ---------- */
