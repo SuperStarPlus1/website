@@ -182,6 +182,7 @@
         inp('hfAtt', 'נוכחים מטעם המעסיק', s.fields.conductor) + inp('hfRep', 'מלווה מטעם העובד/ת (אם היה)', '') +
         '<label class="wide" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="hfPresent" checked style="width:auto"> העובד/ת התייצב/ה לשימוע</label>' +
         ta('hfReasons', 'הטענות שהוצגו לעובד/ת', (s.fields.reasons || []).join('\n'), 4) +
+        ta('hfOpening', 'הצגת הדברים מטעם המעסיק — פתיחת השימוע: תיאור האירועים כפי שהוצגו לעובד/ת, לפני תגובתו/ה (לא חובה)', '', 5) +
         ta('hfResp', 'תגובת העובד/ת (כמה שיותר במדויק — מה נאמר)', '', 6) + ta('hfNotes', 'הערות / מסמכים שהוגשו (לא חובה)', '', 3) + '</div>' +
         '<div style="margin-top:10px"><b style="font-size:12.5px">חתימת העובד/ת על הפרוטוקול (על המסך, אם נוכח/ת)</b>' + window.rcSigHtml('hfEmpSig') +
         '<label style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:13px"><input type="checkbox" id="hfRefused"> העובד/ת סירב/ה לחתום</label></div>';
@@ -234,7 +235,7 @@
       const v = (id) => ($(id) ? $(id).value : '');
       const fields = kind === 'summons' ? { hearingDate: v('hfDate'), hearingTime: v('hfTime'), place: v('hfPlace'), conductor: v('hfCond'), considered: v('hfConsidered'), reasons: v('hfReasons') }
         : kind === 'protocol' ? { hearingDate: v('hfDate'), place: v('hfPlace'), start: v('hfStart'), end: v('hfEnd'), attendees: v('hfAtt'), representative: v('hfRep'),
-          employeePresent: $('hfPresent').checked, reasons: v('hfReasons'), response: v('hfResp'), notes: v('hfNotes'), conductor: s.fields.conductor }
+          employeePresent: $('hfPresent').checked, reasons: v('hfReasons'), opening: v('hfOpening'), response: v('hfResp'), notes: v('hfNotes'), conductor: s.fields.conductor }
         : kind === 'decision' ? { hearingDate: v('hfDate'), decision: v('hfDec'), warning: v('hfWarn'), other: v('hfOther'), reasoning: v('hfReason'), contact: v('hfContact') }
         : { noticeDate: v('hfNotice'), noticeDays: Number(v('hfDays')), noticeLabel: (() => { const n = P.startDate ? noticeFor(P.type, P.startDate, v('hfNotice')) : null; return n && n.days === Number(v('hfDays')) ? n.label : v('hfDays') + ' ימים'; })(),
           mode: v('hfMode'), lastDay: v('hfLast'), hearingDate: v('hfHearing'), decisionDate: dec ? String(dec.issuedAt || '').slice(0, 10) : '', reason: v('hfWhy'), checkedProtections: $('hfProt').checked };
