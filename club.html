@@ -65,6 +65,13 @@
   .send:disabled { opacity: .6; cursor: default; }
   .formerr { color: var(--bad); font-weight: 700; text-align: center; margin-top: 10px; }
   .formerr:empty { display: none; }
+  .known { border: 2px solid #c8e6c9; background: #f1f8f1; border-radius: 12px; padding: 11px 12px; min-height: 48px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .known .ltr { direction: ltr; unicode-bidi: isolate; font-weight: 700; letter-spacing: 1px; }
+  .known .tick { color: var(--ok); font-weight: 800; }
+  .known small { color: var(--muted); }
+  .hello { background: #fff8db; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 15px; }
+  .optout { text-align: center; color: var(--muted); font-size: 13.5px; margin: 16px 0 0; }
+  .optout button { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; padding: 0; }
   .hp { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .done { text-align: center; padding: 26px 8px; }
   .done .big { font-size: 56px; line-height: 1; }
@@ -100,7 +107,8 @@
     <div class="grid">
       <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="err" id="e-firstName"></div></div>
       <div class="f"><label for="lastName" data-t="lastName"></label><input id="lastName" autocomplete="family-name" maxlength="40" required><div class="err" id="e-lastName"></div></div>
-      <div class="f"><label for="idNumber" data-t="idNumber"></label><input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" class="ltr" required><div class="err" id="e-idNumber"></div></div>
+      <div class="f"><label for="idNumber" data-t="idNumber"></label><input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" class="ltr" required>
+        <div class="known" id="idKnown" hidden><span class="ltr" id="idMasked"></span> <span class="tick">✓</span> <small data-t="idKnownNote"></small></div><div class="err" id="e-idNumber"></div></div>
       <div class="f"><span class="lbl" id="l-birth" data-t="birth"></span>
         <div class="grid3" role="group" aria-labelledby="l-birth">
           <select id="bDay" aria-label="יום"></select><select id="bMonth" aria-label="חודש"></select><select id="bYear" aria-label="שנה"></select>
@@ -133,6 +141,7 @@
     <div class="hp" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
     <button class="send" id="send" type="submit" data-t="send"></button>
     <div class="formerr" id="formErr" role="alert"></div>
+    <p class="optout" id="optoutRow" hidden><span data-t="optoutQ"></span> <button type="button" id="optoutBtn" data-t="optoutBtn"></button></p>
   </form>
 </main>
 
@@ -161,6 +170,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
+      idKnownNote: 'מוכרת לנו — אין צורך להקליד', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
+      optoutQ: 'לא מעוניינים לקבל הודעות מסופרסטאר?', optoutBtn: 'להסרה', optoutConfirm: 'להסיר את המספר מכל ההודעות של סופרסטאר?', optoutDoneT: 'הוסרת ✓', optoutDone: 'לא נשלח למספר הזה יותר הודעות. הבקשה נרשמה.',
+      wasOut: 'ביקשת בעבר לא לקבל הודעות. מילוי הטופס ואישור הדיוור יחדשו את ההסכמה.', badLink: 'הקישור אינו בתוקף — אפשר למלא את הטופס כרגיל.',
       doneT: (n) => 'תודה, ' + n + '! 🎉', done1: 'הפרטים עודכנו במועדון.', done2: 'שלחנו לכם מייל אישור עם הפרטים וההסכמות. נתראה בחנות! 🛒',
     },
     ar: {
@@ -176,11 +188,16 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
+      idKnownNote: 'معروف لدينا — لا حاجة للكتابة', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
+      optoutQ: 'لا ترغبون بتلقي رسائل من سوبرستار؟', optoutBtn: 'للإزالة', optoutConfirm: 'إزالة الرقم من جميع رسائل سوبرستار؟', optoutDoneT: 'تمت الإزالة ✓', optoutDone: 'لن تُرسل رسائل أخرى إلى هذا الرقم. تم تسجيل الطلب.',
+      wasOut: 'طلبت سابقًا عدم تلقي الرسائل. تعبئة النموذج والموافقة على الرسائل تجدّد الموافقة.', badLink: 'الرابط غير صالح — يمكنك تعبئة النموذج كالمعتاد.',
       doneT: (n) => 'شكرًا، ' + n + '! 🎉', done1: 'تم تحديث التفاصيل في النادي.', done2: 'أرسلنا لكم بريدًا إلكترونيًا للتأكيد مع التفاصيل والموافقات. نراكم في المتجر! 🛒',
     },
   };
   let ui = new URLSearchParams(location.search).get('lang') === 'ar' || (!location.search.includes('lang=') && /^ar\b/i.test(navigator.language || '')) ? 'ar' : 'he';
   let cities = [], cityByName = new Map(), cityCode = null;
+  const invite = (new URLSearchParams(location.search).get('i') || '').trim().toLowerCase();
+  let known = null;   // the invitation: the name and phone filled in, the ID number known (masked)
 
   /* ---------- the page's language ---------- */
   function paint() {
@@ -195,7 +212,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       .replace(t.privacy, '<a href="club-privacy' + q + '" target="_blank" rel="noopener">' + t.privacy + '</a>');
     $('txtMarketing').textContent = CONSENT[ui].marketing;
     $('lnTerms').href = 'club-terms' + q; $('lnPrivacy').href = 'club-privacy' + q;
-    fillBirth(); streetHelp();
+    fillBirth(); streetHelp(); hello();
     document.querySelectorAll('.err').forEach((e) => { if (e.dataset.k) e.textContent = I[ui].e[e.dataset.k]; });
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -257,7 +274,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
   const checks = {
     firstName: () => NAME.test($('firstName').value.trim()),
     lastName: () => NAME.test($('lastName').value.trim()),
-    idNumber: () => idOk($('idNumber').value),
+    idNumber: () => !!known || idOk($('idNumber').value),
     birthDate: () => !!birthIso(),
     city: () => !!cityCode,
     street: () => $('street').value.trim().length >= 2,
@@ -295,7 +312,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       return;
     }
     const btn = $('send'); btn.disabled = true; btn.textContent = I[ui].sending;
-    const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value,
+    const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value, invite: known ? invite : undefined,
       firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
       cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim(),
       phone: $('phone').value.trim(), email: $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
@@ -307,6 +324,34 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     if (!r.ok) { (r.fields || []).forEach((k) => checks[k] && mark(k, false)); $('formErr').textContent = r.error || I[ui].e.net; return; }
     $('card').innerHTML = '<div class="done"><div class="big">✓</div><h2>' + esc(I[ui].doneT(body.firstName)) + '</h2><p>' + I[ui].done1 + '</p><p style="color:#64748b">' + I[ui].done2 + '</p></div>';
     window.scrollTo({ top: $('card').offsetTop - 20, behavior: 'smooth' });
+  });
+
+  /* ---------- an invitation link (club?i=<token>) ---------- */
+  function hello() {
+    let h = $('hello');
+    if (!known) { if (h) h.remove(); return; }
+    if (!h) { h = document.createElement('p'); h.className = 'hello'; h.id = 'hello'; $('form').querySelector('.sub').after(h); }
+    h.textContent = I[ui].hello(known.firstName) + (known.optedOut ? ' ' + I[ui].wasOut : known.submitted ? ' ' + I[ui].again : '');
+  }
+  if (/^[a-z2-9]{8}$/.test(invite)) {
+    fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action: 'clubInvite', i: invite }) }).then((r) => r.json()).then((r) => {
+      if (!r.ok) { $('formErr').textContent = I[ui].badLink; return; }
+      known = r;
+      if (r.firstName && !$('firstName').value) $('firstName').value = r.firstName;
+      if (r.lastName && !$('lastName').value) $('lastName').value = r.lastName;
+      if (r.phone && !$('phone').value) $('phone').value = r.phone.replace(/^(\d{3})(\d{7})$/, '$1-$2');
+      $('idNumber').hidden = true; $('idNumber').required = false;
+      $('idMasked').textContent = r.idMasked; $('idKnown').hidden = false;
+      $('optoutRow').hidden = !!r.optedOut;
+      hello();
+    }).catch(() => {});
+  }
+  $('optoutBtn').addEventListener('click', async () => {
+    if (!known || !confirm(I[ui].optoutConfirm)) return;
+    let r;
+    try { r = await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action: 'clubInviteOptOut', i: invite, uiLang: ui }) })).json(); } catch (e) { r = { ok: false }; }
+    if (!r.ok) { $('formErr').textContent = I[ui].e.net; return; }
+    $('card').innerHTML = '<div class="done"><div class="big">✓</div><h2>' + I[ui].optoutDoneT + '</h2><p>' + I[ui].optoutDone + '</p></div>';
   });
 
   paint();

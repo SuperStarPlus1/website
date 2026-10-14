@@ -213,7 +213,8 @@
       if (!n) { t.insertAdjacentHTML('afterend', '<span class="rcm-note" id="rcmSmsLen"></span>'); n = $('rcmSmsLen'); t.addEventListener('input', smsLen); }
       if (ch !== 'sms') { n.textContent = ''; return; }
       const v = t.value + (r.smsSuffix || ''), len = [...v].length, latin = /^[\x20-\x7e\r\n]*$/.test(v);   // + the reply link, added to every SMS
-      const parts = !len ? 0 : latin ? (len <= 160 ? 1 : Math.ceil(len / 153)) : (len <= 70 ? 1 : Math.ceil(len / 67));
+      const u = v.length;   // Hebrew (UCS-2): UTF-16 units — an emoji takes 2
+      const parts = !len ? 0 : latin ? (len <= 160 ? 1 : Math.ceil(len / 153)) : (u <= 70 ? 1 : Math.ceil(u / 67));
       n.textContent = len + ' תווים · ' + parts + ' ' + (parts === 1 ? 'מקטע' : 'מקטעים') + (latin ? '' : ' (עברית: 70 תווים למקטע)') +
         (r.smsSuffix ? ' · כולל קישור התשובה האישי שנוסף בסוף' : '');
     }
