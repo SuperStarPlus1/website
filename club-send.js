@@ -4,7 +4,8 @@
 //      chosen) → checked and previewed → the message ({שם} = the first name; the personal link "לעדכון/הסרה" is added at
 //      the end) → a test to my phone → "יצירת השליחה" (clubInvitesImport: each customer his own link club?i=…, skipping
 //      who asked for no messages and — by choice — who already updated).
-//   📊 sendings: each with its numbers (sent / delivered / opened / filled) and "▶ שליחה" — 60 at a time until done.
+//   📊 sendings: each with its numbers (sent / delivered / opened / filled), "▶ שליחה עכשיו" — 60 at a time until done —
+//      or "⏰ תזמון" to a date and time (Israel): the server sends it then by itself (within 5 minutes), the page may be closed.
 //   👥 allowed: the addresses that may come in.
 // Server: supabase/functions/api/club.ts. The page the customer opens: club.html?i=<token>.
 (function () {
@@ -31,6 +32,19 @@
     const id = d.padStart(9, '0'); let s = 0;
     for (let i = 0; i < 9; i++) { let n = +id[i] * ((i % 2) + 1); if (n > 9) n -= 9; s += n; }
     return s % 10 === 0 && id !== '000000000';
+  };
+  // the schedule: a date-time input in Israel time ('yyyy-mm-ddThh:mm'), shown as dd/mm hh:mm
+  const pad = (n) => String(n).padStart(2, '0');
+  const localInput = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map((x) => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute; };
+  const whenIL = (v) => { const s = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v) ? v : localInput(new Date(v)); return ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][new Date(s.slice(0, 10) + 'T12:00:00').getDay()] + ' ' + s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11, 16); };
+  /** a word of caution: messages at night, on Friday afternoon or on Saturday annoy (and a holiday is not checked) */
+  const offHours = (v) => {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return '';
+    const day = new Date(v.slice(0, 10) + 'T12:00:00').getDay(), h = Number(v.slice(11, 13));
+    if (day === 6) return '⚠ שבת — לא מומלץ לשלוח הודעות שיווקיות בשבת.';
+    if (day === 5 && h >= 14) return '⚠ יום שישי אחה"צ — לא מומלץ (כניסת שבת).';
+    if (h < 9 || h >= 21) return '⚠ מחוץ לשעות 09:00–21:00 — לא מומלץ לשלוח הודעות בשעה הזו.';
+    return '';
   };
   const phoneOk = (raw) => /^05\d{8}$/.test(String(raw || '').replace(/[^\d+]/g, '').replace(/^\+?972/, '0'));
   const parts = (text) => { const latin = /^[\x20-\x7e\r\n]*$/.test(text), n = text.length; return latin ? (n <= 160 ? 1 : Math.ceil(n / 153)) : (n <= 70 ? 1 : Math.ceil(n / 67)); };   // UTF-16 units: an emoji = 2
@@ -188,11 +202,37 @@
       '<div class="stats"><span>' + b.total + ' לקוחות</span><span>נשלחו ' + b.sent + '</span><span class="ok">נמסרו ' + b.delivered + '</span>' + (b.notDelivered ? '<span class="bad">לא נמסרו ' + b.notDelivered + '</span>' : '') +
         (b.failed ? '<span class="bad">נכשלו ' + b.failed + '</span>' : '') + (b.skipped ? '<span>דולגו ' + b.skipped + '</span>' : '') + '<span>פתחו ' + b.opened + ' (' + pct(b.opened, b.sent) + ')</span><span class="ok"><b>עדכנו ' + b.submitted + ' (' + pct(b.submitted, b.sent) + ')</b></span></div>' +
       '<div class="note" style="white-space:pre-wrap">' + e(b.message) + '</div>' +
-      (b.waiting ? '<div class="row" style="margin-top:8px"><button class="btn primary" data-send="' + b.id + '"' + (info.smsReady ? '' : ' disabled') + '>▶ שליחה ל-' + b.waiting + ' שממתינים</button><button class="btn" data-stop="' + b.id + '" hidden>⏸ עצירה</button><span class="note" data-prog="' + b.id + '"></span></div><div class="bar"><i data-bar="' + b.id + '"></i></div>' : '') +
+      (b.waiting ? (b.scheduledAt ? '<div class="sched">⏰ מתוזמנת ל-<b>' + e(whenIL(b.scheduledAt)) + '</b>' + (new Date(b.scheduledAt) <= new Date() ? ' — נשלחת עכשיו ברקע' : '') +
+          ' <button class="btn" data-unsched="' + b.id + '" style="padding:2px 10px">ביטול תזמון</button></div>' : '') +
+        '<div class="row" style="margin-top:8px"><button class="btn primary" data-send="' + b.id + '"' + (info.smsReady ? '' : ' disabled') + '>▶ שליחה עכשיו ל-' + b.waiting + ' שממתינים</button>' +
+        '<label class="c" style="flex:0 1 210px">או תזמון<input type="datetime-local" data-at="' + b.id + '" value="' + e(b.scheduledAt ? localInput(new Date(b.scheduledAt)) : '') + '"></label>' +
+        '<button class="btn" data-sched="' + b.id + '"' + (info.smsReady ? '' : ' disabled') + '>⏰ ' + (b.scheduledAt ? 'עדכון' : 'תזמון') + '</button>' +
+        '<button class="btn" data-stop="' + b.id + '" hidden>⏸ עצירה</button><span class="note" data-prog="' + b.id + '"></span></div><div class="note" data-hint="' + b.id + '"></div><div class="bar"><i data-bar="' + b.id + '"></i></div>' : '') +
       '</div>').join('');
     $('csRef').addEventListener('click', async () => { info = await api({ action: 'clubBatches' }); if (info.ok) draw(); });
     p.querySelectorAll('[data-send]').forEach((btn) => btn.addEventListener('click', () => send(Number(btn.dataset.send), btn)));
     p.querySelectorAll('[data-stop]').forEach((btn) => btn.addEventListener('click', () => { stop = true; }));
+    p.querySelectorAll('[data-at]').forEach((inp) => {
+      if (!inp.value) inp.value = localInput(new Date(Date.now() + 3600000));
+      inp.min = localInput(new Date());
+      const hint = () => { document.querySelector('[data-hint="' + inp.dataset.at + '"]').textContent = offHours(inp.value); };
+      inp.addEventListener('input', hint); hint();
+    });
+    p.querySelectorAll('[data-sched]').forEach((btn) => btn.addEventListener('click', async () => {
+      const id = Number(btn.dataset.sched), at = document.querySelector('[data-at="' + id + '"]').value;
+      if (!at) { say('בחרו תאריך ושעה', 'err'); return; }
+      const b = info.batches.find((x) => x.id === id), warn = offHours(at);
+      if (!confirm('לתזמן שליחה ל-' + b.waiting + ' לקוחות ב-' + whenIL(at) + '?' + (warn ? '\n\n' + warn : '') + '\n\nהשרת ישלח לבד (עד 5 דקות מהמועד) — אפשר לסגור את הדף.')) return;
+      const x = await api({ action: 'clubBatchSchedule', batchId: id, at });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('תוזמן ✓', 'ok'); info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+    }));
+    p.querySelectorAll('[data-unsched]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (!confirm('לבטל את התזמון? (מה שכבר נשלח — נשאר)')) return;
+      const x = await api({ action: 'clubBatchSchedule', batchId: Number(btn.dataset.unsched), at: null });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('התזמון בוטל', 'ok'); info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+    }));
   }
   async function send(id, btn) {
     const b = info.batches.find((x) => x.id === id);

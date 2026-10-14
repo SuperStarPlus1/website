@@ -69,6 +69,8 @@
   .known .ltr { direction: ltr; unicode-bidi: isolate; font-weight: 700; letter-spacing: 1px; }
   .known .tick { color: var(--ok); font-weight: 800; }
   .known small { color: var(--muted); }
+  .known[hidden], .f input[hidden] { display: none; }
+  .known .chg { margin-inline-start: auto; background: none; border: 0; color: var(--blue); text-decoration: underline; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
   .hello { background: #fff8db; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 15px; }
   .optout { text-align: center; color: var(--muted); font-size: 13.5px; margin: 16px 0 0; }
   .optout button { background: none; border: 0; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; padding: 0; }
@@ -124,7 +126,8 @@
 
     <div class="sec" data-t="secContact"></div>
     <div class="grid">
-      <div class="f"><label for="phone" data-t="phone"></label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" class="ltr" placeholder="05X-XXXXXXX" required><div class="err" id="e-phone"></div></div>
+      <div class="f"><label for="phone" data-t="phone"></label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" class="ltr" placeholder="05X-XXXXXXX" required>
+        <div class="known" id="phoneKnown" hidden><span class="ltr" id="phoneMasked"></span> <span class="tick">✓</span> <button type="button" class="chg" id="phoneChange" data-t="phoneChange"></button></div><div class="err" id="e-phone"></div></div>
       <div class="f"><label for="email" data-t="email"></label><input id="email" type="email" autocomplete="email" maxlength="120" class="ltr" placeholder="name@example.com" required><div class="err" id="e-email"></div></div>
       <div class="f wide"><span class="lbl" id="l-lang" data-t="mailLang"></span>
         <div class="seg" role="radiogroup" aria-labelledby="l-lang">
@@ -170,7 +173,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
-      idKnownNote: 'מוכרת לנו — אין צורך להקליד', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
+      idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
       optoutQ: 'לא מעוניינים לקבל הודעות מסופרסטאר?', optoutBtn: 'להסרה', optoutConfirm: 'להסיר את המספר מכל ההודעות של סופרסטאר?', optoutDoneT: 'הוסרת ✓', optoutDone: 'לא נשלח למספר הזה יותר הודעות. הבקשה נרשמה.',
       wasOut: 'ביקשת בעבר לא לקבל הודעות. מילוי הטופס ואישור הדיוור יחדשו את ההסכמה.', badLink: 'הקישור אינו בתוקף — אפשר למלא את הטופס כרגיל.',
       doneT: (n) => 'תודה, ' + n + '! 🎉', done1: 'הפרטים עודכנו במועדון.', done2: 'שלחנו לכם מייל אישור עם הפרטים וההסכמות. נתראה בחנות! 🛒',
@@ -188,7 +191,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
-      idKnownNote: 'معروف لدينا — لا حاجة للكتابة', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
+      idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
       optoutQ: 'لا ترغبون بتلقي رسائل من سوبرستار؟', optoutBtn: 'للإزالة', optoutConfirm: 'إزالة الرقم من جميع رسائل سوبرستار؟', optoutDoneT: 'تمت الإزالة ✓', optoutDone: 'لن تُرسل رسائل أخرى إلى هذا الرقم. تم تسجيل الطلب.',
       wasOut: 'طلبت سابقًا عدم تلقي الرسائل. تعبئة النموذج والموافقة على الرسائل تجدّد الموافقة.', badLink: 'الرابط غير صالح — يمكنك تعبئة النموذج كالمعتاد.',
       doneT: (n) => 'شكرًا، ' + n + '! 🎉', done1: 'تم تحديث التفاصيل في النادي.', done2: 'أرسلنا لكم بريدًا إلكترونيًا للتأكيد مع التفاصيل والموافقات. نراكم في المتجر! 🛒',
@@ -279,7 +282,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     city: () => !!cityCode,
     street: () => $('street').value.trim().length >= 2,
     houseNo: () => /^\d{1,4}[א-תa-zA-Z]?(\/\d{1,3})?$/.test($('houseNo').value.replace(/\s+/g, '')),
-    phone: () => /^05\d{8}$/.test($('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0')),
+    phone: () => (!!known && $('phone').hidden) || /^05\d{8}$/.test($('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0')),
     email: () => /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test($('email').value.trim()),
     language: () => !!document.querySelector('[name=language]:checked'),
     acceptTerms: () => $('acceptTerms').checked,
@@ -315,7 +318,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value, invite: known ? invite : undefined,
       firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
       cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim(),
-      phone: $('phone').value.trim(), email: $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
+      phone: $('phone').hidden ? '' : $('phone').value.trim(), email: $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
       acceptTerms: $('acceptTerms').checked, acceptMarketing: $('acceptMarketing').checked };
     let r;
     try { r = await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) })).json(); }
@@ -339,13 +342,16 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       known = r;
       if (r.firstName && !$('firstName').value) $('firstName').value = r.firstName;
       if (r.lastName && !$('lastName').value) $('lastName').value = r.lastName;
-      if (r.phone && !$('phone').value) $('phone').value = r.phone.replace(/^(\d{3})(\d{7})$/, '$1-$2');
+      if (r.phoneMasked) { $('phone').hidden = true; $('phone').required = false; $('phoneMasked').textContent = r.phoneMasked; $('phoneKnown').hidden = false; }
       $('idNumber').hidden = true; $('idNumber').required = false;
       $('idMasked').textContent = r.idMasked; $('idKnown').hidden = false;
       $('optoutRow').hidden = !!r.optedOut;
       hello();
     }).catch(() => {});
   }
+  $('phoneChange').addEventListener('click', () => {   // a new number instead of the known one
+    $('phoneKnown').hidden = true; $('phone').hidden = false; $('phone').required = true; $('phone').value = ''; $('phone').focus();
+  });
   $('optoutBtn').addEventListener('click', async () => {
     if (!known || !confirm(I[ui].optoutConfirm)) return;
     let r;
