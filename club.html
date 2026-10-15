@@ -69,7 +69,7 @@
   .known .ltr { direction: ltr; unicode-bidi: isolate; font-weight: 700; letter-spacing: 1px; }
   .known .tick { color: var(--ok); font-weight: 800; }
   .known small { color: var(--muted); }
-  .known[hidden], .f input[hidden], .f[hidden] { display: none; }
+  .known[hidden], .f input[hidden], .f[hidden], #addrFields[hidden], #birthFields[hidden] { display: none; }
   .known .chg { margin-inline-start: auto; background: none; border: 0; color: var(--blue); text-decoration: underline; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
   .savedbox { background: #e8f5e9; border: 1px solid #b7dfb9; border-radius: 12px; padding: 9px 12px; margin: 0 0 12px; font-size: 14.5px; color: #1b5e20; font-weight: 600; }
   .savedbox[hidden] { display: none; }
@@ -120,13 +120,15 @@
       <div class="f"><label for="idNumber" data-t="idNumber"></label><input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" class="ltr" required>
         <div class="known" id="idKnown" hidden><span class="ltr" id="idMasked"></span> <span class="tick">✓</span> <small data-t="idKnownNote"></small></div><div class="err" id="e-idNumber"></div></div>
       <div class="f"><span class="lbl" id="l-birth" data-t="birth"></span>
-        <div class="grid3" role="group" aria-labelledby="l-birth">
+        <div class="grid3" id="birthFields" role="group" aria-labelledby="l-birth">
           <select id="bDay" aria-label="יום"></select><select id="bMonth" aria-label="חודש"></select><select id="bYear" aria-label="שנה"></select>
-        </div><div class="err" id="e-birthDate"></div></div>
+        </div><div class="known" id="birthKnown" hidden><span class="ltr">**/**/****</span> <span class="tick">✓</span> <button type="button" class="chg" id="birthChange" data-t="birthChange"></button></div>
+        <div class="err" id="e-birthDate"></div></div>
     </div>
 
     <div class="sec" data-t="secHome"></div>
-    <div class="grid">
+    <div class="known" id="addrKnown" hidden style="margin-bottom:10px"><span id="addrMasked"></span> <span class="tick">✓</span> <button type="button" class="chg" id="addrChange" data-t="addrChange"></button></div>
+    <div class="grid" id="addrFields">
       <div class="f wide"><label for="city" data-t="city"></label><input id="city" list="cityList" autocomplete="off" maxlength="60" required><datalist id="cityList"></datalist><div class="err" id="e-city"></div></div>
       <div class="f"><label for="street" data-t="street"></label><input id="street" list="streetList" autocomplete="off" maxlength="80" required><datalist id="streetList"></datalist><div class="help" id="streetHelp"></div><div class="err" id="e-street"></div></div>
       <div class="f"><label for="houseNo" data-t="houseNo"></label><input id="houseNo" maxlength="9" class="ltr" required><div class="err" id="e-houseNo"></div></div>
@@ -180,9 +182,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       cityPh: 'התחילו להקליד ובחרו מהרשימה', streetPh: 'רחוב', streetNone: 'ליישוב אין רשימת רחובות רשמית — כתבו את שם הרחוב או השכונה', streetPick: 'בחרו מהרשימה או כתבו',
       send: 'עדכון הפרטים ✓', sending: 'שולח…', terms: 'תקנון המועדון', privacy: 'מדיניות הפרטיות', company: 'פלוס גולד אנרגיה והשקעות בע"מ — רשת סופרסטאר',
       e: { firstName: 'נא לכתוב שם פרטי בעברית או באנגלית', lastName: 'נא לכתוב שם משפחה בעברית או באנגלית', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
-        city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
+        city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב בעברית או באנגלית', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
-      nameHint: 'בעברית או באנגלית', savedAt: (d) => '✓ הפרטים שלך עודכנו ב-' + d + '. אלה הפרטים השמורים — אפשר לשנות ולשלוח שוב.', emailChange: 'החלפת מייל',
+      nameHint: 'בעברית או באנגלית', savedAt: (d) => '✓ הפרטים שלך עודכנו ב-' + d + '. אלה הפרטים השמורים — אפשר לשנות ולשלוח שוב.', emailChange: 'החלפת מייל', addrChange: 'החלפת כתובת', birthChange: 'שינוי',
       nameChanged: (a, b) => 'השם שונה מ"' + a + '" ל"' + b + '" — אולי בגלל מילוי אוטומטי של הטלפון.\n\nאישור = לשמור "' + b + '"\nביטול = לחזור ל"' + a + '" ולתקן',
       nameFix: '✏️ השם הועבר מהרישום הקיים שלנו כשם מלא אחד, וחילקנו אותו לשם פרטי ולשם משפחה. ייתכן שבזמן ההקמה נפלה בו טעות כתיב או חלוקה לא נכונה — על כך אנו מתנצלים מראש. נא לבדוק את השם ולתקן אם צריך.',
       idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', cardNo: 'מספר כרטיס מועדון', cardNote: '(לידיעתך)', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
@@ -201,9 +203,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       cityPh: 'ابدأوا الكتابة واختاروا من القائمة', streetPh: 'الشارع', streetNone: 'لا توجد قائمة شوارع رسمية لهذه البلدة — اكتبوا اسم الشارع أو الحي', streetPick: 'اختاروا من القائمة أو اكتبوا',
       send: 'تحديث التفاصيل ✓', sending: 'جارٍ الإرسال…', terms: 'أنظمة النادي', privacy: 'سياسة الخصوصية', company: 'بلوس جولد للطاقة والاستثمارات م.ض — شبكة سوبرستار',
       e: { firstName: 'يرجى كتابة الاسم الشخصي بالعبرية أو بالإنجليزية', lastName: 'يرجى كتابة اسم العائلة بالعبرية أو بالإنجليزية', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
-        city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
+        city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع بالعبرية أو بالإنجليزية', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
-      nameHint: 'بالعبرية أو بالإنجليزية (لا يمكن بالعربية)', savedAt: (d) => '✓ تم تحديث تفاصيلك في ' + d + '. هذه هي التفاصيل المحفوظة — يمكنك التغيير والإرسال مجددًا.', emailChange: 'تغيير البريد',
+      nameHint: 'بالعبرية أو بالإنجليزية (لا يمكن بالعربية)', savedAt: (d) => '✓ تم تحديث تفاصيلك في ' + d + '. هذه هي التفاصيل المحفوظة — يمكنك التغيير والإرسال مجددًا.', emailChange: 'تغيير البريد', addrChange: 'تغيير العنوان', birthChange: 'تغيير',
       nameChanged: (a, b) => 'تغيّر الاسم من "' + a + '" إلى "' + b + '" — ربما بسبب التعبئة التلقائية في الهاتف.\n\nموافق = حفظ "' + b + '"\nإلغاء = العودة إلى "' + a + '" والتصحيح',
       nameFix: '✏️ نُقل الاسم من سجلّنا الحالي كاسم كامل واحد، وقمنا بتقسيمه إلى اسم شخصي واسم عائلة. قد يكون حدث خطأ في الكتابة أو في التقسيم أثناء الإعداد — نعتذر عن ذلك مسبقًا. يرجى التحقق من الاسم وتصحيحه عند الحاجة.',
       idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', cardNo: 'رقم بطاقة النادي', cardNote: '(للعلم)', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
@@ -288,15 +290,16 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     for (let i = 0; i < 9; i++) { let n = +id[i] * ((i % 2) + 1); if (n > 9) n -= 9; s += n; }
     return s % 10 === 0 && id !== '000000000';
   };
-  const NAME = /^[א-תa-zA-Z'"׳״\-. ]{2,40}$/;   // Hebrew or English only — Comax does not take Arabic letters
+  const NAME = /^[א-תa-zA-Z'"׳״\-. ]{2,40}$/;
+  const STREET = /^[א-תa-zA-Z0-9'"׳״\-.,/() ]{2,80}$/;   // the street too: Hebrew or English (and numbers)   // Hebrew or English only — Comax does not take Arabic letters
   const checks = {
     firstName: () => NAME.test($('firstName').value.trim()),
     lastName: () => NAME.test($('lastName').value.trim()),
     idNumber: () => !!known || idOk($('idNumber').value),
-    birthDate: () => !!birthIso(),
-    city: () => !!cityCode,
-    street: () => $('street').value.trim().length >= 2,
-    houseNo: () => /^\d{1,4}[א-תa-zA-Z]?(\/\d{1,3})?$/.test($('houseNo').value.replace(/\s+/g, '')),
+    birthDate: () => (!!known && $('birthFields').hidden) || !!birthIso(),
+    city: () => (!!known && $('addrFields').hidden) || !!cityCode,
+    street: () => (!!known && $('addrFields').hidden) || STREET.test($('street').value.trim()),   // Hebrew or English only (Comax)
+    houseNo: () => (!!known && $('addrFields').hidden) || /^\d{1,4}[א-תa-zA-Z]?(\/\d{1,3})?$/.test($('houseNo').value.replace(/\s+/g, '')),
     phone: () => (!!known && $('phone').hidden) || /^05\d{8}$/.test($('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0')),
     email: () => (!!known && $('email').hidden) || /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test($('email').value.trim()),
     language: () => !!document.querySelector('[name=language]:checked'),
@@ -338,8 +341,8 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     }
     const btn = $('send'); btn.disabled = true; btn.textContent = I[ui].sending;
     const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value, invite: known ? invite : undefined,
-      firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
-      cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim(),
+      firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: $('birthFields').hidden ? '' : birthIso(),
+      ...($('addrFields').hidden ? { cityCode: null, city: '', street: '', houseNo: '' } : { cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim() }),
       phone: $('phone').hidden ? '' : $('phone').value.trim(), email: $('email').hidden ? '' : $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
       acceptTerms: $('acceptTerms').checked, acceptMarketing: $('acceptMarketing').checked };
     let r;
@@ -380,13 +383,14 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const at = new Date(s.updatedAt);
     $('savedBox').textContent = I[ui].savedAt(at.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + ' ' + at.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }));
     $('savedBox').hidden = false;
-    if (s.birthDate) { $('bYear').value = String(+s.birthDate.slice(0, 4)); $('bMonth').value = String(+s.birthDate.slice(5, 7)); $('bDay').value = String(+s.birthDate.slice(8, 10)); }
-    if (s.city) { $('city').value = s.city; onCity(); }
-    if (s.street) $('street').value = s.street;
-    if (s.houseNo) $('houseNo').value = s.houseNo;
+    // what we know is shown masked — the address and the date of birth stay on the server unless he changes them
+    if (s.hasBirth) { $('birthFields').hidden = true; $('birthKnown').hidden = false; }
+    if (s.addrMasked) { $('addrFields').hidden = true; $('addrMasked').textContent = s.addrMasked; $('addrKnown').hidden = false; }
     const lang = document.querySelector('[name=language][value="' + s.language + '"]'); if (lang) lang.checked = true;
     if (s.emailMasked) { $('email').hidden = true; $('email').required = false; $('emailMasked').textContent = s.emailMasked; $('emailKnown').hidden = false; }
   }
+  $('addrChange').addEventListener('click', () => { $('addrKnown').hidden = true; $('addrFields').hidden = false; $('city').focus(); });
+  $('birthChange').addEventListener('click', () => { $('birthKnown').hidden = true; $('birthFields').hidden = false; $('bDay').focus(); });
   $('emailChange').addEventListener('click', () => {   // a new e-mail instead of the saved one
     $('emailKnown').hidden = true; $('email').hidden = false; $('email').required = true; $('email').value = ''; $('email').focus();
   });
