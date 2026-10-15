@@ -115,7 +115,7 @@
     <p class="savedbox" id="savedBox" hidden></p>
     <p class="namefix" id="nameFix" hidden data-t="nameFix"></p>
     <div class="grid">
-      <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="err" id="e-firstName"></div></div>
+      <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="help" data-t="nameHint"></div><div class="err" id="e-firstName"></div></div>
       <div class="f"><label for="lastName" data-t="lastName"></label><input id="lastName" autocomplete="family-name" maxlength="40" required><div class="err" id="e-lastName"></div></div>
       <div class="f"><label for="idNumber" data-t="idNumber"></label><input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" class="ltr" required>
         <div class="known" id="idKnown" hidden><span class="ltr" id="idMasked"></span> <span class="tick">✓</span> <small data-t="idKnownNote"></small></div><div class="err" id="e-idNumber"></div></div>
@@ -179,10 +179,10 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       day: 'יום', month: 'חודש', year: 'שנה', months: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
       cityPh: 'התחילו להקליד ובחרו מהרשימה', streetPh: 'רחוב', streetNone: 'ליישוב אין רשימת רחובות רשמית — כתבו את שם הרחוב או השכונה', streetPick: 'בחרו מהרשימה או כתבו',
       send: 'עדכון הפרטים ✓', sending: 'שולח…', terms: 'תקנון המועדון', privacy: 'מדיניות הפרטיות', company: 'פלוס גולד אנרגיה והשקעות בע"מ — רשת סופרסטאר',
-      e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
+      e: { firstName: 'נא לכתוב שם פרטי בעברית או באנגלית', lastName: 'נא לכתוב שם משפחה בעברית או באנגלית', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
-      savedAt: (d) => '✓ הפרטים שלך עודכנו ב-' + d + '. אלה הפרטים השמורים — אפשר לשנות ולשלוח שוב.', emailChange: 'החלפת מייל',
+      nameHint: 'בעברית או באנגלית', savedAt: (d) => '✓ הפרטים שלך עודכנו ב-' + d + '. אלה הפרטים השמורים — אפשר לשנות ולשלוח שוב.', emailChange: 'החלפת מייל',
       nameChanged: (a, b) => 'השם שונה מ"' + a + '" ל"' + b + '" — אולי בגלל מילוי אוטומטי של הטלפון.\n\nאישור = לשמור "' + b + '"\nביטול = לחזור ל"' + a + '" ולתקן',
       nameFix: '✏️ השם הועבר מהרישום הקיים שלנו כשם מלא אחד, וחילקנו אותו לשם פרטי ולשם משפחה. ייתכן שבזמן ההקמה נפלה בו טעות כתיב או חלוקה לא נכונה — על כך אנו מתנצלים מראש. נא לבדוק את השם ולתקן אם צריך.',
       idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', cardNo: 'מספר כרטיס מועדון', cardNote: '(לידיעתך)', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
@@ -200,10 +200,10 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       day: 'يوم', month: 'شهر', year: 'سنة', months: ['كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران', 'تموز', 'آب', 'أيلول', 'تشرين الأول', 'تشرين الثاني', 'كانون الأول'],
       cityPh: 'ابدأوا الكتابة واختاروا من القائمة', streetPh: 'الشارع', streetNone: 'لا توجد قائمة شوارع رسمية لهذه البلدة — اكتبوا اسم الشارع أو الحي', streetPick: 'اختاروا من القائمة أو اكتبوا',
       send: 'تحديث التفاصيل ✓', sending: 'جارٍ الإرسال…', terms: 'أنظمة النادي', privacy: 'سياسة الخصوصية', company: 'بلوس جولد للطاقة والاستثمارات م.ض — شبكة سوبرستار',
-      e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
+      e: { firstName: 'يرجى كتابة الاسم الشخصي بالعبرية أو بالإنجليزية', lastName: 'يرجى كتابة اسم العائلة بالعبرية أو بالإنجليزية', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
-      savedAt: (d) => '✓ تم تحديث تفاصيلك في ' + d + '. هذه هي التفاصيل المحفوظة — يمكنك التغيير والإرسال مجددًا.', emailChange: 'تغيير البريد',
+      nameHint: 'بالعبرية أو بالإنجليزية (لا يمكن بالعربية)', savedAt: (d) => '✓ تم تحديث تفاصيلك في ' + d + '. هذه هي التفاصيل المحفوظة — يمكنك التغيير والإرسال مجددًا.', emailChange: 'تغيير البريد',
       nameChanged: (a, b) => 'تغيّر الاسم من "' + a + '" إلى "' + b + '" — ربما بسبب التعبئة التلقائية في الهاتف.\n\nموافق = حفظ "' + b + '"\nإلغاء = العودة إلى "' + a + '" والتصحيح',
       nameFix: '✏️ نُقل الاسم من سجلّنا الحالي كاسم كامل واحد، وقمنا بتقسيمه إلى اسم شخصي واسم عائلة. قد يكون حدث خطأ في الكتابة أو في التقسيم أثناء الإعداد — نعتذر عن ذلك مسبقًا. يرجى التحقق من الاسم وتصحيحه عند الحاجة.',
       idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', cardNo: 'رقم بطاقة النادي', cardNote: '(للعلم)', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
@@ -288,7 +288,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     for (let i = 0; i < 9; i++) { let n = +id[i] * ((i % 2) + 1); if (n > 9) n -= 9; s += n; }
     return s % 10 === 0 && id !== '000000000';
   };
-  const NAME = /^[א-ת؀-ۿa-zA-Z'"׳״\-. ]{2,40}$/;
+  const NAME = /^[א-תa-zA-Z'"׳״\-. ]{2,40}$/;   // Hebrew or English only — Comax does not take Arabic letters
   const checks = {
     firstName: () => NAME.test($('firstName').value.trim()),
     lastName: () => NAME.test($('lastName').value.trim()),
