@@ -106,11 +106,11 @@
   }
   function draw() {
     const b = $('app');
-    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
+    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="auto">🔄 לקוחות חדשים</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
       '<div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
-    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'miv') drawMiv(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
+    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'auto') drawAuto(); else if (tab === 'miv') drawMiv(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -257,6 +257,36 @@
     }
     say('נשלחו ' + sent + ' הודעות' + (failed ? ', ' + failed + ' נכשלו' : ''), failed ? 'err' : 'ok');
     info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+  }
+
+  /* ---------- 🔄 new customers from Comax — invited automatically (club-comax.ts) ---------- */
+  async function drawAuto() {
+    const p = $('csP');
+    p.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubComaxInfo' });
+    if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const day = (d) => ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][new Date(d + 'T12:00:00Z').getUTCDay()] + ' ' + dmy(d);
+    const stale = !r.last || Date.now() - new Date(r.last.at).getTime() > 3 * 3600000;
+    p.innerHTML = '<div class="box"><h4>🔄 שליחה אוטומטית ללקוחות חדשים מקומקס</h4>' +
+      '<div class="note">מחשב החנות בודק כל שעה את רשימת הלקוחות בקומקס (קריאה בלבד). לקוח חדש — עם נייד ות.ז. תקינים, שלא ביקש בקופה לא לקבל דיוור ושלא חסום — מקבל SMS עם טופס העדכון <b>למחרת ב-09:00</b> (מי שהצטרף ביום שישי או בשבת — ביום ראשון).</div>' +
+      '<div class="row" style="margin-top:10px"><label style="font-size:14px"><input type="checkbox" id="auOn"' + (r.on ? ' checked' : '') + '> <b>שליחה אוטומטית פעילה</b></label></div>' +
+      '<label class="c" style="display:block;margin-top:8px">נוסח ההודעה (הקישור האישי מתווסף בסוף)<textarea id="auMsg" rows="3" style="width:100%">' + e(r.message) + '</textarea></label>' +
+      '<div class="row" style="margin-top:6px"><button class="btn primary" id="auSave">שמירת הנוסח</button><span class="note">השליחה הבאה: ' + e(day(r.nextDay)) + ' ב-09:00</span></div>' +
+      '<div class="note" style="margin-top:8px">' + (r.last ? 'בדיקה אחרונה ממחשב החנות: ' + e(dt(r.last.at)) + ' · ' + r.last.total + ' לקוחות בקומקס' : 'מחשב החנות עוד לא שלח נתונים — יש להפעיל בו פעם אחת את "התקנת סנכרון לקוחות קומקס"') +
+        (r.last && stale ? ' <span class="bad">⚠ לא התקבלה בדיקה ב-3 השעות האחרונות — לוודא שמחשב החנות דולק</span>' : '') + (r.last && !r.baselineDone ? ' · טעינה ראשונה' : '') + '</div></div>' +
+      (r.batches.length ? '<div class="box"><h4>השליחות האוטומטיות</h4><table><tr><th>יום</th><th>לקוחות</th><th>נשלחו</th></tr>' +
+        r.batches.map((b) => '<tr><td>' + e(day(b.day)) + ' 09:00</td><td>' + (b.total || 0) + '</td><td>' + (b.sent || 0) + '</td></tr>').join('') + '</table><p class="note">הפרטים המלאים (נמסרו / פתחו / עדכנו) — בלשונית 📊 שליחות.</p></div>' : '') +
+      '<div class="box"><h4>לקוחות חדשים ב-8 הימים האחרונים</h4>' + (r.fresh.length ? '<table><tr><th>כרטיס</th><th>שם</th><th>טלפון</th><th>נוסף</th><th>הזמנה</th></tr>' +
+        r.fresh.map((c) => '<tr><td dir="ltr" class="note">' + e(c.kod) + '</td><td>' + e(c.name || '—') + '</td><td dir="ltr">' + e(c.phone || '—') + '</td><td class="note">' + e(dt(c.at)) + '</td><td>' +
+          (c.invited ? '<span class="ok">✓ תוזמנה</span>' : '<span class="note">' + e(c.why || '—') + '</span>') + '</td></tr>').join('') + '</table>' : '<p class="note">אין עדיין.</p>') + '</div>';
+    $('auOn').addEventListener('change', async () => {
+      const x = await api({ action: 'clubComaxAuto', on: $('auOn').checked });
+      say(x.ok ? (x.on ? 'השליחה האוטומטית פעילה ✓' : 'השליחה האוטומטית כובתה') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
+    $('auSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubComaxAuto', message: $('auMsg').value });
+      say(x.ok ? 'הנוסח נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
   }
 
   /* ---------- 🖼 the deals page ---------- */
