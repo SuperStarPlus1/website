@@ -178,6 +178,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
+      nameChanged: (a, b) => 'השם שונה מ"' + a + '" ל"' + b + '" — אולי בגלל מילוי אוטומטי של הטלפון.\n\nאישור = לשמור "' + b + '"\nביטול = לחזור ל"' + a + '" ולתקן',
       nameFix: '✏️ השם הועבר מהרישום הקיים שלנו כשם מלא אחד, וחילקנו אותו לשם פרטי ולשם משפחה. ייתכן שבזמן ההקמה נפלה בו טעות כתיב או חלוקה לא נכונה — על כך אנו מתנצלים מראש. נא לבדוק את השם ולתקן אם צריך.',
       idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', cardNo: 'מספר כרטיס מועדון', cardNote: '(לידיעתך)', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
       optoutQ: 'לא מעוניינים לקבל הודעות מסופרסטאר?', optoutBtn: 'להסרה', optoutConfirm: 'להסיר את המספר מכל ההודעות של סופרסטאר?', optoutDoneT: 'הוסרת ✓', optoutDone: 'לא נשלח למספר הזה יותר הודעות. הבקשה נרשמה.',
@@ -197,6 +198,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
+      nameChanged: (a, b) => 'تغيّر الاسم من "' + a + '" إلى "' + b + '" — ربما بسبب التعبئة التلقائية في الهاتف.\n\nموافق = حفظ "' + b + '"\nإلغاء = العودة إلى "' + a + '" والتصحيح',
       nameFix: '✏️ نُقل الاسم من سجلّنا الحالي كاسم كامل واحد، وقمنا بتقسيمه إلى اسم شخصي واسم عائلة. قد يكون حدث خطأ في الكتابة أو في التقسيم أثناء الإعداد — نعتذر عن ذلك مسبقًا. يرجى التحقق من الاسم وتصحيحه عند الحاجة.',
       idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', cardNo: 'رقم بطاقة النادي', cardNote: '(للعلم)', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
       optoutQ: 'لا ترغبون بتلقي رسائل من سوبرستار؟', optoutBtn: 'للإزالة', optoutConfirm: 'إزالة الرقم من جميع رسائل سوبرستار؟', optoutDoneT: 'تمت الإزالة ✓', optoutDone: 'لن تُرسل رسائل أخرى إلى هذا الرقم. تم تسجيل الطلب.',
@@ -321,6 +323,13 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       ($(first) || $('form')).scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    if (known && (known.firstName || known.lastName)) {
+      const was = ((known.firstName || '') + ' ' + (known.lastName || '')).trim(), now = ($('firstName').value.trim() + ' ' + $('lastName').value.trim()).trim();
+      const script = (s) => /[\u05D0-\u05EA]/.test(s) ? 'he' : /[\u0600-\u06FF]/.test(s) ? 'ar' : /[a-zA-Z]/.test(s) ? 'en' : '';
+      if (was && now !== was && script(was) && script(now) && script(was) !== script(now) && !confirm(I[ui].nameChanged(was, now))) {
+        $('firstName').value = known.firstName || ''; $('lastName').value = known.lastName || ''; $('firstName').focus(); return;
+      }
+    }
     const btn = $('send'); btn.disabled = true; btn.textContent = I[ui].sending;
     const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value, invite: known ? invite : undefined,
       firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
@@ -349,6 +358,8 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       known = r;
       if (r.firstName && !$('firstName').value) $('firstName').value = r.firstName;
       if (r.lastName && !$('lastName').value) $('lastName').value = r.lastName;
+      // the names we filled in are not AutoFill fields: the phone's contact card (often in English) would overwrite them
+      ['firstName', 'lastName'].forEach((id) => { $(id).setAttribute('autocomplete', 'off'); $(id).setAttribute('name', 'n-' + id + '-' + Math.random().toString(36).slice(2, 7)); });
       if (r.cardNo) { $('cardNo').textContent = r.cardNo; $('cardRow').hidden = false; }   // shown only — it comes from Comax
       if (r.firstName || r.lastName) $('nameFix').hidden = false;   // the name came from our old records — may be misspelt: say so, and sorry
       if (r.phoneMasked) { $('phone').hidden = true; $('phone').required = false; $('phoneMasked').textContent = r.phoneMasked; $('phoneKnown').hidden = false; }
