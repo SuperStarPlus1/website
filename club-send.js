@@ -6,6 +6,8 @@
 //      who asked for no messages and — by choice — who already updated).
 //   📊 sendings: each with its numbers (sent / delivered / opened / filled), "▶ שליחה עכשיו" — 60 at a time until done —
 //      or "⏰ תזמון" to a date and time (Israel): the server sends it then by itself (within 5 minutes), the page may be closed.
+//   📣 mailings: a deal / news message in one language, by SMS and / or e-mail, to the members who chose that language
+//      (club-campaigns.ts) — "פרסומת" and the member's unsubscribe link added by the server; test, send, schedule.
 //   👤 members: the club's members — search, a card (details, every form, every consent / withdrawal), export to Excel.
 //   👥 allowed: the addresses that may come in.
 // Server: supabase/functions/api/club.ts. The page the customer opens: club.html?i=<token>.
@@ -102,11 +104,11 @@
   }
   function draw() {
     const b = $('app');
-    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
+    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
       '<div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
-    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'members') drawMembers(); else drawWho();
+    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -253,6 +255,106 @@
     }
     say('נשלחו ' + sent + ' הודעות' + (failed ? ', ' + failed + ' נכשלו' : ''), failed ? 'err' : 'ok');
     info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+  }
+
+  /* ---------- 📣 mailings ---------- */
+  const AD = { he: 'פרסומת', ar: 'إعلان' }, OUT = { he: 'להסרה: ', ar: 'للإزالة: ' };
+  const MIV = 'https://www.superstar-plus.co.il/mivtzaim';
+  const smsPreview = (lang, text, link) => AD[lang] + ': ' + text.trim() + (link ? '\n' + link.replace(/^https?:\/\/(www\.)?/, '') : '') + '\n' + OUT[lang] + 'superstar-plus.co.il/club-unsub?s=xxxxxxxx';
+  let mlang = 'he';
+  async function drawMail() {
+    const p = $('csP');
+    p.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubCampaigns' });
+    if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const A = r.audience;
+    p.innerHTML = '<div class="box"><h4>👥 מי יקבל</h4><div class="note">רק חברי מועדון שמילאו את הטופס ובחרו שפה; לכל ערוץ — רק מי שאישר אותו, ו-SMS לא נשלח למספר חסום.</div>' +
+      '<div class="stats"><span>עברית: SMS <b>' + A.he.sms + '</b> · מייל <b>' + A.he.email + '</b></span><span>ערבית: SMS <b>' + A.ar.sms + '</b> · מייל <b>' + A.ar.email + '</b></span></div></div>' +
+      '<div class="box"><h4>✉️ דיוור חדש</h4>' +
+      '<div class="row"><label class="c">שם (לזיהוי)<input type="text" id="cmName" value="מבצעי השבוע — ' + new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + '"></label>' +
+        '<label class="c" style="flex:0 1 220px">שפה — נשלח רק למי שבחר אותה<select id="cmLang"><option value="he">עברית</option><option value="ar">ערבית</option></select></label></div>' +
+      '<div class="row" style="margin-top:8px;gap:16px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmSms" checked> SMS</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmMail"> מייל</label>' +
+        '<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmLinkOn" checked> קישור לדף המבצעים</label></div>' +
+      '<label class="c" style="margin-top:8px">קישור<input type="text" id="cmLink" dir="ltr" value="' + MIV + '"></label>' +
+      '<div id="cmSmsBox"><label class="c" style="margin-top:8px">נוסח ה-SMS<textarea id="cmSmsText" rows="3" maxlength="300"></textarea></label>' +
+        '<div class="note">כך תיראה ההודעה (המערכת מוסיפה לבד את "פרסומת" בהתחלה ואת קישור ההסרה האישי בסוף — חובה לפי חוק):</div><pre id="cmSmsPrev" style="white-space:pre-wrap;background:#f1f5f9;border-radius:8px;padding:8px;font:inherit;font-size:13px;margin:4px 0"></pre><div class="note" id="cmSmsLen"></div></div>' +
+      '<div id="cmMailBox" hidden><label class="c" style="margin-top:8px">נושא המייל (יתחיל ב"פרסומת:")<input type="text" id="cmSubj" maxlength="150"></label>' +
+        '<label class="c" style="margin-top:8px">תוכן המייל<textarea id="cmMailText" rows="5" maxlength="5000"></textarea></label>' +
+        '<label class="c" style="margin-top:8px">תמונה במייל (כתובת; ברירת המחדל — התמונה הראשית של דף המבצעים)<input type="text" id="cmImg" dir="ltr" value="' + MIV + '/images/01.jpg"></label>' +
+        '<div class="note">בתחתית כל מייל: פרטי העסק וקישור הסרה אישי.</div></div>' +
+      '<div class="row" style="margin-top:10px"><label class="c">בדיקה — טלפון<input type="tel" id="cmTPh" dir="ltr" placeholder="05X-XXXXXXX"></label><label class="c">בדיקה — מייל<input type="email" id="cmTMail" dir="ltr" placeholder="name@example.com"></label>' +
+        '<button class="btn" id="cmTest">🧪 שליחת בדיקה</button></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn primary" id="cmCreate">יצירת הדיוור</button><span class="note" id="cmAud"></span></div></div>' +
+      '<div id="cmList"></div>';
+    const vals = () => ({ name: $('cmName').value.trim(), lang: $('cmLang').value, sendSms: $('cmSms').checked, sendEmail: $('cmMail').checked,
+      smsText: $('cmSmsText').value.trim(), emailSubject: $('cmSubj').value.trim(), emailText: $('cmMailText').value.trim(),
+      linkUrl: $('cmLinkOn').checked ? $('cmLink').value.trim() : '', imageUrl: $('cmImg').value.trim() });
+    const refresh = () => {
+      const v = vals();
+      $('cmSmsBox').hidden = !v.sendSms; $('cmMailBox').hidden = !v.sendEmail; $('cmLink').disabled = !$('cmLinkOn').checked;
+      const t = smsPreview(v.lang, v.smsText || '…', v.linkUrl), n = parts(t);
+      $('cmSmsPrev').textContent = t; $('cmSmsPrev').dir = 'rtl';
+      $('cmSmsLen').textContent = t.length + ' תווים · ' + n + ' ' + (n === 1 ? 'מקטע' : 'מקטעים') + ' להודעה';
+      const a = A[v.lang];
+      $('cmAud').textContent = 'יישלח ל: ' + [v.sendSms ? a.sms + ' ב-SMS' : '', v.sendEmail ? a.email + ' במייל' : ''].filter(Boolean).join(' · ') + ' (' + (v.lang === 'ar' ? 'ערבית' : 'עברית') + ')';
+    };
+    ['cmLang', 'cmSms', 'cmMail', 'cmLinkOn', 'cmLink', 'cmSmsText'].forEach((id) => { $(id).addEventListener('input', refresh); $(id).addEventListener('change', refresh); });
+    refresh();
+    $('cmTest').addEventListener('click', async () => {
+      const x = await api({ action: 'clubCampaignTest', ...vals(), phone: $('cmTPh').value.trim(), email: $('cmTMail').value.trim() });
+      say(x.ok ? 'בדיקה: ' + x.result : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
+    $('cmCreate').addEventListener('click', async () => {
+      const x = await api({ action: 'clubCampaignCreate', ...vals() });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('הדיוור נוצר ✓ — אפשר לשלוח או לתזמן', 'ok'); drawMail();
+    });
+    // the mailings
+    const lst = $('cmList');
+    if (!r.campaigns.length) { lst.innerHTML = ''; return; }
+    lst.innerHTML = r.campaigns.map((c) => '<div class="box"><div class="row" style="justify-content:space-between"><b>' + e(c.name) + '</b><span class="note">' + (c.lang === 'ar' ? 'ערבית' : 'עברית') +
+        ' · ' + [c.send_sms ? 'SMS' : '', c.send_email ? 'מייל' : ''].filter(Boolean).join(' + ') + ' · ' + e(new Date(c.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) + '</span></div>' +
+      (c.prepared_at ? '<div class="stats"><span>' + c.total + ' הודעות (' + c.sms + ' SMS, ' + c.email + ' מייל)</span><span>נשלחו ' + c.sent + '</span><span class="ok">נמסרו ' + c.delivered + '</span>' +
+          (c.notDelivered ? '<span class="bad">לא נמסרו ' + c.notDelivered + '</span>' : '') + (c.failed ? '<span class="bad">נכשלו ' + c.failed + '</span>' : '') + (c.skipped ? '<span>דולגו ' + c.skipped + '</span>' : '') +
+          (c.waiting ? '<span>ממתינות ' + c.waiting + '</span>' : '') + '</div>' : '<div class="note">עוד לא נשלח.</div>') +
+      (c.send_sms ? '<pre style="white-space:pre-wrap;background:#f1f5f9;border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;margin:6px 0" dir="rtl">' + e(c.preview) + '</pre>' : '') +
+      (c.send_email ? '<div class="note">מייל: ' + e(AD[c.lang] + ': ' + (c.email_subject || '')) + '</div>' : '') +
+      (c.scheduled_at && (!c.prepared_at || c.waiting) ? '<div class="sched">⏰ מתוזמן ל-<b>' + e(whenIL(c.scheduled_at)) + '</b> <button class="btn" data-cun="' + c.id + '" style="padding:2px 10px">ביטול תזמון</button></div>' : '') +
+      (!c.prepared_at || c.waiting ? '<div class="row" style="margin-top:8px"><button class="btn primary" data-csend="' + c.id + '">▶ שליחה עכשיו</button>' +
+          '<label class="c" style="flex:0 1 210px">או תזמון<input type="datetime-local" data-cat="' + c.id + '"></label><button class="btn" data-csched="' + c.id + '">⏰ תזמון</button>' +
+          (!c.prepared_at ? '<button class="btn" data-cdel="' + c.id + '" style="color:#b91c1c">מחיקה</button>' : '') + '<span class="note" data-cprog="' + c.id + '"></span></div><div class="note" data-chint="' + c.id + '"></div>' : '') +
+      '</div>').join('');
+    lst.querySelectorAll('[data-cat]').forEach((inp) => {
+      inp.value = localInput(new Date(Date.now() + 3600000)); inp.min = localInput(new Date());
+      const hint = () => { lst.querySelector('[data-chint="' + inp.dataset.cat + '"]').textContent = offHours(inp.value); };
+      inp.addEventListener('input', hint); hint();
+    });
+    lst.querySelectorAll('[data-csend]').forEach((b) => b.addEventListener('click', async () => {
+      const id = Number(b.dataset.csend), c = r.campaigns.find((x) => x.id === id);
+      if (!confirm('לשלוח עכשיו את "' + c.name + '"?')) return;
+      b.disabled = true; const prog = lst.querySelector('[data-cprog="' + id + '"]');
+      let sent = 0, left = 1;
+      while (left > 0) {
+        const x = await api({ action: 'clubCampaignSend', id });
+        if (!x.ok) { say(x.error || 'שגיאה', 'err'); break; }
+        sent += x.sent; left = x.remaining; prog.textContent = 'נשלחו ' + sent + ' · נותרו ' + left;
+        if (!x.sent && !x.failed && !x.skipped) break;
+      }
+      say('נשלחו ' + sent + ' הודעות', 'ok'); drawMail();
+    }));
+    lst.querySelectorAll('[data-csched]').forEach((b) => b.addEventListener('click', async () => {
+      const id = Number(b.dataset.csched), at = lst.querySelector('[data-cat="' + id + '"]').value, w = offHours(at);
+      if (!at || !confirm('לתזמן ל-' + whenIL(at) + '?' + (w ? '\n\n' + w : ''))) return;
+      const x = await api({ action: 'clubCampaignSchedule', id, at });
+      say(x.ok ? 'תוזמן ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawMail();
+    }));
+    lst.querySelectorAll('[data-cun]').forEach((b) => b.addEventListener('click', async () => {
+      const x = await api({ action: 'clubCampaignSchedule', id: Number(b.dataset.cun), at: null }); say(x.ok ? 'התזמון בוטל' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawMail();
+    }));
+    lst.querySelectorAll('[data-cdel]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('למחוק את הדיוור?')) return;
+      const x = await api({ action: 'clubCampaignDelete', id: Number(b.dataset.cdel) }); say(x.ok ? 'נמחק' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawMail();
+    }));
   }
 
   /* ---------- 👤 the members ---------- */

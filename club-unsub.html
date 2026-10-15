@@ -36,7 +36,7 @@
 (function () {
   'use strict';
   const API = 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api';
-  const qs = new URLSearchParams(location.search), t = (qs.get('t') || '').trim().toLowerCase();
+  const qs = new URLSearchParams(location.search), t = (qs.get('t') || '').trim().toLowerCase(), sc = (qs.get('s') || '').trim().toLowerCase();   // ?t= (mail) or ?s= (SMS, short)
   let ui = qs.get('lang') === 'ar' ? 'ar' : 'he', info = null;
   const I = {
     he: { title: 'הסרה מדיוור', hi: (n) => 'שלום ' + n + ', מאיזה דיוור להסיר אותך?', email: 'מייל', sms: 'SMS', already: 'כבר הוסר', go: 'הסרה', sending: 'מעדכן…',
@@ -64,7 +64,7 @@
       const email = !!(document.getElementById('o-email') || {}).checked && info.marketingEmail, sms = !!(document.getElementById('o-sms') || {}).checked && info.marketingSms;
       if (!email && !sms) { alertBox(L.pick); return; }
       const b = document.getElementById('go'); b.disabled = true; b.textContent = L.sending;
-      const r = await api({ action: 'clubUnsubscribe', t, email, sms, uiLang: ui });
+      const r = await api({ action: 'clubUnsubscribe', t, s: sc, email, sms, uiLang: ui });
       if (!r.ok) { b.disabled = false; b.textContent = L.go; alertBox(L.err); return; }
       card.innerHTML = '<div class="done"><div class="big">✓</div><h1>' + L.doneT + '</h1><p>' + L.doneP + '</p></div>';
     });
@@ -72,7 +72,7 @@
   function alertBox(m) { let n = document.getElementById('msg'); if (!n) { n = document.createElement('p'); n.id = 'msg'; n.style.color = '#c62828'; n.style.fontWeight = '700'; n.setAttribute('role', 'alert'); card.appendChild(n); } n.textContent = m; }
   document.getElementById('lg').addEventListener('click', () => { ui = ui === 'ar' ? 'he' : 'ar'; draw(); });
   (async () => {
-    if (/^[0-9a-f]{32}$/.test(t)) { const r = await api({ action: 'clubUnsubInfo', t }); if (r.ok) { info = r; if (!qs.get('lang') && r.language === 'ar') ui = 'ar'; } }
+    if (/^[0-9a-f]{32}$/.test(t) || /^[a-z2-9]{8}$/.test(sc)) { const r = await api({ action: 'clubUnsubInfo', t, s: sc }); if (r.ok) { info = r; if (!qs.get('lang') && r.language === 'ar') ui = 'ar'; } }
     draw();
   })();
 })();
