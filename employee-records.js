@@ -232,7 +232,7 @@
       '<label class="mrow">היקף משרה (שעות בשבוע)<input id="conWeekly" type="number" min="1" max="80" step="0.5" dir="ltr" value="' + c.weeklyHours + '"></label>' +
       '<label class="mrow">יום עבודה רגיל (שעות)<input id="conDaily" type="number" min="1" max="24" step="0.1" dir="ltr" value="' + c.dailyHours + '"></label>' +
       '<label class="mrow">יום מנוחה שבועי<select id="conRest">' + opt(-1, c.restDay, 'לא נקבע (לפי הסכם — בלי תוספת יום מנוחה)') + DAYS.map((d, i) => opt(i, c.restDay, d)).join('') + '</select></label>' +
-      '<label class="mrow" style="align-self:end"><span><input type="checkbox" id="conOt"' + (c.overtime ? ' checked' : '') + '> זכאות לגמול שעות נוספות</span></label></div>' +
+      '<label class="mrow" style="align-self:end"><span><input type="checkbox" id="conOt"' + (c.overtime ? ' checked' : '') + '> זכאות לגמול שעות נוספות</span><span class="note" style="display:block;font-size:12px">חלוקת השעות לפי חוק (רגילות / 125% / 150%) מוצגת תמיד — גם בגלובלי</span></label></div>' +
       '<div id="conScope" style="font-size:13px;margin-top:8px"></div>' +
       '<p style="font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6"><b>חישוב לפי ' + e(L.name) + '</b> (' + e(L.source) + '): ' +
       'יום רגיל ' + L.dailyRegular5 + ' ש׳ בשבוע של 5 ימים / ' + L.dailyRegular6 + ' ש׳ בשבוע של 6 ימים, ' + L.nightRegular + ' ש׳ במשמרת לילה; ' +
