@@ -6,6 +6,8 @@
 //      who asked for no messages and — by choice — who already updated).
 //   📊 sendings: each with its numbers (sent / delivered / opened / filled), "▶ שליחה עכשיו" — 60 at a time until done —
 //      or "⏰ תזמון" to a date and time (Israel): the server sends it then by itself (within 5 minutes), the page may be closed.
+//   🖼 the deals page: pick the week's images → in the order of their names (as Publish-Mivtzaim.ps1) → shrunk to JPEG →
+//      published to www.superstar-plus.co.il/mivtzaim (club-miv.ts: GitHub, one commit; the page live in about a minute).
 //   📣 mailings: a deal / news message in one language, by SMS and / or e-mail, to the members who chose that language
 //      (club-campaigns.ts) — "פרסומת" and the member's unsubscribe link added by the server; test, send, schedule.
 //   👤 members: the club's members — search, a card (details, every form, every consent / withdrawal), export to Excel.
@@ -104,11 +106,11 @@
   }
   function draw() {
     const b = $('app');
-    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
+    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
       '<div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
-    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
+    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'miv') drawMiv(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -255,6 +257,62 @@
     }
     say('נשלחו ' + sent + ' הודעות' + (failed ? ', ' + failed + ' נכשלו' : ''), failed ? 'err' : 'ok');
     info = await api({ action: 'clubBatches' }); if (info.ok) draw();
+  }
+
+  /* ---------- 🖼 the deals page ---------- */
+  let mivFiles = [];
+  // the order of the script: names that are numbers — by number; else by name
+  const byName = (a, b) => { const x = a.name.replace(/\.[^.]+$/, ''), y = b.name.replace(/\.[^.]+$/, ''); return /^\d+$/.test(x) && /^\d+$/.test(y) ? Number(x) - Number(y) : x.localeCompare(y, 'he', { numeric: true }); };
+  /** a picture → JPEG, at most 1600px wide (the page shows them small; the repository stays light) */
+  const toJpeg = (file) => new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const w = Math.min(1600, img.naturalWidth), h = Math.round(img.naturalHeight * w / img.naturalWidth);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.86).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('לא תמונה: ' + file.name)); };
+    img.src = url;
+  });
+  async function drawMiv() {
+    const p = $('csP');
+    p.innerHTML = '<div class="box"><h4>🖼 דף המבצעים — <a href="https://www.superstar-plus.co.il/mivtzaim" target="_blank" rel="noopener">superstar-plus.co.il/mivtzaim</a></h4><div class="note" id="mvInfo">טוען…</div></div>' +
+      '<div class="box"><h4>העלאת המבצעים של השבוע</h4><div class="note">בוחרים את כל התמונות (או תיקייה). הסדר בדף — לפי שמות הקבצים (1, 2, 3… / 01, 02…), כמו הסקריפט. התמונה הראשונה — התמונה הראשית (וגם התמונה בשיתוף בוואטסאפ). התמונות הקיימות בדף מוחלפות.</div>' +
+      '<div class="row" style="margin-top:8px"><label class="c">תמונות<input type="file" id="mvFiles" accept="image/jpeg,image/png,image/webp" multiple></label><label class="c">או תיקייה שלמה<input type="file" id="mvDir" webkitdirectory></label></div>' +
+      '<div id="mvPrev"></div><div class="row" style="margin-top:10px"><button class="btn primary" id="mvGo" disabled>🚀 פרסום לדף המבצעים</button><span class="note" id="mvProg"></span></div><div class="bar"><i id="mvBar"></i></div></div>';
+    api({ action: 'clubMivInfo' }).then((r) => {
+      $('mvInfo').textContent = r.ok ? 'כרגע בדף: ' + r.live + ' תמונות' + (r.last ? ' · עודכן לאחרונה ' + dt(r.last.at) : '') : 'לא הצלחתי לבדוק את הדף: ' + (r.error || '');
+    });
+    const pick = (list) => {
+      mivFiles = [...list].filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type)).sort(byName);
+      $('mvPrev').innerHTML = mivFiles.length ? '<div class="note" style="margin:8px 0 4px">' + mivFiles.length + ' תמונות, בסדר הזה:</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px">' +
+        mivFiles.map((f, i) => '<figure style="margin:0;text-align:center;font-size:11.5px"><img data-mv="' + i + '" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:' + (i ? '1px solid #e5e7eb' : '3px solid #0076DA') + '"><figcaption>' +
+          String(i + 1).padStart(2, '0') + (i ? '' : ' ⭐ ראשית') + '<br><span class="note">' + e(f.name.slice(0, 18)) + '</span></figcaption></figure>').join('') + '</div>' : '<p class="bad">לא נמצאו תמונות (JPEG / PNG / WEBP).</p>';
+      mivFiles.forEach((f, i) => { const u = URL.createObjectURL(f); const im = $('mvPrev').querySelector('[data-mv="' + i + '"]'); im.onload = () => URL.revokeObjectURL(u); im.src = u; });
+      $('mvGo').disabled = !mivFiles.length || mivFiles.length > 99;
+    };
+    $('mvFiles').addEventListener('change', () => pick($('mvFiles').files));
+    $('mvDir').addEventListener('change', () => pick($('mvDir').files));
+    $('mvGo').addEventListener('click', async () => {
+      if (!confirm('לפרסם ' + mivFiles.length + ' תמונות לדף המבצעים? התמונות הנוכחיות בדף יוחלפו.')) return;
+      $('mvGo').disabled = true;
+      const shas = [];
+      try {
+        for (let i = 0; i < mivFiles.length; i++) {
+          $('mvProg').textContent = 'מעלה ' + (i + 1) + '/' + mivFiles.length + '…'; $('mvBar').style.width = Math.round(i * 90 / mivFiles.length) + '%';
+          const x = await api({ action: 'clubMivBlob', data: await toJpeg(mivFiles[i]) });
+          if (!x.ok) throw new Error(mivFiles[i].name + ': ' + (x.error || 'שגיאה'));
+          shas.push(x.sha);
+        }
+        $('mvProg').textContent = 'מפרסם…';
+        const x = await api({ action: 'clubMivPublish', shas });
+        if (!x.ok) throw new Error(x.error || 'שגיאה');
+        $('mvBar').style.width = '100%';
+        $('mvProg').innerHTML = '✓ פורסם — ' + x.images + ' תמונות. הדף יתעדכן בתוך כדקה: <a href="https://www.superstar-plus.co.il/mivtzaim" target="_blank" rel="noopener">לצפייה</a>';
+        say('דף המבצעים פורסם ✓', 'ok');
+      } catch (err) { $('mvProg').innerHTML = '<span class="bad">' + e(err.message) + '</span>'; $('mvGo').disabled = false; }
+    });
   }
 
   /* ---------- 📣 mailings ---------- */
