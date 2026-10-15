@@ -120,13 +120,15 @@
     const cases = docs.filter((d) => d.kind === 'summons');
     const loose = docs.filter((d) => d.kind !== 'summons' && !d.caseId);
     const status = (d) => d.status === 'cancelled' ? '<span class="rc-st" style="background:#f3f4f6;color:#4b5563">בוטל</span>'
-      : d.kind === 'protocol' ? (d.employeeSigned ? '<span class="rc-st" style="background:#dcfce7;color:#166534">נחתם ע"י העובד/ת</span>' : d.refused ? '<span class="rc-st" style="background:#fee2e2;color:#991b1b">סירב/ה לחתום</span>' : '')
+      : d.kind === 'protocol' ? (d.employeeSigned ? '<span class="rc-st" style="background:#dcfce7;color:#166534">נחתם ע"י העובד/ת</span>' : d.refused ? '<span class="rc-st" style="background:#fee2e2;color:#991b1b">סירב/ה לחתום</span>' : '') +
+        (d.sent ? ' <span class="rc-st" style="background:#e0f2fe;color:#075985">עותק נשלח לעובד/ת</span>' : '')
       : d.ackAt ? '<span class="rc-st" style="background:#dcfce7;color:#166534">✓ הקבלה אושרה ' + e(when(d.ackAt)) + '</span>'
       : d.sent ? '<span class="rc-st" style="background:#fef9c3;color:#854d0e">נשלח — ממתין לאישור קבלה</span>' : '<span class="rc-st" style="background:#f3f4f6;color:#374151">נמסר ידנית</span>';
     const docRow = (d) => '<div class="hr-doc"><span class="t' + (d.status === 'cancelled' ? ' hr-off' : '') + '">' + ICON[d.kind] + ' <b>' + e(d.title) + '</b>' +
       (d.kind === 'decision' && d.fields.decision ? ' — ' + e(C.decisions[d.fields.decision]) : '') +
       ' <span class="rc-meta">' + e(when(d.issuedAt)) + ' · ' + e(d.issuedBy) + '</span></span>' + status(d) +
       '<button class="btn plain" data-pdf="' + d.id + '" style="font-size:12px;padding:4px 10px">📄 PDF</button>' +
+      (d.status !== 'cancelled' && !d.sent ? '<button class="btn plain" data-send="' + d.id + '" style="font-size:12px;padding:4px 10px">📨 שליחה לעובד/ת</button>' : '') +
       (d.status !== 'cancelled' ? '<button class="btn plain" data-cancel="' + d.id + '" style="font-size:12px;padding:4px 10px;color:#b91c1c">ביטול</button>' : '') + '</div>';
     pane.innerHTML = '<div class="hr-legal">שימוע הוא חובה לפני פיטורים: <b>זימון בכתב</b> עם הטענות וזמן סביר להתכונן ← <b>שימוע</b> שבו העובד/ת משמיע/ה את טענותיו/ה (פרוטוקול) ← <b>החלטה</b> מנומקת ← אם הוחלט — <b>מכתב פיטורים</b> עם הודעה מוקדמת לפי החוק. ' +
       'הנוסחים הם תבנית סטנדרטית — מומלץ להתייעץ עם עורך/ת דין בכל מקרה של פיטורים.</div>' +
@@ -150,6 +152,13 @@
       const x = await apiPost({ action: 'hrDocPdf', ...mAuth(), id: Number(b.dataset.pdf) });
       if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
       openFile(x.data, x.filename, 'application/pdf');
+    }));
+    pane.querySelectorAll('[data-send]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('לשלוח את המסמך לעובד/ת באפליקציה ובמייל?')) return;
+      const x = await apiPost({ action: 'sendHrDoc', ...mAuth(), id: Number(b.dataset.send) });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say(x.mailed ? 'נשלח לעובד/ת באפליקציה ובמייל ✓' : 'נשלח באפליקציה — אין לעובד/ת כתובת מייל בכרטיס', 'ok');
+      await load(); drawHr();
     }));
     pane.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
       const reason = prompt('למה המסמך מבוטל? (נשמר ביומן)');
@@ -212,7 +221,8 @@
     }
     html += '<div style="margin-top:10px"><b style="font-size:12.5px">חתימה בשם המעסיק (' + e(mgr) + ')</b>' + window.rcSigHtml('hfSig') + '</div>' +
       (kind !== 'protocol' ? '<label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-weight:700"><input type="checkbox" id="hfSend" checked> לשלוח לעובד/ת באפליקציה ובמייל — לאישור קבלה בחתימה</label>' +
-        '<p class="rc-meta" style="margin:0">בלי שליחה — מדפיסים את ה-PDF ומוסרים ביד (מומלץ להחתים על העותק).</p>' : '') +
+        '<p class="rc-meta" style="margin:0">בלי שליחה — מדפיסים את ה-PDF ומוסרים ביד (מומלץ להחתים על העותק).</p>'
+        : '<label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-weight:700"><input type="checkbox" id="hfSend" checked> לשלוח עותק לעובד/ת באפליקציה ובמייל</label>') +
       '<div class="merr" id="hfErr"></div><button class="btn primary" id="hfGo">' + ICON[kind] + ' הפקת ה' + (kind === 'summons' ? 'זימון' : kind === 'protocol' ? 'פרוטוקול' : kind === 'decision' ? 'החלטה' : 'מכתב') + ' וחתימה</button>';
     pane.innerHTML = html;
     const pad = window.rcSigPad('hfSig');
