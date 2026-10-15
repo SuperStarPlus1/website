@@ -71,6 +71,8 @@
   .known small { color: var(--muted); }
   .known[hidden], .f input[hidden], .f[hidden] { display: none; }
   .known .chg { margin-inline-start: auto; background: none; border: 0; color: var(--blue); text-decoration: underline; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+  .savedbox { background: #e8f5e9; border: 1px solid #b7dfb9; border-radius: 12px; padding: 9px 12px; margin: 0 0 12px; font-size: 14.5px; color: #1b5e20; font-weight: 600; }
+  .savedbox[hidden] { display: none; }
   .namefix { background: #fff3e0; border: 1px solid #ffd8a8; border-radius: 12px; padding: 9px 12px; margin: 0 0 12px; font-size: 14px; color: #7c4a03; }
   .namefix[hidden] { display: none; }
   .hello { background: #fff8db; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 15px; }
@@ -110,6 +112,7 @@
     <div class="sec" data-t="secMe"></div>
     <div class="f" id="cardRow" hidden style="margin-bottom:10px"><span class="lbl" data-t="cardNo"></span>
       <div class="known"><span class="ltr" id="cardNo"></span> <small data-t="cardNote"></small></div></div>
+    <p class="savedbox" id="savedBox" hidden></p>
     <p class="namefix" id="nameFix" hidden data-t="nameFix"></p>
     <div class="grid">
       <div class="f"><label for="firstName" data-t="firstName"></label><input id="firstName" autocomplete="given-name" maxlength="40" required><div class="err" id="e-firstName"></div></div>
@@ -133,7 +136,8 @@
     <div class="grid">
       <div class="f"><label for="phone" data-t="phone"></label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" class="ltr" placeholder="05X-XXXXXXX" required>
         <div class="known" id="phoneKnown" hidden><span class="ltr" id="phoneMasked"></span> <span class="tick">✓</span> <button type="button" class="chg" id="phoneChange" data-t="phoneChange"></button></div><div class="err" id="e-phone"></div></div>
-      <div class="f"><label for="email" data-t="email"></label><input id="email" type="email" autocomplete="email" maxlength="120" class="ltr" placeholder="name@example.com" required><div class="err" id="e-email"></div></div>
+      <div class="f"><label for="email" data-t="email"></label><input id="email" type="email" autocomplete="email" maxlength="120" class="ltr" placeholder="name@example.com" required>
+        <div class="known" id="emailKnown" hidden><span class="ltr" id="emailMasked"></span> <span class="tick">✓</span> <button type="button" class="chg" id="emailChange" data-t="emailChange"></button></div><div class="err" id="e-email"></div></div>
       <div class="f wide"><span class="lbl" id="l-lang" data-t="mailLang"></span>
         <div class="seg" role="radiogroup" aria-labelledby="l-lang">
           <label><input type="radio" name="language" value="he"> עברית</label><label><input type="radio" name="language" value="ar"> العربية</label>
@@ -178,6 +182,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'נא לכתוב שם פרטי (אותיות בלבד)', lastName: 'נא לכתוב שם משפחה (אותיות בלבד)', idNumber: 'מספר תעודת זהות לא תקין', birthDate: 'נא לבחור תאריך לידה (גיל 18 ומעלה)',
         city: 'נא לבחור עיר מהרשימה', street: 'נא לכתוב רחוב', houseNo: 'מספר בית לא תקין', phone: 'מספר נייד לא תקין (05X-XXXXXXX)', email: 'כתובת מייל לא תקינה',
         language: 'נא לבחור שפה', acceptTerms: 'יש לאשר את התקנון ומדיניות הפרטיות', acceptMarketing: 'יש לאשר קבלת עדכונים כדי ליהנות מהטבות המועדון', form: 'יש לתקן את השדות המסומנים', net: 'אין חיבור — נסו שוב בעוד רגע' },
+      savedAt: (d) => '✓ הפרטים שלך עודכנו ב-' + d + '. אלה הפרטים השמורים — אפשר לשנות ולשלוח שוב.', emailChange: 'החלפת מייל',
       nameChanged: (a, b) => 'השם שונה מ"' + a + '" ל"' + b + '" — אולי בגלל מילוי אוטומטי של הטלפון.\n\nאישור = לשמור "' + b + '"\nביטול = לחזור ל"' + a + '" ולתקן',
       nameFix: '✏️ השם הועבר מהרישום הקיים שלנו כשם מלא אחד, וחילקנו אותו לשם פרטי ולשם משפחה. ייתכן שבזמן ההקמה נפלה בו טעות כתיב או חלוקה לא נכונה — על כך אנו מתנצלים מראש. נא לבדוק את השם ולתקן אם צריך.',
       idKnownNote: 'מוכרת לנו — אין צורך להקליד', phoneChange: 'החלפת מספר', cardNo: 'מספר כרטיס מועדון', cardNote: '(לידיעתך)', hello: (n) => 'היי' + (n ? ' ' + n : '') + ' 👋 מילאנו מראש את מה שכבר מוכר לנו — רק להשלים ולאשר.', again: 'כבר עדכנת את הפרטים — אפשר לעדכן שוב.',
@@ -198,6 +203,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       e: { firstName: 'يرجى كتابة الاسم الشخصي (حروف فقط)', lastName: 'يرجى كتابة اسم العائلة (حروف فقط)', idNumber: 'رقم الهوية غير صحيح', birthDate: 'يرجى اختيار تاريخ الميلاد (18 عامًا فما فوق)',
         city: 'يرجى اختيار المدينة من القائمة', street: 'يرجى كتابة الشارع', houseNo: 'رقم البيت غير صحيح', phone: 'رقم المحمول غير صحيح (05X-XXXXXXX)', email: 'البريد الإلكتروني غير صحيح',
         language: 'يرجى اختيار اللغة', acceptTerms: 'يجب الموافقة على الأنظمة وسياسة الخصوصية', acceptMarketing: 'يجب الموافقة على تلقي التحديثات للاستفادة من امتيازات النادي', form: 'يرجى تصحيح الحقول المؤشّرة', net: 'لا يوجد اتصال — حاولوا بعد قليل' },
+      savedAt: (d) => '✓ تم تحديث تفاصيلك في ' + d + '. هذه هي التفاصيل المحفوظة — يمكنك التغيير والإرسال مجددًا.', emailChange: 'تغيير البريد',
       nameChanged: (a, b) => 'تغيّر الاسم من "' + a + '" إلى "' + b + '" — ربما بسبب التعبئة التلقائية في الهاتف.\n\nموافق = حفظ "' + b + '"\nإلغاء = العودة إلى "' + a + '" والتصحيح',
       nameFix: '✏️ نُقل الاسم من سجلّنا الحالي كاسم كامل واحد، وقمنا بتقسيمه إلى اسم شخصي واسم عائلة. قد يكون حدث خطأ في الكتابة أو في التقسيم أثناء الإعداد — نعتذر عن ذلك مسبقًا. يرجى التحقق من الاسم وتصحيحه عند الحاجة.',
       idKnownNote: 'معروف لدينا — لا حاجة للكتابة', phoneChange: 'تغيير الرقم', cardNo: 'رقم بطاقة النادي', cardNote: '(للعلم)', hello: (n) => 'مرحبًا' + (n ? ' ' + n : '') + ' 👋 عبّأنا مسبقًا ما نعرفه — فقط أكملوا وأكّدوا.', again: 'لقد حدّثت التفاصيل سابقًا — يمكنك التحديث مجددًا.',
@@ -292,7 +298,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     street: () => $('street').value.trim().length >= 2,
     houseNo: () => /^\d{1,4}[א-תa-zA-Z]?(\/\d{1,3})?$/.test($('houseNo').value.replace(/\s+/g, '')),
     phone: () => (!!known && $('phone').hidden) || /^05\d{8}$/.test($('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0')),
-    email: () => /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test($('email').value.trim()),
+    email: () => (!!known && $('email').hidden) || /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test($('email').value.trim()),
     language: () => !!document.querySelector('[name=language]:checked'),
     acceptTerms: () => $('acceptTerms').checked,
     acceptMarketing: () => $('acceptMarketing').checked,
@@ -334,7 +340,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const body = { action: 'clubSubmit', uiLang: ui, website: $('website').value, invite: known ? invite : undefined,
       firstName: $('firstName').value.trim(), lastName: $('lastName').value.trim(), idNumber: $('idNumber').value.trim(), birthDate: birthIso(),
       cityCode, city: $('city').value.trim(), street: $('street').value.trim(), houseNo: $('houseNo').value.trim(),
-      phone: $('phone').hidden ? '' : $('phone').value.trim(), email: $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
+      phone: $('phone').hidden ? '' : $('phone').value.trim(), email: $('email').hidden ? '' : $('email').value.trim(), language: document.querySelector('[name=language]:checked').value,
       acceptTerms: $('acceptTerms').checked, acceptMarketing: $('acceptMarketing').checked };
     let r;
     try { r = await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) })).json(); }
@@ -361,7 +367,8 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       // the names we filled in are not AutoFill fields: the phone's contact card (often in English) would overwrite them
       ['firstName', 'lastName'].forEach((id) => { $(id).setAttribute('autocomplete', 'off'); $(id).setAttribute('name', 'n-' + id + '-' + Math.random().toString(36).slice(2, 7)); });
       if (r.cardNo) { $('cardNo').textContent = r.cardNo; $('cardRow').hidden = false; }   // shown only — it comes from Comax
-      if (r.firstName || r.lastName) $('nameFix').hidden = false;   // the name came from our old records — may be misspelt: say so, and sorry
+      if ((r.firstName || r.lastName) && !r.saved) $('nameFix').hidden = false;   // the name came from our old records — may be misspelt: say so, and sorry
+      if (r.saved) fillSaved(r.saved);   // opened again after filling: what he saved
       if (r.phoneMasked) { $('phone').hidden = true; $('phone').required = false; $('phoneMasked').textContent = r.phoneMasked; $('phoneKnown').hidden = false; }
       $('idNumber').hidden = true; $('idNumber').required = false;
       $('idMasked').textContent = r.idMasked; $('idKnown').hidden = false;
@@ -369,6 +376,20 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       hello();
     }).catch(() => {});
   }
+  function fillSaved(s) {
+    const at = new Date(s.updatedAt);
+    $('savedBox').textContent = I[ui].savedAt(at.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + ' ' + at.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }));
+    $('savedBox').hidden = false;
+    if (s.birthDate) { $('bYear').value = String(+s.birthDate.slice(0, 4)); $('bMonth').value = String(+s.birthDate.slice(5, 7)); $('bDay').value = String(+s.birthDate.slice(8, 10)); }
+    if (s.city) { $('city').value = s.city; onCity(); }
+    if (s.street) $('street').value = s.street;
+    if (s.houseNo) $('houseNo').value = s.houseNo;
+    const lang = document.querySelector('[name=language][value="' + s.language + '"]'); if (lang) lang.checked = true;
+    if (s.emailMasked) { $('email').hidden = true; $('email').required = false; $('emailMasked').textContent = s.emailMasked; $('emailKnown').hidden = false; }
+  }
+  $('emailChange').addEventListener('click', () => {   // a new e-mail instead of the saved one
+    $('emailKnown').hidden = true; $('email').hidden = false; $('email').required = true; $('email').value = ''; $('email').focus();
+  });
   $('phoneChange').addEventListener('click', () => {   // a new number instead of the known one
     $('phoneKnown').hidden = true; $('phone').hidden = false; $('phone').required = true; $('phone').value = ''; $('phone').focus();
   });
