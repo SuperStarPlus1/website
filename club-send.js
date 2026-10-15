@@ -416,7 +416,7 @@
   }
 
   /* ---------- 👤 the members ---------- */
-  let mq = '', mpage = 0;
+  let mq = '', mpage = 0, mmode = 'members';   // members (updated their details) | all | waiting | blocked — every customer from the file
   const KIND = { terms: 'תקנון', privacy: 'מדיניות פרטיות', marketing_email: 'דיוור במייל', marketing_sms: 'דיוור ב-SMS' };
   const CHANNEL = { landing: 'טופס המועדון', unsubscribe_link: 'קישור הסרה', invite_link: 'קישור ההזמנה', sms_reply: 'תשובת SMS', office: 'במשרד' };
   const LANG = { he: 'עברית', ar: 'ערבית' };
@@ -426,7 +426,10 @@
   async function drawMembers() {
     const p = $('csP');
     p.innerHTML = '<div class="box"><div class="row"><label class="c" style="flex:1 1 220px">חיפוש — שם, טלפון, ת.ז., מייל או עיר<input type="text" id="mQ" value="' + e(mq) + '"></label>' +
-      '<button class="btn" id="mGo">🔍 חיפוש</button><button class="btn primary" id="mExp">📥 ייצוא לאקסל</button></div><div id="mStats" class="note" style="margin-top:6px"></div></div><div id="mList"><p class="note">טוען…</p></div>';
+      '<button class="btn" id="mGo">🔍 חיפוש</button><button class="btn primary" id="mExp">📥 ייצוא לאקסל</button></div>' +
+      '<div class="tabs" style="margin:10px 0 0" id="mModes"><button data-mm="members">✓ עדכנו פרטים</button><button data-mm="all">📋 כל הלקוחות</button><button data-mm="waiting">⏳ טרם עדכנו</button><button data-mm="blocked">🚫 חסומים לדיוור</button></div>' +
+      '<div id="mStats" class="note" style="margin-top:6px"></div></div><div id="mList"><p class="note">טוען…</p></div>';
+    $('mModes').querySelectorAll('[data-mm]').forEach((b) => { b.classList.toggle('on', b.dataset.mm === mmode); b.addEventListener('click', () => { mmode = b.dataset.mm; mpage = 0; drawMembers(); }); });
     const go = () => { mq = $('mQ').value.trim(); mpage = 0; list(); };
     $('mGo').addEventListener('click', go);
     $('mQ').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
@@ -434,6 +437,7 @@
     list();
   }
   async function list() {
+    if (mmode !== 'members') return listCustomers();
     const r = await api({ action: 'clubMembers', q: mq, page: mpage });
     if (!r.ok) { $('mList').innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     $('mStats').innerHTML = '<b>' + r.all + '</b> חברי מועדון · מאשרים דיוור במייל: <b>' + r.mailOk + '</b> · ב-SMS: <b>' + r.smsOk + '</b>' + (mq ? ' · נמצאו ' + r.total : '') +
@@ -452,6 +456,48 @@
       (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
       '<p class="note">לחיצה על שורה — כרטיס החבר עם כל ההסכמות.</p></div><div id="mCard"></div>';
     $('mList').querySelectorAll('[data-m]').forEach((tr) => tr.addEventListener('click', () => card(Number(tr.dataset.m))));
+    if ($('mPrev')) $('mPrev').addEventListener('click', () => { mpage--; list(); });
+    if ($('mNext')) $('mNext').addEventListener('click', () => { mpage++; list(); });
+  }
+  /** every customer from the file — with the details as they came from Comax, updated or not, blocked or not */
+  async function listCustomers() {
+    const r = await api({ action: 'clubCustomers', q: mq, page: mpage, filter: mmode });
+    if (!r.ok) { $('mList').innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const C = r.counts;
+    $('mStats').innerHTML = '<b>' + C.all + '</b> לקוחות מהקובץ · עדכנו פרטים: <b>' + C.updated + '</b> · טרם עדכנו: <b>' + C.waiting + '</b> · 🚫 חסומים לדיוור: <b>' + C.blocked + '</b>' + (mq ? ' · נמצאו ' + r.total : '') +
+      ' <button class="btn" id="mSync" style="padding:2px 10px;font-size:12.5px">↻ סנכרון חסומים מ-UP Send</button>';
+    $('mSync').addEventListener('click', async () => {
+      $('mSync').disabled = true; $('mSync').textContent = 'מסנכרן…';
+      const x = await api({ action: 'clubBlockSyncNow' });
+      say(x.ok ? 'סונכרן ✓ — חדשים: ' + x.added + ', הוסרו: ' + x.removed : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); list();
+    });
+    if (!r.customers.length) { $('mList').innerHTML = '<p class="note">לא נמצאו לקוחות.</p>'; return; }
+    const SRC = { upsend: 'ספק ה-SMS', site: 'באתר', office: 'במשרד' };
+    const inv = (c) => c.delivery === 'delivered' ? '<span class="ok">נמסר</span>' : c.sms === 'sent' ? 'נשלח' : c.sms === 'skipped' ? '<span class="note">דולג</span>' : c.sms === 'failed' ? '<span class="bad">נכשל</span>' : '<span class="note">—</span>';
+    const pages = Math.ceil(r.total / 50);
+    $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>כרטיס</th><th>שם</th><th>טלפון</th><th>ת.ז.</th><th>הזמנה</th><th>עדכן</th><th>דיוור</th></tr>' +
+      r.customers.map((c, i) => '<tr><td dir="ltr" class="note">' + e(c.cardNo || '—') + '</td><td>' + (c.memberId ? '<a href="#" data-mc="' + c.memberId + '"><b>' + e(c.name || '—') + '</b></a>' : e(c.name || '—')) +
+        '</td><td dir="ltr">' + e(c.phone) + '</td><td dir="ltr" class="note">' + e(c.id3) + '</td><td>' + inv(c) + '</td><td>' + (c.memberId ? '<span class="ok">✓</span>' : c.opened ? '<span class="note">פתח</span>' : '') + '</td><td>' +
+        (c.blocked ? '<span class="bad" title="' + e(c.blockNote || '') + '">🚫 חסום</span> <span class="note">' + e(SRC[c.blockSource] || '') + (c.blockedAt ? ' · ' + e(dmy(String(c.blockedAt).slice(0, 10))) : '') + '</span> <button class="btn" data-unb="' + i + '" style="padding:1px 8px;font-size:12px">הסרת חסימה</button>'
+          : '<span class="ok">פעיל</span> <button class="btn" data-blk="' + i + '" style="padding:1px 8px;font-size:12px">חסימה</button>') + '</td></tr>').join('') + '</table>' +
+      (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
+      '<p class="note">פרטי הלקוחות כפי שהגיעו מקומקס. שם מודגש — עדכן פרטים (לחיצה — הכרטיס המלא).</p></div><div id="mCard"></div>';
+    $('mList').querySelectorAll('[data-mc]').forEach((a) => a.addEventListener('click', (ev) => { ev.preventDefault(); card(Number(a.dataset.mc)); }));
+    $('mList').querySelectorAll('[data-unb]').forEach((b) => b.addEventListener('click', async () => {
+      const c = r.customers[Number(b.dataset.unb)];
+      const note = prompt('הסרת החסימה של ' + (c.name || c.phone) + ' (' + c.phone + ') — גם אצל ספק ה-SMS.\n\nלפי החוק — רק בהסכמה מחודשת של הלקוח/ה. כתבו מתי ואיך ביקש/ה לחזור לקבל הודעות:', '');
+      if (note === null) return;
+      if (note.trim().length < 5) { say('יש לכתוב הערה (לפחות 5 תווים)', 'err'); return; }
+      const x = await api({ action: 'clubUnblock', phone: c.phone, note: note.trim() });
+      say(x.ok ? 'החסימה הוסרה ✓ (גם ב-UP Send)' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) list();
+    }));
+    $('mList').querySelectorAll('[data-blk]').forEach((b) => b.addEventListener('click', async () => {
+      const c = r.customers[Number(b.dataset.blk)];
+      const note = prompt('לחסום את ' + (c.name || c.phone) + ' (' + c.phone + ') לקבלת דיוור ב-SMS? (גם אצל ספק ה-SMS)\nסיבה (לא חובה):', '');
+      if (note === null) return;
+      const x = await api({ action: 'clubBlock', phone: c.phone, note: note.trim() });
+      say(x.ok ? 'נחסם ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) list();
+    }));
     if ($('mPrev')) $('mPrev').addEventListener('click', () => { mpage--; list(); });
     if ($('mNext')) $('mNext').addEventListener('click', () => { mpage++; list(); });
   }
