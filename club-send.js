@@ -276,12 +276,19 @@
   async function list() {
     const r = await api({ action: 'clubMembers', q: mq, page: mpage });
     if (!r.ok) { $('mList').innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
-    $('mStats').innerHTML = '<b>' + r.all + '</b> חברי מועדון · מאשרים דיוור במייל: <b>' + r.mailOk + '</b> · ב-SMS: <b>' + r.smsOk + '</b>' + (mq ? ' · נמצאו ' + r.total : '');
+    $('mStats').innerHTML = '<b>' + r.all + '</b> חברי מועדון · מאשרים דיוור במייל: <b>' + r.mailOk + '</b> · ב-SMS: <b>' + r.smsOk + '</b>' + (mq ? ' · נמצאו ' + r.total : '') +
+      ' · 🚫 מספרים חסומים לדיוור (כולל מי שעוד לא עדכן): <b>' + (r.blockedAll || 0) + '</b> <button class="btn" id="mSync" style="padding:2px 10px;font-size:12.5px">↻ סנכרון חסומים מ-UP Send</button>';
+    $('mSync').addEventListener('click', async () => {
+      $('mSync').disabled = true; $('mSync').textContent = 'מסנכרן…';
+      const x = await api({ action: 'clubBlockSyncNow' });
+      say(x.ok ? 'סונכרן ✓ — חדשים: ' + x.added + ', הוסרו: ' + x.removed : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+      list();
+    });
     if (!r.members.length) { $('mList').innerHTML = '<p class="note">' + (mq ? 'לא נמצאו חברים.' : 'עוד אין חברי מועדון.') + '</p>'; return; }
     const pages = Math.ceil(r.total / 50);
     $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>כרטיס</th><th>שם</th><th>טלפון</th><th>עיר</th><th>ת.ז.</th><th>שפה</th><th>מייל</th><th>SMS</th><th>עודכן</th></tr>' +
       r.members.map((m) => '<tr data-m="' + m.id + '" style="cursor:pointer"><td dir="ltr" class="note">' + e(m.cardNo || '—') + '</td><td><b>' + e(m.name) + '</b></td><td dir="ltr">' + e(m.phone) + '</td><td>' + e(m.city) + '</td><td dir="ltr">' + e(m.id3) + '</td><td>' + (LANG[m.language] || '') +
-        '</td><td>' + yes(m.mail) + '</td><td>' + yes(m.sms) + '</td><td class="note">' + e(dt(m.updated)) + '</td></tr>').join('') + '</table>' +
+        '</td><td>' + yes(m.mail) + '</td><td>' + (m.blocked ? '<span class="bad" title="חסם קבלת דיוור">🚫 חסום</span>' : yes(m.sms)) + '</td><td class="note">' + e(dt(m.updated)) + '</td></tr>').join('') + '</table>' +
       (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
       '<p class="note">לחיצה על שורה — כרטיס החבר עם כל ההסכמות.</p></div><div id="mCard"></div>';
     $('mList').querySelectorAll('[data-m]').forEach((tr) => tr.addEventListener('click', () => card(Number(tr.dataset.m))));
@@ -297,6 +304,14 @@
       '<table style="margin-top:8px">' + row('מס׳ כרטיס מועדון', m.card_no || '—', 1) + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
         row('כתובת', m.street + ' ' + m.house_no + ', ' + m.city) + row('שפת דיוור', LANG[m.language] || m.language) +
         '<tr><td class="note">דיוור כעת</td><td>מייל ' + yes(m.marketing_email) + ' · SMS ' + yes(m.marketing_sms) + '</td></tr>' + row('הצטרף/ה', dt(m.created_at)) + row('עודכן', dt(m.updated_at)) + '</table>' +
+      (r.blocked ? '<div class="warn" style="margin-top:10px">🚫 <b>הלקוח/ה חסם/ה קבלת דיוור</b> — ' + e({ upsend: 'ברשימת החסומים של ספק ה-SMS', site: 'ביקש/ה באתר', office: 'נחסם/ה במשרד' }[r.blocked.source] || r.blocked.source) +
+          ', מ-' + e(dt(r.blocked.blocked_at)) + (r.blocked.note ? ' (' + e(r.blocked.note) + ')' : '') + '. לא יישלחו אליו/ה הודעות. פרטי המועדון נשמרים כפי שהם.' +
+          '<div class="row" style="margin-top:6px"><label class="c" style="flex:1 1 260px">הסרת החסימה — רק בהסכמה מחודשת של הלקוח/ה (חובה לכתוב מתי ואיך)<input type="text" id="mUnNote" maxlength="300" placeholder="למשל: ביקש/ה בטלפון ב-15/10 לחזור לקבל הודעות"></label>' +
+          '<button class="btn" id="mUnblock">הסרת חסימה</button></div></div>'
+        : '<div class="row" style="margin-top:10px"><label class="c" style="flex:1 1 260px">חסימת דיוור ב-SMS (גם אצל ספק ה-SMS)<input type="text" id="mBlNote" maxlength="300" placeholder="סיבה (לא חובה)"></label><button class="btn" id="mBlock">🚫 חסימה</button></div>') +
+      (r.blockLog && r.blockLog.length ? '<h4 style="margin:14px 0 6px">🚫 חסימות והסרות חסימה (' + r.blockLog.length + ')</h4><table><tr><th>מתי</th><th>פעולה</th><th>מקור</th><th>הערה</th><th>ע״י</th></tr>' +
+          r.blockLog.map((b) => '<tr><td class="note">' + e(dt(b.at)) + '</td><td>' + (b.action === 'block' ? '<span class="bad">חסימה</span>' : '<span class="ok">הסרת חסימה</span>') + '</td><td>' +
+            e({ upsend: 'ספק ה-SMS', site: 'האתר', office: 'משרד' }[b.source] || b.source) + '</td><td>' + e(b.note || '') + '</td><td class="note">' + e(b.by_who || '') + '</td></tr>').join('') + '</table>' : '') +
       '<h4 style="margin:14px 0 6px">📜 הסכמות והסרות (' + r.consents.length + ')</h4><div style="overflow-x:auto"><table><tr><th>מתי</th><th>מה</th><th>החלטה</th><th>היכן</th><th>גרסה</th><th>IP</th></tr>' +
         r.consents.map((c) => '<tr title="' + e(c.text_shown) + '"><td class="note">' + e(dt(c.at)) + '</td><td>' + (KIND[c.kind] || c.kind) + '</td><td>' + (c.granted ? '<span class="ok">אישר/ה</span>' : '<span class="bad">ביטל/ה</span>') +
           '</td><td>' + (CHANNEL[c.channel] || e(c.channel)) + '</td><td class="note">' + e(c.doc_version ? c.doc_version + ' · ' + String(c.doc_sha256 || '').slice(0, 8) : '') + '</td><td dir="ltr" class="note">' + e(c.ip || '') + '</td></tr>').join('') + '</table></div>' +
@@ -304,6 +319,20 @@
       '<h4 style="margin:14px 0 6px">📝 טפסים שנשלחו (' + r.submissions.length + ')</h4><table><tr><th>מתי</th><th>שפת הדף</th><th>IP</th><th>מכשיר</th></tr>' +
         r.submissions.map((s) => '<tr><td class="note">' + e(dt(s.at)) + '</td><td>' + (LANG[s.ui_lang] || '') + '</td><td dir="ltr" class="note">' + e(s.ip || '') + '</td><td class="note" dir="ltr" style="text-align:right">' + e(String(s.user_agent || '').slice(0, 60)) + '</td></tr>').join('') + '</table></div>';
     $('mClose').addEventListener('click', () => { box.innerHTML = ''; });
+    if ($('mUnblock')) $('mUnblock').addEventListener('click', async () => {
+      const note = $('mUnNote').value.trim();
+      if (note.length < 5) { say('יש לכתוב מתי ואיך הלקוח/ה ביקש/ה לחזור לקבל הודעות', 'err'); $('mUnNote').focus(); return; }
+      if (!confirm('להסיר את החסימה של ' + m.phone + '? ההסרה תבוצע גם אצל ספק ה-SMS, ותירשם כהסכמה מחודשת עם ההערה.')) return;
+      const x = await api({ action: 'clubUnblock', phone: m.phone, note });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('החסימה הוסרה ✓', 'ok'); card(id); list();
+    });
+    if ($('mBlock')) $('mBlock').addEventListener('click', async () => {
+      if (!confirm('לחסום את ' + m.phone + ' לקבלת דיוור ב-SMS? החסימה תבוצע גם אצל ספק ה-SMS.')) return;
+      const x = await api({ action: 'clubBlock', phone: m.phone, note: $('mBlNote').value.trim() });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('נחסם ✓', 'ok'); card(id); list();
+    });
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async function exportXlsx() {
