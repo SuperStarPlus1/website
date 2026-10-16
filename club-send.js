@@ -496,7 +496,7 @@
     const r = await api({ action: 'clubCoupons' });
     if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const ST = { pending: '⏳ ממתין לפתיחה בקומקס', active: '✅ פעיל', used: '🛒 נוצל', expired: '⌛ פג', cancelled: '✖ בוטל' };
-    const why = { return: 'מוצר שקונה הרבה', winback: 'לא קנה ' + r.winbackDays + ' יום — חלון + SMS' };
+    const why = { return: 'מוצר שקונה הרבה', winback: 'לא קנה ' + r.winbackDays + ' יום — חלון + SMS', manual: 'ידני' };
     const row = (c) => '<tr><td>' + e(c.member) + '<div class="note">' + e(c.card || '') + '</div></td><td><b>' + e(c.name) + '</b><div class="note" dir="ltr">' + e(c.barcode) + '</div></td><td>' + e(c.percent) + '%</td><td>' + e(why[c.reason] || c.reason) + '</td>' +
       '<td>' + e(ST[c.status] || c.status) + (c.valid_to ? '<div class="note">עד ' + e(c.valid_to.split('-').reverse().join('/')) + '</div>' : '') + (c.sms_status ? '<div class="note">SMS: ' + e(c.sms_status) + '</div>' : '') + '</td><td>' +
       (c.status === 'pending' ? '<input type="text" placeholder="מס׳ מבצע בקומקס" data-cx="' + c.id + '" style="width:120px"> <button class="btn primary" data-act="' + c.id + '">נפתח בקומקס ✓</button> ' : '') +
@@ -504,8 +504,20 @@
     const pend = r.coupons.filter((c) => c.status === 'pending'), rest = r.coupons.filter((c) => c.status !== 'pending');
     p.innerHTML = '<div class="box"><h4>🎟 קופונים לחברי המועדון</h4><div class="note">' + r.percent + '% על מוצר אחד שהלקוח קונה (לא מוצר שכבר במבצע), ' + r.days + ' ימים. המערכת מציעה כל בוקר; כדי שהקופה תכבד — פותחים בקומקס מבצע לקבוצת הלקוחות של הלקוח על המוצר, ומסמנים כאן "נפתח בקומקס" — רק אז הלקוח רואה את הקופון באזור האישי (ולקוח שלא קנה ' + r.winbackDays + ' יום מקבל גם חלון קופץ ו-SMS).</div>' +
       '<div class="row" style="margin-top:8px"><label class="c">בפיילוט — מספרי ת"ז (פסיק בין מספרים)<input type="text" id="cpPilot" dir="ltr" value="' + e(r.pilot || '') + '"></label><button class="btn" id="cpSave">💾 שמירה והרצה עכשיו</button></div></div>' +
+      '<div class="box"><h4>➕ קופון ידני</h4><div class="note">לחבר/ת מועדון (שמילא/ה את הטופס): ת"ז או נייד, ברקוד המוצר (השם מהקטלוג), אחוז הנחה וימי תוקף. כמו כל קופון — כדי שהקופה תכבד יש לפתוח אותו בקומקס כמבצע לקבוצת הלקוחות; אם כבר נפתח — לסמן "נפתח בקומקס" והקופון פעיל ומוצג ללקוח מיד.</div>' +
+        '<div class="row" style="margin-top:8px"><label class="c" style="flex:0 1 170px">ת"ז<input type="text" id="cmId" dir="ltr" inputmode="numeric"></label><label class="c" style="flex:0 1 170px">או נייד<input type="tel" id="cmPh" dir="ltr"></label>' +
+        '<label class="c" style="flex:0 1 190px">ברקוד המוצר<input type="text" id="cmBc" dir="ltr" inputmode="numeric"></label><label class="c" style="flex:0 1 100px">% הנחה<input type="number" id="cmPct" min="1" max="100" value="' + r.percent + '"></label>' +
+        '<label class="c" style="flex:0 1 100px">ימי תוקף<input type="number" id="cmDays" min="1" max="90" value="' + r.days + '"></label></div>' +
+        '<div class="row" style="margin-top:8px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmNow"> כבר נפתח בקומקס — להפעיל מיד</label><label class="c" style="flex:0 1 180px">מס׳ מבצע בקומקס<input type="text" id="cmCx"></label>' +
+        '<button class="btn primary" id="cmAdd">➕ יצירת הקופון</button></div></div>' +
       '<div class="box"><h4>⏳ לפתוח בקומקס (' + pend.length + ')</h4>' + (pend.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + pend.map(row).join('') + '</table>' : '<p class="note">אין קופונים שממתינים.</p>') + '</div>' +
       '<div class="box"><h4>קופונים (' + rest.length + ')</h4>' + (rest.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + rest.map(row).join('') + '</table>' : '<p class="note">עוד אין.</p>') + '</div>';
+    $('cmAdd').addEventListener('click', async () => {
+      const x = await api({ action: 'clubCouponCreate', idNumber: $('cmId').value.trim(), phone: $('cmPh').value.trim(), barcode: $('cmBc').value.trim(),
+        percent: Number($('cmPct').value), days: Number($('cmDays').value), activeNow: $('cmNow').checked, comaxCode: $('cmCx').value.trim() });
+      if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
+      say('נוצר קופון ל' + x.member + ' על ' + x.product + (x.status === 'active' ? ' — פעיל עד ' + String(x.validTo).split('-').reverse().join('/') : ' — ממתין לפתיחה בקומקס'), 'ok'); drawCoupons();
+    });
     $('cpSave').addEventListener('click', async () => { const x = await api({ action: 'clubCouponPilot', ids: $('cpPilot').value, runNow: true }); say(x.ok ? 'נשמר ✓' + (x.run ? ' · נוצרו ' + x.run.created : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons(); });
     p.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
       const cx = (p.querySelector('[data-cx="' + b.dataset.act + '"]') || {}).value || '';
