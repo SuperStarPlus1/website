@@ -420,6 +420,7 @@
                 <li onclick="nav('directions-page', this)" tabindex="0" role="menuitem" data-i18n="nav_contact">צור קשר</li>
                 <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);" tabindex="0" role="menuitem" data-i18n="nav_club">⭐ מועדון לקוחות</li>
                 <li onclick="location.href='/club-me' + (document.body.dataset.lang === 'ar' ? '?lang=ar' : '')" tabindex="0" role="menuitem" data-i18n="nav_me">👤 אזור אישי</li>
+                <li onclick="location.href='/shifts'" tabindex="0" role="menuitem" data-i18n="nav_staff" style="opacity:.85">🔐 כניסת עובדים</li>
 
                 <!-- Language switcher -->
                 <li style="background:transparent; padding:4px 8px;" role="none">
@@ -659,7 +660,9 @@
             </div>
             <div class="club-form-wrap">
                 <h2 data-i18n="club_form_title">🚀 הצטרפו עכשיו — בחינם!</h2>
-                <iframe src="https://superstarplus1.github.io/website/club_form.html" class="form-iframe" id="club-iframe" title="טופס הצטרפות למועדון לקוחות" aria-label="טופס הצטרפות למועדון לקוחות"></iframe>
+                <!-- 16/10/2026: joining / updating goes through the club database (club-me → ID + SMS code → the club form, pre-filled from Comax) -->
+                <p data-i18n="club_join_p" style="margin:6px 0 14px;color:#475569">לקוחות קיימים וחדשים: מזינים תעודת זהות ונייד, מקבלים קוד ב-SMS — ומשלימים את הפרטים. לקוחות קיימים יקבלו את הפרטים שכבר רשומים אצלנו בקופה.</p>
+                <a href="/club-me" onclick="this.href='/club-me' + (document.body.dataset.lang === 'ar' ? '?lang=ar' : '')" data-i18n="club_join_btn" style="display:inline-block;background:var(--blue);color:#fff;font-weight:800;font-size:1.15rem;padding:14px 28px;border-radius:14px;text-decoration:none;box-shadow:0 6px 18px rgba(0,118,218,.28)">הצטרפות / כניסה למועדון ←</a>
             </div>
         </div>
     </div>
@@ -1612,7 +1615,7 @@ const TRANSLATIONS = {
         cw_badge: "🎁 הטבת מועדון בלעדית", cw_title: "שובר שטיפת רכב חיצונית מתנה!",
         cw_desc: "בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!",
         cw_cta: "קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨",
-        club_form_title: "🚀 הצטרפו עכשיו — בחינם!",
+        club_form_title: "🚀 הצטרפו עכשיו — בחינם!", club_join_p: "לקוחות קיימים וחדשים: מזינים תעודת זהות ונייד, מקבלים קוד ב-SMS — ומשלימים את הפרטים. לקוחות קיימים יקבלו את הפרטים שכבר רשומים אצלנו בקופה.", club_join_btn: "הצטרפות / כניסה למועדון ←", nav_staff: "🔐 כניסת עובדים",
         banner_text: "🎁 הצטרפו למועדון לקוחות סופרסטאר ו", banner_span: "קבלו סל קניות 41 במתנה!",
         banner_btn: "הצטרפו עכשיו",
         video_fallback: "הדפדפן שלך אינו תומך בהצגת וידאו.",
@@ -1675,7 +1678,7 @@ const TRANSLATIONS = {
         cw_badge: "🎁 ميزة حصرية للنادي", cw_title: "قسيمة غسيل سيارة خارجي مجاناً!",
         cw_desc: "مع كل عملية شراء تتجاوز <strong>₪300</strong> — يحصل أعضاء النادي على قسيمة غسيل سيارة خارجي كامل، مجاناً تماماً!",
         cw_cta: "اشترِ فوق ₪300 ← احصل على قسيمة غسيل 🚗✨",
-        club_form_title: "🚀 انضم الآن — مجاناً!",
+        club_form_title: "🚀 انضم الآن — مجاناً!", club_join_p: "زبائن حاليون وجدد: أدخلوا رقم الهوية والهاتف، استلموا رمزًا برسالة SMS — وأكملوا التفاصيل. الزبائن الحاليون سيجدون التفاصيل المسجلة لدينا في الصندوق.", club_join_btn: "الانضمام / الدخول إلى النادي ←", nav_staff: "🔐 دخول الموظفين",
         banner_text: "🎁 انضم لنادي عملاء سوبر ستار و", banner_span: "احصل على سلة تسوق ₪41 هدية!",
         banner_btn: "انضم الآن",
         video_fallback: "متصفحك لا يدعم تشغيل الفيديو.",
@@ -1738,7 +1741,7 @@ const TRANSLATIONS = {
         cw_badge: "🎁 Exclusive club benefit", cw_title: "Free exterior car wash voucher!",
         cw_desc: "On every purchase over <strong>₪300</strong> — club members receive a full exterior car wash voucher, completely free!",
         cw_cta: "Buy over ₪300 ← Get a car wash voucher 🚗✨",
-        club_form_title: "🚀 Join now — it's free!",
+        club_form_title: "🚀 Join now — it's free!", club_join_p: "Existing and new customers: enter your ID and mobile number, get an SMS code — and complete your details.", club_join_btn: "Join / sign in to the club →", nav_staff: "🔐 Staff login",
         banner_text: "🎁 Join the Super Star loyalty club and ", banner_span: "get a ₪41 shopping basket as a gift!",
         banner_btn: "Join now",
         video_fallback: "Your browser does not support video playback.",

@@ -75,6 +75,9 @@
       <form id="fId" novalidate>
         <label for="idNumber" data-t="idLbl"></label>
         <input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="•••••••••">
+        <label for="phone" data-t="phoneLbl" style="margin-top:12px"></label>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="05X-XXXXXXX">
+        <p class="sub" style="margin:8px 0 0;font-size:13.5px" data-t="phoneHint"></p>
         <button class="btn" id="bId" type="submit" data-t="sendCode"></button>
         <div class="msg" id="mId" role="status"></div>
       </form>
@@ -145,7 +148,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
   const I = {
-    he: { h1: 'האזור האישי במועדון', lead: 'כרטיס המועדון, הפרטים שלכם והמבצעים — במקום אחד.', idLbl: 'מספר תעודת זהות', sendCode: 'שלחו לי קוד ב-SMS',
+    he: { h1: 'מועדון סופרסטאר', lead: 'הצטרפות, עדכון פרטים והאזור האישי — כרטיס המועדון והמבצעים במקום אחד.', idLbl: 'מספר תעודת זהות', phoneLbl: 'מספר נייד', phoneHint: 'לקוחות קיימים — הקוד יישלח לנייד שרשום אצלנו בקופה. לקוחות חדשים — לנייד שהזנתם.', badPhone: 'מספר נייד לא תקין', sendCode: 'שלחו לי קוד ב-SMS',
       codeH: 'הזינו את הקוד', codeLbl: 'קוד בן 6 ספרות', enter: 'כניסה', resend: 'שליחת קוד חדש', resendIn: (s) => 'קוד חדש בעוד ' + s + ' שנ׳', otherId: 'מספר זהות אחר',
       formH: (n) => (n ? n + ', ' : '') + 'עוד צעד קטן 💛', formWhy: 'האזור האישי פתוח לחברי המועדון שהשלימו את הפרטים ואישרו לקבל מבצעים והטבות. זה לוקח דקה — ואחרי השליחה חוזרים לכאן.',
       formGo: 'להשלמת הפרטים', hello: (n) => 'שלום ' + n + ' 👋', cardT: 'כרטיס חבר מועדון סופרסטאר', cardHint: 'הציגו בקופה לזיהוי במועדון',
@@ -153,7 +156,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       detailsH: 'הפרטים שלי', name: 'שם', id: 'ת"ז', phone: 'נייד', email: 'מייל', city: 'יישוב', since: 'חבר/ה מ-', edit: 'עדכון פרטים',
       mailH: 'דיוור', sms: 'SMS', mail: 'מייל', on: 'מאושר', off: 'לא מאושר', mailManage: 'ניהול / הפסקת דיוור', logout: 'יציאה',
       terms: 'תקנון המועדון', privacy: 'מדיניות פרטיות', net: 'אין חיבור — נסו שוב', badId: 'מספר תעודת זהות לא תקין', badCode: 'יש להזין 6 ספרות' },
-    ar: { h1: 'المنطقة الشخصية في النادي', lead: 'بطاقة النادي، تفاصيلك والعروض — في مكان واحد.', idLbl: 'رقم الهوية', sendCode: 'أرسلوا لي رمزًا برسالة SMS',
+    ar: { h1: 'نادي سوبرستار', lead: 'الانضمام، تحديث التفاصيل والمنطقة الشخصية — بطاقة النادي والعروض في مكان واحد.', idLbl: 'رقم الهوية', phoneLbl: 'رقم الهاتف المحمول', phoneHint: 'الزبائن الحاليون — يُرسل الرمز إلى الهاتف المسجل لدينا في الصندوق. الزبائن الجدد — إلى الرقم الذي أدخلتموه.', badPhone: 'رقم هاتف غير صحيح', sendCode: 'أرسلوا لي رمزًا برسالة SMS',
       codeH: 'أدخلوا الرمز', codeLbl: 'رمز من 6 أرقام', enter: 'دخول', resend: 'إرسال رمز جديد', resendIn: (s) => 'رمز جديد بعد ' + s + ' ث', otherId: 'رقم هوية آخر',
       formH: (n) => (n ? n + '، ' : '') + 'خطوة صغيرة أخرى 💛', formWhy: 'المنطقة الشخصية مفتوحة لأعضاء النادي الذين أكملوا التفاصيل ووافقوا على تلقي العروض والمزايا. يستغرق ذلك دقيقة — وبعد الإرسال تعودون إلى هنا.',
       formGo: 'لإكمال التفاصيل', hello: (n) => 'مرحبًا ' + n + ' 👋', cardT: 'بطاقة عضو نادي سوبرستار', cardHint: 'اعرضوها في الصندوق للتعريف في النادي',
@@ -163,7 +166,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
   };
   let ui = new URLSearchParams(location.search).get('lang') === 'ar' || store.get('ss_club_lang') === 'ar' ? 'ar' : 'he';
-  let me = null, idNumber = '', timer = null;
+  let me = null, idNumber = '', phone = '', timer = null;
   const api = async (body) => {
     try { return await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ ...body, uiLang: ui }) })).json(); }
     catch (e) { return { ok: false, error: I[ui].net }; }
@@ -192,7 +195,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     tick(); timer = setInterval(tick, 1000);
   }
   async function sendCode() {
-    const r = await api({ action: 'clubAppStart', idNumber });
+    const r = await api({ action: 'clubAppStart', idNumber, phone });
     if (!r.ok) return r;
     $('codeSub').textContent = r.message; show('stepCode'); $('code').value = ''; $('mCode').textContent = ''; $('code').focus(); cooldown(60);
     return r;
@@ -201,7 +204,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     ev.preventDefault();
     const v = $('idNumber').value.trim();
     if (!idValid(v)) { $('mId').className = 'msg err'; $('mId').textContent = I[ui].badId; return; }
-    idNumber = v; $('bId').disabled = true; $('mId').textContent = '';
+    const ph = $('phone').value.replace(/[^\d+]/g, '').replace(/^\+?972/, '0');
+    if (!/^05\d{8}$/.test(ph)) { $('mId').className = 'msg err'; $('mId').textContent = I[ui].badPhone; return; }
+    idNumber = v; phone = ph; $('bId').disabled = true; $('mId').textContent = '';
     const r = await sendCode();
     $('bId').disabled = false;
     if (!r.ok) { $('mId').className = 'msg err'; $('mId').textContent = r.error || I[ui].net; }
