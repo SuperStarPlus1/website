@@ -243,6 +243,32 @@
             .spender { flex-direction: column; text-align: center; padding: 18px 16px 22px; }
             .sp-stage { flex: none; width: 100%; max-width: 300px; height: 170px; }
         }
+        /* 16/10/2026: the home page fits ONE screen, any device (fitHome() measures the header and the bottom strip) */
+        body.fit-home main { margin: var(--hdr, 85px) 0 0; }
+        body.fit-home #home.active { display: flex; flex-direction: column; height: var(--home-h, 80vh); overflow: hidden; gap: 1.2vh; padding-bottom: 1.2vh; box-sizing: border-box; }
+        body.fit-home .cin { flex: 1 1 48%; height: auto; min-height: 0; }
+        body.fit-home #home .content-wrap { flex: 1 1 52%; min-height: 0; width: 100%; max-width: 1400px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; display: flex; gap: 16px; }
+        body.fit-home #imageRoll { flex: 1 1 0; min-width: 0; min-height: 0; height: auto; aspect-ratio: auto; margin: 0; max-width: none; container-type: size; }
+        body.fit-home .spender { flex: 1 1 0; min-width: 0; min-height: 0; margin: 0; container-type: size; flex-direction: row; text-align: start; padding: 2% 3%; gap: 3%; border-radius: 18px; }
+        @media (max-aspect-ratio: 1/1) { body.fit-home #home .content-wrap { flex-direction: column; gap: 1.2vh; } }
+        body.fit-home #showcase { flex-direction: row; padding: 3% 4%; gap: 4%; text-align: start; }
+        body.fit-home #showcase .sc-img { flex: none; height: min(86cqh, 44cqw); width: auto; aspect-ratio: 1 / 1; }
+        body.fit-home #showcase .sc-txt { flex: 1 1 auto; width: auto; text-align: start; }
+        body.fit-home #showcase .sc-hurry { font-size: clamp(9px, min(7cqh, 4cqw), 20px); padding: .3em .8em; }
+        body.fit-home #showcase h3 { font-size: clamp(10px, min(9cqh, 5cqw), 28px); margin: 3cqh 0 2cqh; -webkit-line-clamp: 2; }
+        body.fit-home #showcase .sc-price { font-size: clamp(12px, min(12cqh, 7cqw), 36px); }
+        body.fit-home #showcase .sc-clock { font-size: clamp(10px, min(9cqh, 5cqw), 28px); margin-top: 2cqh; }
+        body.fit-home #showcase .sc-left { height: max(3px, 2.5cqh); margin-top: 2cqh; }
+        body.fit-home .sp-stage { flex: none; width: min(34cqw, 95cqh); overflow: visible; max-width: none; height: 100%; }
+        body.fit-home .sp-guy { font-size: min(44cqh, 14cqw); bottom: 4%; }
+        body.fit-home .sp-hand { font-size: min(19cqh, 6cqw); bottom: 38%; }
+        body.fit-home .sp-bill { font-size: min(14cqh, 4.5cqw); bottom: 50%; animation-name: spFlyFit; }
+        @keyframes spFlyFit { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 10% { opacity: 1; } 55% { transform: translate(-12cqw, -12cqh) rotate(-120deg); } 100% { opacity: .9; transform: translate(-24cqw, 22cqh) rotate(-260deg) scale(.7); } }
+        body.fit-home .sp-bin { font-size: min(26cqh, 8.5cqw); bottom: 2%; }
+        body.fit-home .sp-txt h3 { font-size: clamp(12px, min(11cqh, 5.5cqw), 34px); margin: 0 0 2cqh; }
+        body.fit-home .sp-txt p { font-size: clamp(10px, min(7cqh, 3.4cqw), 18px); margin: 0 0 3cqh; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        body.fit-home .sp-meter { font-size: clamp(9px, min(6cqh, 3cqw), 16px); margin-bottom: 3cqh; padding: .3em .7em; }
+        body.fit-home .sp-cta { font-size: clamp(10px, min(7cqh, 3.6cqw), 20px); padding: .5em 1.2em; }
         @keyframes scBlink { 50% { transform: scale(1.06); box-shadow: 0 0 18px rgba(255,204,0,.9); } }
         .sc.fade { opacity: 0; }
         .sc .sc-img { flex: 0 0 46%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 14px; }
@@ -1385,6 +1411,23 @@
             '<span dir="ltr">' + p2(Math.floor(s % 86400 / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60) + '</span>';
     }
     setInterval(scTick, 1000);
+    // the home page in one screen: the height left between the header and the bottom strip (it changes — the strip
+    // opens / closes, the phone's toolbar, rotating the device); other pages scroll as before
+    function fitHome() {
+        const home = document.getElementById('home'), on = !!(home && home.classList.contains('active'));
+        document.body.classList.toggle('fit-home', on);
+        if (!on) return;
+        const top = Math.ceil(document.querySelector('header').getBoundingClientRect().bottom);
+        const bn = document.getElementById('club-banner');
+        const low = bn && getComputedStyle(bn).display !== 'none' && !bn.classList.contains('hidden') ? bn.offsetHeight : 0;
+        const h = Math.max(340, Math.floor((window.visualViewport ? window.visualViewport.height : window.innerHeight) - top - low));
+        document.documentElement.style.setProperty('--hdr', top + 'px');
+        document.documentElement.style.setProperty('--home-h', h + 'px');
+    }
+    window.addEventListener('resize', fitHome);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHome);
+    setInterval(fitHome, 500);
+    fitHome();
     (function () { let v = 0; setInterval(() => { const el = document.getElementById('sp-lost'); if (!el) return; v += 0.07 + Math.random() * 0.09; el.textContent = v.toFixed(2); }, 400); })();
     function showcaseOpen() {
         if (!scCur) return;

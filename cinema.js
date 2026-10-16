@@ -87,6 +87,17 @@
 @keyframes cinTile{from{opacity:0;transform:scale(.2) rotate(10deg)}to{opacity:1;transform:none}}
 @keyframes cinOrbit{from{transform:rotateX(-8deg) rotateY(0)}to{transform:rotateX(-8deg) rotateY(-360deg)}}
 body.reduce-motion .cin-bg,body.reduce-motion .cin-grain{display:none}
+/* the texts follow the trailer's height (the home page fits one screen) */
+@supports (container-type:size){
+ .cin{container-type:size}
+ .cin-intro h2{font-size:clamp(18px,min(5vw,20cqh),64px)}
+ .cin-intro p{font-size:clamp(10px,min(2.6vw,6cqh),24px)}
+ .cin-txt h3{font-size:clamp(12px,min(2.6vw,10cqh),32px)}
+ .cin-price{font-size:clamp(14px,min(3.2vw,13cqh),40px)}
+ .cin-stamp{font-size:clamp(9px,min(2.2vw,6.5cqh),20px)}
+ .cin-cap{font-size:clamp(12px,min(4vw,9cqh),36px)}
+ .cin-cta{font-size:clamp(10px,min(2.4vw,7cqh),20px)}
+}
 `;
   const T = {
     he: { title: 'חדש על המדף', sub: 'השבוע בסופרסטאר פלוס', stampNew: '🆕 חדש!', stampPromo: '🔥 מבצע', mont: 'מה חדש אצלנו? 👀', orbit: 'הגיעו השבוע למדפים', cta: 'לכל המוצרים החדשים ←', end: 'בואו לגלות' },
