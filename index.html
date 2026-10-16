@@ -202,17 +202,34 @@
         .roll-item { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .roll-item img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
         /* the home showcase: one product at a time — new on the shelf and this week's promos (16/10/2026) */
-        .sc { width: 100%; height: 100%; display: flex; align-items: center; gap: 4%; padding: 4% 6%; box-sizing: border-box; background: linear-gradient(135deg, #ffffff, #e6f1fb); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); transition: opacity .45s ease; }
+        .sc { position: relative; overflow: hidden; width: 100%; height: 100%; display: flex; align-items: center; gap: 4%; padding: 4% 6%; box-sizing: border-box; background: radial-gradient(ellipse at 30% 20%, #ff5a4e 0%, #c62828 45%, #6d0f0f 100%); color: #fff; border-radius: 18px; box-shadow: 0 12px 34px rgba(198,40,40,0.4); transition: opacity .45s ease; }
+        .sc::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(255,255,255,.05) 0 18px, transparent 18px 36px); animation: scStripes 1.2s linear infinite; pointer-events: none; }
+        @keyframes scStripes { to { background-position: 51px 0; } }
+        .sc > * { position: relative; z-index: 1; }
+        .sc .sc-img { animation: scShake .6s .2s both; box-shadow: 0 0 0 4px #ffcc00, 0 0 40px rgba(255,204,0,.6); }
+        .sc .sc-hurry { display: inline-block; padding: 5px 14px; border-radius: 8px; background: #ffcc00; color: #7a0000; font-weight: 900; font-size: clamp(0.85rem, 2.6vw, 1.25rem); animation: scBlink 1s ease-in-out infinite; }
+        .sc .sc-clock { margin-top: 10px; font-weight: 900; font-size: clamp(1rem, 3.6vw, 1.9rem); font-variant-numeric: tabular-nums; letter-spacing: .03em; text-shadow: 0 2px 10px rgba(0,0,0,.4); }
+        .sc .sc-clock small { display: block; font-size: .5em; font-weight: 700; opacity: .85; letter-spacing: 0; }
+        .sc .sc-left { height: 8px; border-radius: 6px; background: rgba(255,255,255,.25); margin-top: 10px; overflow: hidden; }
+        .sc .sc-left i { display: block; height: 100%; background: linear-gradient(90deg, #ffcc00, #fff3b0); border-radius: 6px; }
+        @keyframes scShake { 0% { transform: scale(.6) rotate(-8deg); opacity: 0; } 50% { transform: scale(1.06) rotate(3deg); opacity: 1; } 70% { transform: rotate(-2deg); } 100% { transform: none; } }
+        @media (max-width: 640px) {
+            .image-roll-container { aspect-ratio: auto; }
+            #showcase { flex-direction: column; padding: 18px 16px 20px; gap: 12px; text-align: center; }
+            #showcase .sc-img { flex: none; width: 62%; height: auto; aspect-ratio: 1 / 1; }
+            #showcase .sc-txt { flex: none; text-align: center; width: 100%; }
+        }
+        @keyframes scBlink { 50% { transform: scale(1.06); box-shadow: 0 0 18px rgba(255,204,0,.9); } }
         .sc.fade { opacity: 0; }
         .sc .sc-img { flex: 0 0 46%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 14px; }
         .sc .sc-img img { max-width: 92%; max-height: 92%; object-fit: contain; }
         .sc .sc-txt { flex: 1; min-width: 0; text-align: start; }
         .sc .sc-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: clamp(0.75rem, 2.2vw, 1rem); background: var(--blue); color: #fff; }
         .sc .sc-badge.promo { background: #d32f2f; }
-        .sc h3 { margin: 12px 0 8px; font-size: clamp(1rem, 3.4vw, 1.7rem); color: #222; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-        .sc .sc-price { font-size: clamp(1.1rem, 4vw, 2.2rem); font-weight: bold; color: #d32f2f; }
+        .sc h3 { margin: 12px 0 8px; font-size: clamp(1rem, 3.4vw, 1.7rem); color: #fff; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .sc .sc-price { font-size: clamp(1.1rem, 4vw, 2.2rem); font-weight: 900; color: #ffcc00; }
         .sc .sc-price.reg { color: var(--blue); }
-        .sc .sc-was { font-size: clamp(0.8rem, 2.2vw, 1.1rem); color: #888; text-decoration: line-through; margin-inline-start: 8px; }
+        .sc .sc-was { font-size: clamp(0.8rem, 2.2vw, 1.1rem); color: #ffd0cc; text-decoration: line-through; margin-inline-start: 8px; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal-overlay img { max-width: 90%; max-height: 90%; border-radius: 5px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
@@ -463,10 +480,10 @@
 
     <!-- HOME -->
     <div id="home" class="page active" role="main">
+        <!-- 16/10/2026: instead of the store video — a cinematic show of the new products (cinema.js), the page's full width -->
+        <div class="cin" id="cinema" role="region" aria-label="חדש על המדף — מוצרים חדשים" style="display:none"></div>
         <div class="content-wrap">
-            <!-- 16/10/2026: instead of the store video — a cinematic show of the new products (cinema.js) -->
-            <div class="cin" id="cinema" role="region" aria-label="חדש על המדף — מוצרים חדשים" style="display:none"></div>
-            <div class="image-roll-container" id="imageRoll" onclick="showcaseOpen()" tabindex="0" role="button" aria-label="מוצרים חדשים ומבצעים" onkeypress="if(event.key==='Enter') showcaseOpen()" style="display:none">
+            <div class="image-roll-container" id="imageRoll" onclick="showcaseOpen()" tabindex="0" role="button" aria-label="מבצעים שנגמרים בקרוב" onkeypress="if(event.key==='Enter') showcaseOpen()" style="display:none">
                 <div class="sc" id="showcase"></div>
             </div>
             <!-- 16/10/2026: the "המבצעים החמים שלנו" strip removed (the owner); the promos are in the showcase above and on the promos page -->
@@ -1293,8 +1310,12 @@
     let scIdx = -1, scCur = null;
     function showcaseList() {
         const seen = new Set();
+        // 16/10/2026: only promos that end within 5 days ("מהר לפני שנגמר"), the soonest first
+        const endOf = (v) => { const m = /(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(String(v || '')); return m ? new Date(+m[3], m[2] - 1, +m[1], 23, 59, 59).getTime() : 0; };
+        const now = Date.now();
         const promos = (window._promoData || []).filter(p => /\/products\//.test(p.url) && !seen.has(p.url) && seen.add(p.url))
-            .map(p => ({ kind: 'promo', url: p.url, name: p.desc, price: p.price, was: p.regularPrice, p }));
+            .map(p => ({ kind: 'promo', url: p.url, name: p.desc, price: p.price, was: p.regularPrice, end: endOf(p.valid), p }))
+            .filter(x => x.end > now && x.end - now <= 5 * 86400000).sort((a, b) => a.end - b.end);
         // 16/10/2026: promos only — the new products have the trailer above (cinema.js)
         const fresh = [].map(f => {
             const bc = String(f.public_id).split('/').pop(), prod = findProductByBarcode(bc);
@@ -1306,17 +1327,28 @@
     }
     function loadDynamicImage() {
         const list = showcaseList(), box = document.getElementById('showcase'), wrap = document.getElementById('imageRoll');
-        if (!box || !list.length) return;
+        if (!box) return;
+        if (!list.length) { wrap.style.display = 'none'; return; }
         wrap.style.display = '';
         scIdx = (scIdx + 1) % list.length; scCur = list[scIdx];
         const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'], it = scCur, esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const html = '<div class="sc-img"><img src="' + esc(it.url) + '" alt="' + esc(it.name) + '" onerror="imgFallback(this)"></div><div class="sc-txt">' +
-            '<span class="sc-badge' + (it.kind === 'promo' ? ' promo' : '') + '">' + esc(it.kind === 'promo' ? (t.sc_promo || '🔥 מבצע') : (t.sc_new || '🆕 חדש על המדף')) + '</span>' +
+            '<span class="sc-hurry">' + esc(t.sc_hurry || '⏰ מהר לפני שנגמר!') + '</span>' +
             '<h3>' + esc(it.name) + '</h3>' + (it.price ? '<div class="sc-price' + (it.kind === 'new' ? ' reg' : '') + '">₪' + esc(it.price) +
-            (it.kind === 'promo' && it.was && it.was !== it.price ? '<span class="sc-was">₪' + esc(it.was) + '</span>' : '') + '</div>' : '') + '</div>';
+            (it.kind === 'promo' && it.was && it.was !== it.price ? '<span class="sc-was">₪' + esc(it.was) + '</span>' : '') + '</div>' : '') +
+            '<div class="sc-clock" data-end="' + it.end + '"></div><div class="sc-left"><i style="width:' + Math.max(3, Math.min(100, (it.end - Date.now()) / (5 * 86400000) * 100)) + '%"></i></div></div>';
         box.classList.add('fade');
-        setTimeout(() => { box.innerHTML = html; box.classList.remove('fade'); }, 450);
+        setTimeout(() => { box.innerHTML = html; box.classList.remove('fade'); scTick(); }, 450);
     }
+    // the countdown, every second
+    function scTick() {
+        const el = document.querySelector('#showcase .sc-clock'); if (!el) return;
+        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'], s = Math.max(0, Math.floor((+el.dataset.end - Date.now()) / 1000));
+        const d = Math.floor(s / 86400), p2 = (n) => String(n).padStart(2, '0');
+        el.innerHTML = '<small>' + (t.sc_ends || 'המבצע נגמר בעוד') + '</small>' + (d ? d + ' ' + (d === 1 ? (t.sc_day || 'יום') : (t.sc_days || 'ימים')) + ' · ' : '') +
+            '<span dir="ltr">' + p2(Math.floor(s % 86400 / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60) + '</span>';
+    }
+    setInterval(scTick, 1000);
     function showcaseOpen() {
         if (!scCur) return;
         const i = scCur.kind === 'promo' ? (window._promoData || []).indexOf(scCur.p) : -1;
@@ -1612,7 +1644,7 @@ const TRANSLATIONS = {
         nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
         nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות", nav_me: "👤 אזור אישי",
         ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
-        home_promos: "🔥 המבצעים החמים שלנו", sc_new: "🆕 חדש על המדף", sc_promo: "🔥 מבצע", home_new: "חדש על המדף",
+        home_promos: "🔥 המבצעים החמים שלנו", sc_hurry: "⏰ מהר לפני שנגמר!", sc_ends: "המבצע נגמר בעוד", sc_day: "יום", sc_days: "ימים", sc_new: "🆕 חדש על המדף", sc_promo: "🔥 מבצע", home_new: "חדש על המדף",
         catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
         catalog_cat_label: "בחר קטגוריה", catalog_cat_ph: "כל הקטגוריות...",
         promos_title: "מבצעים", new_title: "חדש על המדף",
@@ -1675,7 +1707,7 @@ const TRANSLATIONS = {
         nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
         nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء", nav_me: "👤 المنطقة الشخصية",
         ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
-        home_promos: "🔥 عروضنا الساخنة", sc_new: "🆕 جديد على الرف", sc_promo: "🔥 عرض", home_new: "جديد على الرف",
+        home_promos: "🔥 عروضنا الساخنة", sc_hurry: "⏰ أسرع قبل أن ينتهي!", sc_ends: "ينتهي العرض خلال", sc_day: "يوم", sc_days: "أيام", sc_new: "🆕 جديد على الرف", sc_promo: "🔥 عرض", home_new: "جديد على الرف",
         catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
         catalog_cat_label: "اختر فئة", catalog_cat_ph: "جميع الفئات...",
         promos_title: "العروض", new_title: "جديد على الرف",
@@ -1738,7 +1770,7 @@ const TRANSLATIONS = {
         nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
         nav_contact: "Contact", nav_club: "⭐ Loyalty Club", nav_me: "👤 My area",
         ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
-        home_promos: "🔥 Our Hot Deals", sc_new: "🆕 New on the shelf", sc_promo: "🔥 Deal", home_new: "New Arrivals",
+        home_promos: "🔥 Our Hot Deals", sc_hurry: "⏰ Hurry, ends soon!", sc_ends: "Deal ends in", sc_day: "day", sc_days: "days", sc_new: "🆕 New on the shelf", sc_promo: "🔥 Deal", home_new: "New Arrivals",
         catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",
         catalog_cat_label: "Select category", catalog_cat_ph: "All categories...",
         promos_title: "Deals & Promotions", new_title: "New Arrivals",
