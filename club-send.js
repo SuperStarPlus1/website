@@ -472,7 +472,15 @@
     if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const S = r.settings, ta = (id, label, rows, max) => '<label class="c" style="margin-top:8px">' + label + '<textarea id="' + id + '" rows="' + rows + '" maxlength="' + max + '">' + e(S[id]) + '</textarea></label>';
     const inp = (id, label) => '<label class="c" style="margin-top:8px">' + label + '<input type="text" id="' + id + '" maxlength="150" value="' + e(S[id]) + '"></label>';
-    p.innerHTML = '<div class="box"><h4>🎂 ברכת יום הולדת אוטומטית</h4>' +
+    p.innerHTML = '<div class="box" style="border:2px solid #f59e0b"><h4>🎁 מתנת יום הולדת</h4>' +
+      '<div class="note">פעם אחת בחודש יום ההולדת: הנחה בסכום קבוע בקנייה מעל סכום מינימום (₪50 מעל ₪500 = 10%). קנייה מתחת למינימום — בלי מתנה. ' +
+        'כשההטבה פעילה: מוצגת לחבר באזור האישי כל חודש יום ההולדת, ומוזכרת בברכה. כדי שהקופה תיתן אותה — להגדיר בקומקס את מתנת יום ההולדת בקבוצת המועדון ("סל קניות 41" / "מועדון סופר סטאר") באותם סכומים.</div>' +
+      '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" id="bgOn"' + (S.club_bgift_on === 'on' ? ' checked' : '') + '> ההטבה פעילה</label>' +
+      '<div class="row"><label class="c" style="flex:0 1 180px">סכום המתנה (₪)<input type="number" id="bgAmt" min="1" max="10000" value="' + e(S.club_bgift_amount) + '"></label>' +
+        '<label class="c" style="flex:0 1 220px">בקנייה מעל (₪)<input type="number" id="bgMin" min="1" max="10000" value="' + e(S.club_bgift_min) + '"></label>' +
+        '<button class="btn primary" id="bgSave">💾 שמירה</button></div>' +
+      '<div class="note" id="bgPrev" style="margin-top:6px"></div></div>' +
+      '<div class="box"><h4>🎂 ברכת יום הולדת אוטומטית</h4>' +
       '<div class="note">כל יום מ-09:00 — לחברי המועדון שיום ההולדת שלהם היום ואישרו דיוור: SMS (למי שאישר SMS) ומייל מעוצב (למי שאישר מייל), פעם בשנה, בשפה שבחרו. עם "פרסומת" וקישור הסרה. באזור האישי הברכה מוצגת כל חודש יום ההולדת. {שם} = השם הפרטי. החודש: <b>' + r.thisMonth + '</b> חוגגים שאישרו דיוור.</div>' +
       '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" id="bdOn"' + (S.club_bday_on === 'on' ? ' checked' : '') + '> שליחה אוטומטית פעילה</label>' +
       '<div class="row" style="gap:14px;align-items:flex-start"><div class="c" style="flex:1 1 300px"><b>עברית</b>' + ta('club_bday_sms_he', 'SMS', 3, 300) + inp('club_bday_subject_he', 'כותרת המייל וכרטיס הברכה') + ta('club_bday_mail_he', 'תוכן המייל וכרטיס הברכה', 4, 2000) + '</div>' +
@@ -482,6 +490,13 @@
         '<label class="c" style="flex:0 1 140px">שפה<select id="bdTLang"><option value="he">עברית</option><option value="ar">ערבית</option></select></label><button class="btn" id="bdTest">🧪 שליחת בדיקה</button></div></div>' +
       '<div class="box"><h4>נשלחו השנה (' + r.sent.length + ')</h4>' + (r.sent.length ? '<table><tr><th>חבר/ה</th><th>מתי</th><th>SMS</th><th>מייל</th></tr>' + r.sent.map((x) => '<tr><td>' + e(x.name) + '</td><td>' + e(new Date(x.at).toLocaleDateString('he-IL')) + '</td><td>' + e(x.sms || '') + '</td><td>' + e(x.email || '') + '</td></tr>').join('') + '</table>' : '<p class="note">עוד לא נשלחו.</p>') + '</div>';
     const vals = () => { const o = { club_bday_on: $('bdOn').checked ? 'on' : 'off' }; ['club_bday_sms_he', 'club_bday_sms_ar', 'club_bday_subject_he', 'club_bday_subject_ar', 'club_bday_mail_he', 'club_bday_mail_ar'].forEach((k) => { o[k] = $(k).value.trim(); }); return o; };
+    const bgPrev = () => { $('bgPrev').textContent = 'יוצג ללקוח: "🎁 מחכה לך מתנה: ₪' + $('bgAmt').value + ' הנחה בקנייה מעל ₪' + $('bgMin').value + ' — פעם אחת בחודש יום ההולדת."' + ($('bgOn').checked ? '' : ' (כבוי — לא מוצג)'); };
+    ['bgOn', 'bgAmt', 'bgMin'].forEach((id) => $(id).addEventListener('input', bgPrev)); bgPrev();
+    $('bgSave').addEventListener('click', async () => {
+      if ($('bgOn').checked && !confirm('להפעיל את מתנת יום ההולדת? היא תוצג ללקוחות באזור האישי ובברכה — ודא/י שהיא מוגדרת גם בקומקס.')) return;
+      const x = await api({ action: 'clubBdaySave', club_bgift_on: $('bgOn').checked ? 'on' : 'off', club_bgift_amount: $('bgAmt').value, club_bgift_min: $('bgMin').value });
+      say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
     $('bdSave').addEventListener('click', async () => { const x = await api({ action: 'clubBdaySave', ...vals() }); say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); });
     $('bdTest').addEventListener('click', async () => {
       const x = await api({ action: 'clubBdayTest', ...vals(), lang: $('bdTLang').value, phone: $('bdTPh').value.trim(), email: $('bdTMail').value.trim() });
