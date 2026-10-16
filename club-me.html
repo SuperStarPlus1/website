@@ -202,6 +202,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       mailH: 'الرسائل', sms: 'SMS', mail: 'بريد', on: 'موافق', off: 'غير موافق', mailManage: 'إدارة / إيقاف الرسائل', logout: 'خروج',
       terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
   };
+  // the staff's look (club-send → a member's card): club-me?view=<token> — this session only, never kept, nothing changed
+  const VIEW = (new URLSearchParams(location.search).get('view') || '').toLowerCase();
+  if (/^[0-9a-f]{64}$/.test(VIEW)) { const real = store.get; store.get = (k) => k === 'ss_club_s' ? VIEW : real(k); store.set = () => {}; }
   let ui = new URLSearchParams(location.search).get('lang') === 'ar' || store.get('ss_club_lang') === 'ar' ? 'ar' : 'he';
   let me = null, idNumber = '', phone = '', timer = null;
   const api = async (body) => {
@@ -365,6 +368,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       return;
     }
     show('area'); drawArea();
+    if (r.viewOnly && !document.getElementById('viewBar')) document.body.insertAdjacentHTML('afterbegin', '<div id="viewBar" style="position:sticky;top:0;z-index:60;background:#7c2d12;color:#fff;text-align:center;padding:8px;font-weight:700">👁 תצוגת מנהל — כך הלקוח רואה את האזור האישי (קריאה בלבד)</div>');
   }
   async function logout() { const s = store.get('ss_club_s'); store.set('ss_club_s', null); me = null; if (s) await api({ action: 'clubAppLogout', s }); show('stepId'); }
   $('logout').addEventListener('click', logout);

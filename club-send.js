@@ -659,7 +659,7 @@
     const r = await api({ action: 'clubMember', id });
     if (!r.ok) { box.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const m = r.member, row = (k, v, ltr) => '<tr><td class="note" style="width:130px">' + k + '</td><td' + (ltr ? ' dir="ltr" style="text-align:right"' : '') + '><b>' + e(v) + '</b></td></tr>';
-    box.innerHTML = '<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">👤 ' + e(m.first_name + ' ' + m.last_name) + '</h4><button class="btn" id="mClose">סגירה</button></div>' +
+    box.innerHTML = '<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">👤 ' + e(m.first_name + ' ' + m.last_name) + '</h4><span><button class="btn primary" id="mArea">👁 האזור האישי שלו</button> <button class="btn" id="mClose">סגירה</button></span></div>' +
       '<table style="margin-top:8px">' + row('מס׳ כרטיס מועדון', m.card_no || '—', 1) + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
         row('כתובת', m.street + ' ' + m.house_no + ', ' + m.city) + row('שפת דיוור', LANG[m.language] || m.language) +
         '<tr><td class="note">דיוור כעת</td><td>מייל ' + yes(m.marketing_email) + ' · SMS ' + yes(m.marketing_sms) + '</td></tr>' + row('הצטרף/ה', dt(m.created_at)) + row('עודכן', dt(m.updated_at)) + '</table>' +
@@ -678,6 +678,13 @@
       '<h4 style="margin:14px 0 6px">📝 טפסים שנשלחו (' + r.submissions.length + ')</h4><table><tr><th>מתי</th><th>שפת הדף</th><th>IP</th><th>מכשיר</th></tr>' +
         r.submissions.map((s) => '<tr><td class="note">' + e(dt(s.at)) + '</td><td>' + (LANG[s.ui_lang] || '') + '</td><td dir="ltr" class="note">' + e(s.ip || '') + '</td><td class="note" dir="ltr" style="text-align:right">' + e(String(s.user_agent || '').slice(0, 60)) + '</td></tr>').join('') + '</table></div>';
     $('mClose').addEventListener('click', () => { box.innerHTML = ''; });
+    // the member's personal area as he sees it — view only, 30 minutes (club-app.ts clubAppViewToken)
+    $('mArea').addEventListener('click', async () => {
+      const w = window.open('about:blank', '_blank');   // opened now — a popup blocker allows it on the click
+      const x = await api({ action: 'clubMemberAreaLink', idNumber: m.id_number });
+      if (!x.ok) { if (w) w.close(); say(x.error || 'שגיאה', 'err'); return; }
+      if (w) w.location = x.url; else location.href = x.url;
+    });
     if ($('mUnblock')) $('mUnblock').addEventListener('click', async () => {
       const note = $('mUnNote').value.trim();
       if (note.length < 5) { say('יש לכתוב מתי ואיך הלקוח/ה ביקש/ה לחזור לקבל הודעות', 'err'); $('mUnNote').focus(); return; }
