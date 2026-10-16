@@ -652,12 +652,20 @@
     const pages = Math.ceil(r.total / 50);
     $('mList').innerHTML = '<div class="box" style="overflow-x:auto"><table><tr><th>כרטיס</th><th>שם</th><th>טלפון</th><th>ת.ז.</th><th>הזמנה</th><th>עדכן</th><th>דיוור</th></tr>' +
       r.customers.map((c, i) => '<tr><td dir="ltr" class="note">' + e(c.cardNo || '—') + '</td><td>' + (c.memberId ? '<a href="#" data-mc="' + c.memberId + '"><b>' + e(c.name || '—') + '</b></a>' : e(c.name || '—')) +
+        ' <button class="btn" data-view="' + e(c.phone) + '" title="האזור האישי — תצוגת מנהל" style="padding:0 6px;font-size:12px">👁</button>' +
         '</td><td dir="ltr">' + e(c.phone) + '</td><td dir="ltr" class="note">' + e(c.id3) + '</td><td>' + inv(c) + '</td><td>' + (c.memberId ? '<span class="ok">✓</span>' : c.opened ? '<span class="note">פתח</span>' : '') + '</td><td>' +
         (c.blocked ? '<span class="bad" title="' + e(c.blockNote || '') + '">🚫 חסום</span> <span class="note">' + e(SRC[c.blockSource] || '') + (c.blockedAt ? ' · ' + e(dmy(String(c.blockedAt).slice(0, 10))) : '') + '</span> <button class="btn" data-unb="' + i + '" style="padding:1px 8px;font-size:12px">הסרת חסימה</button>'
           : '<span class="ok">פעיל</span> <button class="btn" data-blk="' + i + '" style="padding:1px 8px;font-size:12px">חסימה</button>') + '</td></tr>').join('') + '</table>' +
       (pages > 1 ? '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn" id="mPrev"' + (mpage ? '' : ' disabled') + '>→ הקודם</button><span class="note">עמוד ' + (mpage + 1) + ' מתוך ' + pages + '</span><button class="btn" id="mNext"' + (mpage + 1 < pages ? '' : ' disabled') + '>הבא ←</button></div>' : '') +
       '<p class="note">פרטי הלקוחות כפי שהגיעו מקומקס. שם מודגש — עדכן פרטים (לחיצה — הכרטיס המלא).</p></div><div id="mCard"></div>';
     $('mList').querySelectorAll('[data-mc]').forEach((a) => a.addEventListener('click', (ev) => { ev.preventDefault(); card(Number(a.dataset.mc)); }));
+    // the customer's personal area as he sees it — also one who did not update (his purchases from Comax)
+    $('mList').querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', async () => {
+      const w = window.open('about:blank', '_blank');
+      const x = await api({ action: 'clubMemberAreaLink', phone: b.dataset.view });
+      if (!x.ok) { if (w) w.close(); say(x.error || 'שגיאה', 'err'); return; }
+      if (w) w.location = x.url; else location.href = x.url;
+    }));
     $('mList').querySelectorAll('[data-unb]').forEach((b) => b.addEventListener('click', async () => {
       const c = r.customers[Number(b.dataset.unb)];
       const note = prompt('הסרת החסימה של ' + (c.name || c.phone) + ' (' + c.phone + ') — גם אצל ספק ה-SMS.\n\nלפי החוק — רק בהסכמה מחודשת של הלקוח/ה. כתבו מתי ואיך ביקש/ה לחזור לקבל הודעות:', '');

@@ -369,7 +369,8 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       return;
     }
     show('area'); drawArea();
-    if (r.viewOnly && !document.getElementById('viewBar')) document.body.insertAdjacentHTML('afterbegin', '<div id="viewBar" style="position:sticky;top:0;z-index:60;background:#7c2d12;color:#fff;text-align:center;padding:8px;font-weight:700">👁 תצוגת מנהל — כך הלקוח רואה את האזור האישי (קריאה בלבד)</div>');
+    if (r.viewOnly && !document.getElementById('viewBar')) document.body.insertAdjacentHTML('afterbegin', '<div id="viewBar" style="position:sticky;top:0;z-index:60;background:#7c2d12;color:#fff;text-align:center;padding:8px;font-weight:700">👁 תצוגת מנהל — ' +
+      (r.notMember ? 'הלקוח עוד לא עדכן פרטים: כך ייראה האזור כשיצטרף (הנתונים מקומקס)' : 'כך הלקוח רואה את האזור האישי') + ' (קריאה בלבד)</div>');
   }
   async function logout() { const s = store.get('ss_club_s'); store.set('ss_club_s', null); me = null; if (s) await api({ action: 'clubAppLogout', s }); show('stepId'); }
   $('logout').addEventListener('click', logout);
