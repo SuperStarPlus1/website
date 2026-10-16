@@ -74,6 +74,13 @@
   .deal { background: #eaf4ff; border-radius: 12px; padding: 9px 12px; margin-top: 8px; font-size: 14px; }
   .deal b { color: var(--blue-d); }
   .muted { color: var(--muted); font-size: 14px; }
+  .vcard { border-radius: 20px; padding: 16px; color: #fff; background: linear-gradient(135deg, #1f2937 0%, #0f766e 100%); box-shadow: 0 10px 30px rgba(15, 118, 110, .3); }
+  .vcard .nm { font-size: 18px; font-weight: 800; }
+  .vcard .bc { background: #fff; border-radius: 12px; padding: 8px; margin-top: 10px; text-align: center; }
+  .vcard .bc svg { max-width: 100%; height: 70px; }
+  .vcard .no { color: var(--ink); font: 700 16px/1.2 Consolas, monospace; letter-spacing: 1px; direction: ltr; }
+  .vcard .bal { font-size: 26px; font-weight: 800; direction: ltr; unicode-bidi: isolate; }
+  .warn { background: #fff4e5; border-radius: 12px; padding: 8px 12px; font-size: 13px; color: #7c4a03; margin-top: 10px; }
   .badge { display: inline-block; background: #e8f5e9; color: var(--ok); border-radius: 99px; padding: 2px 10px; font-size: 13px; font-weight: 700; }
   .badge.off { background: #fdecea; color: var(--bad); }
   .foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 18px; }
@@ -135,6 +142,7 @@
       <div class="bc"><svg id="barcode"></svg><div class="no" id="cNo"></div></div>
       <div class="lbl" style="margin-top:8px;position:relative;z-index:1" data-t="cardHint"></div>
     </div>
+    <div id="vc"></div>
     <div id="purch"></div>
     <div class="card">
       <a class="tile go" href="/mivtzaim" style="display:block"><b data-t="t1"></b><small data-t="t1s"></small></a>
@@ -167,7 +175,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       codeH: 'הזינו את הקוד', codeLbl: 'קוד בן 6 ספרות', enter: 'כניסה', resend: 'שליחת קוד חדש', resendIn: (s) => 'קוד חדש בעוד ' + s + ' שנ׳', otherId: 'מספר זהות אחר',
       formH: (n) => (n ? n + ', ' : '') + 'עוד צעד קטן 💛', formWhy: 'האזור האישי פתוח לחברי המועדון שהשלימו את הפרטים ואישרו לקבל מבצעים והטבות. זה לוקח דקה — ואחרי השליחה חוזרים לכאן.',
       formGo: 'להשלמת הפרטים', hello: (n) => 'שלום ' + n + ' 👋', cardT: 'כרטיס חבר מועדון סופרסטאר', cardHint: 'הציגו בקופה לזיהוי במועדון',
-      soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', pLoading: 'הקניות שלכם נטענות מהקופות — יופיעו כאן בקרוב.', pNone: 'עוד לא נמצאו קניות בכרטיס מאז 1/10/2025.', pLast: 'קנייה אחרונה', pAvg: 'סל ממוצע', pCount: 'קניות מ-1/10/25', giftH: '🎁 סל קנייה 41 מתנה', giftProg: (d) => d + ' מתוך 40 קניות', giftToGo: (n) => 'עוד ' + n + ' קניות — והקנייה ה-41 בהטבה', giftDue: 'הגעתם ל-40 קניות! בקנייה הבאה מגיעה לכם ההטבה 🎉', giftExp: (x) => 'ההטבה הצפויה: כ-₪' + x + ' (ממוצע הקניות שלכם)', giftNote: 'הספירה מתחילה אחרי הקנייה שבה מומשה ההטבה הקודמת. הסכום הסופי נקבע בקופה.', giftHist: 'הטבות שקיבלתם', forYouH: '🏷️ מבצעים על מוצרים שאתם קונים', recentH: '🧾 הקניות האחרונות', topH: '🛒 המוצרים שאתם קונים הכי הרבה', times: (n) => n + ' פעמים', reg: 'קופה', benefitLine: 'הטבת 41', validTo: 'עד', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
+      soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', pLoading: 'הקניות שלכם נטענות מהקופות — יופיעו כאן בקרוב.', pNone: 'עוד לא נמצאו קניות בכרטיס מאז 1/10/2025.', pLast: 'קנייה אחרונה', pAvg: 'סל ממוצע', pCount: 'קניות מ-1/10/25', giftH: '🎁 סל קנייה 41 מתנה', giftProg: (d) => d + ' מתוך 40 קניות', giftToGo: (n) => 'עוד ' + n + ' קניות — והקנייה ה-41 בהטבה', giftDue: 'הגעתם ל-40 קניות! בקנייה הבאה מגיעה לכם ההטבה 🎉', giftExp: (x) => 'ההטבה הצפויה: כ-₪' + x + ' (ממוצע הקניות שלכם)', giftNote: 'הספירה מתחילה אחרי הקנייה שבה מומשה ההטבה הקודמת. הסכום הסופי נקבע בקופה.', giftHist: 'הטבות שקיבלתם', forYouH: '🏷️ מבצעים על מוצרים שאתם קונים', recentH: '🧾 הקניות האחרונות', topH: '🛒 המוצרים שאתם קונים הכי הרבה', times: (n) => n + ' פעמים', reg: 'קופה', benefitLine: 'הטבת 41', validTo: 'עד', vcH: '💳 כרטיס נטען דיגיטלי', vcWhy: 'כרטיס לתשלום בקופה — טוענים בו כסף בקופה ומשלמים איתו בכל קנייה, ישר מהטלפון.', vcIssue: 'הנפקת כרטיס דיגיטלי', vcName: 'כרטיס נטען — סופרסטאר', vcNo: 'מספר כרטיס', vcNew: 'הכרטיס מוכן! כדי להתחיל — הציגו את הברקוד בקופה וטענו בו סכום.', vcBal: 'יתרה ידועה', vcBalAt: (d) => 'נכון ל-' + d + ' (היתרה המדויקת — בקופה)', vcTx: 'טעינות ותשלומים', vcLoad: 'טעינה', vcPay: 'תשלום', vcWarn: '🔒 הכרטיס שווה כסף — אל תשלחו צילום שלו לאף אחד.', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
       detailsH: 'הפרטים שלי', name: 'שם', id: 'ת"ז', phone: 'נייד', email: 'מייל', city: 'יישוב', since: 'חבר/ה מ-', edit: 'עדכון פרטים',
       mailH: 'דיוור', sms: 'SMS', mail: 'מייל', on: 'מאושר', off: 'לא מאושר', mailManage: 'ניהול / הפסקת דיוור', logout: 'יציאה',
       terms: 'תקנון המועדון', privacy: 'מדיניות פרטיות', net: 'אין חיבור — נסו שוב', badId: 'מספר תעודת זהות לא תקין', badCode: 'יש להזין 6 ספרות' },
@@ -175,7 +183,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       codeH: 'أدخلوا الرمز', codeLbl: 'رمز من 6 أرقام', enter: 'دخول', resend: 'إرسال رمز جديد', resendIn: (s) => 'رمز جديد بعد ' + s + ' ث', otherId: 'رقم هوية آخر',
       formH: (n) => (n ? n + '، ' : '') + 'خطوة صغيرة أخرى 💛', formWhy: 'المنطقة الشخصية مفتوحة لأعضاء النادي الذين أكملوا التفاصيل ووافقوا على تلقي العروض والمزايا. يستغرق ذلك دقيقة — وبعد الإرسال تعودون إلى هنا.',
       formGo: 'لإكمال التفاصيل', hello: (n) => 'مرحبًا ' + n + ' 👋', cardT: 'بطاقة عضو نادي سوبرستار', cardHint: 'اعرضوها في الصندوق للتعريف في النادي',
-      soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', pLoading: 'يتم تحميل مشترياتكم من الصناديق — ستظهر هنا قريبًا.', pNone: 'لم نجد مشتريات على البطاقة منذ 1/10/2025.', pLast: 'آخر شراء', pAvg: 'متوسط السلة', pCount: 'مشتريات منذ 1/10/25', giftH: '🎁 سلة الشراء 41 هدية', giftProg: (d) => d + ' من 40 عملية شراء', giftToGo: (n) => 'تبقى ' + n + ' عمليات شراء — والشراء الـ41 بالهدية', giftDue: 'وصلتم إلى 40 عملية شراء! في الشراء القادم تستحقون الهدية 🎉', giftExp: (x) => 'الهدية المتوقعة: حوالي ₪' + x + ' (متوسط مشترياتكم)', giftNote: 'يبدأ العد بعد الشراء الذي استُخدمت فيه الهدية السابقة. المبلغ النهائي يُحدد في الصندوق.', giftHist: 'الهدايا التي حصلتم عليها', forYouH: '🏷️ عروض على منتجات تشترونها', recentH: '🧾 آخر المشتريات', topH: '🛒 المنتجات التي تشترونها أكثر', times: (n) => n + ' مرات', reg: 'صندوق', benefitLine: 'هدية 41', validTo: 'حتى', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
+      soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', pLoading: 'يتم تحميل مشترياتكم من الصناديق — ستظهر هنا قريبًا.', pNone: 'لم نجد مشتريات على البطاقة منذ 1/10/2025.', pLast: 'آخر شراء', pAvg: 'متوسط السلة', pCount: 'مشتريات منذ 1/10/25', giftH: '🎁 سلة الشراء 41 هدية', giftProg: (d) => d + ' من 40 عملية شراء', giftToGo: (n) => 'تبقى ' + n + ' عمليات شراء — والشراء الـ41 بالهدية', giftDue: 'وصلتم إلى 40 عملية شراء! في الشراء القادم تستحقون الهدية 🎉', giftExp: (x) => 'الهدية المتوقعة: حوالي ₪' + x + ' (متوسط مشترياتكم)', giftNote: 'يبدأ العد بعد الشراء الذي استُخدمت فيه الهدية السابقة. المبلغ النهائي يُحدد في الصندوق.', giftHist: 'الهدايا التي حصلتم عليها', forYouH: '🏷️ عروض على منتجات تشترونها', recentH: '🧾 آخر المشتريات', topH: '🛒 المنتجات التي تشترونها أكثر', times: (n) => n + ' مرات', reg: 'صندوق', benefitLine: 'هدية 41', validTo: 'حتى', vcH: '💳 بطاقة مشحونة رقمية', vcWhy: 'بطاقة للدفع في الصندوق — تشحنونها بالمال في الصندوق وتدفعون بها في كل عملية شراء، مباشرة من الهاتف.', vcIssue: 'إصدار بطاقة رقمية', vcName: 'بطاقة مشحونة — سوبرستار', vcNo: 'رقم البطاقة', vcNew: 'البطاقة جاهزة! للبدء — اعرضوا الباركود في الصندوق واشحنوا مبلغًا.', vcBal: 'الرصيد المعروف', vcBalAt: (d) => 'صحيح حتى ' + d + ' (الرصيد الدقيق — في الصندوق)', vcTx: 'الشحن والدفع', vcLoad: 'شحن', vcPay: 'دفع', vcWarn: '🔒 البطاقة تساوي مالًا — لا ترسلوا صورتها لأحد.', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
       detailsH: 'تفاصيلي', name: 'الاسم', id: 'الهوية', phone: 'الهاتف', email: 'البريد', city: 'البلدة', since: 'عضو منذ', edit: 'تحديث التفاصيل',
       mailH: 'الرسائل', sms: 'SMS', mail: 'بريد', on: 'موافق', off: 'غير موافق', mailManage: 'إدارة / إيقاف الرسائل', logout: 'خروج',
       terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
@@ -253,11 +261,35 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const b = (on) => '<span class="badge' + (on ? '' : ' off') + '">' + (on ? t.on : t.off) + '</span>';
     $('mailSt').innerHTML = esc(t.sms) + ' ' + b(me.marketingSms) + ' &nbsp; ' + esc(t.mail) + ' ' + b(me.marketingEmail);
     $('editGo').href = me.editUrl + (ui === 'ar' ? '&lang=ar' : '');
+    drawValueCard();
     drawPurchases();
     $('unsubGo').href = me.unsubUrl + (ui === 'ar' ? '&lang=ar' : '');
   }
   const dmy = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(2, 4) : '';
   const money = (n) => '₪' + Number(n || 0).toLocaleString('he-IL', { maximumFractionDigits: 2 });
+  function drawValueCard() {
+    const t = I[ui], v = me.valueCard, box = $('vc');
+    if (!v) {
+      box.innerHTML = '<div class="card"><h2>' + esc(t.vcH) + '</h2><p class="muted" style="margin:0 0 4px">' + esc(t.vcWhy) + '</p>' +
+        '<button class="btn" type="button" id="vcIssue">' + esc(t.vcIssue) + '</button><div class="msg" id="vcMsg"></div></div>';
+      $('vcIssue').addEventListener('click', async () => {
+        $('vcIssue').disabled = true;
+        const r = await api({ action: 'clubAppCardIssue', s: store.get('ss_club_s') });
+        $('vcIssue').disabled = false;
+        if (!r.ok) { $('vcMsg').className = 'msg err'; $('vcMsg').textContent = r.error || t.net; return; }
+        me.valueCard = r.valueCard; drawValueCard();
+      });
+      return;
+    }
+    box.innerHTML = '<div class="card"><h2>' + esc(t.vcH) + '</h2><div class="vcard"><div class="nm">' + esc(t.vcName) + '</div>' +
+      '<div class="bc"><svg id="vcBar"></svg><div class="no">' + esc(t.vcNo) + ' ' + esc(v.cardNo) + '</div></div>' +
+      (v.balance !== null ? '<div style="margin-top:10px">' + esc(t.vcBal) + '</div><div class="bal">' + esc(money(v.balance)) + '</div><div style="font-size:12.5px;opacity:.85">' + esc(t.vcBalAt(dmy(v.balanceAt) + ' ' + (v.balanceAt || '').slice(11, 16))) + '</div>' : '') +
+      '</div>' + (v.active ? '' : '<p class="muted" style="margin:10px 0 0">' + esc(t.vcNew) + '</p>') +
+      (v.tx && v.tx.length ? '<h2 style="margin:14px 0 4px;font-size:15px">' + esc(t.vcTx) + '</h2><ul class="list">' + v.tx.map((x) =>
+        '<li><span>' + esc(dmy(x.at)) + ' ' + esc(x.at.slice(11, 16)) + ' · ' + esc(x.kind === 'load' ? t.vcLoad : t.vcPay) + '</span><span class="num">' + (x.kind === 'load' ? '+' : '-') + esc(money(x.amount)) + '</span></li>').join('') + '</ul>' : '') +
+      '<div class="warn">' + esc(t.vcWarn) + '</div></div>';
+    try { if (window.JsBarcode) JsBarcode('#vcBar', v.code, { format: 'CODE128', displayValue: false, height: 66, margin: 0 }); } catch (e) {}
+  }
   function drawPurchases() {
     const t = I[ui], p = me.purchases, box = $('purch');
     if (!p) { box.innerHTML = ''; return; }
