@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>האזור האישי — מועדון סופרסטאר</title>
+<meta name="description" content="האזור האישי של חברי מועדון סופרסטאר — כרטיס המועדון, הפרטים שלכם והמבצעים.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0076DA">
+<link rel="icon" href="logo.png">
+<!-- The customers' personal area (16/10/2026). Server: supabase/functions/api/club-app.ts (clubAppStart / clubAppVerify /
+     clubAppMe / clubAppLogout). Sign-in: ID number + a one-time SMS code. A customer who did not fill the club form and
+     agree to the mailings is sent to the form (club?i=…&from=app) and comes back here after it. -->
+<style>
+  :root { --blue: #0076DA; --blue-d: #005bb0; --yellow: #ffcc00; --ink: #1f2937; --muted: #64748b; --line: #dbe3ec; --bad: #c62828; --ok: #2e7d32; --bg: #eef4fa; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", Tahoma, Arial, sans-serif; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; max-width: 640px; margin: 0 auto; }
+  .top img { height: 44px; }
+  .lang { display: flex; background: #fff; border: 1.5px solid var(--line); border-radius: 99px; padding: 3px; }
+  .lang button { border: 0; background: none; font: inherit; font-size: 14px; padding: 5px 12px; border-radius: 99px; cursor: pointer; color: var(--muted); }
+  .lang button.on { background: var(--blue); color: #fff; font-weight: 700; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 16px 40px; }
+  .card { background: #fff; border-radius: 20px; padding: 20px 18px; box-shadow: 0 8px 30px rgba(0, 60, 120, .08); margin-top: 14px; }
+  h1 { font-size: clamp(24px, 6vw, 32px); color: var(--blue-d); margin: 10px 0 4px; line-height: 1.25; }
+  h2 { font-size: 18px; margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+  label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  input { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 20px; letter-spacing: 2px; min-height: 52px; direction: ltr; text-align: center; background: #fff; color: var(--ink); }
+  input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0, 118, 218, .15); }
+  .btn { display: block; width: 100%; margin-top: 14px; background: var(--blue); color: #fff; border: 0; border-radius: 14px; padding: 14px; font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; text-align: center; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 118, 218, .25); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.plain { background: #fff; color: var(--blue-d); border: 2px solid var(--line); box-shadow: none; font-size: 16px; padding: 11px; }
+  .link { background: none; border: 0; color: var(--blue); text-decoration: underline; font: inherit; font-size: 14px; cursor: pointer; padding: 0; }
+  .link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+  .msg { margin-top: 10px; font-size: 14.5px; text-align: center; min-height: 1em; }
+  .msg.err { color: var(--bad); font-weight: 700; }
+  .msg.ok { color: var(--ok); }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 10px; flex-wrap: wrap; }
+  .clubcard { border-radius: 20px; padding: 18px; color: #fff; background: linear-gradient(135deg, #0076DA 0%, #004f99 100%); box-shadow: 0 10px 30px rgba(0, 80, 160, .3); position: relative; overflow: hidden; }
+  .clubcard::after { content: ""; position: absolute; inset-inline-end: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255, 204, 0, .25); }
+  .clubcard .nm { font-size: 22px; font-weight: 800; }
+  .clubcard .lbl { opacity: .85; font-size: 13px; }
+  .clubcard .bc { background: #fff; border-radius: 12px; padding: 8px; margin-top: 12px; text-align: center; position: relative; z-index: 1; }
+  .clubcard .bc svg { max-width: 100%; height: 74px; }
+  .clubcard .no { color: var(--ink); font: 700 18px/1.2 Consolas, monospace; letter-spacing: 2px; direction: ltr; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 15px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-weight: 600; }
+  .kv .ltr { direction: ltr; unicode-bidi: isolate; text-align: start; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: #f6f9fd; border: 1.5px dashed var(--line); border-radius: 14px; padding: 12px; font-size: 14px; }
+  .tile b { display: block; font-size: 15px; }
+  .tile small { color: var(--muted); }
+  .tile.go { border-style: solid; background: #fff8db; border-color: #ffe58f; text-decoration: none; color: var(--ink); }
+  .badge { display: inline-block; background: #e8f5e9; color: var(--ok); border-radius: 99px; padding: 2px 10px; font-size: 13px; font-weight: 700; }
+  .badge.off { background: #fdecea; color: var(--bad); }
+  .foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 18px; }
+  .foot a { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="/"><img src="logo.png" alt="סופרסטאר"></a>
+  <div class="lang" role="group" aria-label="שפה / اللغة"><button type="button" data-ui="he">עברית</button><button type="button" data-ui="ar">العربية</button></div>
+</header>
+<main>
+  <!-- sign-in: 1. the ID number -->
+  <section id="stepId" hidden>
+    <h1 data-t="h1"></h1>
+    <p class="sub" data-t="lead"></p>
+    <div class="card">
+      <form id="fId" novalidate>
+        <label for="idNumber" data-t="idLbl"></label>
+        <input id="idNumber" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="•••••••••">
+        <button class="btn" id="bId" type="submit" data-t="sendCode"></button>
+        <div class="msg" id="mId" role="status"></div>
+      </form>
+    </div>
+  </section>
+  <!-- sign-in: 2. the code -->
+  <section id="stepCode" hidden>
+    <h1 data-t="codeH"></h1>
+    <p class="sub" id="codeSub"></p>
+    <div class="card">
+      <form id="fCode" novalidate>
+        <label for="code" data-t="codeLbl"></label>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+        <button class="btn" id="bCode" type="submit" data-t="enter"></button>
+        <div class="msg" id="mCode" role="status"></div>
+        <div class="row"><button type="button" class="link" id="resend"></button><button type="button" class="link" id="otherId" data-t="otherId"></button></div>
+      </form>
+    </div>
+  </section>
+  <!-- not a full member yet → the form -->
+  <section id="stepForm" hidden>
+    <h1 id="formH"></h1>
+    <div class="card">
+      <p data-t="formWhy"></p>
+      <a class="btn" id="formGo" data-t="formGo"></a>
+      <button class="btn plain" type="button" id="formLater" data-t="logout"></button>
+    </div>
+  </section>
+  <!-- the area -->
+  <section id="area" hidden>
+    <h1 id="hello"></h1>
+    <div class="clubcard" style="margin-top:12px">
+      <div class="lbl" data-t="cardT"></div>
+      <div class="nm" id="cName"></div>
+      <div class="bc"><svg id="barcode"></svg><div class="no" id="cNo"></div></div>
+      <div class="lbl" style="margin-top:8px;position:relative;z-index:1" data-t="cardHint"></div>
+    </div>
+    <div class="card">
+      <h2 data-t="soonH"></h2>
+      <div class="tiles">
+        <a class="tile go" href="/mivtzaim"><b data-t="t1"></b><small data-t="t1s"></small></a>
+        <div class="tile"><b data-t="t2"></b><small data-t="soon"></small></div>
+        <div class="tile"><b data-t="t3"></b><small data-t="soon"></small></div>
+        <div class="tile"><b data-t="t4"></b><small data-t="soon"></small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-t="detailsH"></h2>
+      <dl class="kv" id="kv"></dl>
+      <a class="btn plain" id="editGo" data-t="edit"></a>
+    </div>
+    <div class="card">
+      <h2 data-t="mailH"></h2>
+      <p id="mailSt" style="margin:0 0 6px"></p>
+      <a class="link" id="unsubGo" data-t="mailManage"></a>
+    </div>
+    <button class="btn plain" type="button" id="logout" data-t="logout"></button>
+  </section>
+  <p class="foot"><a href="/club-terms" data-t="terms"></a> · <a href="/club-privacy" data-t="privacy"></a></p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script>
+window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' };
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+  const I = {
+    he: { h1: 'האזור האישי במועדון', lead: 'כרטיס המועדון, הפרטים שלכם והמבצעים — במקום אחד.', idLbl: 'מספר תעודת זהות', sendCode: 'שלחו לי קוד ב-SMS',
+      codeH: 'הזינו את הקוד', codeLbl: 'קוד בן 6 ספרות', enter: 'כניסה', resend: 'שליחת קוד חדש', resendIn: (s) => 'קוד חדש בעוד ' + s + ' שנ׳', otherId: 'מספר זהות אחר',
+      formH: (n) => (n ? n + ', ' : '') + 'עוד צעד קטן 💛', formWhy: 'האזור האישי פתוח לחברי המועדון שהשלימו את הפרטים ואישרו לקבל מבצעים והטבות. זה לוקח דקה — ואחרי השליחה חוזרים לכאן.',
+      formGo: 'להשלמת הפרטים', hello: (n) => 'שלום ' + n + ' 👋', cardT: 'כרטיס חבר מועדון סופרסטאר', cardHint: 'הציגו בקופה לזיהוי במועדון',
+      soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
+      detailsH: 'הפרטים שלי', name: 'שם', id: 'ת"ז', phone: 'נייד', email: 'מייל', city: 'יישוב', since: 'חבר/ה מ-', edit: 'עדכון פרטים',
+      mailH: 'דיוור', sms: 'SMS', mail: 'מייל', on: 'מאושר', off: 'לא מאושר', mailManage: 'ניהול / הפסקת דיוור', logout: 'יציאה',
+      terms: 'תקנון המועדון', privacy: 'מדיניות פרטיות', net: 'אין חיבור — נסו שוב', badId: 'מספר תעודת זהות לא תקין', badCode: 'יש להזין 6 ספרות' },
+    ar: { h1: 'المنطقة الشخصية في النادي', lead: 'بطاقة النادي، تفاصيلك والعروض — في مكان واحد.', idLbl: 'رقم الهوية', sendCode: 'أرسلوا لي رمزًا برسالة SMS',
+      codeH: 'أدخلوا الرمز', codeLbl: 'رمز من 6 أرقام', enter: 'دخول', resend: 'إرسال رمز جديد', resendIn: (s) => 'رمز جديد بعد ' + s + ' ث', otherId: 'رقم هوية آخر',
+      formH: (n) => (n ? n + '، ' : '') + 'خطوة صغيرة أخرى 💛', formWhy: 'المنطقة الشخصية مفتوحة لأعضاء النادي الذين أكملوا التفاصيل ووافقوا على تلقي العروض والمزايا. يستغرق ذلك دقيقة — وبعد الإرسال تعودون إلى هنا.',
+      formGo: 'لإكمال التفاصيل', hello: (n) => 'مرحبًا ' + n + ' 👋', cardT: 'بطاقة عضو نادي سوبرستار', cardHint: 'اعرضوها في الصندوق للتعريف في النادي',
+      soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
+      detailsH: 'تفاصيلي', name: 'الاسم', id: 'الهوية', phone: 'الهاتف', email: 'البريد', city: 'البلدة', since: 'عضو منذ', edit: 'تحديث التفاصيل',
+      mailH: 'الرسائل', sms: 'SMS', mail: 'بريد', on: 'موافق', off: 'غير موافق', mailManage: 'إدارة / إيقاف الرسائل', logout: 'خروج',
+      terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
+  };
+  let ui = new URLSearchParams(location.search).get('lang') === 'ar' || store.get('ss_club_lang') === 'ar' ? 'ar' : 'he';
+  let me = null, idNumber = '', timer = null;
+  const api = async (body) => {
+    try { return await (await fetch(window.APP_CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ ...body, uiLang: ui }) })).json(); }
+    catch (e) { return { ok: false, error: I[ui].net }; }
+  };
+  const show = (id) => ['stepId', 'stepCode', 'stepForm', 'area'].forEach((s) => { $(s).hidden = s !== id; });
+  function paint() {
+    document.documentElement.lang = ui; document.documentElement.dir = 'rtl';
+    document.querySelectorAll('[data-t]').forEach((el) => { const v = I[ui][el.dataset.t]; if (typeof v === 'string') el.textContent = v; });
+    document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.ui === ui));
+    if (me) drawArea();
+    if (!$('stepForm').hidden) $('formH').textContent = I[ui].formH(me && me.firstName);
+  }
+  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => { ui = b.dataset.ui; store.set('ss_club_lang', ui); paint(); }));
+
+  function idValid(raw) {
+    const d = raw.replace(/\D/g, '');
+    if (d.length < 5 || d.length > 9) return false;
+    const id = d.padStart(9, '0'); let sum = 0;
+    for (let i = 0; i < 9; i++) { let n = Number(id[i]) * ((i % 2) + 1); if (n > 9) n -= 9; sum += n; }
+    return sum % 10 === 0 && id !== '000000000';
+  }
+  function cooldown(sec) {
+    clearInterval(timer);
+    const b = $('resend'); let left = sec;
+    const tick = () => { if (left <= 0) { clearInterval(timer); b.disabled = false; b.textContent = I[ui].resend; return; } b.disabled = true; b.textContent = I[ui].resendIn(left--); };
+    tick(); timer = setInterval(tick, 1000);
+  }
+  async function sendCode() {
+    const r = await api({ action: 'clubAppStart', idNumber });
+    if (!r.ok) return r;
+    $('codeSub').textContent = r.message; show('stepCode'); $('code').value = ''; $('mCode').textContent = ''; $('code').focus(); cooldown(60);
+    return r;
+  }
+  $('fId').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const v = $('idNumber').value.trim();
+    if (!idValid(v)) { $('mId').className = 'msg err'; $('mId').textContent = I[ui].badId; return; }
+    idNumber = v; $('bId').disabled = true; $('mId').textContent = '';
+    const r = await sendCode();
+    $('bId').disabled = false;
+    if (!r.ok) { $('mId').className = 'msg err'; $('mId').textContent = r.error || I[ui].net; }
+  });
+  $('resend').addEventListener('click', async () => { const r = await sendCode(); if (!r.ok) { $('mCode').className = 'msg err'; $('mCode').textContent = r.error || I[ui].net; } });
+  $('otherId').addEventListener('click', () => { show('stepId'); $('idNumber').focus(); });
+  $('code').addEventListener('input', () => { if ($('code').value.replace(/\D/g, '').length === 6) $('fCode').requestSubmit(); });
+  $('fCode').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const code = $('code').value.replace(/\D/g, '');
+    if (code.length !== 6) { $('mCode').className = 'msg err'; $('mCode').textContent = I[ui].badCode; return; }
+    $('bCode').disabled = true;
+    const r = await api({ action: 'clubAppVerify', idNumber, code });
+    $('bCode').disabled = false;
+    if (!r.ok) { $('mCode').className = 'msg err'; $('mCode').textContent = r.error || I[ui].net; return; }
+    store.set('ss_club_s', r.s);
+    await load();
+  });
+
+  function drawArea() {
+    $('hello').textContent = I[ui].hello(me.firstName);
+    $('cName').textContent = me.firstName + ' ' + me.lastName;
+    $('cNo').textContent = me.cardNo || '—';
+    try { if (window.JsBarcode && me.cardNo) JsBarcode('#barcode', me.cardNo, { format: 'CODE128', displayValue: false, height: 70, margin: 0 }); else $('barcode').style.display = 'none'; }
+    catch (e) { $('barcode').style.display = 'none'; }
+    const t = I[ui], kv = [[t.name, me.firstName + ' ' + me.lastName], [t.id, me.idMasked, 1], [t.phone, me.phoneMasked, 1], [t.email, me.emailMasked, 1], [t.city, me.city],
+      [t.since, me.memberSince ? me.memberSince.split('-').reverse().join('/') : '']];
+    $('kv').innerHTML = kv.filter((x) => x[1]).map((x) => '<dt>' + esc(x[0]) + '</dt><dd' + (x[2] ? ' class="ltr"' : '') + '>' + esc(x[1]) + '</dd>').join('');
+    const b = (on) => '<span class="badge' + (on ? '' : ' off') + '">' + (on ? t.on : t.off) + '</span>';
+    $('mailSt').innerHTML = esc(t.sms) + ' ' + b(me.marketingSms) + ' &nbsp; ' + esc(t.mail) + ' ' + b(me.marketingEmail);
+    $('editGo').href = me.editUrl + (ui === 'ar' ? '&lang=ar' : '');
+    $('unsubGo').href = me.unsubUrl + (ui === 'ar' ? '&lang=ar' : '');
+  }
+  async function load() {
+    const s = store.get('ss_club_s');
+    if (!s) { show('stepId'); return; }
+    const r = await api({ action: 'clubAppMe', s });
+    if (!r.ok) { if (r.signIn) store.set('ss_club_s', null); show('stepId'); return; }
+    me = r;
+    if (!r.open) {
+      show('stepForm'); $('formH').textContent = I[ui].formH(r.firstName);
+      $('formGo').href = r.formUrl + (ui === 'ar' ? '&lang=ar' : '');
+      return;
+    }
+    show('area'); drawArea();
+  }
+  async function logout() { const s = store.get('ss_club_s'); store.set('ss_club_s', null); me = null; if (s) await api({ action: 'clubAppLogout', s }); show('stepId'); }
+  $('logout').addEventListener('click', logout);
+  $('formLater').addEventListener('click', logout);
+  paint();
+  load();
+})();
+</script>
+</body>
+</html>

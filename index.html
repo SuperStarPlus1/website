@@ -419,6 +419,7 @@
                 <li onclick="nav('career-page', this)" tabindex="0" role="menuitem" data-i18n="nav_career">קריירה</li>
                 <li onclick="nav('directions-page', this)" tabindex="0" role="menuitem" data-i18n="nav_contact">צור קשר</li>
                 <li onclick="nav('club-page', this)" style="background:var(--yellow); color:var(--blue);" tabindex="0" role="menuitem" data-i18n="nav_club">⭐ מועדון לקוחות</li>
+                <li onclick="location.href='/club-me' + (document.body.dataset.lang === 'ar' ? '?lang=ar' : '')" tabindex="0" role="menuitem" data-i18n="nav_me">👤 אזור אישי</li>
 
                 <!-- Language switcher -->
                 <li style="background:transparent; padding:4px 8px;" role="none">
@@ -1563,7 +1564,7 @@ const TRANSLATIONS = {
         skip_link: "דלג לתוכן הראשי",
         nav_home: "דף הבית", nav_catalog: "קטלוג", nav_promos: "מבצעים",
         nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
-        nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות",
+        nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות", nav_me: "👤 אזור אישי",
         ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
         home_promos: "🔥 מבצעים לזמן מוגבל", home_new: "חדש על המדף",
         catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
@@ -1626,7 +1627,7 @@ const TRANSLATIONS = {
         skip_link: "تخطى إلى المحتوى الرئيسي",
         nav_home: "الرئيسية", nav_catalog: "الكتالوج", nav_promos: "العروض",
         nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
-        nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء",
+        nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء", nav_me: "👤 المنطقة الشخصية",
         ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
         home_promos: "🔥 عروض لفترة محدودة", home_new: "جديد على الرف",
         catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
@@ -1689,7 +1690,7 @@ const TRANSLATIONS = {
         skip_link: "Skip to main content",
         nav_home: "Home", nav_catalog: "Catalog", nav_promos: "Deals",
         nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
-        nav_contact: "Contact", nav_club: "⭐ Loyalty Club",
+        nav_contact: "Contact", nav_club: "⭐ Loyalty Club", nav_me: "👤 My area",
         ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
         home_promos: "🔥 Limited Time Deals", home_new: "New Arrivals",
         catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",

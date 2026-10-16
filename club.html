@@ -350,7 +350,9 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     catch (e) { r = { ok: false, error: I[ui].e.net }; }
     btn.disabled = false; btn.textContent = I[ui].send;
     if (!r.ok) { (r.fields || []).forEach((k) => checks[k] && mark(k, false)); $('formErr').textContent = r.error || I[ui].e.net; return; }
-    $('card').innerHTML = '<div class="done"><div class="big">✓</div><h2>' + esc(I[ui].doneT(body.firstName)) + '</h2><p>' + I[ui].done1 + '</p><p style="color:#64748b">' + I[ui].done2 + '</p></div>';
+    $('card').innerHTML = '<div class="done"><div class="big">✓</div><h2>' + esc(I[ui].doneT(body.firstName)) + '</h2><p>' + I[ui].done1 + '</p><p style="color:#64748b">' + I[ui].done2 + '</p>' +
+      // came from the personal area (club-me.html) — back to it, now open
+      (new URLSearchParams(location.search).get('from') === 'app' ? '<a class="send" style="display:block;text-decoration:none" href="/club-me' + (ui === 'ar' ? '?lang=ar' : '') + '">' + (ui === 'ar' ? 'إلى المنطقة الشخصية ←' : 'לאזור האישי ←') + '</a>' : '') + '</div>';
     window.scrollTo({ top: $('card').offsetTop - 20, behavior: 'smooth' });
   });
 
