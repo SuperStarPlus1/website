@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>בדיקת מחיר — סופרסטאר</title>
+<script src="img.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 <style>
   :root {
@@ -389,7 +390,7 @@
 <div id="toast"></div>
 
 <header>
-  <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו">
+  <img src="img/logo.webp" alt="לוגו">
   <h1>🔍 בדיקת מחיר</h1>
 </header>
 
@@ -411,7 +412,7 @@
   <div id="result-card">
     <div class="product-image-wrap">
       <img id="prod-img" src="" alt="תמונת מוצר"
-        onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
+        onerror="imgFallback(this)">
       <div class="promo-badge" id="promo-badge">🔥 במבצע!</div>
     </div>
     <div class="product-info">
@@ -613,7 +614,7 @@ function lookup(bc) {
 
 
 function showSingleResult(barcode, product, offer) {
-    const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg`;
+    const imgUrl = `${prodImg(barcode)}`;
     document.getElementById('prod-img').src = imgUrl;
 
     const name  = product ? (product.Name || '') : (offer ? (offer.Name || offer.Discreption || offer.Description || '') : '');
@@ -678,7 +679,7 @@ function showMultiResults(matches, searchTerm) {
             });
         }
         const imgBc  = nb(p.Barcode); // תמיד ברקוד מלא מהמוצר
-        const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${imgBc}.jpg`;
+        const imgUrl = `${prodImg(imgBc)}`;
         const hasPromo = !!offer;
         const price    = hasPromo
             ? (offer.UnitPrice || offer.Price || p.Price || '—')
@@ -687,7 +688,7 @@ function showMultiResults(matches, searchTerm) {
         return `
         <div class="multi-item" onclick="selectProduct('${bc}')">
             <img src="${imgUrl}"
-                onerror="this.src='https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png'"
+                onerror="imgFallback(this)"
                 alt="${safeName}">
             <div class="multi-item-info">
                 <div class="multi-item-name">${p.Name || ''}</div>

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>סופר סטאר פלוס</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="img.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          ACCESSIBILITY STYLES — Israel SI 5568 / WCAG 2.1 AA
@@ -407,7 +408,7 @@
 <header role="banner">
     <div class="nav-container">
         <div class="logo" onclick="nav('home')" role="link" tabindex="0" aria-label="דף הבית - סופרסטאר פלוס">
-            <img src="https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png" alt="לוגו סופרסטאר פלוס">
+            <img src="img/logo.webp" alt="לוגו סופרסטאר פלוס">
         </div>
         <nav aria-label="ניווט ראשי" role="navigation">
             <ul class="nav-links">
@@ -833,7 +834,7 @@
         const title = document.getElementById('promo-items-title');
         title.textContent = d.desc + ' — ' + d.allBcs.length + ' פריטים';
         list.innerHTML = d.allBcs.map(bc => {
-            const imgUrl = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${bc}.jpg`;
+            const imgUrl = `${prodImg(bc)}`;
             const prod   = allItems.find(x => {
                 let s = String(x.Barcode||'').trim();
                 if(s.endsWith('.0')) s=s.slice(0,-2);
@@ -841,7 +842,7 @@
             });
             const name = prod ? (prod.Name || bc) : bc;
             return `<div class="promo-item-row">
-                <img src="${imgUrl}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${name}">
+                <img src="${imgUrl}" onerror="imgFallback(this)" alt="${name}">
                 <div>
                     <div class="item-name">${name}</div>
                     <div class="item-bc">${bc}</div>
@@ -890,9 +891,14 @@
 
     async function loadCloud(tag, divId, type = 'grid', filter = false) {
         try {
-            const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
-            const d = await r.json();
-            let files = d.resources;
+            let files;
+            if (tag === 'auto-new') {
+                const r = await fetch('data/new.json', { cache: 'no-cache' });
+                files = ((await r.json()).items || []).map(i => ({ public_id: 'products/' + i.barcode, url: prodImg(i.barcode), created_at: i.since }));
+            } else {
+                const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
+                files = (await r.json()).resources;
+            }
             if (filter) files = files.filter(f => isFresh(f.public_id));
             // "חדש על המדף": product photos the catalog sync uploaded in the last 7 days (the tag "auto-new" is kept by
             // the nightly job on the server); newest first — the home page shows the 12 newest
@@ -904,7 +910,7 @@
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
 
             const html = files.map(f => {
-                const url = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+                const url = f.url || `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
 
                 if (type === 'slider') {
                     return `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`;
@@ -922,7 +928,7 @@
                 <div class="card" role="listitem" tabindex="0"
                     onclick="zoomProduct('${url}','${barcode}')"
                     onkeypress="if(event.key==='Enter') zoomProduct('${url}','${barcode}')">
-                    <img src="${url}" alt="${name || 'מוצר'}" loading="lazy">
+                    <img src="${url}" alt="${name || 'מוצר'}" loading="lazy" onerror="imgFallback(this)">
                     ${name  ? `<h3>${name}</h3>` : ''}
                     ${price ? `<div class="price">₪${price}</div>` : ''}
                     ${cat   ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-top:4px;">${cat}</div>` : ''}
@@ -942,7 +948,7 @@
         container.innerHTML = slice.map(i => {
             const tName = i.Name || '';
             const safeDesc = tName.replace(/'/g, "\\'");
-            const imgUrl = `https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/products/${i.Barcode}.jpg`;
+            const imgUrl = `${prodImg(i.Barcode)}`;
             return `
             <div class="card" role="listitem" tabindex="0"
                 onclick="zoom('${imgUrl}','${safeDesc}','${i.Price||''}')"
@@ -950,7 +956,7 @@
                 <img src="${imgUrl}" loading="lazy" alt="${tName || 'מוצר'}"
                     onclick="zoom('${imgUrl}','${safeDesc}','${i.Price||""}')"
                     style="cursor:pointer"
-                    onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'">
+                    onerror="imgFallback(this)">
                 <h3>${tName || ''}</h3>
                 <div class="price">&#8362;${i.Price || ''}</div>
                 ${window._catPromoMap && window._catPromoMap[String(i.Barcode||'').trim().replace(/\.0$/,'')] || ''}
@@ -1109,7 +1115,7 @@
             const priceLabel = qty === 0.01 ? t.promo_kg : t.promo_unit;
             const catalogItem = findItemByBarcode(o.Barcode);
             const regularPrice = catalogItem ? (catalogItem.Price || '') : '';
-            const url = barcode ? `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg` : `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png`;
+            const url = barcode ? `${prodImg(barcode)}` : `img/logo.webp`;
             if (!window._promoData) window._promoData = [];
             // "מוגבל ל-99999 יח'" means no limit — not shown
             const promoNote = /9{4,}/.test(o.PromoNote || '') ? '' : (o.PromoNote || '');
@@ -1123,7 +1129,7 @@
                     onclick="zoomPromoByIdx(parseInt(this.dataset.pidx))"
                     tabindex="0" role="button" aria-label="${desc}"
                     onkeypress="if(event.key==='Enter') zoomPromoByIdx(parseInt(this.dataset.pidx))">
-                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${desc || 'מוצר במבצע'}">
+                    <img src="${url}" onerror="imgFallback(this)" alt="${desc || 'מוצר במבצע'}">
                     ${desc  ? `<div style="font-weight:bold;margin-top:5px;color:#333;font-size:0.85rem">${desc}</div>` : ''}
                     ${price ? '<div style="color:#d32f2f;font-weight:bold">&#8362;' + price + ' ' + (isWeight ? 'לק"ג' : "ליח'") + '</div>' : ''}
                     ${promoNote ? `<div style="font-size:0.7rem;color:#ef6c00;background:#fff3e0;border-radius:6px;padding:2px 5px;margin-top:2px">${promoNote}</div>` : ''}
@@ -1168,7 +1174,7 @@
             const regularPrice = catalogItem ? (catalogItem.Price || "") : "";
             const rawCat = catalogItem ? (catalogItem[field] || "") : "";
             const cat = rawCat ? rawCat : "";
-            const url = barcode ? `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/products/${barcode}.jpg` : `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/logo.png`;
+            const url = barcode ? `${prodImg(barcode)}` : `img/logo.webp`;
             const promoNote = (o.PromoNote || '');
             const safeDesc = desc.replace(/'/g, '');
             let allBcs = [];
@@ -1182,7 +1188,7 @@
                     data-pidx="${pIdx}"
                     onclick="zoomPromoByIdx(parseInt(this.dataset.pidx))"
                     onkeypress="if(event.key==='Enter') zoomPromoByIdx(parseInt(this.dataset.pidx))">
-                    <img src="${url}" onerror="this.src='https://res.cloudinary.com/dj56w7nb9/image/upload/f_auto,q_auto/logo.png'" alt="${safeDesc}" loading="lazy">
+                    <img src="${url}" onerror="imgFallback(this)" alt="${safeDesc}" loading="lazy">
                     <h3>${desc}</h3>
                     ${cat ? `<div style="display:inline-block;background:#e6f1fb;color:#0076DA;font-size:0.7rem;font-weight:bold;padding:2px 8px;border-radius:10px;margin-bottom:4px;" aria-label="קטגוריה: ${cat}">${cat}</div>` : ""}
                     ${price ? `<div class="price" aria-label="${priceLabel} ₪${price}">
