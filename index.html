@@ -219,6 +219,30 @@
             #showcase .sc-img { flex: none; width: 62%; height: auto; aspect-ratio: 1 / 1; }
             #showcase .sc-txt { flex: none; text-align: center; width: 100%; }
         }
+        /* the spender (16/10/2026) */
+        .spender { display: flex; align-items: center; gap: 4%; margin: 40px 0 30px; padding: 22px 5%; border-radius: 22px; text-decoration: none; color: #fff; background: linear-gradient(120deg, #0b2a55 0%, #0076DA 55%, #00a2ff 100%); box-shadow: 0 14px 36px rgba(0,80,170,.35); overflow: hidden; position: relative; }
+        .spender:hover .sp-cta { transform: scale(1.05); }
+        .sp-stage { position: relative; flex: 0 0 34%; height: 190px; }
+        .sp-guy { position: absolute; bottom: 8px; right: 12%; font-size: 92px; line-height: 1; animation: spSway 2.4s ease-in-out infinite; transform-origin: bottom center; }
+        .sp-hand { position: absolute; bottom: 74px; right: 2%; font-size: 40px; animation: spToss 1.2s ease-in-out infinite; transform-origin: bottom left; }
+        .sp-bill { position: absolute; bottom: 100px; right: 8%; font-size: 30px; opacity: 0; animation: spFly 2.4s ease-in infinite; }
+        .sp-bill.b2 { animation-delay: .4s; } .sp-bill.b3 { animation-delay: .8s; } .sp-bill.b4 { animation-delay: 1.2s; font-size: 24px; } .sp-bill.b5 { animation-delay: 1.6s; } .sp-bill.b6 { animation-delay: 2s; font-size: 24px; }
+        .sp-bin { position: absolute; bottom: 4px; left: 4%; font-size: 54px; animation: spBin 2.4s ease-in-out infinite; }
+        .sp-txt { flex: 1; min-width: 0; }
+        .sp-txt h3 { margin: 0 0 8px; font-size: clamp(1.3rem, 3.4vw, 2.2rem); font-weight: 900; color: #ffcc00; text-shadow: 0 3px 14px rgba(0,0,0,.3); }
+        .sp-txt p { margin: 0 0 12px; font-size: clamp(.95rem, 2vw, 1.15rem); opacity: .95; line-height: 1.5; }
+        .sp-meter { display: inline-block; background: rgba(0,0,0,.25); border-radius: 10px; padding: 6px 12px; font-size: clamp(.85rem, 1.8vw, 1rem); margin-bottom: 14px; }
+        .sp-meter b { color: #ff8a80; font-size: 1.15em; font-variant-numeric: tabular-nums; }
+        .sp-cta { display: inline-block; background: #ffcc00; color: #003a75; font-weight: 900; padding: 10px 22px; border-radius: 30px; font-size: clamp(1rem, 2.2vw, 1.2rem); box-shadow: 0 6px 18px rgba(0,0,0,.25); transition: transform .2s; animation: cinPulse2 1.8s ease-in-out infinite; }
+        @keyframes cinPulse2 { 50% { box-shadow: 0 0 0 8px rgba(255,204,0,.25), 0 6px 18px rgba(0,0,0,.25); } }
+        @keyframes spSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+        @keyframes spToss { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-35deg) translateY(-6px); } }
+        @keyframes spFly { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 10% { opacity: 1; } 55% { transform: translate(-140%, -70px) rotate(-120deg); } 100% { opacity: .9; transform: translate(-330%, 70px) rotate(-260deg) scale(.7); } }
+        @keyframes spBin { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-8deg) scale(1.08); } 90% { transform: rotate(6deg); } }
+        @media (max-width: 640px) {
+            .spender { flex-direction: column; text-align: center; padding: 18px 16px 22px; }
+            .sp-stage { flex: none; width: 100%; max-width: 300px; height: 170px; }
+        }
         @keyframes scBlink { 50% { transform: scale(1.06); box-shadow: 0 0 18px rgba(255,204,0,.9); } }
         .sc.fade { opacity: 0; }
         .sc .sc-img { flex: 0 0 46%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 14px; }
@@ -487,8 +511,20 @@
                 <div class="sc" id="showcase"></div>
             </div>
             <!-- 16/10/2026: the "המבצעים החמים שלנו" strip removed (the owner); the promos are in the showcase above and on the promos page -->
-            <h2 class="section-title" data-i18n="home_new">חדש על המדף</h2>
-            <div id="new-home" class="grid" role="list" aria-label="מוצרים חדשים"></div>
+            <!-- 16/10/2026: "חבר מועדון — או נמנע מחיסכון?" — the spender who throws his money away, and a link to join -->
+            <a class="spender" href="/club-me" onclick="this.href='/club-me' + (document.body.dataset.lang === 'ar' ? '?lang=ar' : '')" aria-label="הצטרפות למועדון הלקוחות">
+                <div class="sp-stage" aria-hidden="true">
+                    <div class="sp-guy">😎</div><div class="sp-hand">🤚</div>
+                    <span class="sp-bill b1">💸</span><span class="sp-bill b2">💵</span><span class="sp-bill b3">💸</span><span class="sp-bill b4">🪙</span><span class="sp-bill b5">💵</span><span class="sp-bill b6">🪙</span>
+                    <div class="sp-bin">🗑️</div>
+                </div>
+                <div class="sp-txt">
+                    <h3 data-i18n="sp_title">חבר מועדון — או נמנע מחיסכון?</h3>
+                    <p data-i18n="sp_sub">הוא משלם מחיר מלא, מוותר על סל קניות 41 במתנה ועל קופונים אישיים… ולא אכפת לו 🤷‍♂️</p>
+                    <div class="sp-meter"><span data-i18n="sp_meter">כסף שזרק לפח מתחילת הביקור:</span> <b dir="ltr">₪<span id="sp-lost">0.00</span></b></div>
+                    <span class="sp-cta" data-i18n="sp_cta">אל תהיו כמוהו — הצטרפו בחינם ←</span>
+                </div>
+            </a>
         </div>
     </div>
 
@@ -1349,6 +1385,7 @@
             '<span dir="ltr">' + p2(Math.floor(s % 86400 / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60) + '</span>';
     }
     setInterval(scTick, 1000);
+    (function () { let v = 0; setInterval(() => { const el = document.getElementById('sp-lost'); if (!el) return; v += 0.07 + Math.random() * 0.09; el.textContent = v.toFixed(2); }, 400); })();
     function showcaseOpen() {
         if (!scCur) return;
         const i = scCur.kind === 'promo' ? (window._promoData || []).indexOf(scCur.p) : -1;
@@ -1644,7 +1681,7 @@ const TRANSLATIONS = {
         nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
         nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות", nav_me: "👤 אזור אישי",
         ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
-        home_promos: "🔥 המבצעים החמים שלנו", sc_hurry: "⏰ מהר לפני שנגמר!", sc_ends: "המבצע נגמר בעוד", sc_day: "יום", sc_days: "ימים", sc_new: "🆕 חדש על המדף", sc_promo: "🔥 מבצע", home_new: "חדש על המדף",
+        home_promos: "🔥 המבצעים החמים שלנו", sp_title: "חבר מועדון — או נמנע מחיסכון?", sp_sub: "הוא משלם מחיר מלא, מוותר על סל קניות 41 במתנה ועל קופונים אישיים… ולא אכפת לו 🤷‍♂️", sp_meter: "כסף שזרק לפח מתחילת הביקור:", sp_cta: "אל תהיו כמוהו — הצטרפו בחינם ←", sc_hurry: "⏰ מהר לפני שנגמר!", sc_ends: "המבצע נגמר בעוד", sc_day: "יום", sc_days: "ימים", sc_new: "🆕 חדש על המדף", sc_promo: "🔥 מבצע", home_new: "חדש על המדף",
         catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
         catalog_cat_label: "בחר קטגוריה", catalog_cat_ph: "כל הקטגוריות...",
         promos_title: "מבצעים", new_title: "חדש על המדף",
@@ -1707,7 +1744,7 @@ const TRANSLATIONS = {
         nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
         nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء", nav_me: "👤 المنطقة الشخصية",
         ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
-        home_promos: "🔥 عروضنا الساخنة", sc_hurry: "⏰ أسرع قبل أن ينتهي!", sc_ends: "ينتهي العرض خلال", sc_day: "يوم", sc_days: "أيام", sc_new: "🆕 جديد على الرف", sc_promo: "🔥 عرض", home_new: "جديد على الرف",
+        home_promos: "🔥 عروضنا الساخنة", sp_title: "عضو في النادي — أم تتجنب التوفير؟", sp_sub: "يدفع السعر الكامل، ويتنازل عن سلة التسوق رقم 41 هدية وعن القسائم الشخصية… ولا يهمه 🤷‍♂️", sp_meter: "المال الذي رماه منذ بداية الزيارة:", sp_cta: "لا تكونوا مثله — انضموا مجانًا ←", sc_hurry: "⏰ أسرع قبل أن ينتهي!", sc_ends: "ينتهي العرض خلال", sc_day: "يوم", sc_days: "أيام", sc_new: "🆕 جديد على الرف", sc_promo: "🔥 عرض", home_new: "جديد على الرف",
         catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
         catalog_cat_label: "اختر فئة", catalog_cat_ph: "جميع الفئات...",
         promos_title: "العروض", new_title: "جديد على الرف",
@@ -1770,7 +1807,7 @@ const TRANSLATIONS = {
         nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
         nav_contact: "Contact", nav_club: "⭐ Loyalty Club", nav_me: "👤 My area",
         ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
-        home_promos: "🔥 Our Hot Deals", sc_hurry: "⏰ Hurry, ends soon!", sc_ends: "Deal ends in", sc_day: "day", sc_days: "days", sc_new: "🆕 New on the shelf", sc_promo: "🔥 Deal", home_new: "New Arrivals",
+        home_promos: "🔥 Our Hot Deals", sp_title: "Club member — or avoiding savings?", sp_sub: "He pays full price, skips the free 41st basket and personal coupons… and doesn't care 🤷‍♂️", sp_meter: "Money he threw away since you arrived:", sp_cta: "Don't be like him — join free →", sc_hurry: "⏰ Hurry, ends soon!", sc_ends: "Deal ends in", sc_day: "day", sc_days: "days", sc_new: "🆕 New on the shelf", sc_promo: "🔥 Deal", home_new: "New Arrivals",
         catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",
         catalog_cat_label: "Select category", catalog_cat_ph: "All categories...",
         promos_title: "Deals & Promotions", new_title: "New Arrivals",

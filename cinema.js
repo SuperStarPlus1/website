@@ -4,7 +4,7 @@
 // frame. Few new products → this week's promos fill in. The site's "reduce motion" (accessibility) keeps it still.
 (function () {
   const CSS = `
-.cin{position:relative;width:100%;height:min(56.25vw,78vh);min-height:300px;margin:0;overflow:hidden;background:#04060d;color:#fff;cursor:pointer;box-shadow:0 25px 60px rgba(0,40,100,.35);isolation:isolate;user-select:none}
+.cin{position:relative;width:100%;height:min(28vw,39vh);min-height:210px;margin:0;overflow:hidden;background:#04060d;color:#fff;cursor:pointer;box-shadow:0 25px 60px rgba(0,40,100,.35);isolation:isolate;user-select:none}
 .cin::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#12305e 0%,#060a18 62%,#020308 100%);z-index:0}
 .cin-bg{position:absolute;inset:-60%;z-index:1;background:conic-gradient(from 0deg,transparent 0 18deg,rgba(0,118,218,.38) 28deg,transparent 42deg 118deg,rgba(255,204,0,.22) 130deg,transparent 145deg 215deg,rgba(0,118,218,.32) 228deg,transparent 242deg 300deg,rgba(255,255,255,.12) 310deg,transparent 322deg);filter:blur(22px);animation:cinSpin 22s linear infinite}
 .cin-stage{position:absolute;inset:0;z-index:2}
@@ -21,7 +21,7 @@
 
 /* the opening / closing titles */
 .cin-intro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2%}
-.cin-intro h2{margin:0;font-size:clamp(2rem,7.5vw,4.6rem);font-weight:900;letter-spacing:.02em;filter:drop-shadow(0 6px 24px rgba(255,204,0,.35))}
+.cin-intro h2{margin:0;font-size:clamp(1.6rem,5vw,3.4rem);font-weight:900;letter-spacing:.02em;filter:drop-shadow(0 6px 24px rgba(255,204,0,.35))}
 .cin-intro h2 span{display:inline-block;margin:0 .14em;padding:0 .04em;background:linear-gradient(180deg,#fff7c2 0%,#ffcc00 55%,#e09a00 100%);-webkit-background-clip:text;background-clip:text;color:transparent;animation:cinWord .8s cubic-bezier(.2,.9,.25,1.2) both}
 .cin-intro p{margin:0;font-size:clamp(.9rem,2.6vw,1.45rem);letter-spacing:.35em;color:#cfe3ff;animation:cinFadeUp .9s .9s both}
 .cin-flare{position:absolute;top:44%;left:0;width:60%;height:3px;background:linear-gradient(90deg,transparent,#fff,#ffe680,#fff,transparent);box-shadow:0 0 30px 8px rgba(255,230,128,.7);animation:cinFlare 1.6s .25s ease-in-out both}
@@ -29,39 +29,40 @@
 .cin-cta{margin-top:2%;padding:.6em 1.6em;border-radius:40px;background:#ffcc00;color:#003a75;font-weight:800;font-size:clamp(.9rem,2.4vw,1.25rem);animation:cinPop .6s 1s both,cinPulse 1.6s 1.6s ease-in-out infinite}
 
 /* one product: a spotlight, a zoom from blur, a light sweep */
-.cin-hero{display:flex;align-items:center;justify-content:center;gap:5%;padding:6% 8%;box-sizing:border-box}
+.cin-hero{display:flex;align-items:center;justify-content:center;gap:4%;padding:2% 8%;box-sizing:border-box}
 .cin-hero.flip{flex-direction:row-reverse}
 .cin-light{position:absolute;top:-30%;width:55%;height:150%;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 75%);clip-path:polygon(42% 0,58% 0,100% 100%,0 100%);filter:blur(6px);animation:cinBeam 4.8s ease-in-out both;pointer-events:none}
 .cin-hero .cin-light{right:3%}.cin-hero.flip .cin-light{right:auto;left:3%}
-.cin-card{position:relative;flex:none;height:72%;aspect-ratio:1/1;background:#fff;border-radius:22px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,204,0,.55),0 0 70px rgba(0,140,255,.55);-webkit-box-reflect:below 8px linear-gradient(transparent 62%,rgba(255,255,255,.22));animation:cinZoom 1.15s cubic-bezier(.2,.85,.2,1) both,cinFloat 3.6s 1.15s ease-in-out infinite alternate}
+.cin-card{position:relative;flex:none;height:74%;aspect-ratio:1/1;background:#fff;border-radius:22px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,204,0,.55),0 0 70px rgba(0,140,255,.55);-webkit-box-reflect:below 8px linear-gradient(transparent 62%,rgba(255,255,255,.22));animation:cinZoom 1.15s cubic-bezier(.2,.85,.2,1) both,cinFloat 3.6s 1.15s ease-in-out infinite alternate}
 .cin-card img{width:88%;height:88%;object-fit:contain;animation:cinKen 5.5s ease-out both}
 .cin-shine{position:absolute;inset:-20%;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.95) 50%,transparent 62%);mix-blend-mode:overlay;transform:translateX(-130%);animation:cinShine 1.3s 1.25s ease-in-out both}
 .cin-txt{flex:0 1 46%;min-width:0;text-align:start;z-index:1}
 .cin-stamp{display:inline-block;padding:.35em 1em;border-radius:8px;background:#e53935;color:#fff;font-weight:900;font-size:clamp(.8rem,2.2vw,1.2rem);letter-spacing:.06em;box-shadow:0 6px 20px rgba(229,57,53,.5);animation:cinSlam .55s .55s cubic-bezier(.3,1.6,.5,1) both}
 .cin-stamp.new{background:#0076DA;box-shadow:0 6px 20px rgba(0,118,218,.6)}
-.cin-txt h3{margin:.45em 0 .3em;font-size:clamp(1.15rem,3.9vw,2.4rem);line-height:1.18;font-weight:800;text-shadow:0 4px 18px rgba(0,0,0,.6);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;animation:cinRise .8s .85s cubic-bezier(.2,.8,.2,1) both}
-.cin-price{display:inline-block;font-size:clamp(1.4rem,5vw,3.1rem);font-weight:900;color:#ffcc00;text-shadow:0 0 22px rgba(255,204,0,.55);animation:cinPop .55s 1.35s cubic-bezier(.3,1.6,.5,1) both}
+.cin-txt h3{margin:.35em 0 .2em;font-size:clamp(1rem,2.6vw,1.9rem);line-height:1.18;font-weight:800;text-shadow:0 4px 18px rgba(0,0,0,.6);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;animation:cinRise .8s .85s cubic-bezier(.2,.8,.2,1) both}
+.cin-price{display:inline-block;font-size:clamp(1.2rem,3.2vw,2.4rem);font-weight:900;color:#ffcc00;text-shadow:0 0 22px rgba(255,204,0,.55);animation:cinPop .55s 1.35s cubic-bezier(.3,1.6,.5,1) both}
 .cin-was{font-size:.45em;color:#9fb3cc;text-decoration:line-through;margin-inline-start:.5em;text-shadow:none}
 
 /* the quick montage */
-.cin-mont{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:3%;padding:7% max(8%,calc(50% - 60vh));box-sizing:border-box;animation:cinMontZoom 3.6s ease-in-out both}
+.cin-mont{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:2%;padding:9% 6% 13%;box-sizing:border-box;animation:cinMontZoom 3.6s ease-in-out both}
 .cin-mont .tile{background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 30px rgba(0,140,255,.45);animation:cinTile .45s cubic-bezier(.3,1.5,.5,1) both}
 .cin-mont .tile img{width:86%;height:86%;object-fit:contain}
 .cin-cap{position:absolute;inset:auto 0 9% 0 !important;text-align:center;font-weight:900;font-size:clamp(1.1rem,4vw,2.4rem);color:#ffcc00;text-shadow:0 4px 20px rgba(0,0,0,.9);animation:cinRise .7s 1.5s both}
 
 /* the 3D carousel */
 .cin-orbit{perspective:1100px;display:flex;align-items:center;justify-content:center}
-.cin-ring{position:relative;height:46%;aspect-ratio:1/1;transform-style:preserve-3d;animation:cinOrbit 9s linear both}
+.cin-ring{position:relative;height:52%;aspect-ratio:1/1;transform-style:preserve-3d;animation:cinOrbit 9s linear both}
 .cin-ring .tile{position:absolute;inset:0;background:#fff;border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(0,140,255,.5);-webkit-box-reflect:below 6px linear-gradient(transparent 65%,rgba(255,255,255,.2))}
 .cin-ring .tile img{width:86%;height:86%;object-fit:contain}
 
 @media (max-width:640px){
- .cin{height:min(125vw,82vh)}
- .cin-hero,.cin-hero.flip{flex-direction:column;justify-content:center;padding:12% 8%;gap:4%;text-align:center}
- .cin-card{height:44%}
- .cin-txt{flex:0 0 auto;text-align:center}
- .cin-mont{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr);padding:14% 10%}
- .cin-ring{height:30%}
+ .cin{height:min(62vw,42vh);min-height:220px}
+ .cin-hero,.cin-hero.flip{padding:4% 5%;gap:4%}
+ .cin-card{height:66%}
+ .cin-txt{flex:1 1 auto}
+ .cin-txt h3{-webkit-line-clamp:2}
+ .cin-mont{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));padding:9% 8% 14%}
+ .cin-ring{height:44%}
  .cin-light{width:90%}
 }
 @keyframes cinSpin{to{transform:rotate(360deg)}}
@@ -132,7 +133,7 @@ body.reduce-motion .cin-bg,body.reduce-motion .cin-grain{display:none}
     },
     orbit() {
       const list = take(Math.min(8, items.length)), t = tx(), n = list.length; cur = null;
-      const tw = stage.clientHeight * (stage.clientWidth < 640 ? 0.3 : 0.46), r = Math.round(tw / (2 * Math.tan(Math.PI / Math.max(n, 3))) * 1.2);
+      const tw = stage.clientHeight * (stage.clientWidth < 640 ? 0.44 : 0.52), r = Math.round(tw / (2 * Math.tan(Math.PI / Math.max(n, 3))) * 1.2);
       stage.innerHTML = '<div class="cin-orbit"><div class="cin-ring">' + list.map((it, i) => '<div class="tile" style="transform:rotateY(' + (i * 360 / n) + 'deg) translateZ(' + r + 'px)">' + img(it) + '</div>').join('') + '</div></div><div class="cin-cap">' + esc(t.orbit) + '</div>';
       return 5200;
     },
