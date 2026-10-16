@@ -512,26 +512,42 @@
     if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const ST = { pending: '⏳ ממתין לפתיחה בקומקס', active: '✅ פעיל', used: '🛒 נוצל', expired: '⌛ פג', cancelled: '✖ בוטל' };
     const why = { return: 'מוצר שקונה הרבה', winback: 'לא קנה ' + r.winbackDays + ' יום — חלון + SMS', manual: 'ידני' };
-    const row = (c) => '<tr><td>' + e(c.member) + '<div class="note">' + e(c.card || '') + '</div></td><td><b>' + e(c.name) + '</b><div class="note" dir="ltr">' + e(c.barcode) + '</div></td><td>' + e(c.percent) + '%</td><td>' + e(why[c.reason] || c.reason) + '</td>' +
+    const row = (c) => '<tr><td>' + e(c.member) + '<div class="note">' + e(c.card || '') + (c.batch ? ' · 👥 ' + e(c.batch) : '') + '</div></td><td><b>' + e(c.name) + '</b><div class="note" dir="ltr">' + e(c.barcode) + '</div></td><td>' + e(c.percent) + '%</td><td>' + e(why[c.reason] || c.reason) + '</td>' +
       '<td>' + e(ST[c.status] || c.status) + (c.valid_to ? '<div class="note">עד ' + e(c.valid_to.split('-').reverse().join('/')) + '</div>' : '') + (c.sms_status ? '<div class="note">SMS: ' + e(c.sms_status) + '</div>' : '') + '</td><td>' +
       (c.status === 'pending' ? '<input type="text" placeholder="מס׳ מבצע בקומקס" data-cx="' + c.id + '" style="width:120px"> <button class="btn primary" data-act="' + c.id + '">נפתח בקומקס ✓</button> ' : '') +
       (c.status === 'pending' || c.status === 'active' ? '<button class="btn" data-cancel="' + c.id + '">ביטול</button>' : '') + '</td></tr>';
     const pend = r.coupons.filter((c) => c.status === 'pending'), rest = r.coupons.filter((c) => c.status !== 'pending');
     p.innerHTML = '<div class="box"><h4>🎟 קופונים לחברי המועדון</h4><div class="note">' + r.percent + '% על מוצר אחד שהלקוח קונה (לא מוצר שכבר במבצע), ' + r.days + ' ימים. המערכת מציעה כל בוקר; כדי שהקופה תכבד — פותחים בקומקס מבצע לקבוצת הלקוחות של הלקוח על המוצר, ומסמנים כאן "נפתח בקומקס" — רק אז הלקוח רואה את הקופון באזור האישי (ולקוח שלא קנה ' + r.winbackDays + ' יום מקבל גם חלון קופץ ו-SMS).</div>' +
       '<div class="row" style="margin-top:8px"><label class="c">בפיילוט — מספרי ת"ז (פסיק בין מספרים)<input type="text" id="cpPilot" dir="ltr" value="' + e(r.pilot || '') + '"></label><button class="btn" id="cpSave">💾 שמירה והרצה עכשיו</button></div></div>' +
-      '<div class="box"><h4>➕ קופון ידני</h4><div class="note">לחבר/ת מועדון (שמילא/ה את הטופס): ת"ז או נייד, ברקוד המוצר (השם מהקטלוג), אחוז הנחה וימי תוקף. כמו כל קופון — כדי שהקופה תכבד יש לפתוח אותו בקומקס כמבצע לקבוצת הלקוחות; אם כבר נפתח — לסמן "נפתח בקומקס" והקופון פעיל ומוצג ללקוח מיד.</div>' +
-        '<div class="row" style="margin-top:8px"><label class="c" style="flex:0 1 170px">ת"ז<input type="text" id="cmId" dir="ltr" inputmode="numeric"></label><label class="c" style="flex:0 1 170px">או נייד<input type="tel" id="cmPh" dir="ltr"></label>' +
+      '<div class="box"><h4>➕ קופון ידני — ללקוח או לקבוצה</h4><div class="note">רק לחברי מועדון שמילאו את הטופס ואישרו דיוור. אותו מוצר, אחוז וימים לכולם; מי שכבר יש לו קופון פתוח על המוצר — מדולג. כדי שהקופה תכבד: מבצע אחד בקומקס לקבוצת המועדון על המוצר, ואז "נפתח בקומקס" — לכל הקבוצה יחד.</div>' +
+        '<div class="row" style="margin-top:8px;gap:14px;flex-wrap:wrap">' + [['one', 'לקוח אחד'], ['list', 'רשימה (ת"ז / נייד)'], ['all', 'כל חברי המועדון'], ['bought', 'מי שקנה מוצר'], ['quiet', 'מי שלא קנה X ימים']].map((x, i) =>
+          '<label style="display:flex;gap:6px;align-items:center"><input type="radio" name="cmT" value="' + x[0] + '"' + (i ? '' : ' checked') + '> ' + x[1] + '</label>').join('') + '</div>' +
+        '<div class="row" style="margin-top:8px" id="cmOne"><label class="c" style="flex:0 1 170px">ת"ז<input type="text" id="cmId" dir="ltr" inputmode="numeric"></label><label class="c" style="flex:0 1 170px">או נייד<input type="tel" id="cmPh" dir="ltr"></label></div>' +
+        '<label class="c" id="cmListW" hidden style="margin-top:8px">ת"ז או מספרי נייד (שורה / פסיק בין מספרים — אפשר להדביק מאקסל)<textarea id="cmList" rows="4" dir="ltr"></textarea></label>' +
+        '<label class="c" id="cmBoughtW" hidden style="margin-top:8px;max-width:260px">ברקוד המוצר שקנו<input type="text" id="cmBought" dir="ltr" inputmode="numeric"></label>' +
+        '<label class="c" id="cmQuietW" hidden style="margin-top:8px;max-width:200px">לא קנו (ימים)<input type="number" id="cmQuiet" min="1" max="365" value="14"></label>' +
+        '<div class="row" style="margin-top:8px"><label class="c" style="flex:0 1 260px">שם הקבוצה (לזיהוי — לא חובה)<input type="text" id="cmBatch" maxlength="60"></label>' +
         '<label class="c" style="flex:0 1 190px">ברקוד המוצר<input type="text" id="cmBc" dir="ltr" inputmode="numeric"></label><label class="c" style="flex:0 1 100px">% הנחה<input type="number" id="cmPct" min="1" max="100" value="' + r.percent + '"></label>' +
         '<label class="c" style="flex:0 1 100px">ימי תוקף<input type="number" id="cmDays" min="1" max="90" value="' + r.days + '"></label></div>' +
         '<div class="row" style="margin-top:8px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmNow"> כבר נפתח בקומקס — להפעיל מיד</label><label class="c" style="flex:0 1 180px">מס׳ מבצע בקומקס<input type="text" id="cmCx"></label>' +
         '<button class="btn primary" id="cmAdd">➕ יצירת הקופון</button></div></div>' +
-      '<div class="box"><h4>⏳ לפתוח בקומקס (' + pend.length + ')</h4>' + (pend.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + pend.map(row).join('') + '</table>' : '<p class="note">אין קופונים שממתינים.</p>') + '</div>' +
+      '<div class="box"><h4>⏳ לפתוח בקומקס (' + pend.length + ')</h4>' +
+        [...new Set(pend.map((c) => c.batch).filter(Boolean))].map((b) => { const n = pend.filter((c) => c.batch === b).length;
+          return '<div class="row" style="margin:4px 0;align-items:center"><b>👥 ' + e(b) + '</b> <span class="note">' + n + ' קופונים</span> <input type="text" placeholder="מס׳ מבצע בקומקס" data-bcx="' + e(b) + '" style="width:130px"> <button class="btn primary" data-bact="' + e(b) + '">נפתח בקומקס — לכל הקבוצה ✓</button></div>'; }).join('') +
+        (pend.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + pend.map(row).join('') + '</table>' : '<p class="note">אין קופונים שממתינים.</p>') + '</div>' +
       '<div class="box"><h4>קופונים (' + rest.length + ')</h4>' + (rest.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + rest.map(row).join('') + '</table>' : '<p class="note">עוד אין.</p>') + '</div>';
+    const tNow = () => (document.querySelector('[name=cmT]:checked') || {}).value || 'one';
+    const tShow = () => { const t = tNow(); $('cmOne').hidden = t !== 'one'; $('cmListW').hidden = t !== 'list'; $('cmBoughtW').hidden = t !== 'bought'; $('cmQuietW').hidden = t !== 'quiet'; };
+    document.querySelectorAll('[name=cmT]').forEach((x) => x.addEventListener('change', tShow)); tShow();
     $('cmAdd').addEventListener('click', async () => {
-      const x = await api({ action: 'clubCouponCreate', idNumber: $('cmId').value.trim(), phone: $('cmPh').value.trim(), barcode: $('cmBc').value.trim(),
+      const t = tNow();
+      if (t !== 'one' && !confirm('ליצור את הקופון לכל הקבוצה שנבחרה?')) return;
+      const x = await api({ action: 'clubCouponCreate', target: t, idNumber: $('cmId').value.trim(), phone: $('cmPh').value.trim(), list: $('cmList').value,
+        boughtBarcode: $('cmBought').value.trim(), quietDays: Number($('cmQuiet').value), batch: $('cmBatch').value.trim(), barcode: $('cmBc').value.trim(),
         percent: Number($('cmPct').value), days: Number($('cmDays').value), activeNow: $('cmNow').checked, comaxCode: $('cmCx').value.trim() });
       if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
-      say('נוצר קופון ל' + x.member + ' על ' + x.product + (x.status === 'active' ? ' — פעיל עד ' + String(x.validTo).split('-').reverse().join('/') : ' — ממתין לפתיחה בקומקס'), 'ok'); drawCoupons();
+      say('נוצרו ' + x.created + ' קופונים על ' + x.product + (x.member ? ' ל' + x.member : '') + (x.skipped ? ' (' + x.skipped + ' דולגו — כבר יש להם קופון פתוח על המוצר)' : '') +
+        (x.status === 'active' ? ' — פעילים עד ' + String(x.validTo).split('-').reverse().join('/') : ' — ממתינים לפתיחה בקומקס'), 'ok'); drawCoupons();
     });
     $('cpSave').addEventListener('click', async () => { const x = await api({ action: 'clubCouponPilot', ids: $('cpPilot').value, runNow: true }); say(x.ok ? 'נשמר ✓' + (x.run ? ' · נוצרו ' + x.run.created : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons(); });
     p.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
@@ -539,6 +555,12 @@
       if (!confirm('לסמן שהמבצע נפתח בקומקס? הקופון יוצג ללקוח מיד, לתוקף 7 ימים' + '.')) return;
       const x = await api({ action: 'clubCouponActivate', id: Number(b.dataset.act), comaxCode: cx });
       say(x.ok ? 'הקופון פעיל עד ' + x.validTo.split('-').reverse().join('/') + (x.sms ? ' · SMS: ' + x.sms : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons();
+    }));
+    p.querySelectorAll('[data-bact]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('לסמן שהמבצע נפתח בקומקס לכל הקבוצה? הקופונים יוצגו ללקוחות מיד.')) return;
+      const cx = (p.querySelector('[data-bcx="' + CSS.escape(b.dataset.bact) + '"]') || {}).value || '';
+      const x = await api({ action: 'clubCouponActivateBatch', batch: b.dataset.bact, comaxCode: cx });
+      say(x.ok ? 'הופעלו ' + x.activated + ' קופונים' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons();
     }));
     p.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
       if (!confirm('לבטל את הקופון?')) return;
