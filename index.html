@@ -6,6 +6,7 @@
     <title>סופר סטאר פלוס</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="img.js"></script>
+<script src="cinema.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
@@ -463,12 +464,8 @@
     <!-- HOME -->
     <div id="home" class="page active" role="main">
         <div class="content-wrap">
-            <div class="video-box" role="region" aria-label="סרטון פרסומי">
-                <video autoplay muted loop playsinline controls preload="metadata" poster="https://res.cloudinary.com/dj56w7nb9/video/upload/so_0/v1/promo_video.jpg" aria-label="סרטון פרסומי של סופרסטאר פלוס">
-                    <source src="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4" type="video/mp4">
-                    <p data-i18n="video_fallback">הדפדפן שלך אינו תומך בהצגת וידאו. <a href="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">לחץ להורדת הסרטון</a></p>
-                </video>
-            </div>
+            <!-- 16/10/2026: instead of the store video — a cinematic show of the new products (cinema.js) -->
+            <div class="cin" id="cinema" role="region" aria-label="חדש על המדף — מוצרים חדשים" style="display:none"></div>
             <div class="image-roll-container" id="imageRoll" onclick="showcaseOpen()" tabindex="0" role="button" aria-label="מוצרים חדשים ומבצעים" onkeypress="if(event.key==='Enter') showcaseOpen()" style="display:none">
                 <div class="sc" id="showcase"></div>
             </div>
@@ -1298,7 +1295,8 @@
         const seen = new Set();
         const promos = (window._promoData || []).filter(p => /\/products\//.test(p.url) && !seen.has(p.url) && seen.add(p.url))
             .map(p => ({ kind: 'promo', url: p.url, name: p.desc, price: p.price, was: p.regularPrice, p }));
-        const fresh = (window._newItems || []).map(f => {
+        // 16/10/2026: promos only — the new products have the trailer above (cinema.js)
+        const fresh = [].map(f => {
             const bc = String(f.public_id).split('/').pop(), prod = findProductByBarcode(bc);
             return prod ? { kind: 'new', url: f.url, name: prod.Name || '', price: prod.Price || '', barcode: bc } : null;
         }).filter(Boolean);
@@ -1596,6 +1594,7 @@
 
     window.onload = () => {
         start();
+        cinemaStart();   // the home trailer of the new products (cinema.js)
         setTimeout(loadDynamicImage, 2500);   // the showcase — once the promos and the catalog are in
         initBanner();
         loadA11yPrefs();
