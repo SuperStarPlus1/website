@@ -581,13 +581,35 @@
     p.innerHTML = '<div class="box"><div class="row"><label class="c" style="flex:1 1 220px">חיפוש — שם, טלפון, ת.ז., מייל או עיר<input type="text" id="mQ" value="' + e(mq) + '"></label>' +
       '<button class="btn" id="mGo">🔍 חיפוש</button><button class="btn primary" id="mExp">📥 ייצוא לאקסל</button></div>' +
       '<div class="tabs" style="margin:10px 0 0" id="mModes"><button data-mm="members">✓ עדכנו פרטים</button><button data-mm="all">📋 כל הלקוחות</button><button data-mm="waiting">⏳ טרם עדכנו</button><button data-mm="blocked">🚫 חסומים לדיוור</button></div>' +
-      '<div id="mStats" class="note" style="margin-top:6px"></div></div><div id="mList"><p class="note">טוען…</p></div>';
+      '<div id="mStats" class="note" style="margin-top:6px"></div></div><div id="mMail"></div><div id="mList"><p class="note">טוען…</p></div>';
     $('mModes').querySelectorAll('[data-mm]').forEach((b) => { b.classList.toggle('on', b.dataset.mm === mmode); b.addEventListener('click', () => { mmode = b.dataset.mm; mpage = 0; drawMembers(); }); });
     const go = () => { mq = $('mQ').value.trim(); mpage = 0; list(); };
     $('mGo').addEventListener('click', go);
     $('mQ').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
     $('mExp').addEventListener('click', exportXlsx);
     list();
+    drawMailHealth();
+  }
+
+  /* ---------- 📧 addresses that bounce / complain (club-email-health.ts) ---------- */
+  async function drawMailHealth() {
+    const box = $('mMail');
+    const r = await api({ action: 'clubEmailEvents' });
+    if (!r.ok || !box) return;
+    const ST = { bounced: '↩ חזר (NDR)', complained: '🚫 סומן כספאם' };
+    box.innerHTML = '<details class="box"' + (r.webhook ? '' : ' open') + '><summary style="cursor:pointer;font-weight:700">📧 מיילים לא תקינים (' + r.bad.length + ')' + (r.webhook ? '' : ' — ⚠ החיבור ל-Resend טרם הוגדר') + '</summary>' +
+      '<div class="note" style="margin-top:6px">מייל שחוזר (NDR) או שסומן כספאם — מסומן אוטומטית: לא נשלחים אליו יותר דיוור, ברכות והעתקי קבלות, ובאזור האישי של הלקוח מופיעה בקשה לעדכן את הכתובת. כתובת חדשה בטופס המועדון — חוזרת להיות תקינה.</div>' +
+      (r.webhook ? '<p class="note" style="color:#166534">✓ הדיווחים מ-Resend מחוברים.</p>' :
+        '<div class="note" style="margin-top:8px;background:#fff7ed;padding:8px;border-radius:8px"><b>הגדרה חד-פעמית ב-Resend</b> (מפתח השליחה של המערכת לא מורשה ליצור את זה לבד):<ol style="margin:4px 18px 0;padding:0">' +
+          '<li>להיכנס ל-resend.com ← Webhooks ← Add endpoint.</li><li>Endpoint URL: <code dir="ltr">' + e(r.endpoint) + '</code></li><li>לסמן את האירועים <b>email.bounced</b> ו-<b>email.complained</b> ← Add.</li>' +
+          '<li>להעתיק את ה-Signing secret (מתחיל ב-whsec_) ולהדביק כאן:</li></ol>' +
+          '<div class="row" style="margin-top:6px"><input type="text" id="whSec" dir="ltr" placeholder="whsec_…" style="flex:1 1 260px"><button class="btn primary" id="whSave">חיבור</button></div></div>') +
+      (r.bad.length ? '<table style="margin-top:8px"><tr><th>חבר/ה</th><th>מייל</th><th>מצב</th><th>מתי</th></tr>' + r.bad.map((x) => '<tr><td>' + e(x.first_name + ' ' + x.last_name) + '</td><td dir="ltr">' + e(x.email) + '</td><td>' + e(ST[x.email_status] || x.email_status) +
+        (x.email_bad_reason ? '<div class="note">' + e(x.email_bad_reason) + '</div>' : '') + '</td><td>' + e(x.email_bad_at ? new Date(x.email_bad_at).toLocaleDateString('he-IL') : '') + '</td></tr>').join('') + '</table>' : '') + '</details>';
+    if ($('whSave')) $('whSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubEmailWebhookSetup', secret: $('whSec').value.trim() });
+      say(x.ok ? 'החיבור נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawMailHealth();
+    });
   }
   async function list() {
     if (mmode !== 'members') return listCustomers();
@@ -660,7 +682,7 @@
     if (!r.ok) { box.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
     const m = r.member, row = (k, v, ltr) => '<tr><td class="note" style="width:130px">' + k + '</td><td' + (ltr ? ' dir="ltr" style="text-align:right"' : '') + '><b>' + e(v) + '</b></td></tr>';
     box.innerHTML = '<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">👤 ' + e(m.first_name + ' ' + m.last_name) + '</h4><span><button class="btn primary" id="mArea">👁 האזור האישי שלו</button> <button class="btn" id="mClose">סגירה</button></span></div>' +
-      '<table style="margin-top:8px">' + row('מס׳ כרטיס מועדון', m.card_no || '—', 1) + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email, 1) + row('תאריך לידה', dmy(m.birth_date)) +
+      '<table style="margin-top:8px">' + row('מס׳ כרטיס מועדון', m.card_no || '—', 1) + row('ת.ז.', m.id_number, 1) + row('טלפון', m.phone, 1) + row('מייל', m.email + (m.email_status && m.email_status !== 'ok' ? (m.email_status === 'bounced' ? '  ↩ לא תקין (חזר)' : '  🚫 סומן כספאם') : ''), 1) + row('תאריך לידה', dmy(m.birth_date)) +
         row('כתובת', m.street + ' ' + m.house_no + ', ' + m.city) + row('שפת דיוור', LANG[m.language] || m.language) +
         '<tr><td class="note">דיוור כעת</td><td>מייל ' + yes(m.marketing_email) + ' · SMS ' + yes(m.marketing_sms) + '</td></tr>' + row('הצטרף/ה', dt(m.created_at)) + row('עודכן', dt(m.updated_at)) + '</table>' +
       (r.blocked ? '<div class="warn" style="margin-top:10px">🚫 <b>הלקוח/ה חסם/ה קבלת דיוור</b> — ' + e({ upsend: 'ברשימת החסומים של ספק ה-SMS', site: 'ביקש/ה באתר', office: 'נחסם/ה במשרד' }[r.blocked.source] || r.blocked.source) +
