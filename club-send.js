@@ -31,7 +31,7 @@
   }
   const LINK = '\nלעדכון/הסרה: superstar-plus.co.il/club?i=xxxxxxxx';
   // short on purpose: with the link it stays 2 SMS parts (no emoji — one counts as two characters, and old phones show a box)
-  const DEFAULT_MSG = '{שם}, עדכנו פרטים במועדון סופרסטאר וקבלו מבצעים, הטבות ומתנה ליום ההולדת!';
+  const DEFAULT_MSG = '{שם}, עדכנו פרטים במועדון סופרסטאר וקבלו מבצעים והטבות בלעדיות!';   // 16/10/2026: no birthday gift yet
   const idOk = (raw) => {
     const d = String(raw || '').replace(/\D/g, ''); if (d.length < 5 || d.length > 9) return false;
     const id = d.padStart(9, '0'); let s = 0;
