@@ -3284,6 +3284,7 @@ async function loadSites(){
       if(!confirm('לדווח נוכחות באתר "'+b.dataset.site+'"? יירשם דיווח בודד עם זיכוי זמן נסיעה.')) return;
       b.disabled = true;
       const p = attState.pos || await attGetPos();
+      if(!p){ b.disabled = false; alert(ATT_NOLOC); return; }
       const r2 = await apiPost({ action:'punchSite', username:state.emp.username, password:state.emp.pw,
         site:b.dataset.site, lat:p?p.lat:0, lng:p?p.lng:0 });
       b.disabled = false;
@@ -3383,6 +3384,8 @@ async function attGetPosQuiet(){
   }catch(e){ return undefined; }
   return attGetPos();
 }
+// 16/10/2026: no report without a location — the server refuses it too
+const ATT_NOLOC = '📍 לא ניתן לדווח נוכחות בלי מיקום. יש להפעיל את שירותי המיקום (GPS) בטלפון ולאשר לאפליקציה גישה למיקום, ולנסות שוב. אם אין אפשרות — לפנות למנהל/ת לדיווח ידני.';
 function attGetPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(null);
@@ -3412,7 +3415,7 @@ async function openAtt(){
   attState.pos = await attGetPos();
   document.getElementById('attGps').textContent = attState.pos
     ? '📍 מיקום נקלט (דיוק ~'+attState.pos.acc+' מ׳)'
-    : '⚠ שירותי מיקום כבויים — הדיווח יסומן "ללא מיקום" ויעודכן המנהל';
+    : '⚠ אין מיקום — לא ניתן לדווח. יש להפעיל שירותי מיקום ולאשר לאפליקציה גישה למיקום';
 }
 document.getElementById('myAttBtn').addEventListener('click', openAtt);
 
@@ -3421,10 +3424,11 @@ async function punch(type){
   err.textContent='שולח דיווח…';
   const pos = attState.pos || await attGetPos();
   attState.pos = pos;
+  if(!pos){ err.textContent = ATT_NOLOC; alert(ATT_NOLOC); return; }
   const r = await apiPost({ action:'punch', username:state.emp.username, password:state.emp.pw,
     type, lat: pos?pos.lat:0, lng: pos?pos.lng:0 });
   err.textContent='';
-  if(!r.ok){ err.textContent = r.error||'שגיאה'; return; }
+  if(!r.ok){ err.textContent = r.error||'שגיאה'; toast(r.error||'שגיאה','err'); if(r.noLocation) attState.pos = null; return; }
   if(r.status==='מחוץ לאזור') alert('⚠ הדיווח נקלט ('+r.time+') אך המיקום שלך מחוץ לאזור החנות ('+r.dist+' מ׳). המנהל קיבל עדכון.');
   else if(r.status==='ללא מיקום') toast('הדיווח נקלט ('+r.time+') ללא מיקום — הפעל GPS בפעם הבאה','err');
   else toast(type+' נרשם ✓ '+r.time,'ok');
