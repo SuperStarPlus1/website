@@ -200,6 +200,18 @@
         .image-roll-container { width: 100%; max-width: 800px; margin: 20px auto; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; cursor: pointer; background: transparent; position: relative; }
         .roll-item { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .roll-item img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+        /* the home showcase: one product at a time — new on the shelf and this week's promos (16/10/2026) */
+        .sc { width: 100%; height: 100%; display: flex; align-items: center; gap: 4%; padding: 4% 6%; box-sizing: border-box; background: linear-gradient(135deg, #ffffff, #e6f1fb); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); transition: opacity .45s ease; }
+        .sc.fade { opacity: 0; }
+        .sc .sc-img { flex: 0 0 46%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 14px; }
+        .sc .sc-img img { max-width: 92%; max-height: 92%; object-fit: contain; }
+        .sc .sc-txt { flex: 1; min-width: 0; text-align: start; }
+        .sc .sc-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-weight: bold; font-size: clamp(0.75rem, 2.2vw, 1rem); background: var(--blue); color: #fff; }
+        .sc .sc-badge.promo { background: #d32f2f; }
+        .sc h3 { margin: 12px 0 8px; font-size: clamp(1rem, 3.4vw, 1.7rem); color: #222; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .sc .sc-price { font-size: clamp(1.1rem, 4vw, 2.2rem); font-weight: bold; color: #d32f2f; }
+        .sc .sc-price.reg { color: var(--blue); }
+        .sc .sc-was { font-size: clamp(0.8rem, 2.2vw, 1.1rem); color: #888; text-decoration: line-through; margin-inline-start: 8px; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal-overlay img { max-width: 90%; max-height: 90%; border-radius: 5px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
@@ -460,10 +472,10 @@
                     <p data-i18n="video_fallback">הדפדפן שלך אינו תומך בהצגת וידאו. <a href="https://res.cloudinary.com/dj56w7nb9/video/upload/v1/promo_video.mp4">לחץ להורדת הסרטון</a></p>
                 </video>
             </div>
-            <div class="image-roll-container" id="imageRoll" onclick="openImage(this)" tabindex="0" role="button" aria-label="לחץ להגדלת התמונה" onkeypress="if(event.key==='Enter') openImage(this)">
-                <div class="roll-item"><img src="" alt="מבצעי השבוע" id="img1"></div>
+            <div class="image-roll-container" id="imageRoll" onclick="showcaseOpen()" tabindex="0" role="button" aria-label="מוצרים חדשים ומבצעים" onkeypress="if(event.key==='Enter') showcaseOpen()" style="display:none">
+                <div class="sc" id="showcase"></div>
             </div>
-            <h2 class="section-title" data-i18n="home_promos">🔥 מבצעים לזמן מוגבל</h2>
+            <h2 class="section-title" data-i18n="home_promos">🔥 המבצעים החמים שלנו</h2>
             <div class="slider-wrap" aria-label="מבצעים" role="region">
                 <button class="slider-nav prev"
                     onmousedown="startSlide('prev')" onmouseup="stopSlide()" onmouseleave="stopSlide()"
@@ -895,6 +907,7 @@
             if (tag === 'auto-new') {
                 const r = await fetch('data/new.json', { cache: 'no-cache' });
                 files = ((await r.json()).items || []).map(i => ({ public_id: 'products/' + i.barcode, url: prodImg(i.barcode), created_at: i.since }));
+                window._newItems = files;   // also the home showcase
             } else {
                 const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
                 files = (await r.json()).resources;
@@ -1296,17 +1309,39 @@
         sel.value = curGrp;
     }
 
-    async function loadDynamicImage() {
-        try {
-            const response = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/pictureroll.json`);
-            const data = await response.json();
-            if (data.resources.length > 0) {
-                const randomImg = data.resources[Math.floor(Math.random() * data.resources.length)];
-                const img = document.getElementById('img1');
-                img.src = `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${randomImg.public_id}.${randomImg.format}`;
-                img.alt = "מבצעי השבוע";
-            }
-        } catch (e) {}
+    // The home showcase (16/10/2026, instead of the Cloudinary "pictureroll" pictures): every few seconds one product —
+    // alternately this week's promos (window._promoData, with a product photo) and new on the shelf (data/new.json)
+    let scIdx = -1, scCur = null;
+    function showcaseList() {
+        const seen = new Set();
+        const promos = (window._promoData || []).filter(p => /\/products\//.test(p.url) && !seen.has(p.url) && seen.add(p.url))
+            .map(p => ({ kind: 'promo', url: p.url, name: p.desc, price: p.price, was: p.regularPrice, p }));
+        const fresh = (window._newItems || []).map(f => {
+            const bc = String(f.public_id).split('/').pop(), prod = findProductByBarcode(bc);
+            return prod ? { kind: 'new', url: f.url, name: prod.Name || '', price: prod.Price || '', barcode: bc } : null;
+        }).filter(Boolean);
+        const out = [];
+        for (let i = 0; i < Math.max(promos.length, fresh.length); i++) { if (promos[i]) out.push(promos[i]); if (fresh[i]) out.push(fresh[i]); }
+        return out;
+    }
+    function loadDynamicImage() {
+        const list = showcaseList(), box = document.getElementById('showcase'), wrap = document.getElementById('imageRoll');
+        if (!box || !list.length) return;
+        wrap.style.display = '';
+        scIdx = (scIdx + 1) % list.length; scCur = list[scIdx];
+        const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'], it = scCur, esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const html = '<div class="sc-img"><img src="' + esc(it.url) + '" alt="' + esc(it.name) + '" onerror="imgFallback(this)"></div><div class="sc-txt">' +
+            '<span class="sc-badge' + (it.kind === 'promo' ? ' promo' : '') + '">' + esc(it.kind === 'promo' ? (t.sc_promo || '🔥 מבצע') : (t.sc_new || '🆕 חדש על המדף')) + '</span>' +
+            '<h3>' + esc(it.name) + '</h3>' + (it.price ? '<div class="sc-price' + (it.kind === 'new' ? ' reg' : '') + '">₪' + esc(it.price) +
+            (it.kind === 'promo' && it.was && it.was !== it.price ? '<span class="sc-was">₪' + esc(it.was) + '</span>' : '') + '</div>' : '') + '</div>';
+        box.classList.add('fade');
+        setTimeout(() => { box.innerHTML = html; box.classList.remove('fade'); }, 450);
+    }
+    function showcaseOpen() {
+        if (!scCur) return;
+        const i = scCur.kind === 'promo' ? (window._promoData || []).indexOf(scCur.p) : -1;
+        if (i >= 0) zoomPromoByIdx(i);
+        else zoomProduct(scCur.url, scCur.barcode);
     }
 
     function openImage(container) {
@@ -1580,10 +1615,10 @@
 
     window.onload = () => {
         start();
-        loadDynamicImage();
+        setTimeout(loadDynamicImage, 2500);   // the showcase — once the promos and the catalog are in
         initBanner();
         loadA11yPrefs();
-        setInterval(loadDynamicImage, 8000);
+        setInterval(loadDynamicImage, 5000);
     };
 
 
@@ -1597,7 +1632,7 @@ const TRANSLATIONS = {
         nav_new: "חדש על המדף", nav_about: "אודות", nav_career: "קריירה",
         nav_contact: "צור קשר", nav_club: "⭐ מועדון לקוחות", nav_me: "👤 אזור אישי",
         ticker: "חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772",
-        home_promos: "🔥 מבצעים לזמן מוגבל", home_new: "חדש על המדף",
+        home_promos: "🔥 המבצעים החמים שלנו", sc_new: "🆕 חדש על המדף", sc_promo: "🔥 מבצע", home_new: "חדש על המדף",
         catalog_search_label: "חפש מוצר", catalog_search_ph: "חפש שם מוצר או ברקוד...",
         catalog_cat_label: "בחר קטגוריה", catalog_cat_ph: "כל הקטגוריות...",
         promos_title: "מבצעים", new_title: "חדש על המדף",
@@ -1660,7 +1695,7 @@ const TRANSLATIONS = {
         nav_new: "جديد على الرف", nav_about: "من نحن", nav_career: "وظائف",
         nav_contact: "اتصل بنا", nav_club: "⭐ نادي العملاء", nav_me: "👤 المنطقة الشخصية",
         ticker: "جديد! بطاقة هدايا قابلة للشحن. مناسبة للأعياد أو كهدية. للاستفسار واتساب 049076772",
-        home_promos: "🔥 عروض لفترة محدودة", home_new: "جديد على الرف",
+        home_promos: "🔥 عروضنا الساخنة", sc_new: "🆕 جديد على الرف", sc_promo: "🔥 عرض", home_new: "جديد على الرف",
         catalog_search_label: "ابحث عن منتج", catalog_search_ph: "ابحث باسم المنتج أو الباركود...",
         catalog_cat_label: "اختر فئة", catalog_cat_ph: "جميع الفئات...",
         promos_title: "العروض", new_title: "جديد على الرف",
@@ -1723,7 +1758,7 @@ const TRANSLATIONS = {
         nav_new: "New Arrivals", nav_about: "About", nav_career: "Careers",
         nav_contact: "Contact", nav_club: "⭐ Loyalty Club", nav_me: "👤 My area",
         ticker: "New! Rechargeable gift card — perfect for holidays, employees or a special treat. WhatsApp: 049076772",
-        home_promos: "🔥 Limited Time Deals", home_new: "New Arrivals",
+        home_promos: "🔥 Our Hot Deals", sc_new: "🆕 New on the shelf", sc_promo: "🔥 Deal", home_new: "New Arrivals",
         catalog_search_label: "Search product", catalog_search_ph: "Search by name or barcode...",
         catalog_cat_label: "Select category", catalog_cat_ph: "All categories...",
         promos_title: "Deals & Promotions", new_title: "New Arrivals",
