@@ -96,7 +96,7 @@
     $('lgBack').addEventListener('click', () => { $('lgStep2').hidden = true; $('lgStep1').hidden = false; $('lgCode').value = ''; });
   }
 
-  let tab = 'new', info = null, rows = [], head = [], map = {}, stop = false;
+  let tab = 'send', sendMode = 'mail', info = null, rows = [], head = [], map = {}, stop = false;
   async function open() {
     $('who').textContent = me; $('out').hidden = false;
     $('app').innerHTML = '<p class="note">טוען…</p>';
@@ -106,11 +106,18 @@
   }
   function draw() {
     const b = $('app');
-    b.innerHTML = '<div class="tabs"><button data-t="new">📤 שליחה חדשה</button><button data-t="list">📊 שליחות (' + info.batches.length + ')</button><button data-t="auto">🔄 לקוחות חדשים</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="mail">📣 דיוור ומבצעים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
+    if (tab === 'new' || tab === 'mail') { sendMode = tab; tab = 'send'; }
+    b.innerHTML = '<div class="tabs"><button data-t="send">📣 שליחת הודעות</button><button data-t="list">📊 הזמנות שנשלחו (' + info.batches.length + ')</button><button data-t="auto">🔄 לקוחות חדשים</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="bday">🎂 ברכות</button><button data-t="coupons">🎟 קופונים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
-      '<div id="csP"></div>';
+      '<div id="csMode"></div><div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
-    if (tab === 'new') drawNew(); else if (tab === 'list') drawList(); else if (tab === 'auto') drawAuto(); else if (tab === 'miv') drawMiv(); else if (tab === 'mail') drawMail(); else if (tab === 'members') drawMembers(); else drawWho();
+    if (tab === 'send') {
+      // 16/10/2026: ONE place to send — two kinds that were two separate tabs (and looked the same)
+      $('csMode').innerHTML = '<div class="box" style="padding:10px 12px"><div class="tabs" style="margin:0"><button data-sm="mail">👥 לחברי המועדון — מבצע, הודעה או ברכה</button><button data-sm="new">📨 הזמנה להצטרפות — מקובץ Excel</button></div>' +
+        '<div class="note" style="margin-top:6px">' + (sendMode === 'mail' ? 'נשלח רק לחברי מועדון שמילאו את הטופס ואישרו דיוור, בשפה שבחרו.' : 'לקוחות מהקופה שעוד לא בחברי המועדון: הודעת SMS עם קישור אישי לטופס.') + '</div></div>';
+      $('csMode').querySelectorAll('[data-sm]').forEach((x) => { x.classList.toggle('on', x.dataset.sm === sendMode); x.addEventListener('click', () => { sendMode = x.dataset.sm; draw(); }); });
+      if (sendMode === 'new') drawNew(); else drawMail();
+    } else if (tab === 'list') drawList(); else if (tab === 'auto') drawAuto(); else if (tab === 'miv') drawMiv(); else if (tab === 'bday') drawBday(); else if (tab === 'coupons') drawCoupons(); else if (tab === 'members') drawMembers(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -358,7 +365,11 @@
     const A = r.audience;
     p.innerHTML = '<div class="box"><h4>👥 מי יקבל</h4><div class="note">רק חברי מועדון שמילאו את הטופס ובחרו שפה; לכל ערוץ — רק מי שאישר אותו, ו-SMS לא נשלח למספר חסום.</div>' +
       '<div class="stats"><span>עברית: SMS <b>' + A.he.sms + '</b> · מייל <b>' + A.he.email + '</b></span><span>ערבית: SMS <b>' + A.ar.sms + '</b> · מייל <b>' + A.ar.email + '</b></span></div></div>' +
-      '<div class="box"><h4>✉️ דיוור חדש</h4>' +
+      '<div class="box"><h4>✉️ הודעה חדשה לחברי המועדון</h4>' +
+      '<div class="row" style="gap:16px;margin-bottom:6px"><label style="display:flex;gap:6px;align-items:center"><input type="radio" name="cmKind" value="promo" checked> 🏷️ מבצע / הודעה</label>' +
+        '<label style="display:flex;gap:6px;align-items:center"><input type="radio" name="cmKind" value="greeting"> 🎉 ברכה (חג, אירוע — טקסט חופשי)</label>' +
+        '<label class="c" style="flex:0 1 200px">להציג באזור האישי (ימים)<input type="number" id="cmArea" min="0" max="30" value="0"></label></div>' +
+      '<div class="note" id="cmKindNote"></div>' +
       '<div class="row"><label class="c">שם (לזיהוי)<input type="text" id="cmName" value="מבצעי השבוע — ' + new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) + '"></label>' +
         '<label class="c" style="flex:0 1 220px">שפה — נשלח רק למי שבחר אותה<select id="cmLang"><option value="he">עברית</option><option value="ar">ערבית</option></select></label></div>' +
       '<div class="row" style="margin-top:8px;gap:16px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmSms" checked> SMS</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cmMail"> מייל</label>' +
@@ -374,7 +385,15 @@
         '<button class="btn" id="cmTest">🧪 שליחת בדיקה</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn primary" id="cmCreate">יצירת הדיוור</button><span class="note" id="cmAud"></span></div></div>' +
       '<div id="cmList"></div>';
-    const vals = () => ({ name: $('cmName').value.trim(), lang: $('cmLang').value, sendSms: $('cmSms').checked, sendEmail: $('cmMail').checked,
+    const kindNow = () => (document.querySelector('[name=cmKind]:checked') || {}).value || 'promo';
+    document.querySelectorAll('[name=cmKind]').forEach((x) => x.addEventListener('change', () => {
+      const g = kindNow() === 'greeting';
+      $('cmArea').value = g ? 5 : 0;
+      if (g) { $('cmLinkOn').checked = false; $('cmImg').value = ''; if (/^מבצעי השבוע/.test($('cmName').value)) $('cmName').value = 'ברכת חג — ' + new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }); }
+      $('cmKindNote').textContent = g ? 'ברכה: במייל — כותרת גדולה (נושא המייל) ומעוצבת; באזור האישי — כרטיס ברכה בימים שנבחרו. {שם} בטקסט יוחלף בשם הלקוח. גם ברכה נשלחת עם "פרסומת" וקישור הסרה (חובה לפי חוק).' : '';
+      refresh();
+    }));
+    const vals = () => ({ kind: kindNow(), areaDays: Number($('cmArea').value) || 0, name: $('cmName').value.trim(), lang: $('cmLang').value, sendSms: $('cmSms').checked, sendEmail: $('cmMail').checked,
       smsText: $('cmSmsText').value.trim(), emailSubject: $('cmSubj').value.trim(), emailText: $('cmMailText').value.trim(),
       linkUrl: $('cmLinkOn').checked ? $('cmLink').value.trim() : '', imageUrl: $('cmImg').value.trim() });
     const refresh = () => {
@@ -442,6 +461,61 @@
     lst.querySelectorAll('[data-cdel]').forEach((b) => b.addEventListener('click', async () => {
       if (!confirm('למחוק את הדיוור?')) return;
       const x = await api({ action: 'clubCampaignDelete', id: Number(b.dataset.cdel) }); say(x.ok ? 'נמחק' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawMail();
+    }));
+  }
+
+  /* ---------- 🎂 the birthday greeting, automatic (club-greetings.ts) ---------- */
+  async function drawBday() {
+    const p = $('csP');
+    p.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubBdaySettings' });
+    if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const S = r.settings, ta = (id, label, rows, max) => '<label class="c" style="margin-top:8px">' + label + '<textarea id="' + id + '" rows="' + rows + '" maxlength="' + max + '">' + e(S[id]) + '</textarea></label>';
+    const inp = (id, label) => '<label class="c" style="margin-top:8px">' + label + '<input type="text" id="' + id + '" maxlength="150" value="' + e(S[id]) + '"></label>';
+    p.innerHTML = '<div class="box"><h4>🎂 ברכת יום הולדת אוטומטית</h4>' +
+      '<div class="note">כל יום מ-09:00 — לחברי המועדון שיום ההולדת שלהם היום ואישרו דיוור: SMS (למי שאישר SMS) ומייל מעוצב (למי שאישר מייל), פעם בשנה, בשפה שבחרו. עם "פרסומת" וקישור הסרה. באזור האישי הברכה מוצגת כל חודש יום ההולדת. {שם} = השם הפרטי. החודש: <b>' + r.thisMonth + '</b> חוגגים שאישרו דיוור.</div>' +
+      '<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" id="bdOn"' + (S.club_bday_on === 'on' ? ' checked' : '') + '> שליחה אוטומטית פעילה</label>' +
+      '<div class="row" style="gap:14px;align-items:flex-start"><div class="c" style="flex:1 1 300px"><b>עברית</b>' + ta('club_bday_sms_he', 'SMS', 3, 300) + inp('club_bday_subject_he', 'כותרת המייל וכרטיס הברכה') + ta('club_bday_mail_he', 'תוכן המייל וכרטיס הברכה', 4, 2000) + '</div>' +
+        '<div class="c" style="flex:1 1 300px"><b>ערבית</b>' + ta('club_bday_sms_ar', 'SMS', 3, 300) + inp('club_bday_subject_ar', 'כותרת המייל וכרטיס הברכה') + ta('club_bday_mail_ar', 'תוכן המייל וכרטיס הברכה', 4, 2000) + '</div></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn primary" id="bdSave">💾 שמירה</button></div>' +
+      '<div class="row" style="margin-top:10px"><label class="c">בדיקה — טלפון<input type="tel" id="bdTPh" dir="ltr" placeholder="05X-XXXXXXX"></label><label class="c">בדיקה — מייל<input type="email" id="bdTMail" dir="ltr"></label>' +
+        '<label class="c" style="flex:0 1 140px">שפה<select id="bdTLang"><option value="he">עברית</option><option value="ar">ערבית</option></select></label><button class="btn" id="bdTest">🧪 שליחת בדיקה</button></div></div>' +
+      '<div class="box"><h4>נשלחו השנה (' + r.sent.length + ')</h4>' + (r.sent.length ? '<table><tr><th>חבר/ה</th><th>מתי</th><th>SMS</th><th>מייל</th></tr>' + r.sent.map((x) => '<tr><td>' + e(x.name) + '</td><td>' + e(new Date(x.at).toLocaleDateString('he-IL')) + '</td><td>' + e(x.sms || '') + '</td><td>' + e(x.email || '') + '</td></tr>').join('') + '</table>' : '<p class="note">עוד לא נשלחו.</p>') + '</div>';
+    const vals = () => { const o = { club_bday_on: $('bdOn').checked ? 'on' : 'off' }; ['club_bday_sms_he', 'club_bday_sms_ar', 'club_bday_subject_he', 'club_bday_subject_ar', 'club_bday_mail_he', 'club_bday_mail_ar'].forEach((k) => { o[k] = $(k).value.trim(); }); return o; };
+    $('bdSave').addEventListener('click', async () => { const x = await api({ action: 'clubBdaySave', ...vals() }); say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); });
+    $('bdTest').addEventListener('click', async () => {
+      const x = await api({ action: 'clubBdayTest', ...vals(), lang: $('bdTLang').value, phone: $('bdTPh').value.trim(), email: $('bdTMail').value.trim() });
+      say(x.ok ? 'בדיקה — SMS: ' + x.sms + ' · מייל: ' + x.email : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
+  }
+
+  /* ---------- 🎟 the coupons (club-coupons.ts) ---------- */
+  async function drawCoupons() {
+    const p = $('csP');
+    p.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubCoupons' });
+    if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const ST = { pending: '⏳ ממתין לפתיחה בקומקס', active: '✅ פעיל', used: '🛒 נוצל', expired: '⌛ פג', cancelled: '✖ בוטל' };
+    const why = { return: 'מוצר שקונה הרבה', winback: 'לא קנה ' + r.winbackDays + ' יום — חלון + SMS' };
+    const row = (c) => '<tr><td>' + e(c.member) + '<div class="note">' + e(c.card || '') + '</div></td><td><b>' + e(c.name) + '</b><div class="note" dir="ltr">' + e(c.barcode) + '</div></td><td>' + e(c.percent) + '%</td><td>' + e(why[c.reason] || c.reason) + '</td>' +
+      '<td>' + e(ST[c.status] || c.status) + (c.valid_to ? '<div class="note">עד ' + e(c.valid_to.split('-').reverse().join('/')) + '</div>' : '') + (c.sms_status ? '<div class="note">SMS: ' + e(c.sms_status) + '</div>' : '') + '</td><td>' +
+      (c.status === 'pending' ? '<input type="text" placeholder="מס׳ מבצע בקומקס" data-cx="' + c.id + '" style="width:120px"> <button class="btn primary" data-act="' + c.id + '">נפתח בקומקס ✓</button> ' : '') +
+      (c.status === 'pending' || c.status === 'active' ? '<button class="btn" data-cancel="' + c.id + '">ביטול</button>' : '') + '</td></tr>';
+    const pend = r.coupons.filter((c) => c.status === 'pending'), rest = r.coupons.filter((c) => c.status !== 'pending');
+    p.innerHTML = '<div class="box"><h4>🎟 קופונים לחברי המועדון</h4><div class="note">' + r.percent + '% על מוצר אחד שהלקוח קונה (לא מוצר שכבר במבצע), ' + r.days + ' ימים. המערכת מציעה כל בוקר; כדי שהקופה תכבד — פותחים בקומקס מבצע לקבוצת הלקוחות של הלקוח על המוצר, ומסמנים כאן "נפתח בקומקס" — רק אז הלקוח רואה את הקופון באזור האישי (ולקוח שלא קנה ' + r.winbackDays + ' יום מקבל גם חלון קופץ ו-SMS).</div>' +
+      '<div class="row" style="margin-top:8px"><label class="c">בפיילוט — מספרי ת"ז (פסיק בין מספרים)<input type="text" id="cpPilot" dir="ltr" value="' + e(r.pilot || '') + '"></label><button class="btn" id="cpSave">💾 שמירה והרצה עכשיו</button></div></div>' +
+      '<div class="box"><h4>⏳ לפתוח בקומקס (' + pend.length + ')</h4>' + (pend.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + pend.map(row).join('') + '</table>' : '<p class="note">אין קופונים שממתינים.</p>') + '</div>' +
+      '<div class="box"><h4>קופונים (' + rest.length + ')</h4>' + (rest.length ? '<table><tr><th>לקוח</th><th>מוצר</th><th>הנחה</th><th>למה</th><th>מצב</th><th></th></tr>' + rest.map(row).join('') + '</table>' : '<p class="note">עוד אין.</p>') + '</div>';
+    $('cpSave').addEventListener('click', async () => { const x = await api({ action: 'clubCouponPilot', ids: $('cpPilot').value, runNow: true }); say(x.ok ? 'נשמר ✓' + (x.run ? ' · נוצרו ' + x.run.created : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons(); });
+    p.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
+      const cx = (p.querySelector('[data-cx="' + b.dataset.act + '"]') || {}).value || '';
+      if (!confirm('לסמן שהמבצע נפתח בקומקס? הקופון יוצג ללקוח מיד, לתוקף 7 ימים' + '.')) return;
+      const x = await api({ action: 'clubCouponActivate', id: Number(b.dataset.act), comaxCode: cx });
+      say(x.ok ? 'הקופון פעיל עד ' + x.validTo.split('-').reverse().join('/') + (x.sms ? ' · SMS: ' + x.sms : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons();
+    }));
+    p.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('לבטל את הקופון?')) return;
+      await api({ action: 'clubCouponCancel', id: Number(b.dataset.cancel) }); drawCoupons();
     }));
   }
 
