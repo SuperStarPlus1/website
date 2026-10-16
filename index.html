@@ -740,6 +740,29 @@
     function getCsvUrl(lang)    { return SHEET_URLS.products[lang] || SHEET_URLS.products.he; }
     function getOffersUrl(lang) { return SHEET_URLS.offers[lang]   || SHEET_URLS.offers.he; }
 
+    // 16/10/2026: the catalog and the promotions come from the main register through Supabase, published as files on
+    // this site (data/products-<lang>.json, data/promos-<lang>.json — {cols, rows}). dataParse() takes the sheet's URL
+    // (as Papa.parse did), loads the matching file and gives the same rows ({column: text}); if the file cannot be read,
+    // it falls back to the Google Sheet by itself — the page never stays empty.
+    function dataFileFor(url) {
+        for (const kind of ['products', 'offers'])
+            for (const lang of ['he', 'ar', 'en'])
+                if (SHEET_URLS[kind][lang] === url) return '/data/' + (kind === 'offers' ? 'promos' : 'products') + '-' + lang + '.json';
+        return null;
+    }
+    function dataParse(url, opts) {
+        const file = dataFileFor(url);
+        if (!file) return Papa.parse(url, opts);
+        fetch(file + '?v=' + Math.floor(Date.now() / 600000))   // a fresh copy every 10 minutes
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(j => {
+                if (!j || !Array.isArray(j.cols) || !Array.isArray(j.rows) || !j.rows.length) throw new Error('empty');
+                const data = j.rows.map(row => { const o = {}; j.cols.forEach((c, i) => { o[c] = row[i] == null ? '' : String(row[i]); }); return o; });
+                opts.complete && opts.complete({ data });
+            })
+            .catch(e => { console.warn('data file', file, e && e.message, '→ the Google Sheet'); Papa.parse(url, opts); });
+    }
+
     let allItems = [];
     let curCat = "הכל";
     let limit = 20;
@@ -1181,7 +1204,7 @@
         loadCloud('auto-new', 'new-full', 'grid', false);
         loadCloud('jobs', 'jobs-grid', 'grid', false);
 
-        Papa.parse(getCsvUrl('he'), {
+        dataParse(getCsvUrl('he'), {
             download: true, header: true, complete: r => {
                 allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
                 if (allItems.length === 0) { console.error("לא נמצאו מוצרים!"); return; }
@@ -1202,7 +1225,7 @@
                 loadCloud('auto-new', 'new-home', 'grid', false);
                 loadCloud('auto-new', 'new-full', 'grid', false);
 
-                Papa.parse(getOffersUrl(currentLang), {
+                dataParse(getOffersUrl(currentLang), {
                     download: true, header: true, skipEmptyLines: true,
                     complete: r2 => {
                         const offers = r2.data.filter(o => o.Barcode && o.Barcode.trim() !== "");
@@ -1815,7 +1838,7 @@ async function setLang(lang) {
     showTranslateSpinner(lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'טוען...');
 
     // טען קטלוג + מבצעים בשפה הנכונה
-    Papa.parse(getCsvUrl(lang), {
+    dataParse(getCsvUrl(lang), {
         download: true, header: true,
         complete: r => {
             allItems = r.data.filter(x => x.Barcode && x.Barcode.trim() !== '');
@@ -1832,7 +1855,7 @@ async function setLang(lang) {
             render(allItems);
 
             // טען מבצעים בשפה הנכונה
-            Papa.parse(getOffersUrl(lang), {
+            dataParse(getOffersUrl(lang), {
                 download: true, header: true, skipEmptyLines: true,
                 complete: r2 => {
                     hideTranslateSpinner();
