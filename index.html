@@ -454,9 +454,6 @@
 </header>
 
 <!-- ── News Ticker ── -->
-<div class="news-ticker" role="marquee" aria-live="off" aria-label="חדשות ועדכונים">
-    <div class="ticker-content" data-i18n="ticker">חדש! כרטיס מתנה נטען. מתאים לחגים, וועדי עובדים או סתם כמתנה מפנקת. לפרטים וואטספ 049076772</div>
-</div>
 
 <!-- ══════════════════════════════════════════
      MAIN CONTENT
@@ -704,12 +701,12 @@
 </div>
 
 <!-- ── Club Banner ── -->
-<div id="club-banner" role="alertdialog" aria-live="polite" aria-label="מועדון לקוחות">
+<div id="club-banner" role="alertdialog" aria-live="polite" aria-label="המבצעים">
     <div class="banner-text" data-i18n="banner_text">
-        🎁 הצטרפו למועדון לקוחות סופרסטאר ו<span data-i18n="banner_span">קבלו סל קניות 41 במתנה!</span>
+        הגעת הספקת!! חבל לא להגיע. <span>המבצעים בתוקף עד התאריך המפורסם!</span> ט.ל.ח.
     </div>
     <div class="banner-actions">
-        <button class="banner-btn" onclick="nav('club-page'); closeBanner()" data-i18n="banner_btn">הצטרפו עכשיו</button>
+        <button class="banner-btn" onclick="nav('promos-page'); closeBanner()" data-i18n="banner_btn">למבצעים</button>
         <button class="banner-close" onclick="closeBanner()" aria-label="סגור באנר"><span aria-hidden="true">✕</span></button>
     </div>
 </div>
@@ -1415,13 +1412,12 @@
 
     function closeBanner() {
         document.getElementById('club-banner').classList.add('hidden');
-        try { localStorage.setItem('club-banner-closed', '1'); } catch(e) {}
+        try { localStorage.setItem('promo-banner-closed', '1'); } catch(e) {}
     }
 
     function initBanner() {
         try {
-            if (localStorage.getItem('club-registered') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
-            if (localStorage.getItem('club-banner-closed') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
+            if (localStorage.getItem('promo-banner-closed') === '1') { document.getElementById('club-banner').classList.add('hidden'); return; }
         } catch(e) {}
         setTimeout(() => {
             document.getElementById('club-banner').style.display = 'flex';
@@ -1679,8 +1675,8 @@ const TRANSLATIONS = {
         cw_desc: "בכל קנייה מעל <strong>₪300</strong> — חברי המועדון מקבלים שובר לשטיפת רכב חיצונית מלאה, בחינם לגמרי!",
         cw_cta: "קנו מעל ₪300 ← קבלו שובר שטיפה 🚗✨",
         club_form_title: "🚀 הצטרפו עכשיו — בחינם!", club_join_p: "לקוחות קיימים וחדשים: מזינים תעודת זהות ונייד, מקבלים קוד ב-SMS — ומשלימים את הפרטים. לקוחות קיימים יקבלו את הפרטים שכבר רשומים אצלנו בקופה.", club_join_btn: "הצטרפות / כניסה למועדון ←", nav_staff: "🔐 כניסת עובדים",
-        banner_text: "🎁 הצטרפו למועדון לקוחות סופרסטאר ו", banner_span: "קבלו סל קניות 41 במתנה!",
-        banner_btn: "הצטרפו עכשיו",
+        banner_text: "הגעת הספקת!! חבל לא להגיע. <span>המבצעים בתוקף עד התאריך המפורסם!</span> ט.ל.ח.",
+        banner_btn: "למבצעים",
         video_fallback: "הדפדפן שלך אינו תומך בהצגת וידאו.",
         promo_showing: "מציג {n} מוצרים", promo_regular: "מחיר רגיל: ₪", promo_unit: "מחיר ליח' במבצע:",
         promo_kg: 'מחיר ק"ג במבצע:', promo_valid: "בתוקף עד:", barcode_label: "ברקוד:",
@@ -1742,8 +1738,8 @@ const TRANSLATIONS = {
         cw_desc: "مع كل عملية شراء تتجاوز <strong>₪300</strong> — يحصل أعضاء النادي على قسيمة غسيل سيارة خارجي كامل، مجاناً تماماً!",
         cw_cta: "اشترِ فوق ₪300 ← احصل على قسيمة غسيل 🚗✨",
         club_form_title: "🚀 انضم الآن — مجاناً!", club_join_p: "زبائن حاليون وجدد: أدخلوا رقم الهوية والهاتف، استلموا رمزًا برسالة SMS — وأكملوا التفاصيل. الزبائن الحاليون سيجدون التفاصيل المسجلة لدينا في الصندوق.", club_join_btn: "الانضمام / الدخول إلى النادي ←", nav_staff: "🔐 دخول الموظفين",
-        banner_text: "🎁 انضم لنادي عملاء سوبر ستار و", banner_span: "احصل على سلة تسوق ₪41 هدية!",
-        banner_btn: "انضم الآن",
+        banner_text: "وصلت لحقت!! حرام ما تيجي. <span>العروض سارية حتى التاريخ المُعلن!</span> الخطأ وارد.",
+        banner_btn: "إلى العروض",
         video_fallback: "متصفحك لا يدعم تشغيل الفيديو.",
         promo_showing: "عرض {n} منتجاً", promo_regular: "السعر العادي: ₪", promo_unit: "سعر الوحدة في العرض:",
         promo_kg: "سعر الكيلو في العرض:", promo_valid: "صالح حتى:", barcode_label: "الباركود:",
@@ -1805,8 +1801,8 @@ const TRANSLATIONS = {
         cw_desc: "On every purchase over <strong>₪300</strong> — club members receive a full exterior car wash voucher, completely free!",
         cw_cta: "Buy over ₪300 ← Get a car wash voucher 🚗✨",
         club_form_title: "🚀 Join now — it's free!", club_join_p: "Existing and new customers: enter your ID and mobile number, get an SMS code — and complete your details.", club_join_btn: "Join / sign in to the club →", nav_staff: "🔐 Staff login",
-        banner_text: "🎁 Join the Super Star loyalty club and ", banner_span: "get a ₪41 shopping basket as a gift!",
-        banner_btn: "Join now",
+        banner_text: "Come in and grab it!! Don't miss out. <span>Deals valid until the published date!</span> E&amp;OE.",
+        banner_btn: "See deals",
         video_fallback: "Your browser does not support video playback.",
         promo_showing: "Showing {n} products", promo_regular: "Regular price: ₪", promo_unit: "Unit deal price:",
         promo_kg: "Price per kg:", promo_valid: "Valid until:", barcode_label: "Barcode:",
