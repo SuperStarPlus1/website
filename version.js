@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.83',
+  version: '2.16.84',
   date: '17/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'מועדון: "חבר/ה מ-" הוסר מהאזור האישי — תאריך ההצטרפות האמיתי קיים רק בענן של קומקס, לא בקופות',
     'מועדון: תאריך ההצטרפות באזור האישי — לפי תוקף כרטיס המועדון בקומקס (10 שנים מההצטרפות), כי "תאריך התחלה" ריק בקופה',
     'מועדון: "חבר/ה מ-" באזור האישי — תאריך ההצטרפות בקומקס (ולא היום שבו מולא הטופס באתר)',
     'אתר החנות: המוצרים שלא מוצגים באתר נקבעים לפי מחלקות בקומקס — 10011 ו-220 (סיגריות וטבק); הרשימה מתעדכנת מהקופה כל לילה',
