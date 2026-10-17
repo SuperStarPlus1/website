@@ -537,12 +537,14 @@
       '<label class="c" style="margin-top:12px">מידע על החנות — מה שהנציג יודע (שעות, טלפון, מחלקות, חגים, משלוחים…). כל שינוי כאן נכנס לתשובות מיד.<textarea id="chKnow" rows="11" maxlength="6000">' + e(r.knowledge) + '</textarea></label>' +
       '<div class="note">את מבצעי השבוע, המחירים ותקנון המועדון הנציג קורא לבד מהמערכת ומהאתר — אין צורך לכתוב אותם כאן.</div>' +
       '<div class="row" style="margin-top:8px"><button class="btn primary" id="chSave">💾 שמירה</button></div></div>' +
+      '<div class="box" id="waBox" style="border:2px solid #25D366"><p class="note">טוען את מצב הוואטסאפ…</p></div>' +
       '<div class="box"><h4>🧪 בדיקה</h4><div class="note">שאלה לנציג כמו לקוח לא מחובר (גם כשהנציג כבוי באתר). מראה גם כמה עלתה התשובה.</div>' +
         '<div class="row" style="margin-top:6px"><label class="c">שאלה<input type="text" id="chQ" maxlength="600" value="מה המבצעים על שתייה השבוע?"></label>' +
         '<label class="c" style="flex:0 1 120px">שפה<select id="chL"><option value="he">עברית</option><option value="ar">ערבית</option></select></label><button class="btn" id="chTest"' + (r.connected ? '' : ' disabled') + '>שאל</button></div>' +
         '<div id="chA" style="white-space:pre-wrap;margin-top:8px"></div></div>' +
       '<div class="box"><h4>לפי ימים</h4>' + (r.days.length ? '<table><tr><th>יום</th><th>שיחות</th><th>שאלות</th><th>מחוברים</th><th>עלות</th></tr>' +
         r.days.map((d) => '<tr><td>' + e(d.day.split('-').reverse().join('/')) + '</td><td>' + d.chats + '</td><td>' + d.msgs + '</td><td>' + d.signed_in + '</td><td dir="ltr">' + usd(d.usd) + '</td></tr>').join('') + '</table>' : '<p class="note">עוד אין שימוש.</p>') + '</div>';
+    drawWa();
     $('chConnect').addEventListener('click', async () => {
       const k = $('chKey').value.trim(); if (!k) return say('הדביקו את המפתח', 'err');
       $('chConnect').disabled = true;
@@ -567,6 +569,66 @@
       const x = await api({ action: 'clubChatTest', question: $('chQ').value, uiLang: $('chL').value });
       $('chTest').disabled = false;
       $('chA').innerHTML = x.ok ? e(x.answer) + '<div class="note" style="margin-top:6px">עלות התשובה: כ-$' + Number(x.usd || 0).toFixed(4) + '</div>' : '<span class="bad">' + e(x.error || 'שגיאה') + '</span>';
+    });
+  }
+
+  /* ---------- 🟢 the agent on WhatsApp (club-wa.ts) — Meta's Embedded Signup, the number stays in the Business app ---------- */
+  let waIds = {};
+  window.addEventListener('message', (ev) => {   // the Facebook window tells which WhatsApp account and number were chosen
+    if (!/(^|\.)facebook\.com$/.test(new URL(ev.origin).hostname)) return;
+    try { const d = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data; if (d && d.type === 'WA_EMBEDDED_SIGNUP' && d.data) waIds = { wabaId: d.data.waba_id || '', phoneId: d.data.phone_number_id || '' }; } catch (e) {}
+  });
+  function fbSdk(appId, v) {
+    return new Promise((ok, no) => {
+      if (window.FB) return ok(window.FB);
+      window.fbAsyncInit = () => { window.FB.init({ appId, autoLogAppEvents: true, xfbml: false, version: v }); ok(window.FB); };
+      const sc = document.createElement('script'); sc.src = 'https://connect.facebook.net/he_IL/sdk.js'; sc.async = true; sc.crossOrigin = 'anonymous';
+      sc.onerror = () => no(new Error('Facebook לא נטען')); document.head.appendChild(sc);
+    });
+  }
+  async function drawWa() {
+    const box = $('waBox'); if (!box) return;
+    const w = await api({ action: 'clubWaInfo' });
+    if (!w.ok) { box.innerHTML = '<p class="bad">' + e(w.error || 'שגיאה') + '</p>'; return; }
+    box.innerHTML = '<h4>🟢 הנציג בוואטסאפ של החנות</h4>' +
+      '<div class="note">הנציג עונה ללקוחות שכותבים למספר של החנות — אותו ידע ואותם מבצעים כמו באתר, בלי מידע אישי. המספר נשאר באפליקציית WhatsApp Business בטלפון, ' +
+        'ואפשר להמשיך לענות משם כרגיל: <b>כשמישהו מהצוות עונה ללקוח מהטלפון, הנציג שותק מול הלקוח הזה</b> למשך שעות השקט. גם לקוח שמבקש נציג אנושי, או שולח תמונה / הקלטה — מקבל תשובה קצרה, והנציג עובר לשקט.</div>' +
+      (w.connected
+        ? '<div class="row" style="margin-top:10px;align-items:center"><b>🟢 מחובר: <span dir="ltr">' + e(w.display) + '</span>' + (w.name ? ' · ' + e(w.name) : '') + '</b><button class="btn" id="waOff">ניתוק</button></div>' +
+          '<label style="display:flex;gap:8px;align-items:center;margin:10px 0 4px;font-weight:700"><input type="checkbox" id="waOn"' + (w.on ? ' checked' : '') + '> הנציג עונה בוואטסאפ</label>' +
+          '<div class="row"><label class="c" style="flex:0 1 220px">שעות שקט אחרי תשובה של הצוות<input type="number" id="waPause" min="1" max="168" value="' + e(w.pauseHours) + '"></label><button class="btn primary" id="waSave">💾 שמירה</button>' +
+          '<span class="note" style="flex:1 1 220px">ב-24 השעות האחרונות: ' + w.day.customers + ' לקוחות כתבו · ' + w.day.answers + ' תשובות של הנציג · ' + w.day.paused + ' בשקט (הצוות מטפל)</span></div>'
+        : (!w.appReady ? '<div class="warn">אפליקציית Meta של המערכת לא מוגדרת.</div>' :
+          '<details open style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">חיבור — פעם אחת</summary><ol class="note" style="margin:6px 0">' +
+            '<li>ב-<a href="https://developers.facebook.com/apps/' + e(w.appId) + '/" target="_blank" rel="noopener">האפליקציה של סופרסטאר ב-Meta</a>: <b>Add product → WhatsApp</b> (אם עוד לא נוסף).</li>' +
+            '<li>שם: <b>Facebook Login for Business → Settings</b> — ב-"Allowed Domains for the JavaScript SDK" להוסיף <span dir="ltr">https://www.superstar-plus.co.il</span>.</li>' +
+            '<li>שם: <b>Facebook Login for Business → Configurations → Create</b>, לבחור <b>WhatsApp Embedded Signup</b>, לשמור, ולהעתיק את ה-<b>Configuration ID</b> לכאן:</li></ol>' +
+            '<div class="row"><label class="c" style="flex:0 1 260px">Configuration ID<input type="text" id="waCfg" dir="ltr" value="' + e(w.configId) + '"></label><button class="btn" id="waCfgSave">שמירה</button></div>' +
+            '<ol class="note" start="4" style="margin:8px 0"><li>"חיבור וואטסאפ" → בחלון של Meta: להתחבר עם הפייסבוק של העסק, ולבחור <b>חיבור אפליקציית WhatsApp Business קיימת</b> עם המספר של החנות.</li>' +
+            '<li>Meta תציג קוד QR — לסרוק אותו <b>מאפליקציית WhatsApp Business בטלפון של החנות</b> (ההודעה תופיע שם). זהו — המספר נשאר בטלפון כרגיל.</li></ol>' +
+            '<button class="btn primary" id="waGo"' + (w.configId ? '' : ' disabled') + '>🟢 חיבור וואטסאפ</button></details>'));
+    if ($('waCfgSave')) $('waCfgSave').addEventListener('click', async () => { const x = await api({ action: 'clubWaSave', configId: $('waCfg').value.trim() }); say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawWa(); });
+    if ($('waGo')) $('waGo').addEventListener('click', async () => {
+      let FB; try { FB = await fbSdk(w.appId, w.graphVersion); } catch (err) { return say(err.message, 'err'); }
+      waIds = {};
+      FB.login((resp) => {
+        const code = resp && resp.authResponse && resp.authResponse.code;
+        if (!code) return say('החיבור בוטל או לא הושלם', 'err');
+        setTimeout(async () => {   // the account / number message may come a moment after
+          const x = await api({ action: 'clubWaConnect', code, wabaId: waIds.wabaId, phoneId: waIds.phoneId });
+          if (!x.ok) return say(x.error || 'שגיאה', 'err');
+          say('מחובר ✓ ' + (x.display || '') + ' — סמנו "הנציג עונה בוואטסאפ" כדי להפעיל', 'ok'); drawWa();
+        }, 1500);
+      }, { config_id: w.configId, response_type: 'code', override_default_response_type: true,
+        extras: { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' } });
+    });
+    if ($('waSave')) $('waSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubWaSave', on: $('waOn').checked, pauseHours: $('waPause').value });
+      say(x.ok ? 'נשמר ✓' + ($('waOn').checked ? ' — הנציג עונה בוואטסאפ' : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawWa();
+    });
+    if ($('waOff')) $('waOff').addEventListener('click', async () => {
+      if (!confirm('לנתק את הנציג מהוואטסאפ? המספר נשאר באפליקציה בטלפון כרגיל.')) return;
+      const x = await api({ action: 'clubWaDisconnect' }); say(x.ok ? 'נותק' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawWa();
     });
   }
 
