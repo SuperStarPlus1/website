@@ -213,7 +213,16 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
   };
   // the staff's look (club-send → a member's card): club-me?view=<token> — this session only, never kept, nothing changed
   const VIEW = (new URLSearchParams(location.search).get('view') || '').toLowerCase();
-  if (/^[0-9a-f]{64}$/.test(VIEW)) { const real = store.get; store.get = (k) => k === 'ss_club_s' ? VIEW : real(k); store.set = () => {}; }
+  const realStore = { get: store.get, set: store.set };
+  let viewMode = /^[0-9a-f]{64}$/.test(VIEW);
+  if (viewMode) { store.get = (k) => k === 'ss_club_s' ? VIEW : realStore.get(k); store.set = () => {}; }
+  // 17/10/2026: a staff view link (?view=, 30 minutes) that expired — back to a normal page, or a customer's own sign-in
+  // on it was never kept (the expired view token was used again → the sign-in screen, over and over)
+  function leaveView() {
+    if (!viewMode) return;
+    viewMode = false; store.get = realStore.get; store.set = realStore.set;
+    try { const u = new URL(location.href); u.searchParams.delete('view'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+  }
   let ui = new URLSearchParams(location.search).get('lang') === 'ar' || store.get('ss_club_lang') === 'ar' ? 'ar' : 'he';
   let me = null, idNumber = '', phone = '', timer = null;
   const api = async (body) => {
@@ -271,6 +280,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const r = await api({ action: 'clubAppVerify', idNumber, code });
     $('bCode').disabled = false;
     if (!r.ok) { $('mCode').className = 'msg err'; $('mCode').textContent = r.error || I[ui].net; return; }
+    leaveView();
     store.set('ss_club_s', r.s);
     await load();
   });
@@ -382,7 +392,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const s = store.get('ss_club_s');
     if (!s) { show('stepId'); return; }
     const r = await api({ action: 'clubAppMe', s });
-    if (!r.ok) { if (r.signIn) store.set('ss_club_s', null); show('stepId'); return; }
+    if (!r.ok) { if (r.signIn) { leaveView(); store.set('ss_club_s', null); } show('stepId'); return; }
     me = r;
     if (!r.open) {
       show('stepForm'); $('formH').textContent = I[ui].formH(r.firstName);
