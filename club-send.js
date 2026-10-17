@@ -599,7 +599,12 @@
           '<div class="row"><label class="c" style="flex:0 1 220px">שעות שקט אחרי תשובה של הצוות<input type="number" id="waPause" min="1" max="168" value="' + e(w.pauseHours) + '"></label><button class="btn primary" id="waSave">💾 שמירה</button>' +
           '<span class="note" style="flex:1 1 220px">ב-24 השעות האחרונות: ' + w.day.customers + ' לקוחות כתבו · ' + w.day.answers + ' תשובות של הנציג · ' + w.day.paused + ' בשקט (הצוות מטפל)</span></div>'
         : (!w.appReady ? '<div class="warn">אפליקציית Meta של המערכת לא מוגדרת.</div>' :
-          '<details open style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">חיבור — פעם אחת</summary><ol class="note" style="margin:6px 0">' +
+          '<details open style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">חיבור — פעם אחת</summary>' +
+            '<div class="note" style="margin:6px 0"><b>אפליקציית Meta לוואטסאפ:</b> ' + (w.ownApp ? '<span dir="ltr">' + e(w.appId) + '</span> ✓' : 'עדיין של המערכת (<span dir="ltr">' + e(w.appId) + '</span>)') +
+              ' — אפליקציה חדשה: ב-<a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">developers.facebook.com</a> → האפליקציה → <b>App settings → Basic</b>: מעתיקים את <b>App ID</b> ואת <b>App Secret</b> (לחיצה על Show).</div>' +
+            '<div class="row"><label class="c" style="flex:0 1 220px">App ID<input type="text" id="waAppId" dir="ltr" autocomplete="off" value="' + (w.ownApp ? e(w.appId) : '') + '"></label>' +
+              '<label class="c" style="flex:0 1 280px">App Secret<input type="password" id="waAppSec" dir="ltr" autocomplete="off" spellcheck="false"></label><button class="btn" id="waAppSave">שמירת האפליקציה</button></div>' +
+            '<ol class="note" style="margin:6px 0">' +
             '<li>ב-<a href="https://developers.facebook.com/apps/' + e(w.appId) + '/" target="_blank" rel="noopener">האפליקציה של סופרסטאר ב-Meta</a>: <b>Add product → WhatsApp</b> (אם עוד לא נוסף).</li>' +
             '<li>שם: <b>Facebook Login for Business → Settings</b> — ב-"Allowed Domains for the JavaScript SDK" להוסיף <span dir="ltr">https://www.superstar-plus.co.il</span>.</li>' +
             '<li>שם: <b>Facebook Login for Business → Configurations → Create</b>, לבחור <b>WhatsApp Embedded Signup</b>, לשמור, ולהעתיק את ה-<b>Configuration ID</b> לכאן:</li></ol>' +
@@ -607,6 +612,10 @@
             '<ol class="note" start="4" style="margin:8px 0"><li>"חיבור וואטסאפ" → בחלון של Meta: להתחבר עם הפייסבוק של העסק, ולבחור <b>חיבור אפליקציית WhatsApp Business קיימת</b> עם המספר של החנות.</li>' +
             '<li>Meta תציג קוד QR — לסרוק אותו <b>מאפליקציית WhatsApp Business בטלפון של החנות</b> (ההודעה תופיע שם). זהו — המספר נשאר בטלפון כרגיל.</li></ol>' +
             '<button class="btn primary" id="waGo"' + (w.configId ? '' : ' disabled') + '>🟢 חיבור וואטסאפ</button></details>'));
+    if ($('waAppSave')) $('waAppSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubWaSave', appId: $('waAppId').value.trim(), appSecret: $('waAppSec').value.trim() });
+      say(x.ok ? 'האפליקציה נשמרה ✓ — עכשיו שלבים 1–3 באפליקציה הזאת' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawWa();
+    });
     if ($('waCfgSave')) $('waCfgSave').addEventListener('click', async () => { const x = await api({ action: 'clubWaSave', configId: $('waCfg').value.trim() }); say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawWa(); });
     if ($('waGo')) $('waGo').addEventListener('click', async () => {
       let FB; try { FB = await fbSdk(w.appId, w.graphVersion); } catch (err) { return say(err.message, 'err'); }
