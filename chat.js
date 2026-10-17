@@ -15,15 +15,15 @@
     he: { open: 'צ׳אט עם הנציג הדיגיטלי', name: 'סטארי · הנציג הדיגיטלי', hi: 'היי! אני סטארי 👋 אפשר לשאול אותי על מבצעים, מחירים, שעות פתיחה ומועדון הלקוחות.',
       privacy: 'השיחה לא נשמרת אצלנו. אל תכתבו פרטי אשראי או סיסמאות.', ph: 'כתבו שאלה…', send: 'שליחה', wa: 'וואטסאפ לחנות', in: (n) => '🔓 מחובר/ת' + (n ? ' כ-' + n : '') + ' — אפשר לשאול על הכרטיס שלך',
       out: '🔒 לשאלות על הכרטיס, היתרה והקניות שלך —', login: 'כניסה לאזור האישי', err: 'משהו השתבש — נסו שוב, או כתבו לנו בוואטסאפ.', clear: 'שיחה חדשה',
-      chips: ['🔥 מה המבצעים השבוע?', '🕗 שעות פתיחה', '💳 מה היתרה בכרטיס שלי?', '🎁 כמה קניות נשארו להטבה?'], waText: 'שלום, יש לי שאלה: ' },
+      chips: ['🔥 מה המבצעים השבוע?', '🕗 שעות פתיחה', '🎟 אילו קופונים יש לי?', '🎁 כמה קניות נשארו להטבה?'], waText: 'שלום, יש לי שאלה: ' },
     ar: { open: 'دردشة مع الممثل الرقمي', name: 'ستاري · الممثل الرقمي', hi: 'أهلًا! أنا ستاري 👋 اسألوني عن العروض والأسعار وساعات العمل ونادي الزبائن.',
       privacy: 'لا نحفظ المحادثة. لا تكتبوا تفاصيل بطاقة ائتمان أو كلمات سر.', ph: 'اكتبوا سؤالًا…', send: 'إرسال', wa: 'واتساب للمتجر', in: (n) => '🔓 متصل' + (n ? ' باسم ' + n : '') + ' — يمكنك السؤال عن بطاقتك',
       out: '🔒 للأسئلة عن بطاقتك ورصيدك ومشترياتك —', login: 'الدخول إلى المنطقة الشخصية', err: 'حدث خطأ — حاولوا مرة أخرى أو راسلونا عبر واتساب.', clear: 'محادثة جديدة',
-      chips: ['🔥 ما هي عروض الأسبوع؟', '🕗 ساعات العمل', '💳 كم الرصيد في بطاقتي؟', '🎁 كم مشتريات بقيت للهدية؟'], waText: 'مرحبًا، لدي سؤال: ' },
+      chips: ['🔥 ما هي عروض الأسبوع؟', '🕗 ساعات العمل', '🎟 ما هي قسائمي؟', '🎁 كم مشتريات بقيت للهدية؟'], waText: 'مرحبًا، لدي سؤال: ' },
     en: { open: 'Chat with our digital assistant', name: 'Stari · digital assistant', hi: 'Hi! I\'m Stari 👋 Ask me about deals, prices, opening hours and the customer club.',
       privacy: 'We don\'t keep the conversation. Don\'t type card details or passwords.', ph: 'Type a question…', send: 'Send', wa: 'WhatsApp the store', in: (n) => '🔓 Signed in' + (n ? ' as ' + n : '') + ' — ask about your card',
       out: '🔒 For questions about your card, balance and purchases —', login: 'sign in to your personal area', err: 'Something went wrong — try again or WhatsApp us.', clear: 'New chat',
-      chips: ['🔥 What are this week\'s deals?', '🕗 Opening hours', '💳 What\'s my card balance?', '🎁 How many purchases to my gift?'], waText: 'Hello, I have a question: ' },
+      chips: ['🔥 What are this week\'s deals?', '🕗 Opening hours', '🎟 What coupons do I have?', '🎁 How many purchases to my gift?'], waText: 'Hello, I have a question: ' },
   };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')

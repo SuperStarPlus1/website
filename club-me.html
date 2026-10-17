@@ -326,6 +326,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
   }
   function drawValueCard() {
     const t = I[ui], v = me.valueCard, box = $('vc');
+    if (!me.valueCardsOn) { box.innerHTML = ''; return; }   // 17/10/2026: off (magnetic-stripe only at the register, no PIN)
     if (!v) {
       box.innerHTML = '<div class="card"><h2>' + esc(t.vcH) + '</h2><p class="muted" style="margin:0 0 4px">' + esc(t.vcWhy) + '</p>' +
         '<button class="btn" type="button" id="vcIssue">' + esc(t.vcIssue) + '</button><div class="msg" id="vcMsg"></div></div>';
@@ -410,6 +411,6 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
   load();
 })();
 </script>
-<script src="/chat.js?v=2" defer></script>
+<script src="/chat.js?v=3" defer></script>
 </body>
 </html>
