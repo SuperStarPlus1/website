@@ -517,13 +517,19 @@
         'השיחות לא נשמרות; נספר רק כמה שאלות והעלות. כשלא יודע / מבקשים נציג — כפתור וואטסאפ לחנות. מנוע: Claude של Anthropic (' + e(r.model) + ').</div>' +
       '<div class="row" style="margin-top:10px;align-items:center"><span style="font-weight:700">' + (r.connected ? '🟢 מחובר ל-Anthropic' + (r.keyHint ? ' <span class="note" dir="ltr">(' + e(r.keyHint) + ')</span>' : '') : '⚪ עוד לא מחובר') + '</span>' +
         (r.connected ? '<button class="btn" id="chOff">ניתוק</button>' : '') + '</div>' +
+      (r.keyBad ? '<div class="warn" style="margin-top:8px">⚠ Anthropic דחו את המפתח (' + e(r.keyBad) + ') — כנראה פג או בוטל. צריך מפתח חדש; עד אז הנציג מפנה לוואטסאפ.</div>' : '') +
+      (r.connected ? '<div class="row" style="margin-top:8px;align-items:end"><label class="c" style="flex:0 1 200px">תוקף המפתח עד<input type="date" id="chExp" value="' + e(r.keyExpires || '') + '"></label>' +
+        '<button class="btn" id="chExpSave">שמירת תאריך</button><span class="note" style="flex:1 1 220px">' + (r.keyDaysLeft === null ? 'לא הוגדר תאריך' : r.keyDaysLeft <= 0 ? '<b class="bad">פג תוקף</b>' : 'עוד ' + r.keyDaysLeft + ' ימים') +
+        ' · תזכורת במייל לכל המורשים בדף הזה 30, 7 ויום אחד לפני, וביום עצמו.</span></div>' : '') +
       '<details' + (r.connected ? '' : ' open') + ' style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">' + (r.connected ? 'החלפת מפתח' : 'חיבור — פעם אחת') + '</summary>' +
         '<ol class="note" style="margin:6px 0">' +
           '<li>נכנסים ל-<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API Keys</a> עם החשבון של החברה.</li>' +
           '<li>לוחצים <b>Create Key</b>, שם: "סופרסטאר — צ׳אט באתר", ומעתיקים את המפתח (מתחיל ב-<span dir="ltr">sk-ant-</span>).</li>' +
           '<li>מומלץ: ב-<b>Limits</b> בחשבון — תקרת הוצאה חודשית (למשל $20), כדי שלא יהיו הפתעות.</li>' +
           '<li>מדביקים כאן ולוחצים "חיבור". המפתח נבדק מול Anthropic ונשמר מוצפן — לא מוצג שוב ולא נשלח לדפדפן.</li></ol>' +
-        '<div class="row"><label class="c">מפתח API<input type="password" id="chKey" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label><button class="btn primary" id="chConnect">🔗 חיבור</button></div></details>' +
+        '<div class="row"><label class="c">מפתח API<input type="password" id="chKey" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>' +
+          '<label class="c" style="flex:0 1 180px">בתוקף עד<input type="date" id="chKeyExp"></label><button class="btn primary" id="chConnect">🔗 חיבור</button></div>' +
+        '<div class="note">תאריך התוקף שבחרתם ב-Anthropic ביצירת המפתח (ריק = שנה מהיום).</div></details>' +
       '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px;font-weight:700"><input type="checkbox" id="chOn"' + (r.on ? ' checked' : '') + (r.connected ? '' : ' disabled') + '> הנציג פעיל באתר</label>' +
       '<div class="row"><label class="c" style="flex:0 1 220px">תקציב חודשי (דולר)<input type="number" id="chBudget" min="1" max="1000" value="' + e(r.budget) + '"></label>' +
         '<div class="c" style="flex:1 1 260px"><b>החודש: ' + usd(r.month.usd) + ' מתוך ' + usd(r.budget) + '</b> · ' + r.month.chats + ' שיחות · ' + r.month.msgs + ' שאלות (' + r.month.signedIn + ' של מחוברים)' +
@@ -540,10 +546,13 @@
     $('chConnect').addEventListener('click', async () => {
       const k = $('chKey').value.trim(); if (!k) return say('הדביקו את המפתח', 'err');
       $('chConnect').disabled = true;
-      const x = await api({ action: 'clubChatSave', apiKey: k });
+      const x = await api({ action: 'clubChatSave', apiKey: k, keyExpires: $('chKeyExp').value || undefined });
       $('chConnect').disabled = false;
       if (!x.ok) return say(x.error || 'שגיאה', 'err');
       say('מחובר ✓ — אפשר לבדוק ולהפעיל', 'ok'); drawChat();
+    });
+    if ($('chExpSave')) $('chExpSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubChatSave', keyExpires: $('chExp').value }); say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawChat();
     });
     if ($('chOff')) $('chOff').addEventListener('click', async () => {
       if (!confirm('לנתק את הנציג מ-Anthropic? הוא ייעלם מהאתר עד חיבור מחדש.')) return;
