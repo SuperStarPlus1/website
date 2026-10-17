@@ -116,6 +116,9 @@
         body[data-lang="en"] .logo img { margin-left: 0; margin-right: 30px; }
 
         .nav-links { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0; }
+        .menu-btn { display: none; position: absolute; top: 50%; right: 12px; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 12px; border: 2px solid rgba(255,255,255,.6); background: transparent; color: #fff; font-size: 24px; align-items: center; justify-content: center; cursor: pointer; }
+        .menu-btn:focus-visible { outline: 3px solid #ffcc00; outline-offset: 2px; }
+        header.menu-open .menu-btn { background: var(--yellow); color: var(--blue); border-color: var(--yellow); }
         .nav-links li { color: white; cursor: pointer; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
         .nav-links li.active { background: var(--yellow); color: var(--blue); }
         .nav-links li { transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 160ms ease; }
@@ -426,12 +429,18 @@
             body[data-lang="en"] .nav-container { flex-direction: column; }
             .logo { display: flex; justify-content: center; }
             .logo img, body[data-lang="en"] .logo img { height: 74px; margin: -6px 0 -8px; }
-            header nav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-            header nav::-webkit-scrollbar { display: none; }
-            .nav-links { flex-wrap: nowrap; justify-content: flex-start; gap: 4px; padding: 6px 10px 6px; width: max-content; }
-            .nav-links li { padding: 7px 13px; }
+            /* 17/10/2026: a ☰ button instead of the sideways row (in portrait only 4 of the links showed) — the menu drops
+               down over the page, all the links in two columns, the languages and the networks below them */
+            .menu-btn { display: flex; }
+            header nav { position: absolute; top: 100%; left: 0; right: 0; background: var(--blue); box-shadow: 0 12px 24px rgba(0,0,0,.3); display: none; max-height: calc(100dvh - 90px); overflow-y: auto; }
+            header.menu-open nav { display: block; }
+            .nav-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 12px 14px; width: auto; }
+            .nav-links li { padding: 10px 12px; text-align: center; background: rgba(255,255,255,.1); border-radius: 12px; white-space: normal; }
+            .nav-links li[role="none"] { grid-column: 1 / -1; display: flex; justify-content: center; background: transparent; }
+            #lang-switcher { margin: 0; border: 0; padding: 0; }
+            .social-links-area { margin: 0 !important; border: 0 !important; padding: 4px 0 !important; justify-content: center; }
             .news-ticker { top: 120px; }
-            main { margin-top: 156px; }
+            main { margin-top: 90px; }
             #a11y-bar { bottom: 160px; }
             #a11y-bar.open { transform: translateX(0); }
             #a11y-toggle { bottom: 115px; }
@@ -505,6 +514,7 @@
      HEADER + NAV
 ════════════════════════════════════════════ -->
 <header role="banner">
+    <button class="menu-btn" type="button" aria-label="תפריט" aria-expanded="false" onclick="const h=this.closest('header'),o=h.classList.toggle('menu-open');this.setAttribute('aria-expanded',o);this.textContent=o?'✕':'☰'">☰</button>
     <div class="nav-container">
         <div class="logo" onclick="nav('home')" role="link" tabindex="0" aria-label="דף הבית - סופרסטאר פלוס">
             <img src="img/logo.webp" alt="לוגו סופרסטאר פלוס">
@@ -859,6 +869,7 @@
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
         if (el) el.classList.add('active');
+        const hd = document.querySelector('header'); if (hd && hd.classList.contains('menu-open')) { hd.classList.remove('menu-open'); const mb = hd.querySelector('.menu-btn'); if (mb) { mb.textContent = '☰'; mb.setAttribute('aria-expanded', 'false'); } }
         window.scrollTo(0, 0);
         // announce page change to screen readers
         const main = document.getElementById('main-content');

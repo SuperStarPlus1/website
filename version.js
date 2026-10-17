@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.78',
+  version: '2.16.79',
   date: '17/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'אתר החנות בטלפון: כפתור תפריט ☰ — כל הקישורים, השפות והרשתות החברתיות בתפריט נפתח (במצב מאונך נראו רק 4 קישורים)',
     'אתר החנות: התפריט העליון נכנס במלואו בכל רוחב מסך (היה נחתך משמאל — השפות והרשתות החברתיות); בועת הצ׳אט הוקטנה',
     'אתר החנות: בפרטי ההתקשרות — שם החברה המפעילה (פלוס גולד אנרגיה והשקעות בע"מ), לאימות העסק ב-Meta',
     'נציג הצ׳אט בוואטסאפ: חיבור ידני (מזהה המספר, מזהה החשבון וטוקן קבוע) — כשהאפליקציה ב-Meta לא מציעה "WhatsApp Embedded Signup"',
