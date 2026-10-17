@@ -611,7 +611,12 @@
             '<div class="row"><label class="c" style="flex:0 1 260px">Configuration ID<input type="text" id="waCfg" dir="ltr" value="' + e(w.configId) + '"></label><button class="btn" id="waCfgSave">שמירה</button></div>' +
             '<ol class="note" start="4" style="margin:8px 0"><li>"חיבור וואטסאפ" → בחלון של Meta: להתחבר עם הפייסבוק של העסק, ולבחור <b>חיבור אפליקציית WhatsApp Business קיימת</b> עם המספר של החנות.</li>' +
             '<li>Meta תציג קוד QR — לסרוק אותו <b>מאפליקציית WhatsApp Business בטלפון של החנות</b> (ההודעה תופיע שם). זהו — המספר נשאר בטלפון כרגיל.</li></ol>' +
-            '<button class="btn primary" id="waGo"' + (w.configId ? '' : ' disabled') + '>🟢 חיבור וואטסאפ</button></details>'));
+            '<button class="btn primary" id="waGo"' + (w.configId ? '' : ' disabled') + '>🟢 חיבור וואטסאפ</button></details>' +
+          '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">חיבור ידני (כשאין "WhatsApp Embedded Signup")</summary>' +
+            '<div class="note" style="margin:6px 0">מהאפליקציה ב-Meta → WhatsApp → <b>API Setup</b> (או Production setup): מעתיקים את <b>Phone number ID</b> ואת <b>WhatsApp Business Account ID</b> של המספר של החנות. ' +
+              'טוקן קבוע: <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener">Business settings → System users</a> → Add (Admin) → <b>Assign assets</b>: האפליקציה (Full control) וחשבון הוואטסאפ (Full control) → <b>Generate token</b>: האפליקציה, תוקף <b>Never</b>, הרשאות <span dir="ltr">whatsapp_business_messaging, whatsapp_business_management</span>.</div>' +
+            '<div class="row"><label class="c">Phone number ID<input type="text" id="waMPh" dir="ltr" autocomplete="off"></label><label class="c">WhatsApp Business Account ID<input type="text" id="waMWaba" dir="ltr" autocomplete="off"></label></div>' +
+            '<div class="row" style="margin-top:6px"><label class="c">טוקן (מתחיל ב-EA)<input type="password" id="waMTok" dir="ltr" autocomplete="off" spellcheck="false"></label><button class="btn primary" id="waMGo">🔗 חיבור ידני</button></div></details>'));
     if ($('waAppSave')) $('waAppSave').addEventListener('click', async () => {
       const x = await api({ action: 'clubWaSave', appId: $('waAppId').value.trim(), appSecret: $('waAppSec').value.trim() });
       say(x.ok ? 'האפליקציה נשמרה ✓ — עכשיו שלבים 1–3 באפליקציה הזאת' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawWa();
@@ -630,6 +635,13 @@
         }, 1500);
       }, { config_id: w.configId, response_type: 'code', override_default_response_type: true,
         extras: { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' } });
+    });
+    if ($('waMGo')) $('waMGo').addEventListener('click', async () => {
+      $('waMGo').disabled = true;
+      const x = await api({ action: 'clubWaConnectManual', phoneId: $('waMPh').value.trim(), wabaId: $('waMWaba').value.trim(), token: $('waMTok').value.trim() });
+      $('waMGo').disabled = false;
+      if (!x.ok) return say(x.error || 'שגיאה', 'err');
+      say('מחובר ✓ ' + (x.display || '') + ' — סמנו "הנציג עונה בוואטסאפ" כדי להפעיל', 'ok'); drawWa();
     });
     if ($('waSave')) $('waSave').addEventListener('click', async () => {
       const x = await api({ action: 'clubWaSave', on: $('waOn').checked, pauseHours: $('waPause').value });

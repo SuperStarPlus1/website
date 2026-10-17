@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.16.75',
+  version: '2.16.76',
   date: '17/10/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'נציג הצ׳אט בוואטסאפ: חיבור ידני (מזהה המספר, מזהה החשבון וטוקן קבוע) — כשהאפליקציה ב-Meta לא מציעה "WhatsApp Embedded Signup"',
     'נציג הצ׳אט בוואטסאפ: אפשר לחבר אפליקציית Meta נפרדת לוואטסאפ (App ID ו-App Secret בלשונית 🤖) — פרסום המשרות ממשיך באפליקציה הקיימת',
     'נציג הצ׳אט בוואטסאפ של החנות: עונה ללקוחות שכותבים למספר החנות (אותו ידע ומבצעים, בלי מידע אישי); המספר נשאר באפליקציית WhatsApp Business, וכשמישהו מהצוות עונה ללקוח מהטלפון — הנציג שותק מולו. חיבור בלשונית 🤖 (פעם אחת, דרך Meta); עדיין לא מחובר',
     'נציג הצ׳אט: בועה חדשה — נציג/ה עם אוזניות, בצד שמאל של הדף ובגודל כפול; החלון נפתח משמאל',
