@@ -70,6 +70,12 @@
   details.rc { border-bottom: 1px solid #eef2f7; padding: 8px 0; }
   details.rc summary { cursor: pointer; display: flex; justify-content: space-between; gap: 10px; font-size: 14.5px; list-style: none; }
   details.rc summary::-webkit-details-marker { display: none; }
+  /* 17/10/2026: the receipt's copy (PDF) and the SMS after each purchase */
+  .rcpdf { margin: 8px 0 2px; background: #eef6ff; color: #0b4a8b; border: 1px solid #cfe3fb; border-radius: 10px; padding: 7px 12px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+  .rcpdf:disabled { opacity: .6; cursor: default; }
+  .rsms { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 14px; color: #334155; cursor: pointer; }
+  .rsms input { width: 18px; height: 18px; accent-color: #0076DA; }
+  details.rc.hit { background: #fffbe6; border-radius: 8px; padding: 8px; }
   details.rc .ln { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #475569; padding: 2px 0; }
   .deal { background: #eaf4ff; border-radius: 12px; padding: 9px 12px; margin-top: 8px; font-size: 14px; }
   .deal b { color: var(--blue-d); }
@@ -198,7 +204,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       codeH: 'הזינו את הקוד', codeLbl: 'קוד בן 6 ספרות', enter: 'כניסה', resend: 'שליחת קוד חדש', resendIn: (s) => 'קוד חדש בעוד ' + s + ' שנ׳', otherId: 'מספר זהות אחר',
       formH: (n) => (n ? n + ', ' : '') + 'עוד צעד קטן 💛', formWhy: 'האזור האישי פתוח לחברי המועדון שהשלימו את הפרטים ואישרו לקבל מבצעים והטבות. זה לוקח דקה — ואחרי השליחה חוזרים לכאן.',
       formGo: 'להשלמת הפרטים', hello: (n) => 'שלום ' + n + ' 👋', cardT: 'כרטיס חבר מועדון סופרסטאר', cardHint: 'הציגו בקופה לזיהוי במועדון',
-      soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', pLoading: 'הקניות שלכם נטענות מהקופות — יופיעו כאן בקרוב.', pNone: 'עוד לא נמצאו קניות בכרטיס מאז 1/10/2025.', pLast: 'קנייה אחרונה', pAvg: 'סל ממוצע', pCount: 'קניות מ-1/10/25', giftH: '🎁 סל קנייה 41 מתנה', giftProg: (d) => d + ' מתוך 40 קניות', giftToGo: (n) => 'עוד ' + n + ' קניות — והקנייה ה-41 בהטבה', giftDue: 'הגעתם ל-40 קניות! בקנייה הבאה מגיעה לכם ההטבה 🎉', giftExp: (x) => 'ההטבה הצפויה: כ-₪' + x + ' (ממוצע הקניות שלכם)', giftNote: 'הספירה מתחילה אחרי הקנייה שבה מומשה ההטבה הקודמת. הסכום הסופי נקבע בקופה.', giftHist: 'הטבות שקיבלתם', forYouH: '🏷️ מבצעים על מוצרים שאתם קונים', recentH: '🧾 הקניות האחרונות', topH: '🛒 המוצרים שאתם קונים הכי הרבה', times: (n) => n + ' פעמים', reg: 'קופה', benefitLine: 'הטבת 41', validTo: 'עד', emailBad: '📧 כתובת המייל שסיפקת אינה תקינה — זה בסדר, אבל את/ה מפספס/ת חלק מההטבות שלנו.', emailFix: 'לעדכון המייל', cpH: '🎟 הקופונים שלי', cpOn: (p) => p + '% הנחה', cpUntil: (d) => 'בתוקף עד ' + d, cpHow: 'מציגים בקופה עם כרטיס המועדון — ההנחה על מוצר אחד.', popH: 'התגעגענו! 💛', popP: 'מחכה לך קופון הנחה בסופרסטאר:', popOk: 'מעולה, נתראה!', vcH: '💳 כרטיס נטען דיגיטלי', vcWhy: 'כרטיס לתשלום בקופה — טוענים בו כסף בקופה ומשלמים איתו בכל קנייה, ישר מהטלפון.', vcIssue: 'הנפקת כרטיס דיגיטלי', vcName: 'כרטיס נטען — סופרסטאר', vcNo: 'מספר כרטיס', vcNew: 'הכרטיס מוכן! כדי להתחיל — הציגו את הברקוד בקופה וטענו בו סכום.', vcBal: 'יתרה ידועה', vcBalAt: (d) => 'נכון ל-' + d + ' (היתרה המדויקת — בקופה)', vcTx: 'טעינות ותשלומים', vcLoad: 'טעינה', vcPay: 'תשלום', vcWarn: '🔒 הכרטיס שווה כסף — אל תשלחו צילום שלו לאף אחד.', vcZoom: '🔍 הקישו להגדלה לסריקה בקופה', vcClose: 'הקישו לסגירה · הגבירו את בהירות המסך', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
+      soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', pLoading: 'הקניות שלכם נטענות מהקופות — יופיעו כאן בקרוב.', pNone: 'עוד לא נמצאו קניות בכרטיס מאז 1/10/2025.', pLast: 'קנייה אחרונה', pAvg: 'סל ממוצע', pCount: 'קניות מ-1/10/25', giftH: '🎁 סל קנייה 41 מתנה', giftProg: (d) => d + ' מתוך 40 קניות', giftToGo: (n) => 'עוד ' + n + ' קניות — והקנייה ה-41 בהטבה', giftDue: 'הגעתם ל-40 קניות! בקנייה הבאה מגיעה לכם ההטבה 🎉', giftExp: (x) => 'ההטבה הצפויה: כ-₪' + x + ' (ממוצע הקניות שלכם)', giftNote: 'הספירה מתחילה אחרי הקנייה שבה מומשה ההטבה הקודמת. הסכום הסופי נקבע בקופה.', giftHist: 'הטבות שקיבלתם', forYouH: '🏷️ מבצעים על מוצרים שאתם קונים', recentH: '🧾 הקניות האחרונות', rcPdf: '📄 העתק קבלה (PDF)', rcWait: 'מכין את ההעתק…', rsms: 'שליחת קישור להעתק הקבלה ב-SMS אחרי כל קנייה', topH: '🛒 המוצרים שאתם קונים הכי הרבה', times: (n) => n + ' פעמים', reg: 'קופה', benefitLine: 'הטבת 41', validTo: 'עד', emailBad: '📧 כתובת המייל שסיפקת אינה תקינה — זה בסדר, אבל את/ה מפספס/ת חלק מההטבות שלנו.', emailFix: 'לעדכון המייל', cpH: '🎟 הקופונים שלי', cpOn: (p) => p + '% הנחה', cpUntil: (d) => 'בתוקף עד ' + d, cpHow: 'מציגים בקופה עם כרטיס המועדון — ההנחה על מוצר אחד.', popH: 'התגעגענו! 💛', popP: 'מחכה לך קופון הנחה בסופרסטאר:', popOk: 'מעולה, נתראה!', vcH: '💳 כרטיס נטען דיגיטלי', vcWhy: 'כרטיס לתשלום בקופה — טוענים בו כסף בקופה ומשלמים איתו בכל קנייה, ישר מהטלפון.', vcIssue: 'הנפקת כרטיס דיגיטלי', vcName: 'כרטיס נטען — סופרסטאר', vcNo: 'מספר כרטיס', vcNew: 'הכרטיס מוכן! כדי להתחיל — הציגו את הברקוד בקופה וטענו בו סכום.', vcBal: 'יתרה ידועה', vcBalAt: (d) => 'נכון ל-' + d + ' (היתרה המדויקת — בקופה)', vcTx: 'טעינות ותשלומים', vcLoad: 'טעינה', vcPay: 'תשלום', vcWarn: '🔒 הכרטיס שווה כסף — אל תשלחו צילום שלו לאף אחד.', vcZoom: '🔍 הקישו להגדלה לסריקה בקופה', vcClose: 'הקישו לסגירה · הגבירו את בהירות המסך', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
       detailsH: 'הפרטים שלי', name: 'שם', id: 'ת"ז', phone: 'נייד', email: 'מייל', city: 'יישוב', since: 'חבר/ה מ-', edit: 'עדכון פרטים',
       mailH: 'דיוור', sms: 'SMS', mail: 'מייל', on: 'מאושר', off: 'לא מאושר', mailManage: 'ניהול / הפסקת דיוור', logout: 'יציאה',
       terms: 'תקנון המועדון', privacy: 'מדיניות פרטיות', net: 'אין חיבור — נסו שוב', badId: 'מספר תעודת זהות לא תקין', badCode: 'יש להזין 6 ספרות' },
@@ -206,7 +212,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       codeH: 'أدخلوا الرمز', codeLbl: 'رمز من 6 أرقام', enter: 'دخول', resend: 'إرسال رمز جديد', resendIn: (s) => 'رمز جديد بعد ' + s + ' ث', otherId: 'رقم هوية آخر',
       formH: (n) => (n ? n + '، ' : '') + 'خطوة صغيرة أخرى 💛', formWhy: 'المنطقة الشخصية مفتوحة لأعضاء النادي الذين أكملوا التفاصيل ووافقوا على تلقي العروض والمزايا. يستغرق ذلك دقيقة — وبعد الإرسال تعودون إلى هنا.',
       formGo: 'لإكمال التفاصيل', hello: (n) => 'مرحبًا ' + n + ' 👋', cardT: 'بطاقة عضو نادي سوبرستار', cardHint: 'اعرضوها في الصندوق للتعريف في النادي',
-      soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', pLoading: 'يتم تحميل مشترياتكم من الصناديق — ستظهر هنا قريبًا.', pNone: 'لم نجد مشتريات على البطاقة منذ 1/10/2025.', pLast: 'آخر شراء', pAvg: 'متوسط السلة', pCount: 'مشتريات منذ 1/10/25', giftH: '🎁 سلة الشراء 41 هدية', giftProg: (d) => d + ' من 40 عملية شراء', giftToGo: (n) => 'تبقى ' + n + ' عمليات شراء — والشراء الـ41 بالهدية', giftDue: 'وصلتم إلى 40 عملية شراء! في الشراء القادم تستحقون الهدية 🎉', giftExp: (x) => 'الهدية المتوقعة: حوالي ₪' + x + ' (متوسط مشترياتكم)', giftNote: 'يبدأ العد بعد الشراء الذي استُخدمت فيه الهدية السابقة. المبلغ النهائي يُحدد في الصندوق.', giftHist: 'الهدايا التي حصلتم عليها', forYouH: '🏷️ عروض على منتجات تشترونها', recentH: '🧾 آخر المشتريات', topH: '🛒 المنتجات التي تشترونها أكثر', times: (n) => n + ' مرات', reg: 'صندوق', benefitLine: 'هدية 41', validTo: 'حتى', emailBad: '📧 عنوان البريد الإلكتروني الذي قدمته غير صحيح — لا بأس، لكنك تفوّت بعض امتيازاتنا.', emailFix: 'لتحديث البريد', cpH: '🎟 قسائمي', cpOn: (p) => 'خصم ' + p + '%', cpUntil: (d) => 'صالحة حتى ' + d, cpHow: 'اعرضوها في الصندوق مع بطاقة النادي — الخصم على منتج واحد.', popH: 'اشتقنا لك! 💛', popP: 'تنتظرك قسيمة خصم في سوبرستار:', popOk: 'رائع، نراكم قريبًا!', vcH: '💳 بطاقة مشحونة رقمية', vcWhy: 'بطاقة للدفع في الصندوق — تشحنونها بالمال في الصندوق وتدفعون بها في كل عملية شراء، مباشرة من الهاتف.', vcIssue: 'إصدار بطاقة رقمية', vcName: 'بطاقة مشحونة — سوبرستار', vcNo: 'رقم البطاقة', vcNew: 'البطاقة جاهزة! للبدء — اعرضوا الباركود في الصندوق واشحنوا مبلغًا.', vcBal: 'الرصيد المعروف', vcBalAt: (d) => 'صحيح حتى ' + d + ' (الرصيد الدقيق — في الصندوق)', vcTx: 'الشحن والدفع', vcLoad: 'شحن', vcPay: 'دفع', vcWarn: '🔒 البطاقة تساوي مالًا — لا ترسلوا صورتها لأحد.', vcZoom: '🔍 اضغطوا للتكبير للمسح في الصندوق', vcClose: 'اضغطوا للإغلاق · ارفعوا سطوع الشاشة', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
+      soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', pLoading: 'يتم تحميل مشترياتكم من الصناديق — ستظهر هنا قريبًا.', pNone: 'لم نجد مشتريات على البطاقة منذ 1/10/2025.', pLast: 'آخر شراء', pAvg: 'متوسط السلة', pCount: 'مشتريات منذ 1/10/25', giftH: '🎁 سلة الشراء 41 هدية', giftProg: (d) => d + ' من 40 عملية شراء', giftToGo: (n) => 'تبقى ' + n + ' عمليات شراء — والشراء الـ41 بالهدية', giftDue: 'وصلتم إلى 40 عملية شراء! في الشراء القادم تستحقون الهدية 🎉', giftExp: (x) => 'الهدية المتوقعة: حوالي ₪' + x + ' (متوسط مشترياتكم)', giftNote: 'يبدأ العد بعد الشراء الذي استُخدمت فيه الهدية السابقة. المبلغ النهائي يُحدد في الصندوق.', giftHist: 'الهدايا التي حصلتم عليها', forYouH: '🏷️ عروض على منتجات تشترونها', recentH: '🧾 آخر المشتريات', rcPdf: '📄 نسخة الإيصال (PDF)', rcWait: 'جارٍ تحضير النسخة…', rsms: 'إرسال رابط لنسخة الإيصال برسالة SMS بعد كل شراء', topH: '🛒 المنتجات التي تشترونها أكثر', times: (n) => n + ' مرات', reg: 'صندوق', benefitLine: 'هدية 41', validTo: 'حتى', emailBad: '📧 عنوان البريد الإلكتروني الذي قدمته غير صحيح — لا بأس، لكنك تفوّت بعض امتيازاتنا.', emailFix: 'لتحديث البريد', cpH: '🎟 قسائمي', cpOn: (p) => 'خصم ' + p + '%', cpUntil: (d) => 'صالحة حتى ' + d, cpHow: 'اعرضوها في الصندوق مع بطاقة النادي — الخصم على منتج واحد.', popH: 'اشتقنا لك! 💛', popP: 'تنتظرك قسيمة خصم في سوبرستار:', popOk: 'رائع، نراكم قريبًا!', vcH: '💳 بطاقة مشحونة رقمية', vcWhy: 'بطاقة للدفع في الصندوق — تشحنونها بالمال في الصندوق وتدفعون بها في كل عملية شراء، مباشرة من الهاتف.', vcIssue: 'إصدار بطاقة رقمية', vcName: 'بطاقة مشحونة — سوبرستار', vcNo: 'رقم البطاقة', vcNew: 'البطاقة جاهزة! للبدء — اعرضوا الباركود في الصندوق واشحنوا مبلغًا.', vcBal: 'الرصيد المعروف', vcBalAt: (d) => 'صحيح حتى ' + d + ' (الرصيد الدقيق — في الصندوق)', vcTx: 'الشحن والدفع', vcLoad: 'شحن', vcPay: 'دفع', vcWarn: '🔒 البطاقة تساوي مالًا — لا ترسلوا صورتها لأحد.', vcZoom: '🔍 اضغطوا للتكبير للمسح في الصندوق', vcClose: 'اضغطوا للإغلاق · ارفعوا سطوع الشاشة', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
       detailsH: 'تفاصيلي', name: 'الاسم', id: 'الهوية', phone: 'الهاتف', email: 'البريد', city: 'البلدة', since: 'عضو منذ', edit: 'تحديث التفاصيل',
       mailH: 'الرسائل', sms: 'SMS', mail: 'بريد', on: 'موافق', off: 'غير موافق', mailManage: 'إدارة / إيقاف الرسائل', logout: 'خروج',
       terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
@@ -381,13 +387,56 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       '<div class="deal"><b>' + esc(f.deal[L] || f.deal.he) + '</b>' + (f.note[L] || f.note.he ? '<div class="muted">' + esc(f.note[L] || f.note.he) + '</div>' : '') +
       '<div class="muted">' + esc(f.name) + (f.validTo ? ' · ' + esc(t.validTo) + ' ' + esc(dmy(f.validTo)) : '') + '</div></div>').join('') + '</div>';
     if (p.recent && p.recent.length) h += '<div class="card"><h2>' + esc(t.recentH) + '</h2>' + p.recent.map((r) =>
-      '<details class="rc"><summary><span>' + esc(dmy(r.at)) + ' ' + esc(r.at.slice(11, 16)) + ' · ' + esc(t.reg) + ' ' + esc(r.register) + '</span><span class="num">' + esc(money(r.total)) + '</span></summary>' +
+      '<details class="rc" data-rk="' + esc(r.rkey) + '"><summary><span>' + esc(dmy(r.at)) + ' ' + esc(r.at.slice(11, 16)) + ' · ' + esc(t.reg) + ' ' + esc(r.register) + '</span><span class="num">' + esc(money(r.total)) + '</span></summary>' +
       (r.benefit ? '<div class="ln"><span>🎁 ' + esc(t.benefitLine) + '</span><span class="num">-' + esc(money(r.benefit)) + '</span></div>' : '') +
       (r.lines || []).filter((l) => l[0] !== '-99' && l[0] !== '5651356').map((l) => '<div class="ln"><span>' + esc(l[1]) + (l[2] !== 1 ? ' × ' + esc(l[2]) : '') + '</span><span class="num">' + esc(money(l[4])) + '</span></div>').join('') +
-      '</details>').join('') + '</div>';
+      '<button type="button" class="rcpdf" data-rk="' + esc(r.rkey) + '">' + esc(t.rcPdf) + '</button>' +
+      '</details>').join('') +
+      (me.viewOnly ? '' : '<label class="rsms"><input type="checkbox" id="rsms"' + (me.receiptSms !== false ? ' checked' : '') + '> <span>' + esc(t.rsms) + '</span></label>') + '</div>';
     if (p.top && p.top.length) h += '<div class="card"><h2>' + esc(t.topH) + '</h2><ul class="list">' + p.top.map((x) =>
       '<li><span>' + esc(x.name) + '</span><span class="n">' + esc(t.times(x.times)) + '</span></li>').join('') + '</ul></div>';
     box.innerHTML = h;
+  }
+  /** the copy of a receipt (a PDF from the server) — saved / opened by the phone */
+  async function receiptPdf(rk, btn) {
+    const s = store.get('ss_club_s');
+    if (!s || !rk) return;
+    const was = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = I[ui].rcWait; }
+    const r = await api({ action: 'clubAppReceipt', s, rkey: rk });
+    if (btn) { btn.disabled = false; btn.textContent = was; }
+    if (!r.ok) { alertBox(r.error || I[ui].net); return; }
+    const bin = atob(r.pdf), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' }));
+    const a = document.createElement('a'); a.href = url; a.download = r.name || 'receipt.pdf'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  function alertBox(msg) {
+    const box = $('purch'); if (!box) return;
+    let m = document.getElementById('rcMsg');
+    if (!m) { m = document.createElement('div'); m.id = 'rcMsg'; m.className = 'msg err'; box.prepend(m); }
+    m.textContent = msg;
+  }
+  $('purch').addEventListener('click', (ev) => {
+    const b = ev.target.closest('.rcpdf');
+    if (b) receiptPdf(b.dataset.rk, b);
+  });
+  $('purch').addEventListener('change', async (ev) => {
+    if (ev.target.id !== 'rsms') return;
+    const on = ev.target.checked, r = await api({ action: 'clubAppReceiptSms', s: store.get('ss_club_s'), on });
+    if (!r.ok) { ev.target.checked = !on; alertBox(r.error || I[ui].net); return; }
+    me.receiptSms = on;
+  });
+  /** the SMS link club-me?r=<rkey>: after the sign-in, that receipt — opened, marked, its copy downloaded */
+  let wantReceipt = new URLSearchParams(location.search).get('r') || '';
+  function openWanted() {
+    if (!wantReceipt) return;
+    const rk = wantReceipt; wantReceipt = '';
+    try { const u = new URL(location.href); u.searchParams.delete('r'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+    const d = Array.from(document.querySelectorAll('details.rc')).find((x) => x.dataset.rk === rk);
+    if (d) { d.open = true; d.classList.add('hit'); d.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    receiptPdf(rk, d ? d.querySelector('.rcpdf') : null);
   }
   async function load() {
     const s = store.get('ss_club_s');
@@ -401,6 +450,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       return;
     }
     show('area'); drawArea();
+    if (!r.viewOnly) openWanted();
     if (r.viewOnly && !document.getElementById('viewBar')) document.body.insertAdjacentHTML('afterbegin', '<div id="viewBar" style="position:sticky;top:0;z-index:60;background:#7c2d12;color:#fff;text-align:center;padding:8px;font-weight:700">👁 תצוגת מנהל — ' +
       (r.notMember ? 'הלקוח עוד לא עדכן פרטים: כך ייראה האזור כשיצטרף (הנתונים מקומקס)' : 'כך הלקוח רואה את האזור האישי') + ' (קריאה בלבד)</div>');
   }
