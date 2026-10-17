@@ -186,7 +186,6 @@
         .contact-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .map-container { width: 100%; height: 350px; border-radius: 20px; overflow: hidden; border: 3px solid var(--blue); }
 
-        .fab { position: fixed; bottom: 25px; left: 25px; display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
         .f-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .waze { background-color: #33CCFF; }
         .whatsapp { background-color: #25D366; }
@@ -756,10 +755,6 @@
 </div>
 
 <!-- ── FAB buttons ── -->
-<div class="fab" role="complementary" aria-label="כפתורי פעולה מהירה">
-    <a href="https://wa.me/97249076772" class="f-btn whatsapp" target="_blank" rel="noopener" aria-label="פתח שיחת ווטסאפ - נפתח בחלון חדש"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
-    <a href="https://waze.com/ul?ll=32.92348,35.25752&navigate=yes" class="f-btn waze" target="_blank" rel="noopener" aria-label="נווט אלינו בוויז - נפתח בחלון חדש"><i class="fa-brands fa-waze" aria-hidden="true"></i></a>
-</div>
 
 <!-- ── Club Banner ── -->
 <div id="club-banner" role="alertdialog" aria-live="polite" aria-label="המבצעים">
@@ -2017,6 +2012,6 @@ async function setLang(lang) {
 }
 
 </script>
-<script src="/chat.js" defer></script>
+<script src="/chat.js?v=2" defer></script>
 </body>
 </html>

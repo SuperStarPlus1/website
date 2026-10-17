@@ -78,7 +78,7 @@
       box.setAttribute('aria-label', t.name); box.dir = lang() === 'en' ? 'ltr' : 'rtl';
       const signed = s && (who ? who.s === s : !ss.get('ss_chat_checked'));   // before the first answer: as the browser says
       box.innerHTML = '<div class="ssc-h"><span aria-hidden="true">🤖</span><b>' + esc(t.name) + '</b><button type="button" data-x="new">' + esc(t.clear) + '</button><button type="button" data-x="close" aria-label="✕">✕</button></div>' +
-        '<div class="ssc-who">' + (signed ? esc(t.in(who.name)) : esc(t.out) + ' <a href="/club-me' + (lang() === 'ar' ? '?lang=ar' : '') + '">' + esc(t.login) + '</a>') + '</div>' +
+        '<div class="ssc-who">' + (signed ? esc(t.in(who ? who.name : '')) : esc(t.out) + ' <a href="/club-me' + (lang() === 'ar' ? '?lang=ar' : '') + '">' + esc(t.login) + '</a>') + '</div>' +
         '<div class="ssc-m" aria-live="polite"><div class="n">' + esc(t.privacy) + '</div><div class="b a">' + esc(t.hi) + '</div>' +
         msgs.map((m) => '<div class="b ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? esc(m.content).replace(/\n/g, '<br>') : fmt(m.content)) + '</div>').join('') +
         (busy ? '<div class="b a t">…</div>' : '') +
