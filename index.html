@@ -780,7 +780,6 @@
 ════════════════════════════════════════════════════════════════ -->
 <script>
 
-    const CLOUD = "dj56w7nb9";
 
     // גיליון PRODUCTS מכיל 3 tabs: he / ar / en (מתורגמים מראש ע"י סקריפט הסנכרון)
     const SHEET_ID_PRODUCTS = "2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z";
@@ -966,10 +965,7 @@
                 const r = await fetch('data/new.json', { cache: 'no-cache' });
                 files = ((await r.json()).items || []).map(i => ({ public_id: 'products/' + i.barcode, url: prodImg(i.barcode), created_at: i.since }));
                 window._newItems = files;   // also the home showcase
-            } else {
-                const r = await fetch(`https://res.cloudinary.com/${CLOUD}/image/list/${tag}.json`);
-                files = (await r.json()).resources;
-            }
+            } else return;
             if (filter) files = files.filter(f => isFresh(f.public_id));
             // "חדש על המדף": product photos the catalog sync uploaded in the last 7 days (the tag "auto-new" is kept by
             // the nightly job on the server); newest first — the home page shows the 12 newest
@@ -981,7 +977,7 @@
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
 
             const html = files.map(f => {
-                const url = f.url || `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${f.public_id}.${f.format}`;
+                const url = f.url;
 
                 if (type === 'slider') {
                     return `<img src="${url}" onclick="zoom('${url}')" alt="תמונת מבצע" tabindex="0" onkeypress="if(event.key==='Enter') zoom('${url}')">`;
@@ -1009,7 +1005,24 @@
 
             const target = document.getElementById(divId);
             if (target) target.innerHTML = type === 'slider' ? (html + html) : html;
-        } catch (e) { console.error("Cloudinary error:", e); }
+        } catch (e) { console.error("new on shelf:", e); }
+    }
+
+    // "דרושים" (17/10/2026, instead of the Cloudinary "jobs" pictures): the ACTIVE jobs of the recruiting module — the
+    // manager opens / closes a job with its picture in the staff app; a tap → the apply form (apply.html)
+    async function loadJobs() {
+        const box = document.getElementById('jobs-grid');
+        if (!box) return;
+        try {
+            const r = await (await fetch('https://otjhhljgdevazanrretx.supabase.co/functions/v1/api', { method: 'POST', body: JSON.stringify({ action: 'publicJobs' }) })).json();
+            const e = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            box.innerHTML = (r.ok ? r.jobs : []).map(j => `
+                <a class="card" role="listitem" href="${e(j.applyUrl)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+                    ${j.imageUrl ? `<img src="${e(j.imageUrl)}" alt="${e(j.title)}" loading="lazy" onerror="this.src='img/logo.webp'">` : ''}
+                    <h3>${e(j.title)}</h3>
+                    ${j.department ? `<div class="barcode">${e(j.department)}</div>` : ''}
+                </a>`).join('');
+        } catch (err) { console.error('jobs:', err); }
     }
 
     function render(data) {
@@ -1279,7 +1292,7 @@
     async function start() {
         loadCloud('auto-new', 'new-home', 'grid', false);
         loadCloud('auto-new', 'new-full', 'grid', false);
-        loadCloud('jobs', 'jobs-grid', 'grid', false);
+        loadJobs();
 
         dataParse(getCsvUrl('he'), {
             download: true, header: true, complete: r => {
