@@ -121,6 +121,26 @@
         .nav-links li { transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 160ms ease; }
         .nav-links li:active { transform: scale(.97); }
         .nav-links li[tabindex="0"]:focus-visible { outline: 3px solid #ffcc00 !important; }
+        /* 17/10/2026: the header's row was wider than its 1400px box (9 links + languages + social) — cut on the left at
+           any width; now it uses the whole width and shrinks with the screen down to the phone layout (768px) */
+        @media (min-width: 769px) {
+            .nav-container { max-width: none; padding: 0 clamp(8px, 1.4vw, 24px); }
+            .nav-container nav { flex: 1 1 auto; min-width: 0; }
+            .logo { flex: none; }
+            .logo img { height: clamp(110px, 9vw, 170px); margin-left: clamp(6px, 1.4vw, 30px); }
+            body[data-lang="en"] .logo img { margin-left: 0; margin-right: clamp(6px, 1.4vw, 30px); }
+            .nav-links { gap: clamp(2px, 0.4vw, 10px); }
+            .nav-links li { padding: 8px clamp(5px, 0.75vw, 15px); font-size: clamp(0.74rem, 0.5rem + 0.42vw, 0.95rem); }
+            #lang-switcher { margin-right: clamp(3px, 0.5vw, 15px); padding-right: clamp(3px, 0.5vw, 15px); }
+            .lang-btn { padding: 4px clamp(5px, 0.45vw, 10px); }
+            .social-links-area { margin-right: clamp(4px, 0.8vw, 30px) !important; padding-right: clamp(4px, 0.8vw, 20px) !important; gap: clamp(6px, 0.7vw, 15px) !important; }
+        }
+        /* a narrow desktop / tablet: no social icons in the bar, and the links scroll sideways if they still do not fit */
+        @media (min-width: 769px) and (max-width: 1180px) {
+            .social-links-area { display: none !important; }
+            .nav-container nav { overflow-x: auto; scrollbar-width: none; }
+            .nav-container nav::-webkit-scrollbar { display: none; }
+        }
 
         main { max-width: 100%; margin: 120px auto 50px; }
         .content-wrap { max-width: 1200px; margin: 60px auto 0; padding: 0 20px; }
@@ -2014,6 +2034,6 @@ async function setLang(lang) {
 }
 
 </script>
-<script src="/chat.js?v=4" defer></script>
+<script src="/chat.js?v=5" defer></script>
 </body>
 </html>

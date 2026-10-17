@@ -41,11 +41,12 @@
     '<path d="M16.5 37c0 5 4 8 10 8" fill="none" stroke="#1b2a4a" stroke-width="2.5" stroke-linecap="round"/><circle cx="28" cy="45" r="2.8" fill="#ffcc00" stroke="#1b2a4a" stroke-width="1.2"/>' +
     '<circle cx="28" cy="28" r="1.4" fill="#1b2a4a"/><circle cx="36" cy="28" r="1.4" fill="#1b2a4a"/><path d="M28.5 33q3.5 3 7 0" fill="none" stroke="#1b2a4a" stroke-width="1.5" stroke-linecap="round"/></svg>';
   const css = `
-  .ssc-btn{position:fixed;left:16px;bottom:var(--ssc-b,20px);z-index:2600;width:120px;height:120px;border-radius:50%;border:4px solid #fff;cursor:pointer;padding:0;
+  .ssc-btn{position:fixed;left:16px;bottom:var(--ssc-b,20px);z-index:2600;width:76px;height:76px;border-radius:50%;border:3px solid #fff;cursor:pointer;padding:0;
     background:linear-gradient(135deg,#0076DA,#003a75);color:#fff;box-shadow:0 10px 30px rgba(0,60,140,.45);display:flex;align-items:center;justify-content:center}
-  .ssc-btn svg{width:86px;height:86px;display:block}
+  .ssc-btn svg{width:56px;height:56px;display:block}
+  @media (max-width:640px){.ssc-btn{width:62px;height:62px;left:10px}.ssc-btn svg{width:46px;height:46px}}
   .ssc-btn:focus-visible{outline:3px solid #ffcc00;outline-offset:3px}
-  .ssc-btn .dot{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:#ffcc00;border:2px solid #fff}
+  .ssc-btn .dot{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#ffcc00;border:2px solid #fff}
   .ssc{position:fixed;left:16px;bottom:var(--ssc-b,20px);z-index:3100;width:min(380px,calc(100vw - 32px));height:min(600px,calc(100dvh - var(--ssc-b,20px) - 20px));
     background:#fff;color:#1f2937;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
   .ssc[hidden],.ssc-btn[hidden]{display:none}
