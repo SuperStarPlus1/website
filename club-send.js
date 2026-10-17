@@ -107,7 +107,7 @@
   function draw() {
     const b = $('app');
     if (tab === 'new' || tab === 'mail') { sendMode = tab; tab = 'send'; }
-    b.innerHTML = '<div class="tabs"><button data-t="send">📣 שליחת הודעות</button><button data-t="list">📊 הזמנות שנשלחו (' + info.batches.length + ')</button><button data-t="auto">🔄 לקוחות חדשים</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="bday">🎂 ברכות</button><button data-t="coupons">🎟 קופונים</button><button data-t="members">👤 חברי מועדון</button><button data-t="who">👥 מורשים</button></div>' +
+    b.innerHTML = '<div class="tabs"><button data-t="send">📣 שליחת הודעות</button><button data-t="list">📊 הזמנות שנשלחו (' + info.batches.length + ')</button><button data-t="auto">🔄 לקוחות חדשים</button><button data-t="miv">🖼 דף המבצעים</button><button data-t="bday">🎂 ברכות</button><button data-t="coupons">🎟 קופונים</button><button data-t="members">👤 חברי מועדון</button><button data-t="chat">🤖 נציג צ׳אט</button><button data-t="who">👥 מורשים</button></div>' +
       (info.smsReady ? '' : '<div class="warn">⚠ שליחת SMS עוד לא הופעלה (חסר חיבור לספק ה-SMS). אפשר כבר להכין שליחות — השליחה עצמה תיפתח עם ההפעלה.</div>') +
       '<div id="csMode"></div><div id="csP"></div>';
     b.querySelectorAll('[data-t]').forEach((x) => { x.classList.toggle('on', x.dataset.t === tab); x.addEventListener('click', () => { tab = x.dataset.t; draw(); }); });
@@ -117,7 +117,7 @@
         '<div class="note" style="margin-top:6px">' + (sendMode === 'mail' ? 'נשלח רק לחברי מועדון שמילאו את הטופס ואישרו דיוור, בשפה שבחרו.' : 'לקוחות מהקופה שעוד לא בחברי המועדון: הודעת SMS עם קישור אישי לטופס.') + '</div></div>';
       $('csMode').querySelectorAll('[data-sm]').forEach((x) => { x.classList.toggle('on', x.dataset.sm === sendMode); x.addEventListener('click', () => { sendMode = x.dataset.sm; draw(); }); });
       if (sendMode === 'new') drawNew(); else drawMail();
-    } else if (tab === 'list') drawList(); else if (tab === 'auto') drawAuto(); else if (tab === 'miv') drawMiv(); else if (tab === 'bday') drawBday(); else if (tab === 'coupons') drawCoupons(); else if (tab === 'members') drawMembers(); else drawWho();
+    } else if (tab === 'list') drawList(); else if (tab === 'auto') drawAuto(); else if (tab === 'miv') drawMiv(); else if (tab === 'bday') drawBday(); else if (tab === 'coupons') drawCoupons(); else if (tab === 'members') drawMembers(); else if (tab === 'chat') drawChat(); else drawWho();
   }
 
   /* ---------- 📤 a new sending ---------- */
@@ -501,6 +501,63 @@
     $('bdTest').addEventListener('click', async () => {
       const x = await api({ action: 'clubBdayTest', ...vals(), lang: $('bdTLang').value, phone: $('bdTPh').value.trim(), email: $('bdTMail').value.trim() });
       say(x.ok ? 'בדיקה — SMS: ' + x.sms + ' · מייל: ' + x.email : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
+    });
+  }
+
+  /* ---------- 🤖 the site's chat agent "סטארי" (club-chat.ts, chat.js) ---------- */
+  async function drawChat() {
+    const p = $('csP');
+    p.innerHTML = '<p class="note">טוען…</p>';
+    const r = await api({ action: 'clubChatSettings' });
+    if (!r.ok) { p.innerHTML = '<p class="bad">' + e(r.error || 'שגיאה') + '</p>'; return; }
+    const usd = (v) => '$' + Number(v || 0).toFixed(2), pct = Math.min(100, Math.round(r.month.usd / r.budget * 100));
+    p.innerHTML = '<div class="box" style="border:2px solid #0076DA"><h4>🤖 סטארי — הנציג הדיגיטלי באתר</h4>' +
+      '<div class="note">בועת צ׳אט בדף הבית, בדף המבצעים ובאזור האישי. עונה על מבצעים ומחירים (מהקטלוג והמבצעים שבמערכת), שעות, מיקום ומועדון הלקוחות. ' +
+        'לחבר מועדון <b>שנכנס לאזור האישי</b> (ת״ז + קוד SMS) — גם על הכרטיס שלו, היתרה, הקניות, הטבת 41 והקופונים. בלי כניסה — לא נמסר שום מידע אישי. ' +
+        'השיחות לא נשמרות; נספר רק כמה שאלות והעלות. כשלא יודע / מבקשים נציג — כפתור וואטסאפ לחנות. מנוע: Claude של Anthropic (' + e(r.model) + ').</div>' +
+      '<div class="row" style="margin-top:10px;align-items:center"><span style="font-weight:700">' + (r.connected ? '🟢 מחובר ל-Anthropic' + (r.keyHint ? ' <span class="note" dir="ltr">(' + e(r.keyHint) + ')</span>' : '') : '⚪ עוד לא מחובר') + '</span>' +
+        (r.connected ? '<button class="btn" id="chOff">ניתוק</button>' : '') + '</div>' +
+      '<details' + (r.connected ? '' : ' open') + ' style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">' + (r.connected ? 'החלפת מפתח' : 'חיבור — פעם אחת') + '</summary>' +
+        '<ol class="note" style="margin:6px 0">' +
+          '<li>נכנסים ל-<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API Keys</a> עם החשבון של החברה.</li>' +
+          '<li>לוחצים <b>Create Key</b>, שם: "סופרסטאר — צ׳אט באתר", ומעתיקים את המפתח (מתחיל ב-<span dir="ltr">sk-ant-</span>).</li>' +
+          '<li>מומלץ: ב-<b>Limits</b> בחשבון — תקרת הוצאה חודשית (למשל $20), כדי שלא יהיו הפתעות.</li>' +
+          '<li>מדביקים כאן ולוחצים "חיבור". המפתח נבדק מול Anthropic ונשמר מוצפן — לא מוצג שוב ולא נשלח לדפדפן.</li></ol>' +
+        '<div class="row"><label class="c">מפתח API<input type="password" id="chKey" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label><button class="btn primary" id="chConnect">🔗 חיבור</button></div></details>' +
+      '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px;font-weight:700"><input type="checkbox" id="chOn"' + (r.on ? ' checked' : '') + (r.connected ? '' : ' disabled') + '> הנציג פעיל באתר</label>' +
+      '<div class="row"><label class="c" style="flex:0 1 220px">תקציב חודשי (דולר)<input type="number" id="chBudget" min="1" max="1000" value="' + e(r.budget) + '"></label>' +
+        '<div class="c" style="flex:1 1 260px"><b>החודש: ' + usd(r.month.usd) + ' מתוך ' + usd(r.budget) + '</b> · ' + r.month.chats + ' שיחות · ' + r.month.msgs + ' שאלות (' + r.month.signedIn + ' של מחוברים)' +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="note">הערכה לפי המחירון; החשבון בפועל — אצל Anthropic. בהגעה לתקציב הנציג נעצר עד סוף החודש ומפנה לוואטסאפ.</div></div></div>' +
+      '<label class="c" style="margin-top:12px">מידע על החנות — מה שהנציג יודע (שעות, טלפון, מחלקות, חגים, משלוחים…). כל שינוי כאן נכנס לתשובות מיד.<textarea id="chKnow" rows="11" maxlength="6000">' + e(r.knowledge) + '</textarea></label>' +
+      '<div class="note">את מבצעי השבוע, המחירים ותקנון המועדון הנציג קורא לבד מהמערכת ומהאתר — אין צורך לכתוב אותם כאן.</div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn primary" id="chSave">💾 שמירה</button></div></div>' +
+      '<div class="box"><h4>🧪 בדיקה</h4><div class="note">שאלה לנציג כמו לקוח לא מחובר (גם כשהנציג כבוי באתר). מראה גם כמה עלתה התשובה.</div>' +
+        '<div class="row" style="margin-top:6px"><label class="c">שאלה<input type="text" id="chQ" maxlength="600" value="מה המבצעים על שתייה השבוע?"></label>' +
+        '<label class="c" style="flex:0 1 120px">שפה<select id="chL"><option value="he">עברית</option><option value="ar">ערבית</option></select></label><button class="btn" id="chTest"' + (r.connected ? '' : ' disabled') + '>שאל</button></div>' +
+        '<div id="chA" style="white-space:pre-wrap;margin-top:8px"></div></div>' +
+      '<div class="box"><h4>לפי ימים</h4>' + (r.days.length ? '<table><tr><th>יום</th><th>שיחות</th><th>שאלות</th><th>מחוברים</th><th>עלות</th></tr>' +
+        r.days.map((d) => '<tr><td>' + e(d.day.split('-').reverse().join('/')) + '</td><td>' + d.chats + '</td><td>' + d.msgs + '</td><td>' + d.signed_in + '</td><td dir="ltr">' + usd(d.usd) + '</td></tr>').join('') + '</table>' : '<p class="note">עוד אין שימוש.</p>') + '</div>';
+    $('chConnect').addEventListener('click', async () => {
+      const k = $('chKey').value.trim(); if (!k) return say('הדביקו את המפתח', 'err');
+      $('chConnect').disabled = true;
+      const x = await api({ action: 'clubChatSave', apiKey: k });
+      $('chConnect').disabled = false;
+      if (!x.ok) return say(x.error || 'שגיאה', 'err');
+      say('מחובר ✓ — אפשר לבדוק ולהפעיל', 'ok'); drawChat();
+    });
+    if ($('chOff')) $('chOff').addEventListener('click', async () => {
+      if (!confirm('לנתק את הנציג מ-Anthropic? הוא ייעלם מהאתר עד חיבור מחדש.')) return;
+      const x = await api({ action: 'clubChatSave', disconnect: true }); say(x.ok ? 'נותק' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawChat();
+    });
+    $('chSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubChatSave', on: $('chOn').checked, budget: $('chBudget').value, knowledge: $('chKnow').value });
+      say(x.ok ? 'נשמר ✓' + ($('chOn').checked ? ' — הנציג פעיל באתר' : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawChat();
+    });
+    $('chTest').addEventListener('click', async () => {
+      $('chTest').disabled = true; $('chA').textContent = '…';
+      const x = await api({ action: 'clubChatTest', question: $('chQ').value, uiLang: $('chL').value });
+      $('chTest').disabled = false;
+      $('chA').innerHTML = x.ok ? e(x.answer) + '<div class="note" style="margin-top:6px">עלות התשובה: כ-$' + Number(x.usd || 0).toFixed(4) + '</div>' : '<span class="bad">' + e(x.error || 'שגיאה') + '</span>';
     });
   }
 
