@@ -2405,6 +2405,7 @@ function mgrRowEl(m){
     <input type="text" class="i-empno" value="${esc(m.empNo||'')}" placeholder="מספר עובד (זיהוי אוטומטי בכניסה)" dir="ltr">
     <button class="del" title="הסרה">✕</button>
     <button type="button" class="bell" title="הגדרת התראות">🔔</button>
+    <label class="i-rc" title="גישה למודול גיוס העובדים — לאדמין תמיד" style="grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;${m.role===ROLE_ADMIN?'display:none':''}"><input type="checkbox" class="i-recruit" style="width:auto" ${m.recruit?'checked':''}>🧲 גישה למודול גיוס עובדים</label>
     <div class="mgr-prefs-panel hidden">
       <div class="mgr-pref-row head"><div class="lbl">סוג התראה</div><div class="cb">מייל</div><div class="cb">Push</div></div>
       ${MGR_ALERT_TYPES.map(([key,label])=>{
@@ -2420,6 +2421,7 @@ function mgrRowEl(m){
   div.querySelector('.del').addEventListener('click',()=>div.remove());
   div.querySelector('.i-role').addEventListener('change',e=>{
     div.querySelector('.i-branch').style.display = e.target.value===ROLE_ADMIN ? 'none' : '';
+    div.querySelector('.i-rc').style.display = e.target.value===ROLE_ADMIN ? 'none' : 'flex';   // an admin always has the recruitment
   });
   div.querySelector('.bell').addEventListener('click',(e)=>{
     e.preventDefault();
@@ -2447,7 +2449,8 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
     email: r.querySelector('.i-memail').value.trim(),
     branch: r.querySelector('.i-branch').value,
     empNo: r.querySelector('.i-empno').value.trim(),
-    prefs: mgrRowPrefsJson(r)
+    prefs: mgrRowPrefsJson(r),
+    recruit: r.querySelector('.i-recruit').checked
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;

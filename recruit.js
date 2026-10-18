@@ -611,11 +611,27 @@
   }
 
   /* ================= wiring ================= */
+  // the menu item: an admin always; another manager only with "🧲 גיוס" ticked in the managers window (the server checks too)
+  const access = { who: null, ok: false };
+  async function checkAccess() {
+    const b = $('rcMgrBtn'), s = appState();
+    if (!b || !s || !s.mgr) return;
+    if (isAdmin()) { b.style.display = ''; return; }
+    const who = s.mgr.name + '|' + s.mgr.role;
+    if (access.who !== who) {
+      access.who = who; access.ok = false; b.style.display = 'none';
+      const r = await apiPost({ action: 'recruitAccess', ...mAuth() }).catch(() => null);
+      access.ok = !!(r && r.ok && r.allowed);
+    }
+    b.style.display = access.ok ? '' : 'none';
+  }
   function start() {
     const drop = $('menuAdminDrop');
     if (drop && !$('rcMgrBtn')) {
-      drop.insertAdjacentHTML('beforeend', '<button id="rcMgrBtn">🧲 גיוס עובדים</button>');
+      drop.insertAdjacentHTML('beforeend', '<button id="rcMgrBtn" style="display:none">🧲 גיוס עובדים</button>');
       $('rcMgrBtn').addEventListener('click', openMgr);
+      $('menuAdminBtn')?.addEventListener('click', checkAccess, true);
+      checkAccess();
     }
     const links = document.querySelector('#empHome .eh-links');
     if (links && !$('ehContract')) {
