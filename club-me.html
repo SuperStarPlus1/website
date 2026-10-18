@@ -73,6 +73,28 @@
   /* 17/10/2026: the receipt's copy (PDF) and the SMS after each purchase */
   .rcpdf { margin: 8px 0 2px; background: #eef6ff; color: #0b4a8b; border: 1px solid #cfe3fb; border-radius: 10px; padding: 7px 12px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
   .rcpdf:disabled { opacity: .6; cursor: default; }
+  /* 18/10/2026: the savings, "when did I buy", the shopping list */
+  .saved2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .saved2 .stat b { color: var(--ok); }
+  input.tin { font-size: 16px; letter-spacing: 0; direction: rtl; text-align: right; min-height: 46px; padding: 9px 12px; }
+  .srch, .sladd { display: flex; gap: 8px; align-items: stretch; }
+  .srch input, .sladd input { flex: 1 1 auto; width: auto; min-width: 0; }
+  .srch .btn, .sladd .btn { width: auto; margin: 0; padding: 0 16px; font-size: 16px; white-space: nowrap; }
+  .hit { padding: 9px 0; border-bottom: 1px solid #eef2f7; font-size: 14.5px; }
+  .hit:last-child { border-bottom: 0; }
+  .hit .rcpdf { margin: 6px 0 0; padding: 5px 10px; font-size: 12.5px; }
+  .sl { list-style: none; margin: 10px 0 0; padding: 0; }
+  .sl li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef2f7; font-size: 15px; }
+  .sl li input { width: 22px; height: 22px; min-height: 0; flex: 0 0 auto; margin: 0; accent-color: var(--blue); }
+  .sl li .t { flex: 1; }
+  .sl li.done .t { text-decoration: line-through; color: var(--muted); }
+  .sl .x { border: 0; background: none; color: var(--bad); font-size: 18px; cursor: pointer; padding: 0 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { border: 1px solid var(--line); background: #f6f9fd; border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 13.5px; cursor: pointer; color: var(--ink); }
+  .chip.deal { border-color: #f2c94c; background: #fff8db; }
+  .dealtag { display: inline-block; background: #fff3bf; color: #8a5a00; border-radius: 8px; padding: 1px 7px; font-size: 12px; font-weight: 700; margin-inline-start: 6px; }
+  .slbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .slbar button { flex: 1 1 140px; margin: 0; font-size: 15px; padding: 10px; }
   .rsms { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 14px; color: #334155; cursor: pointer; }
   .rsms input { width: 18px; height: 18px; accent-color: #0076DA; }
   details.rc.hit { background: #fffbe6; border-radius: 8px; padding: 8px; }
@@ -173,6 +195,7 @@
     <div id="coupons"></div>
     <div id="vc"></div>
     <div id="purch"></div>
+    <div id="slist"></div>
     <div class="card">
       <a class="tile go" href="/mivtzaim" style="display:block"><b data-t="t1"></b><small data-t="t1s"></small></a>
     </div>
@@ -205,6 +228,10 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       formH: (n) => (n ? n + ', ' : '') + 'עוד צעד קטן 💛', formWhy: 'האזור האישי פתוח לחברי המועדון שהשלימו את הפרטים ואישרו לקבל מבצעים והטבות. זה לוקח דקה — ואחרי השליחה חוזרים לכאן.',
       formGo: 'להשלמת הפרטים', hello: (n) => 'שלום ' + n + ' 👋', cardT: 'כרטיס חבר מועדון סופרסטאר', cardHint: 'הציגו בקופה לזיהוי במועדון',
       soonH: 'בשבילכם', t1: '🏷️ המבצעים של השבוע', pLoading: 'הקניות שלכם נטענות מהקופות — יופיעו כאן בקרוב.', pNone: 'עוד לא נמצאו קניות בכרטיס מאז 1/10/2025.', pLast: 'קנייה אחרונה', pAvg: 'סל ממוצע', pCount: 'קניות מ-1/10/25', giftH: '🎁 סל קנייה 41 מתנה', giftProg: (d) => d + ' מתוך 40 קניות', giftToGo: (n) => 'עוד ' + n + ' קניות — והקנייה ה-41 בהטבה', giftDue: 'הגעתם ל-40 קניות! בקנייה הבאה מגיעה לכם ההטבה 🎉', giftExp: (x) => 'ההטבה הצפויה: כ-₪' + x + ' (ממוצע הקניות שלכם)', giftNote: 'הספירה מתחילה אחרי הקנייה שבה מומשה ההטבה הקודמת. הסכום הסופי נקבע בקופה.', giftHist: 'הטבות שקיבלתם', forYouH: '🏷️ מבצעים על מוצרים שאתם קונים', recentH: '🧾 הקניות האחרונות', rcPdf: '📄 העתק קבלה (PDF)', rcWait: 'מכין את ההעתק…', rcNone: 'לקנייה הזו לא נשמר פירוט — הפירוט וההעתק נשמרים ל-3 הקניות האחרונות.', rsms: 'שליחת קישור להעתק הקבלה ב-SMS אחרי כל קנייה', topH: '🛒 המוצרים שאתם קונים הכי הרבה', times: (n) => n + ' פעמים', reg: 'קופה', benefitLine: 'הטבת 41', validTo: 'עד', emailBad: '📧 כתובת המייל שסיפקת אינה תקינה — זה בסדר, אבל את/ה מפספס/ת חלק מההטבות שלנו.', emailFix: 'לעדכון המייל', cpH: '🎟 הקופונים שלי', cpOn: (p) => p + '% הנחה', cpUntil: (d) => 'בתוקף עד ' + d, cpHow: 'מציגים בקופה עם כרטיס המועדון — ההנחה על מוצר אחד.', popH: 'התגעגענו! 💛', popP: 'מחכה לך קופון הנחה בסופרסטאר:', popOk: 'מעולה, נתראה!', vcH: '💳 כרטיס נטען דיגיטלי', vcWhy: 'כרטיס לתשלום בקופה — טוענים בו כסף בקופה ומשלמים איתו בכל קנייה, ישר מהטלפון.', vcIssue: 'הנפקת כרטיס דיגיטלי', vcName: 'כרטיס נטען — סופרסטאר', vcNo: 'מספר כרטיס', vcNew: 'הכרטיס מוכן! כדי להתחיל — הציגו את הברקוד בקופה וטענו בו סכום.', vcBal: 'יתרה ידועה', vcBalAt: (d) => 'נכון ל-' + d + ' (היתרה המדויקת — בקופה)', vcTx: 'טעינות ותשלומים', vcLoad: 'טעינה', vcPay: 'תשלום', vcWarn: '🔒 הכרטיס שווה כסף — אל תשלחו צילום שלו לאף אחד.', vcZoom: '🔍 הקישו להגדלה לסריקה בקופה', vcClose: 'הקישו לסגירה · הגבירו את בהירות המסך', t1s: 'כל המבצעים החדשים', t2: '🧾 החשבוניות שלי', t3: '🛒 מה קניתי + מבצעים בשבילי', t4: '📊 הסל הממוצע והקנייה האחרונה', soon: 'בקרוב',
+      savedH: '💰 החיסכון שלכם', savedMonth: 'חסכתם החודש', savedYear: 'חסכתם השנה', savedNote: (d) => 'מבצעים והנחות בקופה — כמו "בקנייה זו חסכת" בקבלה' + (d ? ' (מ-' + d + ')' : ''),
+      searchH: '🔎 מתי קניתי…?', searchPh: 'שם מוצר או ברקוד', searchGo: 'חיפוש', searchNone: 'לא נמצא בקניות שלכם.', searchFrom: (d) => 'מחפש בקניות מ-' + d, searchRet: 'החזרה', searchWait: 'מחפש…',
+      listH: '🛒 רשימת הקניות שלי', listPh: 'מה צריך לקנות?', listAdd: 'הוספה', listEmpty: 'הרשימה ריקה — הוסיפו מוצרים, או בחרו מהמוצרים שאתם קונים.', listSug: 'מהמוצרים שאתם קונים:',
+      listClear: '🧹 מחיקת מה שסומן', listShare: '📤 שיתוף בוואטסאפ', listShareH: '🛒 רשימת קניות — סופרסטאר', dealTag: 'במבצע', listSaved: 'נשמר', listErr: 'לא נשמר — נסו שוב',
       detailsH: 'הפרטים שלי', name: 'שם', id: 'ת"ז', phone: 'נייד', email: 'מייל', city: 'יישוב', since: 'חבר/ה מ-', edit: 'עדכון פרטים',
       mailH: 'דיוור', sms: 'SMS', mail: 'מייל', on: 'מאושר', off: 'לא מאושר', mailManage: 'ניהול / הפסקת דיוור', logout: 'יציאה',
       terms: 'תקנון המועדון', privacy: 'מדיניות פרטיות', net: 'אין חיבור — נסו שוב', badId: 'מספר תעודת זהות לא תקין', badCode: 'יש להזין 6 ספרות' },
@@ -213,6 +240,10 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       formH: (n) => (n ? n + '، ' : '') + 'خطوة صغيرة أخرى 💛', formWhy: 'المنطقة الشخصية مفتوحة لأعضاء النادي الذين أكملوا التفاصيل ووافقوا على تلقي العروض والمزايا. يستغرق ذلك دقيقة — وبعد الإرسال تعودون إلى هنا.',
       formGo: 'لإكمال التفاصيل', hello: (n) => 'مرحبًا ' + n + ' 👋', cardT: 'بطاقة عضو نادي سوبرستار', cardHint: 'اعرضوها في الصندوق للتعريف في النادي',
       soonH: 'من أجلكم', t1: '🏷️ عروض الأسبوع', pLoading: 'يتم تحميل مشترياتكم من الصناديق — ستظهر هنا قريبًا.', pNone: 'لم نجد مشتريات على البطاقة منذ 1/10/2025.', pLast: 'آخر شراء', pAvg: 'متوسط السلة', pCount: 'مشتريات منذ 1/10/25', giftH: '🎁 سلة الشراء 41 هدية', giftProg: (d) => d + ' من 40 عملية شراء', giftToGo: (n) => 'تبقى ' + n + ' عمليات شراء — والشراء الـ41 بالهدية', giftDue: 'وصلتم إلى 40 عملية شراء! في الشراء القادم تستحقون الهدية 🎉', giftExp: (x) => 'الهدية المتوقعة: حوالي ₪' + x + ' (متوسط مشترياتكم)', giftNote: 'يبدأ العد بعد الشراء الذي استُخدمت فيه الهدية السابقة. المبلغ النهائي يُحدد في الصندوق.', giftHist: 'الهدايا التي حصلتم عليها', forYouH: '🏷️ عروض على منتجات تشترونها', recentH: '🧾 آخر المشتريات', rcPdf: '📄 نسخة الإيصال (PDF)', rcWait: 'جارٍ تحضير النسخة…', rcNone: 'لم تُحفظ تفاصيل هذا الشراء — التفاصيل والنسخة تُحفظ لآخر 3 مشتريات.', rsms: 'إرسال رابط لنسخة الإيصال برسالة SMS بعد كل شراء', topH: '🛒 المنتجات التي تشترونها أكثر', times: (n) => n + ' مرات', reg: 'صندوق', benefitLine: 'هدية 41', validTo: 'حتى', emailBad: '📧 عنوان البريد الإلكتروني الذي قدمته غير صحيح — لا بأس، لكنك تفوّت بعض امتيازاتنا.', emailFix: 'لتحديث البريد', cpH: '🎟 قسائمي', cpOn: (p) => 'خصم ' + p + '%', cpUntil: (d) => 'صالحة حتى ' + d, cpHow: 'اعرضوها في الصندوق مع بطاقة النادي — الخصم على منتج واحد.', popH: 'اشتقنا لك! 💛', popP: 'تنتظرك قسيمة خصم في سوبرستار:', popOk: 'رائع، نراكم قريبًا!', vcH: '💳 بطاقة مشحونة رقمية', vcWhy: 'بطاقة للدفع في الصندوق — تشحنونها بالمال في الصندوق وتدفعون بها في كل عملية شراء، مباشرة من الهاتف.', vcIssue: 'إصدار بطاقة رقمية', vcName: 'بطاقة مشحونة — سوبرستار', vcNo: 'رقم البطاقة', vcNew: 'البطاقة جاهزة! للبدء — اعرضوا الباركود في الصندوق واشحنوا مبلغًا.', vcBal: 'الرصيد المعروف', vcBalAt: (d) => 'صحيح حتى ' + d + ' (الرصيد الدقيق — في الصندوق)', vcTx: 'الشحن والدفع', vcLoad: 'شحن', vcPay: 'دفع', vcWarn: '🔒 البطاقة تساوي مالًا — لا ترسلوا صورتها لأحد.', vcZoom: '🔍 اضغطوا للتكبير للمسح في الصندوق', vcClose: 'اضغطوا للإغلاق · ارفعوا سطوع الشاشة', t1s: 'كل العروض الجديدة', t2: '🧾 فواتيري', t3: '🛒 ماذا اشتريت + عروض لي', t4: '📊 متوسط السلة وآخر شراء', soon: 'قريبًا',
+      savedH: '💰 توفيركم', savedMonth: 'وفّرتم هذا الشهر', savedYear: 'وفّرتم هذه السنة', savedNote: (d) => 'العروض والتخفيضات في الصندوق — مثل "وفّرت في هذا الشراء" في الإيصال' + (d ? ' (منذ ' + d + ')' : ''),
+      searchH: '🔎 متى اشتريت…؟', searchPh: 'اسم المنتج أو الباركود', searchGo: 'بحث', searchNone: 'لم يُعثر عليه في مشترياتكم.', searchFrom: (d) => 'البحث في المشتريات منذ ' + d, searchRet: 'إرجاع', searchWait: 'جارٍ البحث…',
+      listH: '🛒 قائمة مشترياتي', listPh: 'ماذا تحتاجون أن تشتروا؟', listAdd: 'إضافة', listEmpty: 'القائمة فارغة — أضيفوا منتجات، أو اختاروا من المنتجات التي تشترونها.', listSug: 'من المنتجات التي تشترونها:',
+      listClear: '🧹 حذف ما تم تحديده', listShare: '📤 مشاركة في واتساب', listShareH: '🛒 قائمة مشتريات — سوبرستار', dealTag: 'بالعرض', listSaved: 'تم الحفظ', listErr: 'لم يُحفظ — حاولوا مرة أخرى',
       detailsH: 'تفاصيلي', name: 'الاسم', id: 'الهوية', phone: 'الهاتف', email: 'البريد', city: 'البلدة', since: 'عضو منذ', edit: 'تحديث التفاصيل',
       mailH: 'الرسائل', sms: 'SMS', mail: 'بريد', on: 'موافق', off: 'غير موافق', mailManage: 'إدارة / إيقاف الرسائل', logout: 'خروج',
       terms: 'نظام النادي', privacy: 'سياسة الخصوصية', net: 'لا يوجد اتصال — حاول مرة أخرى', badId: 'رقم الهوية غير صحيح', badCode: 'يجب إدخال 6 أرقام' },
@@ -307,6 +338,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     drawCoupons();
     drawValueCard();
     drawPurchases();
+    list = me.list || { items: [], suggest: [] }; const sb = $('slist'); if (sb) delete sb.dataset.ready; drawList();
     $('unsubGo').href = me.unsubUrl + (ui === 'ar' ? '&lang=ar' : '');
   }
   const dmy = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(2, 4) : '';
@@ -376,6 +408,13 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       '<div class="stat"><b>' + esc(dmy(p.lastAt)) + '</b><small>' + esc(t.pLast) + '</small></div>' +
       '<div class="stat"><b>' + esc(money(p.avgBasket)) + '</b><small>' + esc(t.pAvg) + '</small></div>' +
       '<div class="stat"><b>' + esc(p.count) + '</b><small>' + esc(t.pCount) + '</small></div></div></div>';
+    if (p.saved && (p.saved.month > 0 || p.saved.year > 0)) {
+      const yearStart = new Date().getFullYear() + '-01-01';
+      h += '<div class="card"><h2>' + esc(t.savedH) + '</h2><div class="saved2">' +
+        '<div class="stat"><b>' + esc(money(p.saved.month)) + '</b><small>' + esc(t.savedMonth) + '</small></div>' +
+        '<div class="stat"><b>' + esc(money(p.saved.year)) + '</b><small>' + esc(t.savedYear) + '</small></div></div>' +
+        '<p class="muted" style="margin:8px 0 0;font-size:12.5px">' + esc(t.savedNote(p.saved.from > yearStart ? dmy(p.saved.from) : '')) + '</p></div>';
+    }
     h += '<div class="card"><h2>' + esc(t.giftH) + '</h2><div class="gift' + (b.due ? ' due' : '') + '">' +
       '<b>' + esc(b.due ? t.giftDue : t.giftToGo(b.toGo)) + '</b>' +
       '<div class="bar"><i style="width:' + Math.round(b.done / 40 * 100) + '%"></i></div>' +
@@ -396,8 +435,86 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       (me.viewOnly ? '' : '<label class="rsms"><input type="checkbox" id="rsms"' + (me.receiptSms !== false ? ' checked' : '') + '> <span>' + esc(t.rsms) + '</span></label>') + '</div>';
     if (p.top && p.top.length) h += '<div class="card"><h2>' + esc(t.topH) + '</h2><ul class="list">' + p.top.map((x) =>
       '<li><span>' + esc(x.name) + '</span><span class="n">' + esc(t.times(x.times)) + '</span></li>').join('') + '</ul></div>';
+    h += '<div class="card"><h2>' + esc(t.searchH) + '</h2><form class="srch" id="srchF"><input class="tin" id="srchQ" maxlength="60" autocomplete="off" placeholder="' + esc(t.searchPh) + '">' +
+      '<button class="btn" type="submit">' + esc(t.searchGo) + '</button></form><div id="srchR"></div></div>';
     box.innerHTML = h;
   }
+  /** "when did I buy X" (clubAppSearch): each hit with its copy */
+  async function searchBuy() {
+    const t = I[ui], q = $('srchQ').value.trim(), out = $('srchR');
+    if (q.length < 2) return;
+    out.innerHTML = '<p class="muted">' + esc(t.searchWait) + '</p>';
+    const r = await api({ action: 'clubAppSearch', s: store.get('ss_club_s'), q });
+    if (!r.ok) { out.innerHTML = '<p class="msg err">' + esc(r.error || t.net) + '</p>'; return; }
+    out.innerHTML = (r.hits.length ? r.hits.map((x) => '<div class="hit"><b>' + esc(x.name) + '</b><div class="muted">' + esc(dmy(x.at)) + ' ' + esc(x.at.slice(11, 16)) + ' · ' + esc(t.reg) + ' ' + esc(x.register) +
+      (x.ret ? ' · ' + esc(t.searchRet) : '') + ' · ' + esc(x.qty !== 1 ? x.qty + ' × ' + money(x.unit) + ' = ' : '') + esc(money(x.total)) + '</div>' +
+      '<button type="button" class="rcpdf" data-rk="' + esc(x.rkey) + '" data-at="' + esc(x.at.slice(0, 10)) + '">' + esc(t.rcPdf) + '</button><div class="msg err rcErr"></div></div>').join('')
+      : '<p class="muted">' + esc(t.searchNone) + '</p>') + (r.from ? '<p class="muted" style="font-size:12.5px;margin:8px 0 0">' + esc(t.searchFrom(dmy(r.from))) + '</p>' : '');
+  }
+
+  /* ---------- 🛒 the shopping list (clubAppMe.list, saved by clubAppListSave) ---------- */
+  let list = { items: [], suggest: [] }, saveTimer = 0;
+  const dealOf = (d) => d ? (d[ui] || d.he || '') : '';
+  function drawList() {
+    const t = I[ui], box = $('slist'), ro = !!me.viewOnly;
+    if (!box) return;
+    if (!me.list) { box.innerHTML = ''; return; }   // the staff's look at a customer who did not join yet
+    if (!box.dataset.ready) {
+      box.innerHTML = '<div class="card"><h2>' + esc(t.listH) + '</h2>' + (ro ? '' : '<form class="sladd" id="slF"><input class="tin" id="slQ" maxlength="80" autocomplete="off" placeholder="' + esc(t.listPh) + '"><button class="btn" type="submit">' + esc(t.listAdd) + '</button></form>') +
+        '<ul class="sl" id="slItems"></ul><div id="slBar"></div><div id="slSug"></div><p class="msg" id="slMsg"></p></div>';
+      box.dataset.ready = '1';
+    }
+    $('slItems').innerHTML = list.items.length ? list.items.map((x) => '<li class="' + (x.done ? 'done' : '') + '" data-id="' + esc(x.id) + '"><input type="checkbox"' + (x.done ? ' checked' : '') + (ro ? ' disabled' : '') + '>' +
+      '<span class="t">' + esc(x.t) + (dealOf(x.deal) ? '<span class="dealtag" title="' + esc(dealOf(x.deal)) + '">🏷 ' + esc(t.dealTag) + '</span><div class="muted" style="font-size:12.5px">' + esc(dealOf(x.deal)) + '</div>' : '') + '</span>' +
+      (ro ? '' : '<button type="button" class="x" aria-label="✕">✕</button>') + '</li>').join('') : '<li class="muted" style="border:0">' + esc(t.listEmpty) + '</li>';
+    $('slBar').innerHTML = list.items.length ? '<div class="slbar">' + (ro || !list.items.some((x) => x.done) ? '' : '<button type="button" class="btn plain" id="slClear">' + esc(t.listClear) + '</button>') +
+      '<button type="button" class="btn plain" id="slShare">' + esc(t.listShare) + '</button></div>' : '';
+    const sug = ro ? [] : list.suggest.filter((g) => !list.items.some((x) => x.b && x.b === g.b));
+    $('slSug').innerHTML = sug.length ? '<p class="muted" style="margin:12px 0 0">' + esc(t.listSug) + '</p><div class="chips">' + sug.map((g) =>
+      '<button type="button" class="chip' + (g.deal ? ' deal' : '') + '" data-b="' + esc(g.b) + '">＋ ' + esc(g.t) + (g.deal ? ' 🏷' : '') + '</button>').join('') + '</div>' : '';
+  }
+  function saveList() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const r = await api({ action: 'clubAppListSave', s: store.get('ss_club_s'), items: list.items.map((x) => ({ id: x.id, t: x.t, b: x.b, done: x.done })) });
+      const m = $('slMsg');
+      if (!r.ok) { if (m) { m.className = 'msg err'; m.textContent = r.error || I[ui].listErr; } return; }
+      if (m) { m.className = 'msg ok'; m.textContent = ''; }
+      // the server's deals (a product just added gets its promotion) — the order and the ticks stay as they are now
+      const by = new Map(r.list.items.map((x) => [x.id, x]));
+      list.items = list.items.map((x) => by.has(x.id) ? { ...x, deal: by.get(x.id).deal } : x);
+      list.suggest = r.list.suggest;
+      drawList();
+    }, 600);
+  }
+  const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  $('slist').addEventListener('submit', (ev) => {
+    if (ev.target.id !== 'slF') return;
+    ev.preventDefault();
+    const v = $('slQ').value.trim();
+    if (!v) return;
+    list.items.push({ id: newId(), t: v, b: '', done: false });
+    $('slQ').value = '';
+    drawList(); saveList();
+  });
+  $('slist').addEventListener('click', (ev) => {
+    const chip = ev.target.closest('.chip');
+    if (chip) { const g = list.suggest.find((x) => x.b === chip.dataset.b); if (g) { list.items.push({ id: newId(), t: g.t, b: g.b, done: false, deal: g.deal }); drawList(); saveList(); } return; }
+    const x = ev.target.closest('.x');
+    if (x) { const id = x.closest('li').dataset.id; list.items = list.items.filter((i) => i.id !== id); drawList(); saveList(); return; }
+    if (ev.target.id === 'slClear') { list.items = list.items.filter((i) => !i.done); drawList(); saveList(); return; }
+    if (ev.target.id === 'slShare') {
+      const left = list.items.filter((i) => !i.done);
+      const text = I[ui].listShareH + '\n' + (left.length ? left : list.items).map((i) => '• ' + i.t).join('\n');
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+    }
+  });
+  $('slist').addEventListener('change', (ev) => {
+    if (ev.target.type !== 'checkbox') return;
+    const it = list.items.find((i) => i.id === ev.target.closest('li').dataset.id);
+    if (it) { it.done = ev.target.checked; drawList(); saveList(); }
+  });
+
   /** the copy of a receipt (a PDF from the server) — saved / opened by the phone */
   async function receiptPdf(rk, btn) {
     const s = store.get('ss_club_s');
@@ -425,6 +542,7 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     const b = ev.target.closest('.rcpdf');
     if (b) receiptPdf(b.dataset.rk, b);
   });
+  $('purch').addEventListener('submit', (ev) => { if (ev.target.id === 'srchF') { ev.preventDefault(); searchBuy(); } });
   $('purch').addEventListener('change', async (ev) => {
     if (ev.target.id !== 'rsms') return;
     const on = ev.target.checked, r = await api({ action: 'clubAppReceiptSms', s: store.get('ss_club_s'), on });

@@ -668,6 +668,16 @@
     const pend = r.coupons.filter((c) => c.status === 'pending'), rest = r.coupons.filter((c) => c.status !== 'pending');
     p.innerHTML = '<div class="box"><h4>🎟 קופונים לחברי המועדון</h4><div class="note">' + r.percent + '% על מוצר אחד שהלקוח קונה (לא מוצר שכבר במבצע), ' + r.days + ' ימים. המערכת מציעה כל בוקר; כדי שהקופה תכבד — פותחים בקומקס מבצע לקבוצת הלקוחות של הלקוח על המוצר, ומסמנים כאן "נפתח בקומקס" — רק אז הלקוח רואה את הקופון באזור האישי (ולקוח שלא קנה ' + r.winbackDays + ' יום מקבל גם חלון קופץ ו-SMS).</div>' +
       '<div class="row" style="margin-top:8px"><label class="c">בפיילוט — מספרי ת"ז (פסיק בין מספרים)<input type="text" id="cpPilot" dir="ltr" value="' + e(r.pilot || '') + '"></label><button class="btn" id="cpSave">💾 שמירה והרצה עכשיו</button></div></div>' +
+      // 18/10/2026: the "41st basket" reminder (club-purchases.ts benefitReminders) — off until turned on here
+      '<div class="box"><h4>🎁 תזכורת "סל 41" ב-SMS</h4><div class="note">אחרי קנייה, לחבר מועדון שאישר SMS: "נשארו עוד 3 קניות — והקנייה ה-41 מתנה מאיתנו", ו"בקנייה הבאה מחכה לך הסל ה-41". כל תזכורת נשלחת פעם אחת בכל סבב. ההודעה מסומנת "פרסומת" ויש בה קישור להסרה.</div>' +
+        '<div class="row" style="margin-top:8px;align-items:center"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="brOn"' + (r.remind.on ? ' checked' : '') + '> <b>פעיל</b></label>' +
+        '<label class="c" style="flex:0 1 220px">כמה קניות לפני ההטבה (פסיק בין מספרים; 0 = הקנייה הבאה היא ההטבה)<input type="text" id="brAt" dir="ltr" value="' + e(r.remind.at) + '"></label><button class="btn" id="brSave">💾 שמירה</button></div>' +
+        '<div class="row" style="margin-top:8px"><label class="c" style="flex:0 1 200px">בדיקה — ת"ז של חבר מועדון<input type="text" id="brTest" dir="ltr" inputmode="numeric"></label><button class="btn" id="brTestGo">📱 שליחת הודעת בדיקה</button></div><div class="note" id="brOut"></div></div>' +
+      // 18/10/2026: automatic activation — infrastructure, locked until Comax's side is checked (club-coupons.ts AUTO_READY)
+      '<div class="box"><h4>⚙ הפעלה אוטומטית של קופונים</h4><div class="note">' + (r.auto.ready ? 'כשפעיל — הקופונים שהמערכת מציעה כל בוקר מופעלים מיד עם מספר המבצע הקבוע בקומקס, בלי "נפתח בקומקס ✓".'
+        : '🔒 <b>נעול</b> — ממתין לבדיקה מול קומקס איך הקופה מכבדת קופון (מבצע לקבוצת לקוחות / לכרטיס). עד אז כל קופון ממתין לפתיחה ידנית כמו היום. אפשר כבר לרשום את מספר המבצע.') + '</div>' +
+        '<div class="row" style="margin-top:8px;align-items:center"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="caOn"' + (r.auto.on ? ' checked' : '') + (r.auto.ready ? '' : ' disabled') + '> הפעלה אוטומטית</label>' +
+        '<label class="c" style="flex:0 1 200px">מס׳ המבצע הקבוע בקומקס<input type="text" id="caCode" value="' + e(r.auto.code || '') + '"></label><button class="btn" id="caSave">💾 שמירה</button></div></div>' +
       '<div class="box"><h4>➕ קופון ידני — ללקוח או לקבוצה</h4><div class="note">רק לחברי מועדון שמילאו את הטופס ואישרו דיוור. אותו מוצר, אחוז וימים לכולם; מי שכבר יש לו קופון פתוח על המוצר — מדולג. כדי שהקופה תכבד: מבצע אחד בקומקס לקבוצת המועדון על המוצר, ואז "נפתח בקומקס" — לכל הקבוצה יחד.</div>' +
         '<div class="row" style="margin-top:8px;gap:14px;flex-wrap:wrap">' + [['one', 'לקוח אחד'], ['list', 'רשימה (ת"ז / נייד)'], ['all', 'כל חברי המועדון'], ['bought', 'מי שקנה מוצר'], ['quiet', 'מי שלא קנה X ימים']].map((x, i) =>
           '<label style="display:flex;gap:6px;align-items:center"><input type="radio" name="cmT" value="' + x[0] + '"' + (i ? '' : ' checked') + '> ' + x[1] + '</label>').join('') + '</div>' +
@@ -697,6 +707,22 @@
       if (!x.ok) { say(x.error || 'שגיאה', 'err'); return; }
       say('נוצרו ' + x.created + ' קופונים על ' + x.product + (x.member ? ' ל' + x.member : '') + (x.skipped ? ' (' + x.skipped + ' דולגו — כבר יש להם קופון פתוח על המוצר)' : '') +
         (x.status === 'active' ? ' — פעילים עד ' + String(x.validTo).split('-').reverse().join('/') : ' — ממתינים לפתיחה בקומקס'), 'ok'); drawCoupons();
+    });
+    $('brSave').addEventListener('click', async () => {
+      if ($('brOn').checked && !r.remind.on && !confirm('להפעיל תזכורות SMS אמיתיות ללקוחות שאישרו SMS?')) return;
+      const x = await api({ action: 'clubBenefitRemind', on: $('brOn').checked, at: $('brAt').value });
+      say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); if (x.ok) drawCoupons();
+    });
+    $('brTestGo').addEventListener('click', async () => {
+      const id = $('brTest').value.trim();
+      if (!id) { say('רשמו ת"ז של חבר מועדון', 'err'); return; }
+      if (!confirm('לשלוח עכשיו SMS בדיקה לחבר המועדון הזה?')) return;
+      const x = await api({ action: 'clubBenefitRemind', testId: id });
+      $('brOut').textContent = x.ok ? ((x.test && x.test.out && x.test.out.length) ? x.test.out.join(' | ') : 'לא נשלח — לחבר אין אישור SMS / נייד, או שהוא חסום') : (x.error || 'שגיאה');
+    });
+    $('caSave').addEventListener('click', async () => {
+      const x = await api({ action: 'clubCouponAuto', code: $('caCode').value.trim(), ...(r.auto.ready ? { on: $('caOn').checked } : {}) });
+      say(x.ok ? 'נשמר ✓' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
     });
     $('cpSave').addEventListener('click', async () => { const x = await api({ action: 'clubCouponPilot', ids: $('cpPilot').value, runNow: true }); say(x.ok ? 'נשמר ✓' + (x.run ? ' · נוצרו ' + x.run.created : '') : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err'); drawCoupons(); });
     p.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
