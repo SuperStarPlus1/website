@@ -37,6 +37,7 @@
     '.rc-score{display:inline-block;width:70px;height:7px;border-radius:9px;background:#e5e7eb;overflow:hidden;vertical-align:middle;margin-inline-end:5px}.rc-score i{display:block;height:100%}' +
     '.rc-f{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rc-f label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:#374151}' +
     '.rc-f input,.rc-f select,.rc-f textarea,.rc-in{border:1.5px solid #d1d5db;border-radius:8px;padding:6px 9px;font:inherit;font-weight:400;width:100%;box-sizing:border-box}' +
+    '.rc-iv{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:#374151;margin-top:8px}.rc-iv textarea{border:1.5px solid #d1d5db;border-radius:8px;padding:6px 9px;font:inherit;font-weight:400;width:100%;box-sizing:border-box;resize:vertical}' +
     '.rc-f .wide{grid-column:1/-1}@media(max-width:560px){.rc-f{grid-template-columns:1fr}}' +
     '.rc-crit{display:grid;grid-template-columns:1fr 92px auto auto;gap:6px;align-items:center;margin-bottom:5px}' +
     '.rc-chk{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed #eef0f4}.rc-chk .w{color:#6b7280;font-size:12px;margin-inline-start:auto}' +
@@ -400,6 +401,8 @@
         '<div style="margin:6px 0" data-checks>' + (a.job.criteria.length ? a.job.criteria.map((k) => '<label class="rc-chk"><input type="checkbox" data-k="' + e(k.id) + '"' + (a.checks[k.id] ? ' checked' : '') +
           (a.status === 'hired' ? ' disabled' : '') + '> ' + e(k.label) + (k.required ? ' <span class="rc-req">חובה</span>' : '') + '<span class="w">משקל ' + k.weight + '</span></label>').join('') : '<p class="rc-meta">למשרה אין קריטריונים.</p>') + '</div>' +
         '<div>ציון התאמה: <span data-score>' + scoreBar(a.score) + '</span> <span class="rc-req" data-miss>' + (a.missingRequired.length ? 'חסר חובה: ' + e(a.missingRequired.join(', ')) : '') + '</span></div>' +
+        '<label class="rc-iv">📝 ראיון עבודה<textarea data-iv rows="5" maxlength="8000" placeholder="מה עלה בראיון: התרשמות, ניסיון, זמינות, שכר מבוקש, הערות…">' + e(a.interview) + '</textarea></label>' +
+        (a.status === 'hired' ? '<button class="btn plain" data-ivsave style="font-size:12.5px;margin-top:4px">💾 שמירת סיכום הראיון</button>' : '') +
         (a.status === 'hired' ? '<p class="rc-meta">✅ התקבל/ה — ' + (a.terms ? (a.terms.type === 'monthly' ? 'חודשי ' : 'שעתי ') + a.terms.wage + ' ₪ · התחלה ' + e(dmy(a.terms.startDate)) : '') + '</p>' :
           '<div class="rc-f" style="margin-top:8px"><label>סטטוס<select data-status>' + A.statuses.filter(([s]) => s !== 'hired').map(([s, h]) => '<option value="' + s + '"' + (s === a.status ? ' selected' : '') + '>' + e(h) + '</option>').join('') + '</select></label>' +
           '<label data-rwrap' + (a.status === 'unsuitable' ? '' : ' style="display:none"') + '>מה חוסר ההתאמה (חובה)<input data-reason value="' + e(a.reason) + '" maxlength="1000"></label>' +
@@ -426,12 +429,18 @@
         box.querySelector('[data-score]').innerHTML = scoreBar(score);
         box.querySelector('[data-miss]').textContent = miss.length ? 'חסר חובה: ' + miss.join(', ') : '';
       }));
+      const ivSave = box.querySelector('[data-ivsave]');
+      if (ivSave) ivSave.addEventListener('click', async () => {
+        const x = await apiPost({ action: 'updateApplication', ...mAuth(), appId: a.appId, interview: box.querySelector('[data-iv]').value });
+        if (!x.ok) { $('rcOverlayE').textContent = x.error || 'שגיאה'; return; }
+        say('נשמר בהצלחה ✓', 'ok'); openCand(c.id);
+      });
       const st = box.querySelector('[data-status]');
       if (!st) return;
       st.addEventListener('change', () => { box.querySelector('[data-rwrap]').style.display = st.value === 'unsuitable' ? '' : 'none'; });
       box.querySelector('[data-save]').addEventListener('click', async () => {
         $('rcOverlayE').textContent = 'שומר…';
-        const x = await apiPost({ action: 'updateApplication', ...mAuth(), appId: a.appId, checks: checks(), status: st.value, reason: box.querySelector('[data-reason]').value, note: box.querySelector('[data-note]').value });
+        const x = await apiPost({ action: 'updateApplication', ...mAuth(), appId: a.appId, checks: checks(), status: st.value, reason: box.querySelector('[data-reason]').value, note: box.querySelector('[data-note]').value, interview: box.querySelector('[data-iv]').value });
         if (!x.ok) { $('rcOverlayE').textContent = x.error || 'שגיאה'; return; }
         $('rcOverlayE').textContent = ''; say('נשמר בהצלחה ✓', 'ok'); openCand(c.id);
       });
