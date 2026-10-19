@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שומר מסך ואנימציית לוגו — סופרסטאר</title>
+<link rel="icon" href="logo.png">
+<!-- 19/10/2026: downloads of the logo animation (source: ~/.mivtzaim/video, Remotion — LogoReveal / LogoScreensaver).
+     downloads/logo: superstar-screensaver.zip = SuperstarSaver.scr (video/screensaver, built with build.cmd; the loop is
+     embedded) + install notes; superstar-logo-loop.mp4 = the 60 s silent loop; the 16x9 / 9x16 reveals with sound. -->
+<style>
+  :root { --blue: #003ecd; --ink: #e8eefc; --muted: #9fb0d6; --card: rgba(255,255,255,.06); --line: rgba(255,255,255,.12); --gold: #ffc61a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, #0b2a8a 0%, #061541 45%, #02050f 100%) fixed; color: var(--ink);
+    font: 16px/1.55 "Segoe UI", Tahoma, Arial, sans-serif; padding: 24px 16px 40px; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  video { width: 100%; border-radius: 16px; display: block; background: #000; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+  .dl { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .dl h2 { font-size: 18px; margin: 0; }
+  .dl p { margin: 0; color: var(--muted); font-size: 14px; flex: 1; }
+  .dl a { margin-top: 8px; text-align: center; background: var(--gold); color: #1a1300; font-weight: 800; text-decoration: none; border-radius: 12px; padding: 11px; }
+  .dl a.alt { background: transparent; color: var(--ink); border: 1.5px solid var(--line); font-weight: 700; }
+  .how { margin-top: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+  .how h2 { font-size: 18px; margin: 0 0 6px; }
+  .how ol { margin: 0; padding-inline-start: 20px; } .how li { margin: 4px 0; }
+  .how small { color: var(--muted); display: block; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>⭐ שומר מסך סופר סטאר</h1>
+  <p class="sub">אנימציית הלוגו — לשומר מסך במחשב, למסכי טלוויזיה בחנות ולרשתות החברתיות</p>
+  <video src="downloads/logo/superstar-logo-loop.mp4" poster="downloads/logo/poster.jpg" autoplay muted loop playsinline controls></video>
+
+  <div class="grid">
+    <div class="dl"><h2>🖥 שומר מסך ל-Windows</h2><p>קובץ התקנה לשומר מסך (Windows 10/11): הסרטון מתנגן בלולאה על כל המסכים ונסגר בהזזת העכבר.</p>
+      <a href="downloads/logo/superstar-screensaver.zip" download>הורדה (ZIP · 23MB)</a></div>
+    <div class="dl"><h2>📺 לולאה למסך טלוויזיה</h2><p>סרטון של דקה, בלי קול, שמתחבר לעצמו בלי קפיצה. הלוגו נע לאט כדי שלא ייצרב במסך. מתאים לנגן USB ולטלוויזיה חכמה.</p>
+      <a href="downloads/logo/superstar-logo-loop.mp4" download>הורדה (MP4 · 23MB)</a></div>
+    <div class="dl"><h2>🎬 אנימציית הלוגו</h2><p>הגרסה הקצרה (7 שניות) עם סאונד — לפתיחת סרטונים, למצגות ולסטורי.</p>
+      <a href="downloads/logo/superstar-logo-16x9.mp4" download>רוחב 16:9 (MP4)</a>
+      <a class="alt" href="downloads/logo/superstar-logo-9x16.mp4" download>סטורי 9:16 (MP4)</a></div>
+  </div>
+
+  <div class="how">
+    <h2>איך מתקינים את שומר המסך</h2>
+    <ol>
+      <li>מורידים את ה-ZIP ומחלצים את <b>SuperstarSaver.scr</b> לתיקייה קבועה (למשל "מסמכים").</li>
+      <li>לחיצה ימנית על הקובץ ← <b>"התקן"</b> (ב-Windows 11: קודם "הצג אפשרויות נוספות").</li>
+      <li>בחלון "שומר מסך" בוחרים כמה דקות המתנה ← <b>"אישור"</b>.</li>
+    </ol>
+    <small>אם מופיע "Windows הגן על המחשב" — "מידע נוסף" ← "הפעל בכל זאת". הקובץ לא חתום דיגיטלית.</small>
+  </div>
+</main>
+</body>
+</html>
