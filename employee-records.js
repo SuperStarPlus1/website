@@ -436,6 +436,9 @@
     // admins only, re-checked whenever the admin menu opens (the same rule as the employee-card buttons)
     const syncMenu = () => $('f106AllBtn').classList.toggle('hidden', !isAdmin());
     if ($('menuAdminBtn')) $('menuAdminBtn').addEventListener('click', syncMenu, true);
+    // menus.js moves the button to "📁 טפסים ותלושים" — check whenever ANY menu opens (only the admin menu before: an admin who
+    // went straight to the documents menu did not see 106 until opening ⚙ ניהול once — 21/10/2026)
+    document.addEventListener('click', (ev) => { if (ev.target.closest && ev.target.closest('.mgr-menu-btn')) syncMenu(); }, true);
     syncMenu();
   }
 
