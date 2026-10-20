@@ -163,7 +163,8 @@
           if (f.type === 'yesno') ctl += '<div class="tk-yn" data-f="' + e(f.id) + '"><button type="button" class="y" data-v="1">כן</button><button type="button" class="n" data-v="0">לא</button></div>';
           if (f.type === 'number') ctl += '<div class="tk-reads">' + Array.from({ length: f.readings || 1 }, (_, i) =>
             '<label>' + e((f.readingLabels && f.readingLabels[i]) || ((f.readings || 1) > 1 ? '#' + (i + 1) : '')) +
-            '<input type="number" inputmode="decimal" step="any" data-f="' + e(f.id) + '" data-r="' + i + '" placeholder="' + e(f.unit || '') + '"></label>').join('') + '</div>';
+            '<input type="number" inputmode="decimal" step="any" data-f="' + e(f.id) + '" data-r="' + i + '" placeholder="' + e(f.unit || '') + '">' +
+            (f.base && f.base[i] != null ? '<small class="tk-base" data-base="' + e(f.id) + '_' + i + '" style="font-size:11px;color:#64748b">בסיס ' + e(f.base[i]) + '</small>' : '') + '</label>').join('') + '</div>';
           if (f.type === 'text') ctl += '<textarea rows="2" data-f="' + e(f.id) + '"></textarea>';
           if (f.type === 'select') ctl += '<select data-f="' + e(f.id) + '"><option value="">— בחירה —</option>' + (f.options || []).map((o) => '<option>' + e(o) + '</option>').join('') + '</select>';
         }
@@ -189,7 +190,14 @@
       a.values = a.values || Array(f.readings || 1).fill(null);
       const v = inp.value === '' ? null : Number(inp.value);
       a.values[Number(inp.dataset.r)] = v;
-      inp.classList.toggle('out', v !== null && ((f.min != null && v < f.min) || (f.max != null && v > f.max)));
+      const r = Number(inp.dataset.r), b = f.base && f.base[r] != null ? f.base[r] : null;
+      inp.classList.toggle('out', v !== null && ((f.min != null && v < f.min) || (f.max != null && v > f.max) || (b !== null && v < b)));
+      const note = body.querySelector('[data-base="' + f.id + '_' + r + '"]');
+      if (note) {   // a base stock: below → a shortage, above → the new base (the server updates the form when sent)
+        note.textContent = v === null ? 'בסיס ' + b : v < b ? 'חסרות ' + (b - v) : v > b ? 'בסיס חדש ' + v : '✓ ' + b;
+        note.style.color = v === null ? '#64748b' : v < b ? '#b91c1c' : v > b ? '#1d4ed8' : '#166534';
+        note.style.fontWeight = v !== null && v < b ? '700' : '400';
+      }
       prog();
     }));
     body.querySelectorAll('textarea[data-f],select[data-f]').forEach((c) => c.addEventListener('input', () => { ans[c.dataset.f].value = c.value; prog(); }));
@@ -331,7 +339,11 @@
       if (!a) return '—';
       if (f.type === 'check') return a.done ? 'בוצע' : 'לא בוצע';
       if (f.type === 'yesno') return a.value === true ? 'כן' : a.value === false ? 'לא' : '—';
-      if (f.type === 'number') return (a.values || []).map((v, i) => ((f.readingLabels && f.readingLabels[i]) ? f.readingLabels[i] + ': ' : '') + (v == null ? '—' : v + (f.unit || ''))).join(' · ');
+      if (f.type === 'number') return (a.values || []).map((v, i) => {
+        const b = a.base && a.base[i] != null ? a.base[i] : null;
+        return ((f.readingLabels && f.readingLabels[i]) ? f.readingLabels[i] + ': ' : '') + (v == null ? '—' : v + (f.unit || '')) +
+          (v == null || b === null ? '' : v < b ? ' (חסרות ' + (b - v) + ' מתוך ' + b + ')' : v > b ? ' (בסיס חדש, היה ' + b + ')' : ' ✓');
+      }).join(' · ');
       if (f.type === 'photo') return '';
       return a.value || '—';
     };
@@ -481,6 +493,7 @@
           f.readings = Number(v('readings')) || 1;
           f.readingLabels = String(v('readingLabels') || '').split(',').map((x) => x.trim()).filter(Boolean);
           f.unit = v('unit'); f.min = v('min') === '' ? null : Number(v('min')); f.max = v('max') === '' ? null : Number(v('max'));
+          f.base = String(v('base') || '').split(',').map((x) => x.trim() === '' ? null : Number(x.trim()));
         }
         if (f.type === 'select') f.options = String(v('options') || '').split(',').map((x) => x.trim()).filter(Boolean);
       });
@@ -496,7 +509,9 @@
           '<label>שמות <input class="tk-in" data-k="readingLabels" value="' + e((f.readingLabels || []).join(', ')) + '" placeholder="מקרר 1, מקרר 2…" style="width:150px"></label>' +
           '<label>יחידה <input class="tk-in" data-k="unit" value="' + e(f.unit || '') + '" placeholder="°" style="width:50px"></label>' +
           '<label>מינ׳ <input class="tk-in" type="number" step="any" data-k="min" value="' + e(f.min == null ? '' : f.min) + '"></label>' +
-          '<label>מקס׳ <input class="tk-in" type="number" step="any" data-k="max" value="' + e(f.max == null ? '' : f.max) + '"></label>' : '') +
+          '<label>מקס׳ <input class="tk-in" type="number" step="any" data-k="max" value="' + e(f.max == null ? '' : f.max) + '"></label>' +
+          '<label title="ספירה מול מלאי בסיס: פחות מהבסיס = חוסר בדוח, יותר = הבסיס החדש">מלאי בסיס <input class="tk-in" data-k="base" value="' +
+          e((f.base || []).map((x) => x == null ? '' : x).join(', ').replace(/^(, )+$/, '')) + '" placeholder="לא חובה — לפי סדר השמות" style="width:150px"></label>' : '') +
         (f.type === 'select' ? '<label>אפשרויות <input class="tk-in" data-k="options" value="' + e((f.options || []).join(', ')) + '" placeholder="תקין, דורש טיפול, …" style="width:260px"></label>' : '') +
         '</div></div>').join('');
       $('tkRows').querySelectorAll('.tk-row').forEach((row, i) => {
