@@ -19,6 +19,7 @@ function initBranchChecklist(opts) {
   const stamp = now.toISOString().replace(/[:.]/g, '-');
   const checklistDiv = document.getElementById("checklist");
   const uploadedFiles = {};
+  let cartBases = null;   // מלאי בסיס עגלות (cartBase) — רק בסעיף שמסומן cartBase
 
   // kioskEmployees — רשימת עובדים פעילים בסניף, ציבורית בכוונה (בלי חשיפת נוכחות/סיסמה),
   // בדיוק מתאימה לטופס ציבורי כזה בלי התחברות. מחליף את activeShiftEmployees (דרש התחברות
@@ -81,15 +82,41 @@ function initBranchChecklist(opts) {
         countInput.style.cssText = "width:70px;padding:6px;margin-top:2px";
         wrap.appendChild(document.createTextNode(label));
         wrap.appendChild(countInput);
+        if (item.cartBase) {
+          // ספירת עגלות מול מלאי בסיס (נשמר בשרת): פחות מהבסיס = חוסר, יותר = הבסיס החדש (השרת מעדכן בשליחה)
+          const note = document.createElement("span"); note.id = `countNote${idx}_${c}`;
+          note.style.cssText = "font-size:11px;margin-top:2px;min-height:14px";
+          wrap.appendChild(note);
+          countInput.addEventListener("input", () => cartNote(idx, c, label));
+        }
         countsDiv.appendChild(wrap);
       });
       textContainer.appendChild(countsDiv);
+      if (item.cartBase) {
+        fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'cartBase' }) })
+          .then(res => res.json())
+          .then(j => { if (j.ok) { cartBases = j.base || {}; item.counts.forEach((label, c) => cartNote(idx, c, label)); } })
+          .catch(() => {});
+      }
     }
     checklistDiv.appendChild(section);
     document.getElementById(`item${idx}`).addEventListener("change", updateTaskCounter);
   });
 
   updateTaskCounter();
+
+  function cartNote(idx, c, label) {
+    const note = document.getElementById(`countNote${idx}_${c}`);
+    const base = cartBases && cartBases[label];
+    if (!note || base == null) return;
+    const v = document.getElementById(`count${idx}_${c}`).value.trim();
+    const n = Number(v);
+    if (v === '' || !Number.isFinite(n)) { note.style.color = '#777'; note.textContent = `בסיס ${base}`; }
+    else if (n < base) { note.style.color = '#c62828'; note.style.fontWeight = 'bold'; note.textContent = `חסרות ${base - n}`; return; }
+    else if (n > base) { note.style.color = '#1565c0'; note.textContent = `בסיס חדש ${n}`; }
+    else { note.style.color = '#2e7d32'; note.textContent = `✓ ${base}`; }
+    note.style.fontWeight = 'normal';
+  }
 
   window.addImage = function (idx) {
     const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.capture = "environment";
@@ -195,6 +222,7 @@ function initBranchChecklist(opts) {
       }
       if (item.counts) {
         sec.counts = item.counts.map((label, c) => ({ label, value: document.getElementById(`count${idx}_${c}`).value.trim() }));
+        if (item.cartBase) sec.cartBase = true;
       }
       return sec;
     });
