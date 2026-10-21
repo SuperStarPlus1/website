@@ -1761,7 +1761,9 @@ document.getElementById('branchSel').addEventListener('change',e=>{
   load();
 });
 /** inactive employees are hidden everywhere unless the manager ticks "show inactive" — and never schedulable */
-function isInactive(name){ const e = empByName(name); return !!e && e.active===false; }
+function isInactive(name, date){ const e = empByName(name); return !!e && (e.active===false || afterEnd(e, date)); }
+// a planned end of work (the card's end date): no shifts after it — the night after it the employee becomes inactive
+function afterEnd(e, date){ return !!(e && date && e.endDate && date > e.endDate); }
 function setShowInactive(on){
   state.showInactive = !!on;
   ['showInactive','empShowInactive'].forEach(id=>{ const c=document.getElementById(id); if(c) c.checked = state.showInactive; });
@@ -1790,6 +1792,7 @@ function onDrop(td){
   const { emp, dept, date } = td.dataset;
   if(s.employee===emp && s.dept===dept && s.date===date) return;
   if(isInactive(emp) || isInactive(s.employee)){ toast('עובד לא פעיל — אי אפשר לשבץ אותו','err'); render(); return; }
+  if(afterEnd(empByName(emp), date)){ toast('התאריך אחרי סיום העבודה של '+emp+' — אי אפשר לשבץ','err'); render(); return; }
   const existing = shiftsOf(emp, dept, date).filter(x=>x._id!==s._id);
   if(!confirmConflicts(emp, date, s.start, [s._id, ...existing.map(x=>x._id)])) { render(); return; }
   if(existing.length && !confirm('לעובד '+emp+' כבר יש משמרת בתא זה ('+existing[0].start+'–'+existing[0].end+'). להחליף אותה?')){ render(); return; }
@@ -1858,6 +1861,7 @@ function openChipEditor(sid){
 }
 function openShiftEditor(ds){
   if(isInactive(ds.emp)){ toast('עובד לא פעיל — אי אפשר לשבץ או לערוך את המשמרות שלו','err'); return; }
+  if(afterEnd(empByName(ds.emp), ds.date)){ toast('התאריך אחרי סיום העבודה של '+ds.emp+' — אי אפשר לשבץ','err'); return; }
   editCtx = { emp: ds.emp, dept: ds.dept, date: ds.date };
   const existing = shiftsOf(ds.emp, ds.dept, ds.date)[0];
   editCtx.sid = existing ? existing._id : null;
@@ -2170,8 +2174,8 @@ function empRow(e){
         <option value="1" ${e.active!==false?'selected':''}>✅ פעיל</option>
         <option value="0" ${e.active===false?'selected':''}>❌ לא פעיל</option>
       </select>
-      <span class="lbl end-only" style="${e.active===false?'':'display:none'}">תאריך סיום עבודה:</span>
-      <input type="date" class="i-end end-only" value="${esc(e.endDate||'')}" style="${e.active===false?'':'display:none'};border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+      <span class="lbl end-lbl">${e.active===false?'תאריך סיום עבודה:':'סיום עבודה מתוכנן:'}</span>
+      <input type="date" class="i-end" value="${esc(e.endDate||'')}" title="היום האחרון לעבודה. בלילה שאחריו העובד/ת מסומן/ת אוטומטית כלא פעיל/ה; השעות וגמר החשבון פתוחים עד ה-15 בחודש שאחרי. ריק — אין סיום מתוכנן" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
       <button class="del" title="הסרה">✕</button></div>
     <div class="chiprow"><span class="lbl">מחלקות:</span>${_empMgrDepts.map(d=>
       `<button class="dchip dept ${e.depts && e.depts.includes(d)?'active':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('')}</div>
@@ -2251,7 +2255,7 @@ function empRow(e){
   });
   div.querySelector('.i-active').addEventListener('change', ev=>{
     const isInactive = ev.target.value==='0';
-    div.querySelectorAll('.end-only').forEach(el=>el.style.display = isInactive?'':'none');
+    div.querySelector('.end-lbl').textContent = isInactive ? 'תאריך סיום עבודה:' : 'סיום עבודה מתוכנן:';   // a future date: inactive on its own after it
   });
   return div;
 }
@@ -2611,6 +2615,7 @@ function runAutoAssign(cfg, prevShifts){
   }
 
   function blocked(e, di, dow, part){
+    if(afterEnd(e, iso(dates[di]))) return true;           // אחרי סיום העבודה המתוכנן
     if((counts[e.name]||0) >= quotaOf(e)) return true;   // מכסת דירוג — קשיחה
     if((worked[e.name]||new Set()).has(di)) return true; // משמרת אחת ביום — קשיחה
     if(busy.has(e.name+'|'+di+'|'+part)) return true;
