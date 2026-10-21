@@ -5353,9 +5353,10 @@ function renderF101Body(data, employer){
       <input type="text" id="f-email" value="${d('email')}" placeholder="דוא&quot;ל" dir="ltr" style="flex:1;min-width:160px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
     </div>
     <div class="chiprow" style="flex-wrap:wrap;gap:14px;margin-bottom:8px">
-      <select id="f-gender" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-        <option ${data.gender==='נקבה'?'':'selected'}>זכר</option>
-        <option ${data.gender==='נקבה'?'selected':''}>נקבה</option>
+      <select id="f-gender" aria-label="מין" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
+        <option value="" disabled ${data.gender==='זכר'||data.gender==='נקבה'?'':'selected'}>מין — לבחור</option>
+        <option value="זכר" ${data.gender==='זכר'?'selected':''}>זכר</option>
+        <option value="נקבה" ${data.gender==='נקבה'?'selected':''}>נקבה</option>
       </select>
       <select id="f-marital" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
         ${['רווק/ה','נשוי/אה','גרוש/ה','אלמן/ה','פרוד/ה'].map(m=>`<option ${data.marital===m?'selected':''}>${m}</option>`).join('')}
@@ -5575,6 +5576,8 @@ async function submitF101Flow(){
     err.textContent = 'יש למלא חשבון בנק: מספר בנק, סניף ומספר חשבון (ספרות בלבד)'; return; }
   if(!fields.firstName || !fields.lastName){ err.textContent = 'יש להזין שם פרטי ושם משפחה'; return; }
   if(!fields.idNumber){ err.textContent = 'יש להזין מספר זהות'; return; }
+  // no default: a wrong "זכר" left as it was gave the wrong credit points in payroll (21/10/2026)
+  if(fields.gender!=='זכר' && fields.gender!=='נקבה'){ err.textContent = 'יש לבחור מין (זכר / נקבה) — משפיע על נקודות הזיכוי במס'; document.getElementById('f-gender').focus(); return; }
   if(!fields.declarationConfirmed){ err.textContent = 'יש לאשר את תיבת ההצהרה בסוף הטופס'; return; }
   if(fields.hasPensionFund && !fields.pensionCompany){ err.textContent = 'סימנת שקיימת לך קרן פנסיה — יש לציין באיזו חברת ביטוח / קרן'; document.getElementById('f-pensionCompany').focus(); return; }
   const attachSpecs = [
