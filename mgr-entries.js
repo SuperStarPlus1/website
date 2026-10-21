@@ -42,8 +42,12 @@
     $('meSub').textContent = sick ? 'נרשם כמאושר, עם האישור המצורף. הימים יסומנו בנוכחות כימי מחלה.' : 'נרשמת כמאושרת. הימים יסומנו בנוכחות כימי חופש.';
     $('meFileRow').style.display = sick ? '' : 'none';
     $('meNoteLbl').textContent = sick ? 'הערה (לא חובה)' : 'סיבה (לא חובה)';
-    const emps = (s.employees || []).filter((x) => x.active !== false).map((x) => x.name).sort((a, b) => a.localeCompare(b, 'he'));
-    $('meEmp').innerHTML = '<option value="">— בחר עובד —</option>' + emps.map((n) => '<option value="' + e(n) + '">' + e(n) + '</option>').join('');
+    // the active employees, and one whose employment ended — until the 15th of the next month (the final settlement,
+    // _shared/employment-end.ts on the server)
+    const until = (d) => { const y = +d.slice(0, 4), m = +d.slice(5, 7); return m === 12 ? (y + 1) + '-01-15' : y + '-' + String(m + 1).padStart(2, '0') + '-15'; };
+    const open = (x) => x.active !== false || (/^\d{4}-\d{2}-\d{2}/.test(x.endDate || '') && today() <= until(x.endDate));
+    const emps = (s.employees || []).filter(open).map((x) => x.name + (x.active === false ? ' (גמר חשבון)' : '')).sort((a, b) => a.localeCompare(b, 'he'));
+    $('meEmp').innerHTML = '<option value="">— בחר עובד —</option>' + emps.map((n) => '<option value="' + e(n.replace(' (גמר חשבון)', '')) + '">' + e(n) + '</option>').join('');
     $('meFrom').value = today(); $('meTo').value = today();
     $('meNote').value = ''; $('meFile').value = ''; $('meErr').textContent = '';
     $('meOverlay').classList.remove('hidden');
