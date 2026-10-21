@@ -15,6 +15,17 @@
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
+  // a number typed as text (the phone's numeric keypad has no minus — the ± key adds it): "4,5" → 4.5; empty / "-" → null
+  const numOf = (t) => { const x = String(t == null ? '' : t).trim().replace(',', '.').replace(/[^\d.\-]/g, ''); return x === '' || x === '-' || isNaN(Number(x)) ? null : Number(x); };
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('.tk-pm');
+    if (!b) return;
+    const inp = b.parentElement.querySelector('input');
+    if (!inp) return;
+    inp.value = inp.value.trim().startsWith('-') ? inp.value.trim().slice(1) : '-' + inp.value.trim();
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.focus();
+  });
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const say = (msg, cls) => { if (typeof toast === 'function') toast(msg, cls); };
@@ -39,6 +50,8 @@
     '.tk-f input[type=number],.tk-f input[type=text],.tk-f textarea,.tk-f select,.tk-in{border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font:inherit;font-size:16px;min-width:0}' +
     '.tk-f input.out{border-color:#dc2626;background:#fef2f2}' +
     '.tk-reads{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}.tk-reads label{font-size:11.5px;color:#6b7280;display:grid;gap:2px}' +
+    '.tk-num{display:flex;gap:4px;align-items:stretch}.tk-num input{flex:1;min-width:0}' +
+    '.tk-pm{flex:none;min-width:34px;border:1.5px solid #d1d5db;border-radius:8px;background:#f8fafc;font:inherit;font-size:16px;font-weight:700;cursor:pointer;color:#1b2a4a}' +
     '.tk-check{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}.tk-check input{width:24px;height:24px;accent-color:#16a34a;flex:none}' +
     '.tk-yn{display:flex;gap:8px}.tk-yn button{flex:1;border:1.5px solid #d1d5db;background:#fff;border-radius:10px;padding:9px;font:inherit;font-weight:800;cursor:pointer}' +
     '.tk-yn button.on.y{background:#dcfce7;border-color:#16a34a}.tk-yn button.on.n{background:#fee2e2;border-color:#dc2626}' +
@@ -163,7 +176,8 @@
           if (f.type === 'yesno') ctl += '<div class="tk-yn" data-f="' + e(f.id) + '"><button type="button" class="y" data-v="1">כן</button><button type="button" class="n" data-v="0">לא</button></div>';
           if (f.type === 'number') ctl += '<div class="tk-reads">' + Array.from({ length: f.readings || 1 }, (_, i) =>
             '<label>' + e((f.readingLabels && f.readingLabels[i]) || ((f.readings || 1) > 1 ? '#' + (i + 1) : '')) +
-            '<input type="number" inputmode="decimal" step="any" data-f="' + e(f.id) + '" data-r="' + i + '" placeholder="' + e(f.unit || '') + '">' +
+            '<span class="tk-num"><input type="text" inputmode="decimal" autocomplete="off" data-f="' + e(f.id) + '" data-r="' + i + '" placeholder="' + e(f.unit || '') + '">' +
+            '<button type="button" class="tk-pm" aria-label="מינוס / פלוס" title="מינוס / פלוס">±</button></span>' +
             (f.base && f.base[i] != null ? '<small class="tk-base" data-base="' + e(f.id) + '_' + i + '" style="font-size:11px;color:#64748b">בסיס ' + e(f.base[i]) + '</small>' : '') + '</label>').join('') + '</div>';
           if (f.type === 'text') ctl += '<textarea rows="2" data-f="' + e(f.id) + '"></textarea>';
           if (f.type === 'select') ctl += '<select data-f="' + e(f.id) + '"><option value="">— בחירה —</option>' + (f.options || []).map((o) => '<option>' + e(o) + '</option>').join('') + '</select>';
@@ -185,10 +199,10 @@
       g.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
       ans[g.dataset.f].value = b.dataset.v === '1'; prog();
     })));
-    body.querySelectorAll('input[type=number][data-f]').forEach((inp) => inp.addEventListener('input', () => {
+    body.querySelectorAll('input[data-r][data-f]').forEach((inp) => inp.addEventListener('input', () => {
       const f = fields.find((x) => x.id === inp.dataset.f), a = ans[f.id];
       a.values = a.values || Array(f.readings || 1).fill(null);
-      const v = inp.value === '' ? null : Number(inp.value);
+      const v = numOf(inp.value);
       a.values[Number(inp.dataset.r)] = v;
       const r = Number(inp.dataset.r), b = f.base && f.base[r] != null ? f.base[r] : null;
       inp.classList.toggle('out', v !== null && ((f.min != null && v < f.min) || (f.max != null && v > f.max) || (b !== null && v < b)));
@@ -492,7 +506,7 @@
         if (f.type === 'number') {
           f.readings = Number(v('readings')) || 1;
           f.readingLabels = String(v('readingLabels') || '').split(',').map((x) => x.trim()).filter(Boolean);
-          f.unit = v('unit'); f.min = v('min') === '' ? null : Number(v('min')); f.max = v('max') === '' ? null : Number(v('max'));
+          f.unit = v('unit'); f.min = numOf(v('min')); f.max = numOf(v('max'));
           f.base = String(v('base') || '').split(',').map((x) => x.trim() === '' ? null : Number(x.trim()));
         }
         if (f.type === 'select') f.options = String(v('options') || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -508,8 +522,8 @@
         (f.type === 'number' ? '<label>קריאות <input class="tk-in" type="number" min="1" max="12" data-k="readings" value="' + e(f.readings || 1) + '" style="width:60px"></label>' +
           '<label>שמות <input class="tk-in" data-k="readingLabels" value="' + e((f.readingLabels || []).join(', ')) + '" placeholder="מקרר 1, מקרר 2…" style="width:150px"></label>' +
           '<label>יחידה <input class="tk-in" data-k="unit" value="' + e(f.unit || '') + '" placeholder="°" style="width:50px"></label>' +
-          '<label>מינ׳ <input class="tk-in" type="number" step="any" data-k="min" value="' + e(f.min == null ? '' : f.min) + '"></label>' +
-          '<label>מקס׳ <input class="tk-in" type="number" step="any" data-k="max" value="' + e(f.max == null ? '' : f.max) + '"></label>' +
+          '<label>מינ׳ <span class="tk-num"><input class="tk-in" type="text" inputmode="decimal" data-k="min" value="' + e(f.min == null ? '' : f.min) + '" style="width:80px"><button type="button" class="tk-pm" aria-label="מינוס / פלוס">±</button></span></label>' +
+          '<label>מקס׳ <span class="tk-num"><input class="tk-in" type="text" inputmode="decimal" data-k="max" value="' + e(f.max == null ? '' : f.max) + '" style="width:80px"><button type="button" class="tk-pm" aria-label="מינוס / פלוס">±</button></span></label>' +
           '<label title="ספירה מול מלאי בסיס: פחות מהבסיס = חוסר בדוח, יותר = הבסיס החדש">מלאי בסיס <input class="tk-in" data-k="base" value="' +
           e((f.base || []).map((x) => x == null ? '' : x).join(', ').replace(/^(, )+$/, '')) + '" placeholder="לא חובה — לפי סדר השמות" style="width:150px"></label>' : '') +
         (f.type === 'select' ? '<label>אפשרויות <input class="tk-in" data-k="options" value="' + e((f.options || []).join(', ')) + '" placeholder="תקין, דורש טיפול, …" style="width:260px"></label>' : '') +
