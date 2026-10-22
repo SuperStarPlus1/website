@@ -2576,7 +2576,9 @@ document.getElementById('aaOk').addEventListener('click', async ()=>{
       prevShifts = p.shifts || [];
     }catch(e){ state.weekStart = sundayOf(state.weekStart); }
 
-    const res = runAutoAssign(cfg, prevShifts);
+    let res;
+    try{ res = runAutoAssign(cfg, prevShifts); }
+    catch(err){ console.error(err); document.getElementById('aaErr').textContent = 'השיבוץ נכשל: ' + (err && err.message || err); return; }
     hide('aaOverlay');
     if(res.created){ state.dirtyShifts = true; render(); }
     let msg = 'נוצרו '+res.created+' משמרות. בדוק את הלוח ולחץ "שמור" לאישור.';
@@ -2615,7 +2617,7 @@ function runAutoAssign(cfg, prevShifts){
   }
 
   function blocked(e, di, dow, part){
-    if(afterEnd(e, iso(dates[di]))) return true;           // אחרי סיום העבודה המתוכנן
+    if(afterEnd(e, di)) return true;                       // אחרי סיום העבודה המתוכנן (di = התאריך עצמו)
     if((counts[e.name]||0) >= quotaOf(e)) return true;   // מכסת דירוג — קשיחה
     if((worked[e.name]||new Set()).has(di)) return true; // משמרת אחת ביום — קשיחה
     if(busy.has(e.name+'|'+di+'|'+part)) return true;
