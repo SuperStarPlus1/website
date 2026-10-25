@@ -403,7 +403,8 @@
         '<div>ציון התאמה: <span data-score>' + scoreBar(a.score) + '</span> <span class="rc-req" data-miss>' + (a.missingRequired.length ? 'חסר חובה: ' + e(a.missingRequired.join(', ')) : '') + '</span></div>' +
         '<label class="rc-iv">📝 ראיון עבודה<textarea data-iv rows="5" maxlength="8000" placeholder="מה עלה בראיון: התרשמות, ניסיון, זמינות, שכר מבוקש, הערות…">' + e(a.interview) + '</textarea></label>' +
         (a.status === 'hired' ? '<button class="btn plain" data-ivsave style="font-size:12.5px;margin-top:4px">💾 שמירת סיכום הראיון</button>' : '') +
-        (a.status === 'hired' ? '<p class="rc-meta">✅ התקבל/ה — ' + (a.terms ? (a.terms.type === 'monthly' ? 'חודשי ' : 'שעתי ') + a.terms.wage + ' ₪ · התחלה ' + e(dmy(a.terms.startDate)) : '') + '</p>' :
+        (a.status === 'hired' ? '<p class="rc-meta">✅ התקבל/ה — ' + (a.terms ? (a.terms.type === 'monthly' ? 'חודשי ' : 'שעתי ') + a.terms.wage + ' ₪' + (a.terms.minWage ? ' (מינימום)' : '') + ' · התחלה ' + e(dmy(a.terms.startDate)) +
+          (a.terms.trialDays ? ' · ' + a.terms.trialDays + ' ימי התנסות' + (a.terms.trialUnpaid ? ' (ללא תשלום אם לא מתאים/ה)' : '') : '') : '') + '</p>' :
           '<div class="rc-f" style="margin-top:8px"><label>סטטוס<select data-status>' + A.statuses.filter(([s]) => s !== 'hired').map(([s, h]) => '<option value="' + s + '"' + (s === a.status ? ' selected' : '') + '>' + e(h) + '</option>').join('') + '</select></label>' +
           '<label data-rwrap' + (a.status === 'unsuitable' ? '' : ' style="display:none"') + '>מה חוסר ההתאמה (חובה)<input data-reason value="' + e(a.reason) + '" maxlength="1000"></label>' +
           '<label class="wide">הערה להיסטוריה (לא חובה)<input data-note maxlength="2000"></label></div>' +
@@ -481,6 +482,8 @@
   }
 
   /* ---------- hiring: the terms + the employer's signature ---------- */
+  // an hourly wage left empty — the minimum wage (the company's setting; the server fills it in)
+  const minPh = () => 'ריק = שכר מינימום' + (A && A.minWage ? ' (' + A.minWage + ' ₪)' : '');
   function hire(c, a) {
     $('rcOverlayF').querySelectorAll('[data-x]').forEach((b) => b.remove());
     const pane = $('rcPane');
@@ -492,16 +495,21 @@
       '<div class="rc-f"><label>שם העובד/ת במערכת<input id="hName" value="' + e(c.fullName) + '" maxlength="80"></label>' +
       '<label>ת.ז. (חובה להסכם)<input id="hId" value="' + e(c.idNumber) + '" inputmode="numeric" dir="ltr"></label>' +
       '<label>סוג העסקה<select id="hType"><option value="hourly">שעתי</option><option value="monthly">חודשי (משכורת)</option></select></label>' +
-      '<label><span id="hWageL">שכר לשעה (₪)</span><input id="hWage" type="number" min="0" step="0.01" dir="ltr"></label>' +
+      '<label><span id="hWageL">שכר לשעה (₪)</span><input id="hWage" type="number" min="0" step="0.01" dir="ltr" placeholder="' + e(minPh()) + '"></label>' +
       '<label>יום המנוחה / החופש המוסכם<select id="hRest"><option value="">— בחירה —</option>' + DAYS.map((d, i) => '<option value="' + i + '"' + (i === 6 ? ' selected' : '') + '>' + d + '</option>').join('') + '</select></label>' +
       '<label>תאריך תחילת עבודה<input id="hStart" type="date"></label>' +
       '<label>ימי עבודה בשבוע<select id="hDays"><option value="6">6</option><option value="5">5</option></select></label>' +
       '<label>שעות שבועיות<input id="hHours" type="number" min="1" max="80" value="42" dir="ltr"></label>' +
       '<label>תפקיד<input id="hTitle" value="' + e(a.job.title) + '" maxlength="80"></label>' +
       '<label>ממונה ישיר/ה<input id="hMgr" value="' + e(mgrName) + '" maxlength="80"></label>' +
+      '<label>ימי התנסות<input id="hTrial" type="number" min="0" max="30" step="1" dir="ltr" placeholder="ריק = בלי"></label>' +
+      '<label id="hTrialU" class="wide" style="display:none;flex-direction:row;align-items:flex-start;gap:6px"><input type="checkbox" id="hTrialUnpaid" style="width:auto;margin-top:3px">' +
+      '<span>ללא תשלום על ימי ההתנסות אם המועמד/ת לא מתאים/ה<br><small style="font-weight:400;color:#b45309">לפי הפסיקה, עבודה בפועל מזכה בשכר גם בימי ניסיון — כדאי לבדוק עם יועץ/ת משפטי/ת</small></span></label>' +
       '<div class="wide"><b style="font-size:12.5px">חתימת המעסיק (' + e(mgrName) + ')</b>' + sigHtml('hSig') + '</div></div>';
     const pad = mountSig('hSig');
-    $('hType').addEventListener('change', () => { $('hWageL').textContent = $('hType').value === 'monthly' ? 'שכר חודשי ברוטו (₪)' : 'שכר לשעה (₪)'; });
+    $('hType').addEventListener('change', () => { const mo = $('hType').value === 'monthly';
+      $('hWageL').textContent = mo ? 'שכר חודשי ברוטו (₪)' : 'שכר לשעה (₪)'; $('hWage').placeholder = mo ? '' : minPh(); });
+    $('hTrial').addEventListener('input', () => { $('hTrialU').style.display = Number($('hTrial').value) > 0 ? 'flex' : 'none'; });
     $('rcBack').addEventListener('click', () => openCand(c.id));
     foot('rcOverlay', '<button class="btn primary" data-x id="hGo">✅ קבלה לעבודה וחתימה</button>');
     $('hGo').addEventListener('click', async () => {
@@ -512,7 +520,8 @@
       $('hGo').disabled = true;
       const r = await apiPost({ action: 'hireCandidate', ...mAuth(), appId: a.appId, employeeName: $('hName').value, idNumber: $('hId').value, signature: sig,
         terms: { type: $('hType').value, wage: $('hWage').value, restDay: $('hRest').value, startDate: $('hStart').value, daysPerWeek: $('hDays').value,
-          weeklyHours: $('hHours').value, jobTitle: $('hTitle').value, manager: $('hMgr').value } });
+          weeklyHours: $('hHours').value, jobTitle: $('hTitle').value, manager: $('hMgr').value,
+          trialDays: $('hTrial').value, trialUnpaid: Number($('hTrial').value) > 0 && $('hTrialUnpaid').checked } });
       $('hGo').disabled = false;
       if (!r.ok) { $('rcOverlayE').textContent = r.error || 'שגיאה'; return; }
       $('rcOverlayE').textContent = ''; $('hGo').remove();
