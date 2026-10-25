@@ -43,6 +43,7 @@ th, td {
 th {
   background-color: #eee;
 }
+#summary tr.detail td { font-size: 12px; color: #64748b; background: #f8fafc; }
 #report-time {
   margin-top: 20px;
   font-weight: bold;
@@ -200,8 +201,10 @@ function addEntry() {
   const net = +(gross - (hooks * hookWeight) - (boxes * boxWeight)).toFixed(2);
 
   if (!summary[itemCode]) {
-    summary[itemCode] = { name: itemName, net: 0 };
+    summary[itemCode] = { name: itemName, net: 0, entries: [] };
   }
+  // every weighing is kept under its item — for control (in the table and in the report)
+  summary[itemCode].entries.push({ gross, hooks, boxes, boxWeight, net, at: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) });
   summary[itemCode].net += net;
   summary[itemCode].net = +summary[itemCode].net.toFixed(2);
 
@@ -229,11 +232,21 @@ function updateTable() {
       <td>${summary[code].net}</td>
     `;
     tbody.appendChild(row);
+    summary[code].entries.forEach((x, i) => {
+      const d = document.createElement("tr");
+      d.className = "detail";
+      d.innerHTML = `
+      <td></td>
+      <td>ספירה ${i + 1} · ${x.at} · ברוטו ${x.gross}${x.hooks ? ` − ${x.hooks} ווים (${+(x.hooks * hookWeight).toFixed(2)})` : ''}${x.boxes ? ` − ${x.boxes} ארגזים × ${x.boxWeight} (${+(x.boxes * x.boxWeight).toFixed(2)})` : ''}</td>
+      <td>${x.net}</td>
+    `;
+      tbody.appendChild(d);
+    });
   }
 }
 
 function sendReportByEmail() {
-  const rows = Object.entries(summary).map(([code, { name, net }]) => ({ code, name, net }));
+  const rows = Object.entries(summary).map(([code, { name, net, entries }]) => ({ code, name, net, entries }));
   if (!rows.length) { alert("אין נתונים לשליחה."); return; }
   const performedBy = document.getElementById("performedBy").value;
   if (!performedBy) { alert("יש לבחור מבצע ספירה."); return; }

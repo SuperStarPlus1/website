@@ -50,7 +50,8 @@
     '.tk-f input[type=number],.tk-f input[type=text],.tk-f textarea,.tk-f select,.tk-in{border:1.5px solid #d1d5db;border-radius:8px;padding:8px 10px;font:inherit;font-size:16px;min-width:0}' +
     '.tk-f input.out{border-color:#dc2626;background:#fef2f2}' +
     '.tk-reads{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}.tk-reads label{font-size:11.5px;color:#6b7280;display:grid;gap:2px}' +
-    '.tk-num{display:flex;gap:4px;align-items:stretch}.tk-num input{flex:1;min-width:0}' +
+    // a reading's box keeps to its cell (the phone's input width pushed it over the next reading's ± button)
+    '.tk-reads label{min-width:0}.tk-num{display:flex;gap:4px;align-items:stretch;min-width:0}.tk-num input{flex:1 1 0;min-width:0;width:100%;box-sizing:border-box}' +
     '.tk-pm{flex:none;min-width:34px;border:1.5px solid #d1d5db;border-radius:8px;background:#f8fafc;font:inherit;font-size:16px;font-weight:700;cursor:pointer;color:#1b2a4a}' +
     '.tk-check{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}.tk-check input{width:24px;height:24px;accent-color:#16a34a;flex:none}' +
     '.tk-yn{display:flex;gap:8px}.tk-yn button{flex:1;border:1.5px solid #d1d5db;background:#fff;border-radius:10px;padding:9px;font:inherit;font-weight:800;cursor:pointer}' +
