@@ -93,6 +93,31 @@
     $(id).classList.remove('hidden');
     return $(id + 'Body');
   }
+  /** 📤 after a report was sent (and mailed to the managers): share it on WhatsApp from this device — the PDF with the photos
+   *  where the device can share files (phones), else the text. WhatsApp lets the person pick the group; it cannot be sent to
+   *  a group by itself. */
+  async function waShare(sh) {
+    let file = null;
+    try {
+      if (sh.url && navigator.canShare) {
+        const b = await (await fetch(sh.url)).blob();
+        const f = new File([b], sh.name || 'דוח.pdf', { type: 'application/pdf' });
+        if (navigator.canShare({ files: [f] })) file = f;
+      }
+    } catch (_) { /* the text only */ }
+    const body = overlay('tkWa', '📤 לשלוח גם לוואטסאפ?');
+    $('tkWaSub').textContent = 'הדוח נשלח במייל למנהלים. אפשר לשלוח אותו גם לקבוצה בוואטסאפ.';
+    body.innerHTML = '<pre style="white-space:pre-wrap;font:inherit;background:#f8fafc;border-radius:9px;padding:10px;margin:0 0 10px;max-height:40vh;overflow:auto">' + e(sh.text) + '</pre>' +
+      (file ? '<p class="tk-meta">📎 יצורף הדוח המלא עם התמונות (PDF).</p>' : '') +
+      '<button class="tk-btn" id="tkWaGo" style="width:100%;padding:12px;background:#16a34a">📤 שליחה בוואטסאפ</button>';
+    $('tkWaGo').addEventListener('click', async () => {
+      try {
+        if (file) await navigator.share({ files: [file], text: sh.text });
+        else window.open('https://wa.me/?text=' + encodeURIComponent(sh.text), '_blank', 'noopener');
+        $('tkWa').classList.add('hidden');
+      } catch (x) { if (x && x.name !== 'AbortError') window.open('https://wa.me/?text=' + encodeURIComponent(sh.text), '_blank', 'noopener'); }
+    });
+  }
   const apChip = (a) => a === 'pending' ? ' <span class="tk-chip wait">🕓 ממתין לאישור</span>' : a === 'returned' ? ' <span class="tk-chip ret">↩ הוחזר לתיקון</span>'
     : a === 'approved' ? ' <span class="tk-chip done">✔ אושר</span>' : '';
   const chip = (st) => st === 'returned' ? '<span class="tk-chip ret">↩ לתיקון</span>' : st === 'done' ? '<span class="tk-chip done">✅ בוצעה</span>' : st === 'late' ? '<span class="tk-chip late">⏰ באיחור</span>'
@@ -273,6 +298,7 @@
           : await apiPost({ action: 'submitTask', ...meAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
         if (!r.ok) { err.textContent = r.error || 'שגיאה'; return; }
         $('tkFill').classList.add('hidden');
+        if (r.share) waShare(r.share);
         if (mark) { say('המשימה סומנה כבוצעה ✓', 'ok'); mark.done(); return; }
         say((r.pending ? 'הדיווח נשלח ✓ — ממתין לאישור מנהל' : 'המשימה נשלחה ✓') + (r.flags ? ' · ' + r.flags + ' סעיפים לתשומת לב המנהל' : ''), 'ok');
         await fetchMine();
