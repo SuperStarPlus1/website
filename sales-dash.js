@@ -115,6 +115,22 @@
   const marginColor = (m) => m == null ? '#e2e8f0;#475569' : m < 10 ? '#fee2e2;#b91c1c' : m < 20 ? '#fef3c7;#92400e' : m < 30 ? '#dcfce7;#166534' : '#d1fae5;#065f46';
   const mBadge = (m) => { const [bg, fg] = marginColor(m).split(';'); return '<span class="sd-m" style="background:' + bg + ';color:' + fg + '">' + pct(m) + '</span>'; };
 
+  // 💵 the Z receipts per register (as the register's Z report: sales + returns + payments on credit account; the sales
+  // on account — invoices — are in the sales, not in Z). Not per department.
+  function zCard(r) {
+    const z = r.z || {}, rg = z.regs || [];
+    if (!rg.length) return '';
+    const t = rg.reduce((a, x) => { for (const k of ['z_total', 'cash', 'cards', 'account_pay', 'returns', 'credit_sales', 'docs']) a[k] = (a[k] || 0) + Number(x[k] || 0); return a; }, {});
+    const row = (l, x, b) => { const other = Number(x.z_total || 0) - Number(x.cash || 0) - Number(x.cards || 0);
+      return '<tr' + (b ? ' style="font-weight:800;background:#f8fafc"' : '') + '><td style="white-space:nowrap">' + l + '</td><td class="n"><b>' + nis(x.z_total, 2) + '</b></td><td class="n">' + nis(x.cash, 2) +
+        '</td><td class="n">' + nis(x.cards, 2) + '</td><td class="n">' + nis(other, 2) + '</td><td class="n">' + nis(x.account_pay, 2) + '</td><td class="n">' + nis(x.returns, 2) +
+        '</td><td class="n" style="color:#7c3aed">' + nis(x.credit_sales, 2) + '</td><td class="n">' + num(x.docs) + '</td></tr>'; };
+    return '<div class="sd-card wide"><h3>💵 תקבולי Z <small>לפי קופה — כמו בדוח Z</small></h3><div class="sd-scroll" style="overflow:auto"><table class="sd-tbl">' +
+      '<tr><th>קופה</th><th class="n">סה"כ Z</th><th class="n">מזומן</th><th class="n">אשראי</th><th class="n">אחר</th><th class="n">מזה תשלומי הקפה</th><th class="n">החזרות</th><th class="n">מכירות בהקפה (לא ב-Z)</th><th class="n">מסמכים</th></tr>' +
+      rg.map((x) => row('קופה ' + x.register, x)).join('') + (rg.length > 1 ? row('סה"כ', t, 1) : '') + '</table></div>' +
+      '<div style="font-size:12px;color:#64748b;margin-top:6px">' + delta(t.z_total, (z.cmp || {}).z_total, 1) + ' · "אחר" — כרטיסי מתנה, שוברים ושאר אמצעי תשלום. מכירות בהקפה נכללות במכירות למעלה, ולא ב-Z.</div></div>';
+  }
+
   function draw() {
     charts.forEach((c) => c.destroy()); charts = [];
     const r = R, body = $('sdBody');
@@ -145,6 +161,7 @@
     const oneDay = r.from === r.to;
     h += '<div class="sd-grid">' +
       '<div class="sd-card wide"><h3>' + (oneDay ? '⏰ מכירות לפי שעה' : '📅 מכירות ורווח לפי יום') + ' <small>' + dm(r.from) + (oneDay ? '' : '–' + dm(r.to)) + '</small></h3><div style="height:260px"><canvas id="sdC1"></canvas></div></div>' +
+      (P.dep === '' ? zCard(r) : '') +
       '<div class="sd-card"><h3>🍩 מחלקות <small>לחיצה — סינון</small></h3><div style="height:260px"><canvas id="sdC2"></canvas></div></div>' +
       '<div class="sd-card"><h3>🏷 מחלקות — מכירות ורווח</h3><div class="sd-scroll" style="max-height:290px;overflow:auto"><table class="sd-tbl"><tr><th>מחלקה</th><th class="n">מכירות</th><th class="n">שינוי</th><th class="n">רווח</th><th>%</th></tr>' +
         r.deps.map((d) => { const pf = d.net_c - d.cost, m = d.net_c > 0 && d.cost > 0 ? pf / d.net_c * 100 : null, ch = d.cmp_sales ? (d.sales - d.cmp_sales) / Math.abs(d.cmp_sales) * 100 : null;
@@ -159,7 +176,7 @@
       '<div class="sd-card"><h3>💤 מלאי שלא זז <small>30 יום בלי מכירה — לפי שווי בעלות</small></h3>' + stockTbl(r.deadStock, 'dead') + '</div>' +
       '</div>' +
       '<div class="sd-note">העלות היא מחיר הקנייה האחרון ב-Comax (לפני מע"מ), כפול הכמות. הרווח = מכירות לפני מע"מ פחות עלות; מוצר בלי מחיר עלות לא נכלל ברווח. ' +
-      'הנחת מבצע נרשמת על המוצרים שבמבצע (המכירות והרווח שלהם אחרי ההנחה); הנחה שלא ניתן לשייך למוצר והטבת סל 41 מופיעות כשורות נפרדות. מלאי — מוצרים ארוזים בלבד (שקילים, כמו ירקות ובשר, נספרים ידנית). ' +
+      'המכירות כוללות מכירות בהקפה, החזרות וטעינת כרטיסי מתנה (מימוש כרטיס יורד מהסה"כ — שורה "כרטיסי מתנה", לא נכללת ברווח); תקבולי Z מוצגים בנפרד, כמו בדוח Z. הנחת מבצע נרשמת על המוצרים שבמבצע (המכירות והרווח שלהם אחרי ההנחה); הנחה שלא ניתן לשייך למוצר והטבת סל 41 מופיעות כשורות נפרדות. מלאי — מוצרים ארוזים בלבד (שקילים, כמו ירקות ובשר, נספרים ידנית). ' +
       'הנתונים מגיעים מהחנות כל 15 דקות; ב-Comax רק קוראים.' + (r.since ? ' נתונים מ-' + dm(r.since) + '/' + r.since.slice(0, 4) + '.' : '') + '</div>';
     body.innerHTML = h;
     bindBar();
