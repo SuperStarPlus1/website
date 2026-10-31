@@ -14,7 +14,7 @@
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const say = (msg, cls) => { if (typeof toast === 'function') toast(msg, cls); };
   const empAuth = () => { const s = appState(); return s && s.emp ? { username: s.emp.username, password: s.emp.pw } : {}; };
-  const KIND_IC = { vacation: '🏖', sick: '🤒', constraint: '🖐', hours: '🕒', punch: '✏' };
+  const KIND_IC = { vacation: '🏖', sick: '🤒', constraint: '🖐', hours: '🕒', punch: '✏', swap: '🔁' };
   const LEVEL_TXT = { direct: 'מנהל/ת ישיר/ה', branch: 'מנהלי הסניף', admin: 'אדמין החברה', skip: 'דילוג', done: 'טופלה' };
   function ago(iso) {
     if (!iso) return '';
@@ -67,11 +67,11 @@
       : s.level === 'done' ? e(s.why) + ' — ' + e(s.to) : 'אצל ' + e(s.to) + (s.why ? ' — ' + e(s.why) : '')) + '</li>').join('') + '</ol></details>';
 
   /* ================= employee: my team ================= */
-  let team = { items: [], team: [], hours: 48 };
+  let team = { items: [], team: [], hours: 48, nextHours: 24 };
   async function fetchTeam() {
     const s = appState();
     if (!s || !s.emp) return null;
-    try { const r = await apiPost({ action: 'teamRequests', ...empAuth() }); if (r && r.ok && Array.isArray(r.items)) team = { items: r.items, team: r.team || [], hours: r.hours }; } catch (_) { /* offline */ }
+    try { const r = await apiPost({ action: 'teamRequests', ...empAuth() }); if (r && r.ok && Array.isArray(r.items)) team = { items: r.items, team: r.team || [], hours: r.hours, nextHours: r.nextHours }; } catch (_) { /* offline */ }
     syncTeamUi();
     return team;
   }
@@ -175,8 +175,9 @@
         '<input list="apEmpList" id="apBulk" placeholder="מנהל/ת ישיר/ה" style="min-width:150px"><button class="ap-btn sm" id="apBulkSet">החלה</button>' +
         '<button class="ap-btn plain sm" id="apBulkClear">ללא מנהל ישיר</button></div>' +
         '<div style="overflow:auto;max-height:52vh"><table class="ap-table"><thead><tr><th><input type="checkbox" id="apAll"></th><th>עובד/ת</th><th>סניף</th><th>מנהל/ת ישיר/ה</th><th>צוות</th></tr></thead><tbody id="apRows"></tbody></table></div>' +
-        (r.isAdmin ? '<div class="ap-tools" style="margin-top:10px"><span class="ap-meta">בקשה ללא מענה עוברת למנהל שמעל אחרי</span>' +
-          '<input type="number" id="apHours" min="0" max="720" value="' + Number(r.hours) + '" style="width:70px"><span class="ap-meta">שעות (0 = רק כשהמאשר/ת בחופשה / מחלה)</span>' +
+        (r.isAdmin ? '<div class="ap-tools" style="margin-top:10px"><span class="ap-meta">בקשה שהמנהל/ת הישיר/ה לא ענה/תה עליה עוברת למנהל שמעל אחרי</span>' +
+          '<input type="number" id="apHours" min="0" max="720" value="' + Number(r.hours) + '" style="width:70px"><span class="ap-meta">שעות (0 = רק כשהמאשר/ת בחופשה / מחלה); ומשם, בכל שלב, אחרי</span>' +
+          '<input type="number" id="apNextHours" min="1" max="720" value="' + Number(r.nextHours || 24) + '" style="width:70px"><span class="ap-meta">שעות</span>' +
           '<button class="ap-btn plain sm" id="apHoursSave">שמירה</button></div>' : '') +
         '<div style="display:flex;gap:8px;justify-content:flex-start;margin-top:10px"><button class="ap-btn ok" id="apSave">💾 שמירת השינויים</button><span class="ap-meta" id="apDirty"></span></div>';
       drawRows();
@@ -193,7 +194,7 @@
       $('apBulkClear').addEventListener('click', () => bulk(''));
       $('apSave').addEventListener('click', save);
       if ($('apHoursSave')) $('apHoursSave').addEventListener('click', async () => {
-        const x = await apiPost({ action: 'setEscalateHours', ...mgrAuth(), hours: Number($('apHours').value) });
+        const x = await apiPost({ action: 'setEscalateHours', ...mgrAuth(), hours: Number($('apHours').value), nextHours: Number($('apNextHours').value) });
         say(x.ok ? '✓ נשמר' : (x.error || 'שגיאה'), x.ok ? 'ok' : 'err');
       });
     }
