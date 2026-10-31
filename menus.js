@@ -19,7 +19,7 @@
   ];
   const PLAN = {
     menuAttDrop: ['liveBtn', 'attBtn', 'haMgrBtn', 'nsMenuBtn'],
-    menuReqDrop: ['reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
+    menuReqDrop: ['apMgrTeamBtn', 'reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
     menuAdminDrop: ['empMgr', 'hrMenuBtn', 'msgBtn', 'annBtn', 'meSickBtn', 'meVacBtn', 'holBtn', 'clkMenuBtn', 'incMgrBtn', 'rcMgrBtn', 'pubMenuBtn', 'coSetBtn', 'coBillBtn'],
     menuDocsDrop: ['payBtn', 'f101AdminBtn', 'f106AllBtn'],
     menuMeDrop: ['mpwBtn', 'mfaMenuBtn', 'myAlertsBtn', 'mgrPushBtn2'],

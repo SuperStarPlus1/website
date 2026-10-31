@@ -3,6 +3,8 @@
 //   employee  "📥 בקשות הצוות" — requests of the people I manage directly, waiting for me (approve / reject); shown only
 //             to someone with a team or a waiting request, with a count and a home-screen banner
 //             "⏳ בקשות בטיפול" — where each of my requests waits now, and the way it went
+//   manager   "✅ בקשות ואישורים ← 📥 בקשות הצוות" — the same, for a manager account that is someone's direct manager
+//             (e.g. the owner, who is not an employee; 31/10/2026) — shown only when he has a team or a waiting request
 //   manager   "נוכחות ← 🧭 שרשרת אישורים" — each employee's direct manager (any employee, any branch; bulk set), the
 //             requests open in the chain, and (admin) the hours before a request moves one up
 //             "⚙ ניהול ← 👥 עובדים" — the same direct manager on the employee's card (one field: employees.reports_to)
@@ -67,15 +69,29 @@
       : s.level === 'done' ? e(s.why) + ' — ' + e(s.to) : 'אצל ' + e(s.to) + (s.why ? ' — ' + e(s.why) : '')) + '</li>').join('') + '</ol></details>';
 
   /* ================= employee: my team ================= */
-  let team = { items: [], team: [], hours: 48, nextHours: 24 };
-  async function fetchTeam() {
-    const s = appState();
-    if (!s || !s.emp) return null;
-    try { const r = await apiPost({ action: 'teamRequests', ...empAuth() }); if (r && r.ok && Array.isArray(r.items)) team = { items: r.items, team: r.team || [], hours: r.hours, nextHours: r.nextHours }; } catch (_) { /* offline */ }
-    syncTeamUi();
-    return team;
+  const blank = () => ({ items: [], team: [], hours: 48, nextHours: 24 });
+  const teams = { emp: blank(), mgr: blank() };
+  let teamMode = 'emp', team = teams.emp;
+  const teamAuth = (mode) => ((mode || teamMode) === 'mgr' ? (typeof mgrAuth === 'function' ? mgrAuth() : {}) : empAuth());
+  async function fetchTeam(mode) {
+    const m = mode || teamMode, s = appState();
+    if (!s || !(m === 'mgr' ? s.mgr : s.emp)) return null;
+    try {
+      const r = await apiPost({ action: 'teamRequests', ...teamAuth(m) });
+      if (r && r.ok && Array.isArray(r.items)) teams[m] = { items: r.items, team: r.team || [], hours: r.hours, nextHours: r.nextHours };
+    } catch (_) { /* offline */ }
+    if (m === teamMode) team = teams[m];
+    if (m === 'mgr') syncMgrTeamUi(); else syncTeamUi();
+    return teams[m];
+  }
+  function syncMgrTeamUi() {
+    const t = teams.mgr, b = $('apMgrTeamBtn');
+    if (!b) return;
+    b.style.display = t.items.length || t.team.length ? '' : 'none';
+    b.innerHTML = '📥 בקשות הצוות' + (t.items.length ? '<span class="ap-badge">' + t.items.length + '</span>' : '');
   }
   function syncTeamUi() {
+    const team = teams.emp;
     const has = team.items.length > 0 || team.team.length > 0;
     const b = $('apTeamBtn');
     if (b) {
@@ -91,13 +107,16 @@
       }
       ban.innerHTML = '<span>📥 <b>' + team.items.length + '</b> ' + (team.items.length === 1 ? 'בקשה של הצוות ממתינה' : 'בקשות של הצוות ממתינות') + ' לאישורך</span>' +
         '<button class="ap-btn" id="apBannerBtn">לטיפול</button>';
-      $('apBannerBtn').addEventListener('click', openTeam);
+      $('apBannerBtn').addEventListener('click', () => openTeam('emp'));
     } else if (ban) ban.remove();
   }
-  async function openTeam() {
+  async function openTeam(mode) {
+    if (mode === 'emp' || mode === 'mgr') teamMode = mode;
+    team = teams[teamMode];
     const body = overlay('apTeamOverlay', '📥 בקשות הצוות', 'בקשות של העובדים שאת/ה המנהל/ת הישיר/ה שלהם');
     body.innerHTML = '<p class="ap-meta">טוען…</p>';
     await fetchTeam();
+    team = teams[teamMode];
     const hrs = team.hours > 0 ? 'בקשה שלא תיענה תוך ' + team.hours + ' שעות עוברת למנהל שמעליך.' : '';
     body.innerHTML = (team.team.length ? '<p class="ap-meta">הצוות שלך: ' + team.team.map(e).join(', ') + (hrs ? '<br>' + hrs : '') + '</p>' : '') +
       (team.items.length ? team.items.map((x) =>
@@ -113,15 +132,15 @@
       card.querySelectorAll('[data-ok]').forEach((btn) => btn.addEventListener('click', async () => {
         const approve = btn.dataset.ok === '1';
         card.querySelectorAll('button').forEach((b) => (b.disabled = true));
-        const x = await apiPost({ action: 'reviewTeamRequest', ...empAuth(), id, approve, note: card.querySelector('.ap-note').value.trim() });
+        const x = await apiPost({ action: 'reviewTeamRequest', ...teamAuth(), id, approve, note: card.querySelector('.ap-note').value.trim() });
         if (!x.ok) { say(x.error || 'שגיאה', 'err'); card.querySelectorAll('button').forEach((b) => (b.disabled = false)); return; }
         say(approve ? '✓ הבקשה אושרה' : 'הבקשה נדחתה', approve ? 'ok' : '');
-        openTeam();
+        openTeam(teamMode);
       }));
       const c = card.querySelector('[data-cert]');
       if (c) c.addEventListener('click', async () => {
         c.disabled = true; c.textContent = 'טוען…';
-        const x = await apiPost({ action: 'teamSickCert', ...empAuth(), id });
+        const x = await apiPost({ action: 'teamSickCert', ...teamAuth(), id });
         c.disabled = false; c.textContent = '📎 האישור הרפואי';
         if (!x.ok) return say(x.error || 'שגיאה', 'err');
         if (typeof openBlobPdf === 'function') openBlobPdf(x.data, x.filename, x.mimeType);
@@ -167,7 +186,8 @@
     } else {
       const branches = [...new Set(r.people.map((p) => p.branch))].sort();
       body.innerHTML = tabs +
-        '<datalist id="apEmpList">' + r.people.filter((p) => p.active).map((p) => '<option value="' + e(p.name) + '">' + e(p.branch) + '</option>').join('') + '</datalist>' +
+        '<datalist id="apEmpList">' + r.people.filter((p) => p.active).map((p) => '<option value="' + e(p.name) + '">' + e(p.branch) + '</option>').join('') +
+          (r.managers || []).map((n) => '<option value="' + e(n) + '">חשבון מנהל</option>').join('') + '</datalist>' +
         '<div class="ap-tools"><input id="apFind" placeholder="🔍 חיפוש עובד/ת" style="flex:1;min-width:140px">' +
         (branches.length > 1 ? '<select id="apBranch"><option value="">כל הסניפים</option>' + branches.map((b) => '<option>' + e(b) + '</option>').join('') + '</select>' : '') +
         '<label class="ap-meta"><input type="checkbox" id="apOff"> לא פעילים</label></div>' +
@@ -186,7 +206,7 @@
       const bulk = (val) => {
         const picked = [...$('apRows').querySelectorAll('input[type=checkbox]:checked')].map((c) => c.dataset.n);
         if (!picked.length) return say('יש לסמן עובדים', 'err');
-        if (val && !r.people.some((p) => p.name === val)) return say('יש לבחור מנהל/ת מהרשימה', 'err');
+        if (val && !pickable(val)) return say('יש לבחור מנהל/ת מהרשימה', 'err');
         picked.forEach((n) => setEdit(n, val));
         drawRows();
       };
@@ -201,6 +221,8 @@
     body.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { chainTab = b.dataset.tab; renderChain(); }));
   }
   const current = (p) => (p.name in edits ? edits[p.name] : p.reportsTo);
+  /** may be a direct manager: an employee, or a manager account that is not an employee */
+  const pickable = (v) => chain.people.some((p) => p.name === v) || (chain.managers || []).includes(v);
   function setEdit(name, val) {
     const p = chain.people.find((x) => x.name === name);
     if (!p || !p.canEdit) return;
@@ -218,7 +240,7 @@
       '<tr><td colspan="5" class="ap-meta">אין עובדים</td></tr>';
     $('apRows').querySelectorAll('input[data-m]').forEach((inp) => inp.addEventListener('change', () => {
       const v = inp.value.trim();
-      if (v && !chain.people.some((p) => p.name === v)) { say('יש לבחור עובד/ת מהרשימה', 'err'); inp.value = current(chain.people.find((p) => p.name === inp.dataset.m)); return; }
+      if (v && !pickable(v)) { say('יש לבחור עובד/ת או מנהל/ת מהרשימה', 'err'); inp.value = current(chain.people.find((p) => p.name === inp.dataset.m)); return; }
       setEdit(inp.dataset.m, v);
       drawRows();
     }));
@@ -239,10 +261,10 @@
 
   /* ================= manager: the employee card (👥 עובדים) ================= */
   // the direct manager on the card is the same field as in the chain screen (employees.reports_to): saved at once
-  let empPeople = null;
+  let empPeople = null, empManagers = [];
   async function loadPeople(force) {
     if (!empPeople || force) {
-      try { const r = await apiPost({ action: 'approvalChain', ...mgrAuth() }); if (r && r.ok && Array.isArray(r.people)) empPeople = r.people; } catch (_) { /* offline */ }
+      try { const r = await apiPost({ action: 'approvalChain', ...mgrAuth() }); if (r && r.ok && Array.isArray(r.people)) { empPeople = r.people; empManagers = r.managers || []; } } catch (_) { /* offline */ }
     }
     return empPeople || [];
   }
@@ -260,7 +282,8 @@
     box.style.display = '';
     const people = await loadPeople();
     if (sel.value !== name) return;                          // another employee was picked meanwhile
-    $('apEmpMgrList').innerHTML = people.filter((x) => x.active && x.name !== name).map((x) => '<option value="' + e(x.name) + '">' + e(x.branch) + '</option>').join('');
+    $('apEmpMgrList').innerHTML = people.filter((x) => x.active && x.name !== name).map((x) => '<option value="' + e(x.name) + '">' + e(x.branch) + '</option>').join('') +
+      empManagers.map((n) => '<option value="' + e(n) + '">חשבון מנהל</option>').join('');
     const p = people.find((x) => x.name === name);
     inp.value = p ? p.reportsTo : '';
     inp.dataset.emp = name;
@@ -271,7 +294,7 @@
     const people = await loadPeople();
     const p = people.find((x) => x.name === name);
     if (!name || (p && v === p.reportsTo)) return;
-    if (v && !people.some((x) => x.name === v)) { say('יש לבחור עובד/ת מהרשימה', 'err'); inp.value = p ? p.reportsTo : ''; return; }
+    if (v && !people.some((x) => x.name === v) && !empManagers.includes(v)) { say('יש לבחור עובד/ת או מנהל/ת מהרשימה', 'err'); inp.value = p ? p.reportsTo : ''; return; }
     $('apEmpMgrSt').textContent = 'שומר…';
     const x = await apiPost({ action: 'setReportsTo', ...mgrAuth(), changes: [{ employee: name, reportsTo: v }] });
     if (!x.ok) { $('apEmpMgrSt').textContent = ''; say(x.error || 'שגיאה', 'err'); inp.value = p ? p.reportsTo : ''; return; }
@@ -308,7 +331,7 @@
     const mk = (id, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.setAttribute('role', 'menuitem'); b.innerHTML = label; b.addEventListener('click', fn); return b; };
     const hist = $('myHistoryBtn');
     const mine = mk('apMineBtn', '⏳ בקשות בטיפול', openMine);
-    const tb = mk('apTeamBtn', '📥 בקשות הצוות', openTeam);
+    const tb = mk('apTeamBtn', '📥 בקשות הצוות', () => openTeam('emp'));
     tb.style.display = 'none';
     if (hist) { drop.insertBefore(mine, hist); drop.insertBefore(tb, mine); } else { drop.appendChild(tb); drop.appendChild(mine); }
     syncTeamUi();                                            // the team may have been fetched before the menu existed
@@ -317,20 +340,29 @@
   function wireManager() {
     const drop = $('menuAttDrop');
     if (!drop || $('apChainBtn')) return;
-    drop.insertAdjacentHTML('beforeend', '<button id="apChainBtn">🧭 שרשרת אישורים</button>');
+    drop.insertAdjacentHTML('beforeend', '<button id="apMgrTeamBtn" style="display:none">📥 בקשות הצוות</button><button id="apChainBtn">🧭 שרשרת אישורים</button>');
     $('apChainBtn').addEventListener('click', () => openChain());
+    $('apMgrTeamBtn').addEventListener('click', () => openTeam('mgr'));
+  }
+  /** a signed-in manager: is he someone's direct manager? (checked once per sign-in, and every 10 minutes) */
+  let mgrSeen = '', mgrAt = 0;
+  function watchManager() {
+    const s = appState(), who = s && s.mgr ? s.mgr.name : '';
+    if (!who) { mgrSeen = ''; return; }
+    if (who !== mgrSeen || Date.now() - mgrAt > 600000) { mgrSeen = who; mgrAt = Date.now(); fetchTeam('mgr'); }
   }
   function start() {
     wrapApi();
     wireManager();
+    setInterval(watchManager, 3000);
     wireEmpCard();
     let tries = 0;
     const iv = setInterval(() => { if (wireEmployee() || ++tries > 40) clearInterval(iv); }, 250);   // employee-menus.js builds the menu first
     const home = $('empHome');
     if (home) {
       let shown = !home.classList.contains('hidden');
-      if (shown) fetchTeam();
-      new MutationObserver(() => { const now = !home.classList.contains('hidden'); if (now && !shown) fetchTeam(); shown = now; })
+      if (shown) fetchTeam('emp');
+      new MutationObserver(() => { const now = !home.classList.contains('hidden'); if (now && !shown) fetchTeam('emp'); shown = now; })
         .observe(home, { attributes: true, attributeFilter: ['class'] });
     }
   }
