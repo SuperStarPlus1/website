@@ -338,9 +338,9 @@
     const pane = $('rcPane');
     pane.innerHTML = '<button class="btn plain" id="rcBack" data-back style="font-size:12.5px">→ חזרה למועמדים</button><div class="rc-f" style="margin-top:8px">' +
       '<label class="wide">משרה<select id="ncJob">' + open.map((j) => '<option value="' + j.id + '"' + (String(j.id) === filt.jobId ? ' selected' : '') + '>' + e(j.title + ' · ' + j.department) + '</option>').join('') + '</select></label>' +
-      '<label>שם מלא<input id="ncName" maxlength="80"></label><label>טלפון<input id="ncPhone" inputmode="tel" dir="ltr"></label>' +
-      '<label>מייל<input id="ncEmail" type="email" dir="ltr"></label><label>ת.ז. (לא חובה)<input id="ncId" inputmode="numeric" dir="ltr"></label>' +
-      '<label>עיר מגורים<input id="ncCity"></label><label>קורות חיים (PDF / Word / תמונה)<input id="ncCv" type="file" accept="' + CV_ACCEPT + '"></label>' +
+      '<label>שם מלא<input id="ncName" maxlength="80" autocomplete="off"></label><label>טלפון<input id="ncPhone" inputmode="tel" dir="ltr" autocomplete="off"></label>' +
+      '<label>מייל<input id="ncEmail" type="email" dir="ltr" autocomplete="off"></label><label>ת.ז. (לא חובה)<input id="ncId" inputmode="numeric" dir="ltr" autocomplete="off"></label>' +
+      '<label>עיר מגורים<input id="ncCity" autocomplete="off"></label><label>קורות חיים (PDF / Word / תמונה)<input id="ncCv" type="file" accept="' + CV_ACCEPT + '"></label>' +
       '<label class="wide">תקציר קורות חיים / התרשמות<textarea id="ncSum" rows="4" maxlength="4000"></textarea></label></div><div id="ncDup"></div>';
     $('rcBack').addEventListener('click', drawCands);
     foot('rcOverlay', '<button class="btn primary" data-x id="ncSave">💾 שמירת המועמד/ת</button>');
@@ -453,11 +453,11 @@
   function editCand(c) {
     const pane = $('rcPane');
     pane.innerHTML = '<button class="btn plain" id="ecBack" data-back style="font-size:12.5px">→ חזרה לכרטיס</button><h3 style="margin:8px 0">✏ עריכת פרטים — ' + e(c.fullName) + '</h3>' +
-      '<div class="rc-f"><label>שם מלא<input id="ecName" maxlength="80" value="' + e(c.fullName) + '"></label>' +
-      '<label>טלפון<input id="ecPhone" dir="ltr" inputmode="tel" value="' + e(c.phone) + '"></label>' +
-      '<label>מייל<input id="ecEmail" dir="ltr" type="email" value="' + e(c.email) + '"></label>' +
-      '<label>ת.ז.<input id="ecId" dir="ltr" inputmode="numeric" maxlength="9" value="' + e(c.idNumber) + '"></label>' +
-      '<label>עיר<input id="ecCity" maxlength="60" value="' + e(c.city) + '"></label>' +
+      '<div class="rc-f"><label>שם מלא<input id="ecName" maxlength="80" autocomplete="off" value="' + e(c.fullName) + '"></label>' +
+      '<label>טלפון<input id="ecPhone" dir="ltr" inputmode="tel" autocomplete="off" value="' + e(c.phone) + '"></label>' +
+      '<label>מייל<input id="ecEmail" dir="ltr" type="email" autocomplete="off" value="' + e(c.email) + '"></label>' +
+      '<label>ת.ז.<input id="ecId" dir="ltr" inputmode="numeric" maxlength="9" autocomplete="off" value="' + e(c.idNumber) + '"></label>' +
+      '<label>עיר<input id="ecCity" maxlength="60" autocomplete="off" value="' + e(c.city) + '"></label>' +
       '<label>קורות חיים חדשים (לא חובה)<input id="ecCv" type="file" accept="' + CV_ACCEPT + '"></label>' +
       '<label class="wide">תקציר<textarea id="ecSum" rows="3" maxlength="4000">' + e(c.summary) + '</textarea></label></div>' +
       (c.employee ? '<p class="rc-meta">👷 ' + e(c.employee) + ' כבר עובד/ת — השינוי כאן לא משנה את כרטיס העובד.</p>' : '') +
