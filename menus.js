@@ -5,7 +5,7 @@
 //                        שרשרת אישורים
 //   📅 סידור             as it was
 //   ⚙ ניהול              (was "אדמין"): עובדים · כרטיס עובד · גיוס עובדים · ערוצי פרסום · הודעה · לוח הודעות · מחלה / חופשה לעובד · לוח חגים · שעון נוכחות · תמרוץ · הגדרות חברה · חיוב
-//   📁 טפסים ותלושים     תלושים · טפסי 101 · טפסי 106
+//   📁 טפסים ותלושים     ניהול מסמכים · תלושים · טפסי 101 · טפסי 106
 //   👤 אזור אישי         the manager's own: החלפת סיסמה · אימות דו-שלבי · ההתראות שלי · Push
 // A menu with nothing the signed-in manager may see (e.g. the documents for a shift manager) is not shown.
 (function () {
@@ -21,7 +21,7 @@
     menuAttDrop: ['liveBtn', 'attBtn', 'haMgrBtn', 'nsMenuBtn'],
     menuReqDrop: ['apMgrTeamBtn', 'reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
     menuAdminDrop: ['empMgr', 'hrMenuBtn', 'msgBtn', 'annBtn', 'meSickBtn', 'meVacBtn', 'holBtn', 'clkMenuBtn', 'incMgrBtn', 'rcMgrBtn', 'pubMenuBtn', 'coSetBtn', 'coBillBtn'],
-    menuDocsDrop: ['payBtn', 'f101AdminBtn', 'f106AllBtn'],
+    menuDocsDrop: ['dsMgrBtn', 'payBtn', 'f101AdminBtn', 'f106AllBtn'],
     menuMeDrop: ['mpwBtn', 'mfaMenuBtn', 'myAlertsBtn', 'mgrPushBtn2'],
   };
 

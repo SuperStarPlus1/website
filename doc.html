@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>מסמך</title>
+<!-- The document viewer — every shared link (<site>/app/doc?c=<company>&t=<token>; Superstar: doc.html?t=<token>, its own
+     API address below). Server: _shared/docs-handlers.ts docOpen / docSendCode / docPing / docAck. The pages are drawn
+     here (pdf.js) with the reader's watermark; the time on each page is sent every 10 s while the page is in front. -->
+<script>window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api' }; window.companySlug = () => '';</script>
+<style>
+  :root { --ink: #1b2a4a; --muted: #64748b; --line: #e2e8f0; --ok: #166534; --bad: #b91c1c; --bg: #e9edf3; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, "Segoe UI", Arial, sans-serif; }
+  .bar { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
+  .bar .t { flex: 1; min-width: 0; }
+  .bar .t b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .t span { color: var(--muted); font-size: 13px; }
+  .bar .pg { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13.5px; white-space: nowrap; }
+  .btn { background: var(--ink); color: #fff; border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+  .btn.plain { background: #fff; color: var(--ink); border: 1.5px solid #cbd5e1; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .card { width: 100%; max-width: 460px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 6px 24px rgba(15, 23, 42, .08); padding: 22px 20px; text-align: center; }
+  .card h1 { font-size: 19px; margin: 0 0 6px; }
+  .card p { color: var(--muted); margin: 0 0 14px; }
+  .card input { width: 100%; font: inherit; font-size: 24px; letter-spacing: 6px; text-align: center; direction: ltr; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px; }
+  .card .btn { width: 100%; margin-top: 12px; padding: 12px; }
+  .msg { margin-top: 10px; font-weight: 600; min-height: 1.5em; }
+  .msg.bad { color: var(--bad); } .msg.ok { color: var(--ok); }
+  #pages { padding: 14px 16px 30px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .page { position: relative; background: #fff; box-shadow: 0 2px 10px rgba(15, 23, 42, .12); width: 100%; max-width: 900px; }
+  .page canvas, .page img { display: block; width: 100%; height: auto; }
+  .page .no { position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: #94a3b8; }
+  .nodl { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .nodl img, .nodl canvas { pointer-events: none; }
+  .ack { width: 100%; max-width: 900px; background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(15, 23, 42, .08); }
+  .ack h2 { margin: 0 0 6px; font-size: 17px; }
+  .ack p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .ack input { width: 100%; font: inherit; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 9px 11px; margin-bottom: 8px; }
+  .sig { border: 1.5px dashed #94a3b8; border-radius: 10px; background: #f8fafc; touch-action: none; width: 100%; height: 150px; display: block; }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .done { background: #dcfce7; color: var(--ok); border-radius: 12px; padding: 12px 14px; font-weight: 700; width: 100%; max-width: 900px; text-align: center; }
+  .spin { width: 34px; height: 34px; border: 4px solid #cbd5e1; border-top-color: var(--ink); border-radius: 50%; margin: 60px auto; animation: s 1s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  @media print { body.noprint * { display: none !important; } body.noprint::after { content: "הדפסת המסמך אינה מאושרת"; display: block !important; padding: 40px; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="spin"></div></div>
+<script>
+(function () {
+  'use strict';
+  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const qs = new URLSearchParams(location.search);
+  const TOKEN = (qs.get('t') || '').toLowerCase();
+  const company = (window.companySlug && window.companySlug()) || '';
+  const app = document.getElementById('app');
+  const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = { get(k) { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
+  const SKEY = 'doc-ses-' + TOKEN;
+  async function api(body, keepalive) {
+    const r = await fetch(window.APP_CONFIG.API_URL, { method: 'POST', keepalive: !!keepalive, body: JSON.stringify(Object.assign(company ? { company } : {}, body)) });
+    return await r.json();
+  }
+  const device = () => { const u = navigator.userAgent; return (/iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Mac/.test(u) ? 'Mac' : 'אחר') + ' · ' + (/Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : /Firefox\//.test(u) ? 'Firefox' : 'דפדפן'); };
+  function closedCard(msg, co) { app.innerHTML = '<div class="card"><div style="font-size:42px">🔒</div><h1>' + e(msg) + '</h1>' + (co ? '<p>' + e(co) + '</p>' : '') + '</div>'; }
+
+  async function open(code) {
+    if (!/^[0-9a-f]{32}$/.test(TOKEN)) { closedCard('הקישור לא תקין'); return; }
+    let j;
+    try { j = await api({ action: 'docOpen', token: TOKEN, code: code || '', session: store.get(SKEY), device: device() }); }
+    catch (_) { closedCard('אין חיבור — נסה/י לרענן'); return; }
+    if (j.ok) { store.set(SKEY, j.session); show(j); return; }
+    if (j.needCode) { codeCard(j); return; }
+    closedCard(j.error || 'המסמך לא זמין', j.company);
+  }
+  let codeInfo = null;
+  function codeCard(j) {
+    if (j.title) codeInfo = j;
+    const c = codeInfo || {};
+    if (!document.getElementById('cIn')) {
+      app.innerHTML = '<div class="card"><div style="font-size:38px">🔐</div><h1>' + e(c.title || 'מסמך מאובטח') + '</h1>' +
+        '<p>' + e(c.company || '') + ' שיתפ/ה איתך מסמך. לאימות, נשלח קוד ' + (c.via === 'sms' ? 'ב-SMS למספר ' : 'למייל ') + '<b dir="ltr">' + e(c.to || '') + '</b></p>' +
+        '<button class="btn" id="cSend">שליחת קוד</button>' +
+        '<div id="cBox" style="display:none;margin-top:14px"><input id="cIn" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••">' +
+        '<button class="btn" id="cGo">כניסה למסמך</button></div><div class="msg" id="cMsg"></div></div>';
+      document.getElementById('cSend').addEventListener('click', async (ev) => {
+        const b = ev.currentTarget; b.disabled = true; msg('שולח…');
+        const r = await api({ action: 'docSendCode', token: TOKEN }).catch(() => ({ ok: false, error: 'אין חיבור' }));
+        b.disabled = false;
+        if (!r.ok) { msg(r.error || 'הקוד לא נשלח', 'bad'); return; }
+        b.textContent = 'שליחת קוד חדש'; b.className = 'btn plain';
+        document.getElementById('cBox').style.display = ''; document.getElementById('cIn').focus(); msg('הקוד נשלח', 'ok');
+      });
+      const go = () => { const v = document.getElementById('cIn').value.replace(/\D/g, ''); if (v.length === 6) { msg('בודק…'); open(v); } };
+      document.getElementById('cGo').addEventListener('click', go);
+      document.getElementById('cIn').addEventListener('input', (ev) => { ev.target.value = ev.target.value.replace(/\D/g, ''); if (ev.target.value.length === 6) go(); });
+    } else document.getElementById('cBox').style.display = '';
+    if (j.error) msg(j.error, 'bad');
+  }
+  function msg(t, cls) { const m = document.getElementById('cMsg'); if (m) { m.textContent = t; m.className = 'msg ' + (cls || ''); } }
+
+  /* ---------- the document ---------- */
+  let D = null, cur = 1, maxPage = 1;
+  const secs = {};          // seconds per page since the last ping
+  function show(j) {
+    D = j;
+    document.title = j.title + ' — ' + j.company;
+    if (!j.allowDownload) { document.body.classList.add('noprint'); document.addEventListener('contextmenu', (ev) => ev.preventDefault()); }
+    app.innerHTML = '<div class="bar"><div class="t"><b>' + e(j.title) + '</b><span>' + e(j.company) + (j.version > 1 ? ' · גרסה ' + j.version : '') + '</span></div>' +
+      '<span class="pg" id="pg"></span>' + (j.allowDownload ? '<button class="btn plain" id="dl">⬇ הורדה</button>' : '') + '</div>' +
+      '<div id="pages" class="' + (j.allowDownload ? '' : 'nodl') + '"></div>';
+    if (j.allowDownload) document.getElementById('dl').addEventListener('click', download);
+    if (/^image\//.test(j.mime)) {
+      const img = new Image();
+      img.onload = () => { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext('2d'); x.drawImage(img, 0, 0); mark(x, c.width, c.height); pageBox(1).appendChild(c); afterPages(1); };
+      img.src = 'data:' + j.mime + ';base64,' + j.data;
+    } else loadPdf();
+    startTracking();
+  }
+  function pageBox(n) {
+    const d = document.createElement('div'); d.className = 'page'; d.dataset.p = n;
+    d.innerHTML = '<span class="no">' + n + '</span>';
+    document.getElementById('pages').appendChild(d);
+    return d;
+  }
+  /** the reader's name, contact and the time — across the page, so a screenshot still says whose copy it is */
+  function mark(ctx, w, h) {
+    if (!D.watermark) return;
+    ctx.save();
+    const size = Math.max(14, Math.round(w / 34));
+    ctx.font = '600 ' + size + 'px system-ui, Arial, sans-serif';
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.11)';
+    ctx.textAlign = 'center';
+    ctx.translate(w / 2, h / 2); ctx.rotate(-Math.PI / 6);
+    const step = size * 6;
+    for (let y = -h; y < h; y += step) for (let x = -w; x < w; x += Math.max(w * 0.75, size * 22)) ctx.fillText(D.watermark, x + ((y / step) % 2 ? size * 8 : 0), y);
+    ctx.restore();
+  }
+  function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+  async function loadPdf() {
+    try {
+      if (!window.pdfjsLib) await loadScript(PDFJS);
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      const bin = atob(D.data), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+      const boxes = [];
+      for (let n = 1; n <= pdf.numPages; n++) { const b = pageBox(n); b.style.aspectRatio = '1 / 1.414'; boxes.push(b); }
+      const width = () => Math.min(900, document.getElementById('pages').clientWidth - 32);
+      const draw = async (b) => {
+        if (b.dataset.done) return; b.dataset.done = '1';
+        const page = await pdf.getPage(Number(b.dataset.p));
+        const v1 = page.getViewport({ scale: 1 }), scale = (width() * Math.min(2, window.devicePixelRatio || 1)) / v1.width;
+        const vp = page.getViewport({ scale });
+        const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        const ctx = c.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        mark(ctx, c.width, c.height);
+        b.style.aspectRatio = ''; b.insertBefore(c, b.firstChild);
+      };
+      const io = new IntersectionObserver((ents) => ents.forEach((en) => { if (en.isIntersecting) draw(en.target); }), { rootMargin: '600px 0px' });
+      boxes.forEach((b) => io.observe(b));
+      afterPages(pdf.numPages);
+    } catch (err) {
+      document.getElementById('pages').innerHTML = '<div class="card"><h1>לא ניתן להציג את המסמך</h1><p>נסה/י לרענן את הדף</p></div>';
+    }
+  }
+  let total = 1;
+  function afterPages(n) {
+    total = n;
+    const pages = document.getElementById('pages');
+    // which page is in front: the one covering the middle of the screen
+    const seen = new IntersectionObserver((ents) => ents.forEach((en) => {
+      if (en.isIntersecting) { cur = Number(en.target.dataset.p); maxPage = Math.max(maxPage, cur); label(); }
+    }), { rootMargin: '-45% 0px -45% 0px' });
+    pages.querySelectorAll('.page').forEach((p) => seen.observe(p));
+    label();
+    if (D.needAck) pages.insertAdjacentHTML('beforeend', D.acked ? doneHtml(D.ackName) : ackHtml());
+    if (D.needAck && !D.acked) wireAck();
+  }
+  function label() { const p = document.getElementById('pg'); if (p) p.textContent = 'עמוד ' + cur + ' מתוך ' + total; const g = document.getElementById('aGo'); if (g) g.disabled = maxPage < total; const h = document.getElementById('aHint'); if (h) h.style.display = maxPage < total ? '' : 'none'; }
+  const doneHtml = (n) => '<div class="done">✓ אישרת שקראת והבנת את המסמך' + (n ? ' — ' + e(n) : '') + '</div>';
+  const ackHtml = () => '<div class="ack" id="ack"><h2>✍ אישור קריאה</h2><p>בחתימתך את/ה מאשר/ת שקראת את המסמך במלואו והבנת אותו.</p>' +
+    '<input id="aName" placeholder="שם מלא" value="' + e(D.recipient || '') + '">' +
+    '<canvas class="sig" id="aSig"></canvas><div class="row"><button class="btn plain" id="aClr" type="button">ניקוי חתימה</button><span style="flex:1"></span>' +
+    '<button class="btn" id="aGo" disabled>קראתי והבנתי</button></div><div class="msg" id="aHint" style="color:#64748b;font-weight:400;font-size:13.5px">יש לגלול עד סוף המסמך לפני האישור</div><div class="msg" id="aMsg"></div></div>';
+  function wireAck() {
+    const c = document.getElementById('aSig'), ctx = c.getContext('2d');
+    let drawn = 0, down = false;
+    const fit = () => { const r = c.getBoundingClientRect(); c.width = r.width * 2; c.height = r.height * 2; ctx.scale(2, 2); ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a'; drawn = 0; };
+    fit();
+    const pt = (ev) => { const r = c.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
+    c.addEventListener('pointerdown', (ev) => { down = true; c.setPointerCapture(ev.pointerId); const [x, y] = pt(ev); ctx.beginPath(); ctx.moveTo(x, y); });
+    c.addEventListener('pointermove', (ev) => { if (!down) return; const [x, y] = pt(ev); ctx.lineTo(x, y); ctx.stroke(); drawn++; });
+    c.addEventListener('pointerup', () => { down = false; });
+    document.getElementById('aClr').addEventListener('click', () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); fit(); });
+    label();
+    document.getElementById('aGo').addEventListener('click', async (ev) => {
+      const m = document.getElementById('aMsg'), name = document.getElementById('aName').value.trim();
+      if (name.length < 2) { m.className = 'msg bad'; m.textContent = 'יש למלא שם מלא'; return; }
+      if (drawn < 8) { m.className = 'msg bad'; m.textContent = 'יש לחתום בתיבת החתימה'; return; }
+      ev.currentTarget.disabled = true; m.className = 'msg'; m.textContent = 'שומר…';
+      await ping();
+      const r = await api({ action: 'docAck', token: TOKEN, viewId: D.viewId, session: D.session, name, signature: c.toDataURL('image/png') }).catch(() => ({ ok: false, error: 'אין חיבור' }));
+      if (!r.ok) { m.className = 'msg bad'; m.textContent = r.error || 'שגיאה'; ev.currentTarget.disabled = false; return; }
+      document.getElementById('ack').outerHTML = doneHtml(name);
+      try { window.parent && window.parent !== window && window.parent.postMessage({ docAck: TOKEN }, '*'); } catch (_) { /* not inside the app */ }
+    });
+  }
+  function download() {
+    const bin = atob(D.data), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: D.mime })); a.download = D.fileName || D.title; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  /* ---------- tracking: a second counts only while the page is in front ---------- */
+  function startTracking() {
+    setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus()) secs[cur] = (secs[cur] || 0) + 1; }, 1000);
+    setInterval(ping, 10000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') ping(true); });
+    window.addEventListener('pagehide', () => ping(true));
+  }
+  async function ping(leaving) {
+    const s = Object.assign({}, secs);
+    if (!Object.keys(s).length && !leaving) return;
+    for (const k in secs) delete secs[k];
+    try { await api({ action: 'docPing', token: TOKEN, viewId: D.viewId, session: D.session, secs: s, maxPage }, leaving === true); }
+    catch (_) { for (const k in s) secs[k] = (secs[k] || 0) + s[k]; }
+  }
+  open();
+})();
+</script>
+</body>
+</html>
