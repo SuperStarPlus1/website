@@ -292,11 +292,27 @@
       '<label>טלפון נייד<input class="ds-in" id="sxP" inputmode="tel" dir="ltr" placeholder="05X-XXXXXXX"></label><label>מייל<input class="ds-in" id="sxM" type="email" dir="ltr"></label>' +
       '<label class="ds-chk full"><input type="checkbox" id="sxCode"> 🔐 לדרוש קוד אימות בכניסה (נשלח לטלפון / למייל של הנמען — רק הוא יוכל לפתוח)</label>' +
       '<label>תוקף הקישור<select class="ds-in" id="sxExp"><option value="0">ללא הגבלה</option><option value="1">יום אחד</option><option value="7" selected>שבוע</option><option value="14">שבועיים</option><option value="30">חודש</option><option value="90">3 חודשים</option></select></label>' +
-      '<label>שליחה<select class="ds-in" id="sxSend"><option value="none">רק ליצור קישור (להעתקה)</option><option value="sms">ב-SMS</option><option value="email">במייל</option></select></label>' +
+      '<label>שליחה<select class="ds-in" id="sxSend"><option value="none">רק ליצור קישור (להעתקה)</option><option value="sms">ב-SMS</option><option value="email">במייל</option><option value="both">ב-SMS וגם במייל</option></select></label>' +
       '<label class="ds-chk"><input type="checkbox" id="sxWm" checked> סימן מים עם שם הנמען</label><label class="ds-chk"><input type="checkbox" id="sxDl"> לאפשר הורדה והדפסה</label>' +
       '<label class="ds-chk"><input type="checkbox" id="sxNot" checked> 📧 לעדכן אותי במייל כשנפתח</label><label class="ds-chk"><input type="checkbox" id="sxAck"> ✍ לבקש אישור קריאה בחתימה</label>' +
       '<label class="full">הודעה (לא חובה)<textarea class="ds-in" id="sxMsg" rows="2" maxlength="400"></textarea></label></div>' +
       '<div style="margin-top:12px"><button class="btn primary" id="sxGo">🔗 יצירת קישור</button></div><div id="sxOut"></div>';
+    const expTxt = () => {
+      const d = Number($('sxExp').value);
+      if (!d) return 'הקישור בתוקף ללא הגבלת זמן.';
+      const t = new Date(Date.now() + d * 86400000), p2 = (n) => String(n).padStart(2, '0');
+      return 'הקישור בתוקף עד ' + p2(t.getDate()) + '/' + p2(t.getMonth() + 1) + '/' + t.getFullYear() + ' ' + p2(t.getHours()) + ':' + p2(t.getMinutes()) + '.';
+    };
+    const preview = () => {
+      const pv = $('sxPv'); if (!pv) return;
+      const show = $('sxSend').value !== 'none'; pv.style.display = show ? '' : 'none'; if (!show) return;
+      const n = $('sxN').value.trim(), msg = $('sxMsg').value.trim();
+      pv.textContent = 'נוסח ההודעה:\n' + (n ? n + ' שלום,' : 'שלום,') + '\nמצורף קישור ל' + f.title + ':\n(הקישור האישי)\n\n' + expTxt() +
+        ($('sxCode').checked ? '\nבפתיחה יישלח אליך קוד אימות.' : '') + ($('sxAck').checked ? '\nבסוף המסמך יש לאשר קריאה.' : '') + (msg ? '\n\n' + msg : '');
+    };
+    $('sxOut').insertAdjacentHTML('beforebegin', '<div id="sxPv" style="display:none;white-space:pre-wrap;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 11px;margin-top:10px;font-size:13px;color:#334155"></div>');
+    ['sxN', 'sxMsg'].forEach((id) => $(id).addEventListener('input', preview));
+    ['sxExp', 'sxSend', 'sxCode', 'sxAck'].forEach((id) => $(id).addEventListener('change', preview));
     $('sxGo').addEventListener('click', async (ev) => {
       const b = ev.currentTarget; err('dsForm', '');
       b.disabled = true;
