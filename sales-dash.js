@@ -1,6 +1,6 @@
 // 📊 the sales and profit dashboard (25/10/2026) — admin only: ⚙ ניהול ← 📊 לוח מכירות ורווח. Full screen.
 // Data: api biDashboard (sales-bi.ts / migration 20261107100000_sales_bi.sql), fed by the store PC
-// (C:\Dropbox\superstar\sales_summary_sync.py, READ ONLY on Comax, every 15 minutes).
+// (C:\Dropbox\פיתוח מערכות\סופרסטאר\סקריפטים קומקס\sales_summary_sync.py, READ ONLY on Comax, every 15 minutes).
 // The cost = Comax's last purchase price (price list 108, before VAT); profit = sales without VAT − cost; a product
 // without a cost is left out of the profit (shown apart). Charts: Chart.js from cdnjs (loaded on first open).
 // Uses the app's globals: apiPost, mgrAuth, state.
