@@ -265,6 +265,7 @@
     // groups
     const groups = {};
     for (const r of items) {
+      if (!GROUPS.includes(r.grp)) GROUPS.splice(GROUPS.length - 1, 0, r.grp);   // a group added in the catalog is shown too
       const g = groups[r.grp] = groups[r.grp] || { name: r.grp, opening: 0, buyQty: 0, salesQty: 0, closing: 0, buySum: 0, salesSum: 0, openVal: 0, closeVal: 0, buyVal: 0, diffVal: 0, cogs: 0, profit: 0, items: [] };
       ['opening', 'buyQty', 'salesQty', 'closing', 'buySum', 'salesSum', 'openVal', 'closeVal', 'buyVal', 'diffVal', 'cogs', 'profit'].forEach((k) => { g[k] += r[k] || 0; });
       g.items.push(r);
@@ -537,22 +538,143 @@
     });
   }
 
-  /* ================= Excel ================= */
+  /* ================= Excel — styled like the screen (11/11/2026, the owner) ================= */
+  // SheetJS community cannot write styles → xlsx-js-style (a SheetJS build that can), loaded only for the export and
+  // kept apart from the app's global XLSX (the rest of the portal keeps its own copy).
+  const XS_URL = '/vendor/xlsx-js-style-1.2.0.min.js';   // hosted on the site: the CSP allows scripts only from self / cdnjs (not there)
+  let XS = null;
+  async function styledXlsx() {
+    if (XS) return XS;
+    const prev = window.XLSX;
+    await new Promise((res, rej) => { const s = document.createElement('script'); s.src = XS_URL; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    XS = window.XLSX;
+    if (prev) window.XLSX = prev;
+    return XS;
+  }
+  const HEX = { 'עוף': ['D97706', 'FEF3C7'], 'טלה': ['7C3AED', 'EDE9FE'], 'עגל': ['9F1239', 'FFE4E6'], 'מיוחדים': ['0F766E', 'CCFBF1'], 'לא משויך': ['64748B', 'F1F5F9'] };
+  const F = { money: '"₪"#,##0;[Red]-"₪"#,##0', money2: '"₪"#,##0.00;[Red]-"₪"#,##0.00', kg: '#,##0.0;[Red]-#,##0.0', kg2: '#,##0.00;[Red]-#,##0.00', pct: '0.0%;[Red]-0.0%' };
+  const border = { top: { style: 'thin', color: { rgb: 'EADBCF' } }, bottom: { style: 'thin', color: { rgb: 'EADBCF' } }, left: { style: 'thin', color: { rgb: 'F4ECE4' } }, right: { style: 'thin', color: { rgb: 'F4ECE4' } } };
+  const font = (o) => ({ name: 'Arial', sz: 11, ...o });
+  function sheetOf(X, rows, cols) {   // rows: arrays of cells {v, s?, z?} | null
+    const ws = {}; let maxC = 0;
+    rows.forEach((r, ri) => (r || []).forEach((c, ci) => {
+      if (c == null) return;
+      const cell = typeof c === 'object' && !(c instanceof Date) ? c : { v: c };
+      const v = cell.v;
+      const o = { v: v == null ? '' : v, t: typeof v === 'number' ? 'n' : 's' };
+      if (cell.z) o.z = cell.z;
+      o.s = { alignment: { horizontal: 'right', vertical: 'center', readingOrder: 2, wrapText: !!cell.wrap }, font: font({}), ...(cell.s || {}) };
+      if (cell.s && cell.s.font) o.s.font = font(cell.s.font);
+      if (typeof v === 'number') o.s.alignment = { ...o.s.alignment, horizontal: 'center' };
+      ws[X.utils.encode_cell({ r: ri, c: ci })] = o; maxC = Math.max(maxC, ci);
+    }));
+    ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, rows.length - 1), c: maxC } });
+    ws['!cols'] = cols.map((w) => ({ wch: w }));
+    return ws;
+  }
+  const lossFill = (p) => (p == null ? 'F1F5F9' : p >= thr() ? 'FEE2E2' : p >= thr() / 2 ? 'FEF3C7' : 'DCFCE7');
+  const lossInk = (p) => (p == null ? '475569' : p >= thr() ? '991B1B' : p >= thr() / 2 ? '92400E' : '166534');
+
   async function exportXlsx() {
-    await loadScript(XURL);
+    const X = await styledXlsx();
     const per = (W.from ? dmy(W.from.day) + '–' : '') + (W.to ? dmy(W.to.day) : '');
-    const sum = [['מלאי בשר · סופרסטאר פלוס · ' + per + ' · כל הסכומים כולל מע"מ'], [],
-      ['קבוצה', 'פתיחה ק"ג', 'קניות ק"ג', 'נמכר ק"ג', 'סגירה ק"ג', 'פחת ק"ג', '% פחת', 'שווי פחת', 'מכירות', 'עלות המכר', 'רווח גולמי', '% רווח', 'שווי מלאי סגירה']];
-    const gl = GROUPS.filter((g) => W.groups[g]).map((g) => W.groups[g]).concat([W.T]);
-    gl.forEach((g) => sum.push([g.name, r2(g.opening), r2(g.buyQty), r2(g.salesQty), r2(g.closing), r2(g.loss), g.lossPct == null ? '' : r2(g.lossPct) / 100, r2(g.diffVal), r2(g.salesSum), r2(g.cogs), r2(g.profit), g.margin == null ? '' : r2(g.margin) / 100, r2(g.closeVal)]));
-    const its = [['קבוצה', 'ברקוד', 'פריט', 'סוג', 'עלות לק"ג', 'מקור העלות', 'פתיחה', 'קניות', 'מכירות', 'סגירה', 'הפרש ק"ג', 'שווי הפרש', 'סכום קניות', 'סכום מכירות', 'שווי סגירה', 'מחיר מכירה לק"ג', 'רווח לק"ג']];
-    GROUPS.forEach((g) => (W.groups[g] ? W.groups[g].items : []).forEach((r) => its.push([g, r.barcode, r.name, KIND[r.kind], r.cost == null ? '' : r2(r.cost), r.costSrc, r2(r.opening), r2(r.buyQty), r2(r.salesQty), r2(r.closing), r2(r.diff), r2(r.diffVal), r2(r.buyVal), r2(r.salesSum), r2(r.closeVal), r.avgPrice == null ? '' : r2(r.avgPrice), r.unitMargin == null ? '' : r2(r.unitMargin)])));
-    const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
-    const s1 = XLSX.utils.aoa_to_sheet(sum); s1['!cols'] = [{ wch: 14 }].concat(Array(12).fill({ wch: 12 }));
-    for (let i = 4; i <= sum.length; i++) { ['G', 'L'].forEach((c) => { if (s1[c + i] && s1[c + i].t === 'n') s1[c + i].z = '0.0%'; }); ['H', 'I', 'J', 'K', 'M'].forEach((c) => { if (s1[c + i]) s1[c + i].z = '"₪"#,##0'; }); }
-    const s2 = XLSX.utils.aoa_to_sheet(its); s2['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 22 }, { wch: 6 }, { wch: 9 }, { wch: 40 }].concat(Array(10).fill({ wch: 10 })); s2['!autofilter'] = { ref: 'A1:Q' + its.length };
-    XLSX.utils.book_append_sheet(wb, s1, 'סיכום'); XLSX.utils.book_append_sheet(wb, s2, 'פריטים');
-    XLSX.writeFile(wb, 'מלאי בשר ' + per.replace(/\//g, '-') + '.xlsx');
+    const T = W.T, gl = GROUPS.filter((g) => W.groups[g]).map((g) => W.groups[g]);
+    const H = (v) => ({ v, s: { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10.5 }, fill: { fgColor: { rgb: '4A0D18' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true, readingOrder: 2 }, border } });
+    const N = (v, z, extra) => ({ v: v == null || !isFinite(v) ? '' : Math.round(v * 100) / 100, z, s: { border, ...(extra || {}) } });
+
+    /* ---- סיכום ---- */
+    const S = [];
+    S.push([{ v: 'מלאי בשר · סופרסטאר פלוס · ' + per, s: { font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4A0D18' } }, alignment: { horizontal: 'center', vertical: 'center', readingOrder: 2 } } }]);
+    S.push([{ v: 'כל הסכומים כולל מע"מ · ספירת פתיחה: ' + (W.from ? dmy(W.from.day) + ' ' + hm(W.from.counted_at) + ' (' + (W.from.performed_by || '') + ')' : 'אין') + ' · ספירת סגירה: ' + (W.to ? dmy(W.to.day) + ' ' + hm(W.to.counted_at) + ' (' + (W.to.performed_by || '') + ')' : '') + ' · סף פחת ' + thr() + '%', s: { font: { color: { rgb: '78716C' }, sz: 10 }, alignment: { horizontal: 'center', readingOrder: 2 } } }]);
+    S.push([]);
+    // the five cards, like the screen: label / value / note, each card two columns wide
+    const cards = [['מכירות', T.salesSum, F.money, kg(T.salesQty, 0) + ' ק"ג נמכרו', '0F766E'], ['רווח גולמי', T.profit, F.money, pct(T.margin) + ' מהמכירות', '15803D'],
+      ['פחת', T.diffVal, F.money, kg(T.loss, 1) + ' ק"ג · ' + pct(T.lossPct) + ' מהנכנס', 'B91C1C'], ['מלאי בסגירה', T.closeVal, F.money, kg(T.closing, 0) + ' ק"ג', '7F1D2D'], ['קניות', T.buyVal, F.money, kg(T.buyQty, 0) + ' ק"ג', 'B45309']];
+    const r1 = [], r2 = [], r3 = [];
+    cards.forEach(([l, v, z, d, c]) => {
+      const st = (o) => ({ fill: { fgColor: { rgb: c } }, alignment: { horizontal: 'center', vertical: 'center', readingOrder: 2 }, ...o });
+      r1.push({ v: l, s: st({ font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 } }) }, { v: '', s: st({}) });
+      r2.push({ v: Math.round(v), z, s: st({ font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 18 } }) }, { v: '', s: st({}) });
+      r3.push({ v: d, s: st({ font: { color: { rgb: 'FFFFFF' }, sz: 10 } }) }, { v: '', s: st({}) });
+    });
+    S.push(r1, r2, r3, []);
+    const gHead = ['קבוצה', 'פתיחה ק"ג', 'קניות ק"ג', 'נמכר ק"ג', 'נשאר ק"ג', 'פחת ק"ג', '% פחת', 'שווי פחת', 'מכירות', 'עלות המכר', 'רווח גולמי', '% רווח', 'שווי מלאי בסגירה'];
+    const gStart = S.length;
+    S.push(gHead.map(H));
+    for (const g of gl) {
+      const [ink, bg] = HEX[g.name] || HEX['לא משויך'];
+      S.push([{ v: g.name, s: { font: { bold: true, color: { rgb: ink } }, fill: { fgColor: { rgb: bg } }, border: { ...border, right: { style: 'thick', color: { rgb: ink } } } } },
+        N(g.opening, F.kg), N(g.buyQty, F.kg), N(g.salesQty, F.kg), N(g.closing, F.kg), N(g.loss, F.kg, { font: { bold: true, color: { rgb: g.loss > 0 ? 'B91C1C' : '15803D' } } }),
+        N(g.lossPct == null ? null : g.lossPct / 100, F.pct, { font: { bold: true, color: { rgb: lossInk(g.lossPct) } }, fill: { fgColor: { rgb: lossFill(g.lossPct) } } }),
+        N(g.diffVal, F.money), N(g.salesSum, F.money), N(g.cogs, F.money), N(g.profit, F.money, { font: { bold: true, color: { rgb: g.profit < 0 ? 'B91C1C' : '15803D' } } }),
+        N(g.margin == null ? null : g.margin / 100, F.pct), N(g.closeVal, F.money)]);
+    }
+    const tot = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '7F1D2D' } } };
+    S.push([{ v: 'סה"כ מחלקה', s: tot }, N(T.opening, F.kg, tot), N(T.buyQty, F.kg, tot), N(T.salesQty, F.kg, tot), N(T.closing, F.kg, tot), N(T.loss, F.kg, tot), N(T.lossPct == null ? null : T.lossPct / 100, F.pct, tot),
+      N(T.diffVal, F.money, tot), N(T.salesSum, F.money, tot), N(T.cogs, F.money, tot), N(T.profit, F.money, tot), N(T.margin == null ? null : T.margin / 100, F.pct, tot), N(T.closeVal, F.money, tot)]);
+    if (W.warns.length) {
+      S.push([], [{ v: '⚠ לבדיקה', s: { font: { bold: true, color: { rgb: '9A3412' } } } }]);
+      W.warns.forEach((w) => S.push([{ v: '• ' + w, wrap: true, s: { font: { color: { rgb: '9A3412' }, sz: 10 }, fill: { fgColor: { rgb: 'FFF7ED' } } } }]));
+    }
+    S.push([], [{ v: 'עלות לק"ג = סכום הכניסה האחרונה ÷ כמותה, אם הכניסה עד ' + D.priceDays + ' ימים לפני ספירת הסגירה; אחרת לפי השלם שממנו הנתח נחתך. פחת = פתיחה + קניות − מכירות − סגירה. רווח גולמי = מכירות − (שווי פתיחה + קניות − שווי סגירה).', wrap: true, s: { font: { color: { rgb: '78716C' }, sz: 9.5 } } }]);
+    const ws1 = sheetOf(X, S, [14, 12, 12, 12, 12, 12, 10, 12, 12, 12, 12, 10, 14]);
+    const last = S.length - 1;
+    ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 12 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } }, { s: { r: last, c: 0 }, e: { r: last, c: 12 } }];
+    for (let k = 0; k < 5; k++) for (const rr of [3, 4, 5]) ws1['!merges'].push({ s: { r: rr, c: k * 2 }, e: { r: rr, c: k * 2 + 1 } });
+    S.forEach((r, i) => { if (r && r[0] && typeof r[0].v === 'string' && r[0].v.startsWith('• ')) ws1['!merges'].push({ s: { r: i, c: 0 }, e: { r: i, c: 12 } }); });
+    ws1['!rows'] = S.map((r, i) => (i === 0 ? { hpt: 30 } : i === 4 ? { hpt: 32 } : i === gStart ? { hpt: 30 } : r && r[0] && typeof r[0].v === 'string' && (r[0].v.startsWith('• ') || i === last) ? { hpt: 30 } : {}));
+
+    /* ---- פריטים: like the item table, grouped, with the group totals ---- */
+    const IH = ['פריט', 'ברקוד', 'סוג', 'עלות לק"ג', 'מקור העלות', 'פתיחה', 'קניות', 'מכירות ק"ג', 'סגירה', 'הפרש ק"ג', 'מכירות ₪', 'מחיר מכירה לק"ג', 'רווח לק"ג', '% רווח', 'שווי מלאי'];
+    const P = [[{ v: 'פירוט פריטים · ' + per + ' · כולל מע"מ', s: { font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4A0D18' } }, alignment: { horizontal: 'center', readingOrder: 2 } } }], IH.map(H)];
+    const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: IH.length - 1 } }];
+    const KF = { whole: ['FEF3C7', '92400E'], cut: ['DCFCE7', '166534'], ready: ['F1F5F9', '475569'] };
+    const ord = { whole: 0, cut: 1, ready: 2 };
+    for (const g of gl) {
+      const [ink, bg] = HEX[g.name] || HEX['לא משויך'];
+      merges.push({ s: { r: P.length, c: 0 }, e: { r: P.length, c: IH.length - 1 } });
+      P.push([{ v: g.name + ' · ' + g.items.length + ' פריטים · פחת ' + kg(g.loss) + ' ק"ג (' + pct(g.lossPct) + ') · רווח גולמי ' + nis(g.profit) + ' (' + pct(g.margin) + ')', s: { font: { bold: true, sz: 12, color: { rgb: ink } }, fill: { fgColor: { rgb: bg } }, border: { ...border, right: { style: 'thick', color: { rgb: ink } } } } }]);
+      const its = g.items.slice().sort((a, b) => (ord[a.kind] - ord[b.kind]) || (b.salesSum - a.salesSum));
+      its.forEach((r, i) => {
+        const zebra = i % 2 ? { fill: { fgColor: { rgb: 'FCF8F4' } } } : {};
+        const [kb, ki] = KF[r.kind] || KF.ready;
+        const col = (v) => ({ font: { bold: true, color: { rgb: v > 0.05 ? '15803D' : v < -0.05 ? 'B91C1C' : '1F1A17' } } });
+        P.push([{ v: r.name, s: { border, ...zebra, font: { bold: true } } }, { v: r.barcode, s: { border, ...zebra, font: { color: { rgb: '78716C' }, sz: 9.5 } } },
+          { v: KIND[r.kind], s: { border, fill: { fgColor: { rgb: kb } }, font: { bold: true, color: { rgb: ki }, sz: 10 }, alignment: { horizontal: 'center' } } },
+          N(r.cost, F.money2, { ...zebra, ...(r.costHow === 'none' ? { fill: { fgColor: { rgb: 'FEE2E2' } } } : {}) }),
+          { v: r.costSrc + (r.costNote ? ' (' + r.costNote + ')' : ''), wrap: true, s: { border, ...zebra, font: { sz: 9, color: { rgb: r.costOld || r.costHow === 'none' ? '9A3412' : '57534E' } } } },
+          N(r.opening, F.kg2, zebra), N(r.buyQty, F.kg2, zebra), N(r.salesQty, F.kg2, zebra), N(r.closing, F.kg2, zebra),
+          N(r.diff, F.kg2, { ...zebra, font: { bold: true, color: { rgb: r.kind !== 'whole' && r.diff > 0.05 ? 'B91C1C' : r.diff < -0.05 ? '15803D' : '1F1A17' } } }),
+          N(r.salesSum, F.money, zebra), N(r.avgPrice, F.money2, zebra), N(r.unitMargin, F.money2, { ...zebra, ...col(r.unitMargin || 0) }),
+          N(r.unitMarginPct == null ? null : r.unitMarginPct / 100, F.pct, zebra), N(r.closeVal, F.money, zebra)]);
+      });
+      const gt = { font: { bold: true, color: { rgb: ink } }, fill: { fgColor: { rgb: 'F8EFE6' } }, border: { ...border, top: { style: 'medium', color: { rgb: ink } } } };
+      P.push([{ v: 'סה"כ ' + g.name, s: gt }, { v: '', s: gt }, { v: '', s: gt }, { v: '', s: gt }, { v: 'פחת ' + pct(g.lossPct) + ' · רווח ' + pct(g.margin), s: gt },
+        N(g.opening, F.kg, gt), N(g.buyQty, F.kg, gt), N(g.salesQty, F.kg, gt), N(g.closing, F.kg, gt), N(g.loss, F.kg, gt), N(g.salesSum, F.money, gt),
+        { v: '', s: gt }, N(g.profit, F.money, gt), N(g.margin == null ? null : g.margin / 100, F.pct, gt), N(g.closeVal, F.money, gt)]);
+      P.push([]);
+    }
+    P.push([{ v: 'סה"כ מחלקה', s: tot }, { v: '', s: tot }, { v: '', s: tot }, { v: '', s: tot }, { v: 'פחת ' + pct(T.lossPct) + ' · רווח ' + pct(T.margin), s: tot },
+      N(T.opening, F.kg, tot), N(T.buyQty, F.kg, tot), N(T.salesQty, F.kg, tot), N(T.closing, F.kg, tot), N(T.loss, F.kg, tot), N(T.salesSum, F.money, tot), { v: '', s: tot }, N(T.profit, F.money, tot), N(T.margin == null ? null : T.margin / 100, F.pct, tot), N(T.closeVal, F.money, tot)]);
+    const ws2 = sheetOf(X, P, [22, 11, 7, 10, 42, 10, 10, 10, 10, 10, 11, 11, 10, 8, 11]);
+    ws2['!merges'] = merges;
+    ws2['!rows'] = P.map((r, i) => (i === 0 ? { hpt: 26 } : i === 1 ? { hpt: 30 } : {}));
+
+    /* ---- היסטוריה ---- */
+    const reps = D.reports.slice().sort((a, b) => (a.period_to < b.period_to ? -1 : 1));
+    const wb = X.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+    X.utils.book_append_sheet(wb, ws1, 'סיכום'); X.utils.book_append_sheet(wb, ws2, 'פריטים');
+    if (reps.length) {
+      const gs = GROUPS.filter((g) => reps.some((r) => r.result && r.result.groups && r.result.groups[g]));
+      const Hh = [H('תקופה'), H('מכירות'), H('רווח גולמי'), H('% רווח'), H('פחת ק"ג'), H('% פחת'), H('שווי פחת')].concat(gs.map((g) => H(g + ' · % פחת')));
+      const R = [Hh];
+      reps.forEach((r) => { const t = (r.result && r.result.total) || {};
+        R.push([{ v: (r.period_from ? dmy(r.period_from) + '–' : '') + dmy(r.period_to), s: { border, font: { bold: true } } }, N(t.sales, F.money), N(t.profit, F.money), N(t.margin == null ? null : t.margin / 100, F.pct), N(t.loss, F.kg),
+          N(t.lossPct == null ? null : t.lossPct / 100, F.pct, { font: { bold: true, color: { rgb: lossInk(t.lossPct) } }, fill: { fgColor: { rgb: lossFill(t.lossPct) } } }), N(t.lossVal, F.money)]
+          .concat(gs.map((g) => { const x = r.result.groups && r.result.groups[g]; return x ? N(x.lossPct == null ? null : x.lossPct / 100, F.pct, { font: { bold: true, color: { rgb: lossInk(x.lossPct) } }, fill: { fgColor: { rgb: lossFill(x.lossPct) } } }) : { v: '—', s: { border } }; }))); });
+      X.utils.book_append_sheet(wb, sheetOf(X, R, [16, 12, 12, 9, 10, 9, 12].concat(gs.map(() => 12))), 'היסטוריה');
+    }
+    X.writeFile(wb, 'מלאי בשר ' + per.replace(/\//g, '-') + '.xlsx');
   }
 
   function start() {
