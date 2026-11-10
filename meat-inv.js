@@ -34,7 +34,9 @@
   let tab = 'week', sel = { to: null, from: null }, openRow = null, sortK = '', sortD = -1, charts = [];
 
   document.head.insertAdjacentHTML('beforeend', '<style>' +
-    '#miOv{position:fixed;inset:0;z-index:9000;background:#f6f3ef;overflow:auto;direction:rtl;font-family:inherit;color:#1f1a17}#miOv.hidden{display:none}' +
+    '#miOv{position:fixed;inset:0;z-index:9000;background:#f6f3ef;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;direction:rtl;font-family:inherit;color:#1f1a17}#miOv.hidden{display:none}' +
+    // a phone shows only item / cost / difference / margin per kg — the rest is in the row opened by a tap (11 columns did not fit, 10/11/2026)
+    '#miTbl .dt{white-space:normal;overflow-wrap:anywhere}@media (max-width:760px){#miTbl .dt{max-width:calc(100vw - 56px)}#miTbl .o{display:none}#miTbl td,#miTbl th{padding:6px 3px}#miOv table.mi-tbl{font-size:12px}.mi-wrap{padding:10px 10px 48px}.mi-card{padding:12px 10px}}' +
     '.mi-top{position:sticky;top:0;z-index:3;background:linear-gradient(120deg,#4a0d18,#7f1d2d 55%,#b45309);color:#fff;padding:11px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(74,13,24,.3)}' +
     '.mi-top h2{margin:0;font-size:19px;font-weight:900}.mi-top .sp{flex:1}' +
     '.mi-top button{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}' +
@@ -56,7 +58,7 @@
     '.mi-g .line{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}.mi-g .line b{font-variant-numeric:tabular-nums}' +
     '.mi-bar{height:8px;border-radius:9px;background:#f1e6dc;overflow:hidden;margin:6px 0 2px}.mi-bar i{display:block;height:100%}' +
     '.mi-badge{display:inline-block;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:800}.mi-ok{background:#dcfce7;color:#166534}.mi-warn{background:#fef3c7;color:#92400e}.mi-bad{background:#fee2e2;color:#991b1b}.mi-mute{background:#f1f5f9;color:#475569}' +
-    '.mi-tbl{width:100%;border-collapse:collapse;font-size:13px}.mi-tbl th{text-align:right;color:#78716c;font-weight:800;font-size:12px;padding:6px;border-bottom:1.5px solid #eadbcf;white-space:nowrap;cursor:pointer;position:sticky;top:0;background:#fff}' +
+    '#miOv table.mi-tbl{width:100%;min-width:0;border-collapse:collapse;font-size:13px}.mi-tbl th{text-align:right;color:#78716c;font-weight:800;font-size:12px;padding:6px;border-bottom:1.5px solid #eadbcf;white-space:nowrap;cursor:pointer;position:sticky;top:0;background:#fff}' +
     '.mi-tbl td{padding:6px;border-bottom:1px solid #f4ece4;vertical-align:top}.mi-tbl .n{text-align:left;direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}' +
     '.mi-tbl tr.it{cursor:pointer}.mi-tbl tr.it:hover td{background:#fdf6ee}.mi-tbl tr.gh td{background:#f8efe6;font-weight:900;color:#4a0d18}.mi-tbl tr.gt td{font-weight:900;border-top:1.5px solid #eadbcf;background:#fcf8f4}' +
     '.mi-tbl tr.det td{background:#fffaf5;font-size:12.5px;line-height:1.7;color:#44403c}.mi-tbl small{color:#78716c}' +
@@ -352,29 +354,30 @@
     document.querySelectorAll('.mi-g').forEach((el) => el.addEventListener('click', () => { LS('g', LS('g') === el.dataset.g ? '' : el.dataset.g); render(); }));
   }
   const COLS = [['name', 'פריט'], ['cost', 'עלות לק"ג'], ['opening', 'פתיחה'], ['buyQty', 'קניות'], ['salesQty', 'מכירות'], ['closing', 'סגירה'], ['diff', 'הפרש ק"ג'], ['salesSum', 'מכירות ₪'], ['avgPrice', 'מחיר מכירה לק"ג'], ['unitMargin', 'רווח לק"ג'], ['closeVal', 'שווי מלאי']];
+  const OPT = new Set(['opening', 'buyQty', 'salesQty', 'closing', 'salesSum', 'avgPrice', 'closeVal']);   // hidden on a phone
   function drawItems() {
     const t = $('miTbl'); if (!t || !W) return;
     const q = (LS('q') || '').trim(), gsel = LS('g') || '';
-    let h = '<tr>' + COLS.map(([k, l]) => '<th data-k="' + k + '"' + (k === 'name' ? '' : ' class="n"') + '>' + l + (sortK === k ? (sortD < 0 ? ' ▼' : ' ▲') : '') + '</th>').join('') + '</tr>';
+    let h = '<tr>' + COLS.map(([k, l]) => '<th data-k="' + k + '"' + (k === 'name' ? '' : ' class="n' + (OPT.has(k) ? ' o' : '') + '"') + '>' + l + (sortK === k ? (sortD < 0 ? ' ▼' : ' ▲') : '') + '</th>').join('') + '</tr>';
     for (const g of GROUPS) {
       const G = W.groups[g]; if (!G || (gsel && gsel !== g)) continue;
       let its = G.items.filter((r) => !q || r.name.includes(q) || r.barcode.includes(q));
       if (!its.length) continue;
       const ord = { whole: 0, cut: 1, ready: 2 };
       its = its.slice().sort(sortK ? (a, b) => (typeof a[sortK] === 'string' ? sortD * String(a[sortK]).localeCompare(String(b[sortK]), 'he') : sortD * ((a[sortK] ?? -1e18) - (b[sortK] ?? -1e18))) : (a, b) => (ord[a.kind] - ord[b.kind]) || (b.salesSum - a.salesSum));
-      h += '<tr class="gh"><td colspan="10" style="border-right:5px solid ' + (GCOL[g] || '#999') + '">' + e(g) + ' · ' + its.length + ' פריטים</td></tr>';
+      h += '<tr class="gh"><td colspan="11" style="border-right:5px solid ' + (GCOL[g] || '#999') + '">' + e(g) + ' · ' + its.length + ' פריטים</td></tr>';
       for (const r of its) {
         const kb = '<span class="mi-badge ' + (r.kind === 'whole' ? 'mi-warn' : r.kind === 'ready' ? 'mi-mute' : 'mi-ok') + '">' + KIND[r.kind] + '</span>';
         const cb = r.costHow === 'none' ? '<span class="mi-badge mi-bad">אין מחיר</span>' : r.costHow === 'source' ? '<small>לפי שלם</small>' : r.costHow === 'manual' ? '<small>ידני</small>' : r.costOld ? '<span class="mi-badge mi-warn">ישן</span>' : '<small>כניסה ' + dm(r.entry && r.entry.date) + '</small>';
         h += '<tr class="it" data-bc="' + r.barcode + '"><td>' + e(r.name) + ' ' + kb + '<br><small>' + r.barcode + '</small></td>' +
-          '<td class="n">' + nis(r.cost, 2) + '<br>' + cb + '</td><td class="n">' + kg(r.opening, 2) + '</td><td class="n">' + kg(r.buyQty, 2) + '</td><td class="n">' + kg(r.salesQty, 2) + '</td>' +
-          '<td class="n">' + kg(r.closing, 2) + (r.counted || !W.to ? '' : '<br><small>לא נספר</small>') + '</td>' +
+          '<td class="n">' + nis(r.cost, 2) + '<br>' + cb + '</td><td class="n o">' + kg(r.opening, 2) + '</td><td class="n o">' + kg(r.buyQty, 2) + '</td><td class="n o">' + kg(r.salesQty, 2) + '</td>' +
+          '<td class="n o">' + kg(r.closing, 2) + (r.counted || !W.to ? '' : '<br><small>לא נספר</small>') + '</td>' +
           '<td class="n ' + (r.kind !== 'whole' && r.diff > 0.05 ? 'neg' : r.diff < -0.05 ? 'pos' : '') + '">' + kg(r.diff, 2) + '</td>' +
-          '<td class="n">' + nis(r.salesSum) + '</td><td class="n">' + nis(r.avgPrice, 2) + '</td><td class="n ' + (r.unitMargin < 0 ? 'neg' : r.unitMargin > 0 ? 'pos' : '') + '">' + (r.unitMargin == null ? '—' : nis(r.unitMargin, 2) + '<br><small>' + pct(r.unitMarginPct) + '</small>') + '</td><td class="n">' + nis(r.closeVal) + '</td></tr>';
-        if (openRow === r.barcode) h += '<tr class="det"><td colspan="10">' + detail(r) + '</td></tr>';
+          '<td class="n o">' + nis(r.salesSum) + '</td><td class="n o">' + nis(r.avgPrice, 2) + '</td><td class="n ' + (r.unitMargin < 0 ? 'neg' : r.unitMargin > 0 ? 'pos' : '') + '">' + (r.unitMargin == null ? '—' : nis(r.unitMargin, 2) + '<br><small>' + pct(r.unitMarginPct) + '</small>') + '</td><td class="n o">' + nis(r.closeVal) + '</td></tr>';
+        if (openRow === r.barcode) h += '<tr class="det"><td colspan="11"><div class="dt">' + detail(r) + '</div></td></tr>';
       }
-      h += '<tr class="gt"><td>סה"כ ' + e(g) + '</td><td></td><td class="n">' + kg(G.opening) + '</td><td class="n">' + kg(G.buyQty) + '</td><td class="n">' + kg(G.salesQty) + '</td><td class="n">' + kg(G.closing) + '</td>' +
-        '<td class="n ' + (G.loss > 0 ? 'neg' : 'pos') + '">' + kg(G.loss) + '<br><small>' + pct(G.lossPct) + '</small></td><td class="n">' + nis(G.salesSum) + '</td><td class="n" colspan="2">רווח גולמי ' + nis(G.profit) + '<br><small>' + pct(G.margin) + ' מהמכירות</small></td><td class="n">' + nis(G.closeVal) + '</td></tr>';
+      h += '<tr class="gt"><td>סה"כ ' + e(g) + '</td><td></td><td class="n o">' + kg(G.opening) + '</td><td class="n o">' + kg(G.buyQty) + '</td><td class="n o">' + kg(G.salesQty) + '</td><td class="n o">' + kg(G.closing) + '</td>' +
+        '<td class="n ' + (G.loss > 0 ? 'neg' : 'pos') + '">' + kg(G.loss) + '<br><small>' + pct(G.lossPct) + '</small></td><td class="n o">' + nis(G.salesSum) + '</td><td class="n o"></td><td class="n">רווח ' + nis(G.profit) + '<br><small>' + pct(G.margin) + ' מהמכירות</small></td><td class="n o">' + nis(G.closeVal) + '</td></tr>';
     }
     t.innerHTML = h;
     t.querySelectorAll('th').forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; if (sortK === k) sortD *= -1; else { sortK = k; sortD = -1; } drawItems(); }));
@@ -383,6 +386,7 @@
   function detail(r) {
     const lines = [];
     lines.push('<b>עלות לק"ג:</b> ' + nis(r.cost, 2) + ' — ' + e(r.costSrc) + (r.costNote ? ' <small>(' + e(r.costNote) + ')</small>' : ''));
+    lines.push('<b>מכירות:</b> ' + kg(r.salesQty, 2) + ' ק"ג · ' + nis(r.salesSum) + ' · <b>מלאי בסגירה:</b> ' + kg(r.closing, 2) + ' ק"ג · ' + nis(r.closeVal));
     lines.push('<b>חישוב:</b> פתיחה ' + kg(r.opening, 2) + ' + קניות ' + kg(r.buyQty, 2) + ' − מכירות ' + kg(r.salesQty, 2) + ' = צפוי ' + kg(r.expected, 2) + ' ק"ג · נספר ' + kg(r.closing, 2) + ' · הפרש ' + kg(r.diff, 2) + ' ק"ג (' + nis(r.diffVal) + ')');
     if (r.salesQty > 0) lines.push('<b>מכירה:</b> ' + nis(r.salesSum) + ' על ' + kg(r.salesQty, 2) + ' ק"ג = ' + nis(r.avgPrice, 2) + ' לק"ג · רווח ' + nis(r.unitMargin, 2) + ' לק"ג (' + pct(r.unitMarginPct) + ')');
     lines.push('<b>שווי:</b> פתיחה ' + nis(r.openVal) + ' · קניות ' + nis(r.buyVal) + ' · סגירה ' + nis(r.closeVal));
