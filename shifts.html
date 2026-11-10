@@ -2194,31 +2194,15 @@ function empRow(e){
       <span class="lbl">משמרת קבועה:</span>
       <input type="text" class="i-fixed" value="${esc(e.fixedShifts||'')}" placeholder="למשל: ש-${esc(SC.keys()[0])}${SC.keys()[1]?', ג-'+esc(SC.keys()[1]):''}" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
     <div class="chiprow" style="margin-top:7px"><span class="lbl">אימייל:</span>
-      <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-      <span class="lbl">מס' עובד:</span>
-      <input type="text" class="i-empno" value="${esc(e.empNo||'')}" placeholder="לתלושים" dir="ltr" style="width:80px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center">
-      <span class="lbl">מס' עובד בשעון נוכחות:</span>
-      <input type="text" class="i-clockempno" value="${esc(e.clockEmpNo||'')}" placeholder="לייבוא DAT" dir="ltr" style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"></div>
-    <div class="chiprow" style="margin-top:7px"><span class="lbl">תחילת עבודה:</span>
-      <input type="date" class="i-start" value="${esc(e.startDate||'')}" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-      <span class="lbl">🎂 תאריך לידה:</span>
-      <input type="date" class="i-birth" value="${esc(e.birthDate||'')}" title="לברכת יום הולדת אוטומטית ב-8:00 בבוקר" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 9px">
-      <span class="lbl">מחלקה ראשית:</span>
+      <input type="text" class="i-email" value="${esc(e.email||'')}" placeholder="להתראות (רשות)" dir="ltr" style="flex:1;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px"></div>
+    <div class="chiprow" style="margin-top:7px"><span class="lbl">מחלקה ראשית:</span>
       <select class="i-primary" style="border:2px solid var(--gold);border-radius:8px;padding:6px 10px;font-weight:700;background:#fffdf0">
         ${e.depts.map(d=>`<option value="${esc(d)}" ${d===(e.primaryDept||e.depts[0])?'selected':''}>${esc(d)}</option>`).join('')}
       </select>
       <span class="lbl">תקן חופשה/חודש:</span>
       <input type="number" step="0.01" class="i-vac" value="${e.vacQuota||''}" placeholder="${e.vacMonthly||'אוטומטי'}" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center"
-        title="ריק = חישוב אוטומטי לפי ותק">
-      <span class="lbl">סוג העסקה (שעתי/חודשי):</span>
-      <select class="i-emptype" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 8px">
-        <option ${!e.empType||e.empType==='שעתי'?'selected':''}>שעתי</option>
-        <option ${e.empType==='חודשי'?'selected':''}>חודשי</option>
-      </select>
-      <span class="lbl mo-only" style="${e.empType!=='חודשי'?'display:none':''}">תקן שעות/חודש:</span>
-      <input type="number" class="i-monthly mo-only" value="${e.monthlyHours||''}" placeholder="186" style="width:72px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType!=='חודשי'?'display:none':''}" title="תקן שעות חודשי (עובד חודשי בלבד)">
-      <span class="lbl hr-only" style="${e.empType==='חודשי'?'display:none':''}">ערך שעה:</span>
-      <input type="number" step="0.01" class="i-rate hr-only" value="${e.hourRate||''}" placeholder="מינימום" style="width:88px;border:1.5px solid var(--line);border-radius:8px;padding:6px 9px;text-align:center;${e.empType==='חודשי'?'display:none':''}" title="ריק = שכר מינימום · לא רלוונטי לעובד חודשי"></div>
+        title="ריק = חישוב אוטומטי לפי ותק"></div>
+    <div class="chiprow" style="margin-top:7px;background:#f5f3ff;border-radius:8px;padding:7px 9px;font-size:12.5px;color:#4c1d95">💼 שכר, סוג העסקה, תאריך תחילת עבודה, תאריך לידה ומספרי עובד (תלושים ושעון) — ב<b>🗂 כרטיס עובד מלא</b> (אדמין בלבד). כאן — רק מה שצריך לסידור.</div>
     <div class="chiprow" style="margin-top:7px">
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;color:#374151">
         <input type="checkbox" class="i-autobreak" ${e.autoBreakDeduct?'checked':''} style="width:16px;height:16px">
@@ -2248,11 +2232,6 @@ function empRow(e){
     c.classList.toggle('active', !!next);
     c.textContent=DAY_LETTERS[Number(c.dataset.i)]+(next===''||next==='מלא'?'':SC.mark(next));
   }));
-  div.querySelector('.i-emptype').addEventListener('change', ev=>{
-    const isMonthly = ev.target.value==='חודשי';
-    div.querySelectorAll('.mo-only').forEach(el=>el.style.display = isMonthly?'':'none');
-    div.querySelectorAll('.hr-only').forEach(el=>el.style.display = isMonthly?'none':'');
-  });
   div.querySelector('.i-active').addEventListener('change', ev=>{
     const isInactive = ev.target.value==='0';
     div.querySelector('.end-lbl').textContent = isInactive ? 'תאריך סיום עבודה:' : 'סיום עבודה מתוכנן:';   // a future date: inactive on its own after it
@@ -2280,15 +2259,15 @@ document.getElementById('empOk').addEventListener('click',async ()=>{
     primaryDept:r.querySelector('.i-primary')?r.querySelector('.i-primary').value:'',
     fixedShifts:r.querySelector('.i-fixed').value.trim(),
     email:r.querySelector('.i-email').value.trim(),
-    empNo:r.querySelector('.i-empno').value.trim(),
-    clockEmpNo:r.querySelector('.i-clockempno').value.trim(),
-    startDate:r.querySelector('.i-start').value,
-    birthDate:r.querySelector('.i-birth').value,
+    empNo:_currentEmp?.empNo||'',
+    clockEmpNo:_currentEmp?.clockEmpNo||'',
+    startDate:_currentEmp?.startDate||'',
+    birthDate:_currentEmp?.birthDate||'',
     endDate:r.querySelector('.i-end').value,
     vacQuota:Number(r.querySelector('.i-vac').value)||0,
-    empType:r.querySelector('.i-emptype').value||'שעתי',
-    monthlyHours:Number(r.querySelector('.i-monthly').value)||0,
-    hourRate:Number(r.querySelector('.i-rate').value)||0,
+    empType:_currentEmp?.empType||'שעתי',
+    monthlyHours:_currentEmp?.monthlyHours||0,
+    hourRate:_currentEmp?.hourRate||0,
     autoBreakDeduct:r.querySelector('.i-autobreak').checked,
     f101:Number(r.querySelector('.i-f101').value)||0,
     avatar:_currentEmp?.avatar||'',

@@ -222,10 +222,23 @@
     if (!into) { $('empConOverlayErr').textContent = ''; show('empConOverlay'); }
     const r = await apiPost({ action: 'employeeDetails', ...mgrAuth(), employee: emp });
     if (!r.ok) { B.innerHTML = into ? '<p class="merr">' + e(r.error || 'שגיאה') + '</p>' : ''; if (!into) $('empConOverlayErr').textContent = r.error || 'שגיאה'; return; }
-    const c = r.contract, L = r.rules;
+    const c = r.contract, L = r.rules, E = r.employment || {};
+    // one employment type: a card without a saved contract starts from the employee's type (hourly / monthly)
+    if (!r.contractSaved && E.empType === 'חודשי') c.type = 'monthly';
     const opt = (v, cur, label) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + label + '</option>';
     B.innerHTML =
       '<div style="font-weight:800;margin-bottom:8px">' + e(emp) + (r.contractSaved ? '' : ' <small style="color:var(--muted);font-weight:400">— לא הוגדר חוזה, מוצגות ברירות המחדל</small>') + '</div>' +
+      // 💼 the employment fields — moved here from the employee manager (11/11/2026): the manager list is for the schedule
+      '<div style="border:1.5px solid #ddd6fe;background:#faf5ff;border-radius:12px;padding:10px 12px;margin-bottom:12px">' +
+      '<div style="font-weight:800;color:#5b21b6;margin-bottom:8px">💼 פרטי העסקה ושכר <small style="font-weight:400;color:var(--muted)">· אדמין בלבד</small></div>' +
+      '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' +
+      '<label class="mrow">מספר עובד (לתלושים)<input id="emNo" dir="ltr" maxlength="30" value="' + e(E.empNo) + '"></label>' +
+      '<label class="mrow">מספר עובד בשעון נוכחות<input id="emClock" dir="ltr" maxlength="30" value="' + e(E.clockEmpNo) + '"></label>' +
+      '<label class="mrow">תאריך תחילת עבודה<input id="emStart" type="date" value="' + e(E.startDate) + '"></label>' +
+      '<label class="mrow">🎂 תאריך לידה<input id="emBirth" type="date" value="' + e(E.birthDate) + '" title="לברכת יום הולדת אוטומטית ב-8:00"></label>' +
+      '<label class="mrow" id="emRateW">ערך שעה (₪)<input id="emRate" type="number" min="0" step="0.01" dir="ltr" placeholder="ריק = שכר מינימום" value="' + (E.hourRate || '') + '"></label>' +
+      '<label class="mrow" id="emHoursW">תקן שעות חודשי<input id="emHours" type="number" min="0" max="400" dir="ltr" placeholder="186" value="' + (E.monthlyHours || '') + '"></label>' +
+      '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">סוג העסקה (שעתי / חודשי / גלובלי) — למטה, בחוזה.</div></div>' +
       '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
       '<label class="mrow">סוג העסקה<select id="conType">' + opt('hourly', c.type, 'שעתי') + opt('monthly', c.type, 'חודשי') + opt('global', c.type, 'גלובלי (כולל שעות נוספות)') + '</select></label>' +
       '<label class="mrow">ימי עבודה בשבוע<select id="conDays">' + opt(5, c.daysPerWeek, '5 ימים') + opt(6, c.daysPerWeek, '6 ימים') + '</select></label>' +
@@ -238,6 +251,11 @@
       'יום רגיל ' + L.dailyRegular5 + ' ש׳ בשבוע של 5 ימים / ' + L.dailyRegular6 + ' ש׳ בשבוע של 6 ימים, ' + L.nightRegular + ' ש׳ במשמרת לילה; ' +
       'שבוע מלא ' + L.weeklyRegular + ' ש׳. נוספות: שעתיים ראשונות 125%, מעבר 150%. יום מנוחה או חג: 150% (נוספות בו 175% / 200%). ' +
       'ימי חופש קבועים נקבעים בכרטיס העובד. המספרים הם הערכה לצורך דוחות — יש לאשר אותם מול מחלקת השכר.</p>';
+    const typeView = () => {   // hourly: the hourly rate; monthly / global: the monthly hours
+      const hourly = $('conType').value === 'hourly';
+      $('emRateW').style.display = hourly ? '' : 'none'; $('emHoursW').style.display = hourly ? 'none' : '';
+    };
+    $('conType').addEventListener('change', typeView); typeView();
     const scope = () => {
       const w = Number($('conWeekly').value) || 0;
       $('conScope').textContent = w ? 'היקף משרה: ' + Math.round(w / L.weeklyRegular * 100) + '%' : '';
@@ -245,14 +263,21 @@
       $('conOt').disabled = $('conType').value === 'global';
     };
     if (into) {
-      B.insertAdjacentHTML('beforeend', '<div class="merr" id="conErrIn"></div><button class="btn primary" id="conSaveIn">💾 שמירת החוזה</button>');
-      $('conSaveIn').addEventListener('click', () => saveContract($('conErrIn'), () => toast('החוזה נשמר ✓', 'ok')));
+      B.insertAdjacentHTML('beforeend', '<div class="merr" id="conErrIn"></div><button class="btn primary" id="conSaveIn">💾 שמירה</button>');
+      $('conSaveIn').addEventListener('click', () => saveContract($('conErrIn'), () => toast('פרטי ההעסקה והחוזה נשמרו ✓', 'ok')));
     }
     ['conWeekly', 'conType'].forEach((id) => $(id).addEventListener('input', scope));
     $('conDays').addEventListener('change', () => { $('conDaily').value = $('conDays').value === '6' ? L.dailyRegular6 : L.dailyRegular5; });
     scope();
   }
   async function saveContract(errEl, done) {
+    // the employment fields first (saveEmployment), then the contract — one button for both
+    const employment = { empNo: $('emNo').value.trim(), clockEmpNo: $('emClock').value.trim(), startDate: $('emStart').value, birthDate: $('emBirth').value,
+      empType: $('conType').value === 'hourly' ? 'שעתי' : 'חודשי', hourRate: $('emRate').value, monthlyHours: $('emHours').value };
+    const er = await apiPost({ action: 'saveEmployment', ...mgrAuth(), employee: conEmp, employment });
+    if (!er.ok) { errEl.textContent = er.error || 'שגיאה'; return; }
+    const x = typeof empByName === 'function' ? empByName(conEmp) : null;   // the app's copy (payslips, reports) without a reload
+    if (x && er.employment) Object.assign(x, er.employment);
     const contract = { type: $('conType').value, daysPerWeek: Number($('conDays').value), weeklyHours: Number($('conWeekly').value),
       dailyHours: Number($('conDaily').value), restDay: Number($('conRest').value), overtime: $('conOt').checked };
     const r = await apiPost({ action: 'saveEmployeeContract', ...mgrAuth(), employee: conEmp, contract });

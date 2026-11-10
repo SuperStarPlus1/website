@@ -66,7 +66,7 @@
     if (!isAdmin() || !name) return;
     emp = name; tab = startTab || 'details';
     const body = overlay('hrOverlay', '🗂 כרטיס עובד — ' + name, 'כל המידע והמסמכים של העובד/ת במקום אחד · אדמין בלבד', 900);
-    body.innerHTML = '<div class="rc-tabs"><button data-t="details">👤 פרטים</button><button data-t="bank">🏦 חשבון בנק</button><button data-t="contract">📄 חוזה עבודה</button>' +
+    body.innerHTML = '<div class="rc-tabs"><button data-t="details">👤 פרטים</button><button data-t="bank">🏦 חשבון בנק</button><button data-t="contract">💼 העסקה וחוזה</button>' +
       '<button data-t="docs">📂 מסמכים</button><button data-t="hr">⚖ שימוע ופיטורים</button></div><div id="hrPane"></div>';
     body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.t; drawTab(); }));
     C = null;
