@@ -239,6 +239,19 @@
       '<label class="mrow" id="emRateW">ערך שעה (₪)<input id="emRate" type="number" min="0" step="0.01" dir="ltr" placeholder="ריק = שכר מינימום" value="' + (E.hourRate || '') + '"></label>' +
       '<label class="mrow" id="emHoursW">תקן שעות חודשי<input id="emHours" type="number" min="0" max="400" dir="ltr" placeholder="186" value="' + (E.monthlyHours || '') + '"></label>' +
       '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">סוג העסקה (שעתי / חודשי / גלובלי) — למטה, בחוזה.</div></div>' +
+      // 🏖 leave, attendance, Form 101 and the payslip balances (moved from the employee manager, 11/11/2026)
+      '<div style="border:1.5px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:10px 12px;margin-bottom:12px">' +
+      '<div style="font-weight:800;color:#166534;margin-bottom:8px">🏖 חופשה, נוכחות ויתרות</div>' +
+      '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' +
+      '<label class="mrow">תקן חופשה לחודש (ימים)<input id="emVacQ" type="number" min="0" step="0.01" dir="ltr" placeholder="אוטומטי לפי ותק' + (E.vacMonthly ? ' — ' + E.vacMonthly : '') + '" value="' + (E.vacQuota || '') + '"></label>' +
+      '<label class="mrow">טופס 101 — שנה אחרונה<input id="emF101" type="number" min="2000" max="2100" dir="ltr" placeholder="—" value="' + (E.f101 || '') + '"></label>' +
+      '<label class="mrow" style="align-self:end"><span><input type="checkbox" id="emBreak"' + (E.autoBreakDeduct ? ' checked' : '') + '> ⏸ ניכוי הפסקה אוטומטי</span><span style="display:block;font-size:12px;color:var(--muted)">חצי שעה בכל יום עבודה בלי החתמת הפסקה בשעון</span></label>' +
+      '</div><div style="font-weight:700;font-size:12.5px;color:#166534;margin:10px 0 6px">📊 יתרות נכון לתלוש ' + e(E.lastPayslipMonth || '—') + ' <small style="font-weight:400;color:var(--muted)">(מתעדכנות לבד בהעלאת תלוש)</small></div>' +
+      '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">' +
+      '<label class="mrow">יתרת חופשה (ימים)<input id="emVacB" type="number" step="0.01" dir="ltr" value="' + (E.vacBalance || '') + '"></label>' +
+      '<label class="mrow">יתרת מחלה (ימים)<input id="emSickB" type="number" step="0.01" dir="ltr" value="' + (E.sickBalance || '') + '"></label>' +
+      '<label class="mrow">יתרת הבראה<input id="emRecB" type="number" step="0.01" dir="ltr" value="' + (E.recoveryBalance || '') + '"></label>' +
+      '</div></div>' +
       '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
       '<label class="mrow">סוג העסקה<select id="conType">' + opt('hourly', c.type, 'שעתי') + opt('monthly', c.type, 'חודשי') + opt('global', c.type, 'גלובלי (כולל שעות נוספות)') + '</select></label>' +
       '<label class="mrow">ימי עבודה בשבוע<select id="conDays">' + opt(5, c.daysPerWeek, '5 ימים') + opt(6, c.daysPerWeek, '6 ימים') + '</select></label>' +
@@ -273,11 +286,13 @@
   async function saveContract(errEl, done) {
     // the employment fields first (saveEmployment), then the contract — one button for both
     const employment = { empNo: $('emNo').value.trim(), clockEmpNo: $('emClock').value.trim(), startDate: $('emStart').value, birthDate: $('emBirth').value,
-      empType: $('conType').value === 'hourly' ? 'שעתי' : 'חודשי', hourRate: $('emRate').value, monthlyHours: $('emHours').value };
+      empType: $('conType').value === 'hourly' ? 'שעתי' : 'חודשי', hourRate: $('emRate').value, monthlyHours: $('emHours').value,
+      vacQuota: $('emVacQ').value, f101: $('emF101').value, autoBreakDeduct: $('emBreak').checked,
+      vacBalance: $('emVacB').value, sickBalance: $('emSickB').value, recoveryBalance: $('emRecB').value };
     const er = await apiPost({ action: 'saveEmployment', ...mgrAuth(), employee: conEmp, employment });
     if (!er.ok) { errEl.textContent = er.error || 'שגיאה'; return; }
     const x = typeof empByName === 'function' ? empByName(conEmp) : null;   // the app's copy (payslips, reports) without a reload
-    if (x && er.employment) Object.assign(x, er.employment);
+    if (x && er.employment) { const m = er.employment; Object.assign(x, m); x.vacationBalance = m.recoveryBalance; }   // the app calls the recovery balance vacationBalance
     const contract = { type: $('conType').value, daysPerWeek: Number($('conDays').value), weeklyHours: Number($('conWeekly').value),
       dailyHours: Number($('conDaily').value), restDay: Number($('conRest').value), overtime: $('conOt').checked };
     const r = await apiPost({ action: 'saveEmployeeContract', ...mgrAuth(), employee: conEmp, contract });
