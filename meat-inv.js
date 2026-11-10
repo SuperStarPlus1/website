@@ -16,8 +16,8 @@
   const mAuth = () => (typeof mgrAuth === 'function' ? mgrAuth() : {});
   const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
   const XURL = typeof XLSX_URL !== 'undefined' ? XLSX_URL : 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  const GROUPS = ['עוף', 'בקר ועגל', 'טלה', 'אחר', 'לא משויך'];
-  const GCOL = { 'עוף': '#d97706', 'בקר ועגל': '#9f1239', 'טלה': '#7c3aed', 'אחר': '#0f766e', 'לא משויך': '#64748b' };
+  const GROUPS = ['עוף', 'טלה', 'עגל', 'מיוחדים', 'לא משויך'];   // the owner's groups, as in his sheet and the count form
+  const GCOL = { 'עוף': '#d97706', 'עגל': '#9f1239', 'טלה': '#7c3aed', 'מיוחדים': '#0f766e', 'לא משויך': '#64748b' };
   const KIND = { whole: 'שלם', cut: 'חלק', ready: 'מוכן' };
   const nis = (v, d) => (v == null || !isFinite(v) ? '—' : (v < 0 ? '-' : '') + '₪' + Math.abs(Number(v)).toLocaleString('he-IL', { maximumFractionDigits: d == null ? 0 : d, minimumFractionDigits: d == null ? 0 : d }));
   const kg = (v, d) => (v == null || !isFinite(v) ? '—' : Number(v).toLocaleString('he-IL', { maximumFractionDigits: d == null ? 1 : d, minimumFractionDigits: d == null ? 1 : d }));
@@ -108,7 +108,15 @@
     const rep = D.reports.find((r) => r.to_count === sel.to && (r.from_count || null) === (sel.from || null));
     if (rep) {
       const full = await apiPost({ action: 'meatReport', ...mAuth(), id: rep.id }).catch(() => null);
-      if (full && full.ok) W = compute(full.report.rows, { saved: full.report });
+      if (full && full.ok) {
+        W = compute(full.report.rows, { saved: full.report });
+        // a count was corrected since the week was saved → refresh its summary in the history
+        const now = summaryOf(W);
+        if (JSON.stringify(now) !== JSON.stringify(full.report.result || {})) {
+          apiPost({ action: 'meatSave', ...mAuth(), resultOnly: true, fromCount: sel.from, toCount: sel.to, result: now }).catch(() => null);
+          const rr = D.reports.find((r) => r.id === full.report.id); if (rr) rr.result = now;
+        }
+      }
     }
     render();
   }
@@ -119,8 +127,10 @@
     const buf = new Uint8Array(await file.arrayBuffer());
     let wb;
     const head = new TextDecoder('ascii').decode(buf.slice(0, 64)).trim().toLowerCase();
-    if (head.startsWith('<')) {   // Comax's ".xls" that is really HTML in Windows-1255
-      wb = XLSX.read(new TextDecoder('windows-1255').decode(buf), { type: 'string', cellDates: true });
+    if (buf[0] === 0xff && buf[1] === 0xfe) {   // Comax's ".xls" saved as HTML in UTF-16 (e.g. 5003_57347.xls)
+      wb = XLSX.read(new TextDecoder('utf-16le').decode(buf.slice(2)), { type: 'string', raw: true });
+    } else if (head.startsWith('<')) {   // Comax's ".xls" that is really HTML in Windows-1255
+      wb = XLSX.read(new TextDecoder('windows-1255').decode(buf), { type: 'string', raw: true });
     } else wb = XLSX.read(buf, { type: 'array', cellDates: true });
     for (const name of wb.SheetNames) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
@@ -199,8 +209,10 @@
       else {
         for (const step of (it.sources || [])) {
           if (depth > 3) break;
-          const ps = step.map((s) => ({ s, p: price(s, (depth || 0) + 1), w: file[s] ? file[s].buyQty : 0 })).filter((x) => x.p && x.p.cost > 0);
+          let ps = step.map((s) => ({ s, p: price(s, (depth || 0) + 1), w: file[s] ? file[s].buyQty : 0, d: (entry(s) || {}).date || '' })).filter((x) => x.p && x.p.cost > 0);
           if (!ps.length) continue;
+          // nothing of these wholes bought in the period → only the one(s) bought last (an old whole must not drag the price)
+          if (!ps.some((x) => x.w > 0)) { const last = ps.reduce((a, x) => (x.d > a ? x.d : a), ''); ps = ps.filter((x) => x.d === last); }
           const wsum = ps.reduce((a, x) => a + (x.w > 0 ? x.w : 0), 0);
           const cost = wsum > 0 ? ps.reduce((a, x) => a + x.p.cost * (x.w > 0 ? x.w : 0), 0) / wsum : ps.reduce((a, x) => a + x.p.cost, 0) / ps.length;
           out = { cost, how: 'source', src: 'לפי ' + ps.map((x) => nameOf(x.s) + ' ' + nis(x.p.cost, 2) + (wsum > 0 && x.w > 0 ? ' (' + kg(x.w, 0) + ' ק"ג נקנו)' : '')).join(' + ') + (wsum > 0 && ps.length > 1 ? ' — ממוצע לפי ק"ג' : ''),
@@ -243,6 +255,8 @@
     const old = items.filter((r) => r.costOld);
     if (old.length) warns.push('מחיר ישן (יותר מחודשיים): ' + old.map((r) => r.name + ' — ' + r.costSrc).join(' · '));
     const neg = items.filter((r) => r.kind !== 'whole' && r.diff < -5);
+    const unc = W_unc(items, to);
+    if (unc.length) warns.push('לא נספרו בספירת הסגירה אבל היה אמור להיות מלאי: ' + unc.map((r) => r.name + ' (' + kg(r.expected, 1) + ' ק"ג)').join(', ') + ' — הם נחשבים 0 ונכנסים לפחת. אם יש מהם במקרר, צריך לשקול אותם בטופס הספירה.');
     if (!from) warns.push('אין ספירת פתיחה — מלאי הפתיחה נחשב 0, והפחת והרווח לא מדויקים.');
     if (to && from && rows.length) {
       const late = rows.filter((r) => r.lastDate && r.buyQty > 0 && r.lastDate > to.day);
@@ -264,6 +278,7 @@
     T.in = T.opening + T.buyQty; T.loss = T.in - T.salesQty - T.closing; T.lossPct = T.in > 0.001 ? T.loss / T.in * 100 : null; T.margin = T.salesSum > 0 ? T.profit / T.salesSum * 100 : null;
     return { rows, items, groups, T, warns, meta: meta || {}, from, to, neg };
   }
+  function W_unc(items, to) { return to ? items.filter((r) => !r.counted && r.kind !== 'whole' && r.expected > 0.5) : []; }
   function summaryOf(w) {
     const g = {};
     Object.values(w.groups).forEach((x) => { g[x.name] = { in: r2(x.in), sold: r2(x.salesQty), closing: r2(x.closing), loss: r2(x.loss), lossPct: x.lossPct == null ? null : r2(x.lossPct), lossVal: r2(x.diffVal), sales: r2(x.salesSum), profit: r2(x.profit), margin: x.margin == null ? null : r2(x.margin), stock: r2(x.closeVal) }; });
@@ -426,22 +441,57 @@
 
   /* ================= counts ================= */
   function renderCounts(body) {
-    let h = '<div class="mi-info">הספירות נכנסות לכאן לבד מטופס ספירת הבשר (כל שליחה = ספירה). ספירה שנשלחה בטעות אפשר למחוק.</div><div class="mi-card"><div class="mi-scroll"><table class="mi-tbl"><tr><th>תאריך</th><th>מבצע הספירה</th><th class="n">פריטים</th><th class="n">ק"ג</th><th>שבוע שמור</th><th></th></tr>';
+    let h = '<div class="mi-info">הספירות נכנסות לכאן לבד מטופס ספירת הבשר (כל שליחה = ספירה). לחיצה על ספירה פותחת אותה לתיקון — שקילה שגויה, או פריט שנספר רק בקומקס. כל תיקון נשמר עם שם ותאריך. ספירה שנשלחה בטעות אפשר למחוק.</div><div class="mi-card"><div class="mi-scroll"><table class="mi-tbl"><tr><th>תאריך</th><th>מבצע הספירה</th><th class="n">פריטים</th><th class="n">ק"ג</th><th>שבוע שמור</th><th></th></tr>';
     for (const c of D.counts) {
       const tot = (c.items || []).reduce((a, x) => a + (Number(x.net) || 0), 0);
       const rep = D.reports.find((r) => r.to_count === c.id);
       h += '<tr class="it" data-id="' + c.id + '"><td><b>' + dmy(c.day) + '</b> ' + hm(c.counted_at) + '</td><td>' + e(c.performed_by || '') + '</td><td class="n">' + (c.items || []).length + '</td><td class="n">' + kg(tot, 1) + '</td>' +
         '<td>' + (rep ? '<span class="mi-badge mi-ok">כן</span>' : '<span class="mi-badge mi-mute">לא</span>') + '</td><td><button class="mi-btn ghost" data-del="' + c.id + '" style="padding:3px 9px">מחיקה</button></td></tr>';
-      if (openRow === 'c' + c.id) h += '<tr class="det"><td colspan="6">' + (c.items || []).map((x) => e(x.name) + ' <small>(' + e(x.code) + ')</small>: <b>' + kg(x.net, 2) + '</b>').join(' · ') + '</td></tr>';
+      if (openRow === 'c' + c.id) h += '<tr class="det"><td colspan="6">' + countEditor(c) + '</td></tr>';
+      else if ((c.edits || []).length) h += '<tr><td colspan="6" style="padding-top:0"><small>✎ ' + (c.edits || []).length + ' תיקונים</small></td></tr>';
     }
     body.innerHTML = h + '</table></div></div>';
     body.querySelectorAll('tr.it').forEach((tr) => tr.addEventListener('click', (ev) => { if (ev.target.closest('[data-del]')) return; openRow = openRow === 'c' + tr.dataset.id ? null : 'c' + tr.dataset.id; renderCounts(body); }));
+    wireCountEditor(body);
     body.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
       const c = countById(Number(b.dataset.del));
       if (!c || !window.confirm('למחוק את הספירה מ-' + dmy(c.day) + ' ' + hm(c.counted_at) + '? השבוע שנשמר עליה יימחק גם הוא.')) return;
       const r = await apiPost({ action: 'meatCountDelete', ...mAuth(), id: c.id }).catch(() => null);
       if (r && r.ok) load(); else b.textContent = 'נכשל';
     }));
+  }
+
+  function countEditor(c) {
+    const its = (c.items || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'he'));
+    const inCount = new Set(its.map((x) => String(x.code)));
+    const addable = D.items.filter((i) => !inCount.has(String(i.barcode))).sort((a, b) => (a.grp + a.name).localeCompare(b.grp + b.name, 'he'));
+    let h = '<div class="dt" data-cid="' + c.id + '"><table class="mi-tbl" style="max-width:560px"><tr><th>פריט</th><th class="n">ק"ג</th><th>הסרה</th></tr>';
+    for (const x of its) h += '<tr><td>' + e(x.name) + ' <small>' + e(x.code) + '</small></td><td class="n"><input class="mi-in" type="number" step="0.01" min="0" data-code="' + e(x.code) + '" data-name="' + e(x.name) + '" data-old="' + Number(x.net) + '" value="' + Number(x.net) + '" style="width:95px"></td><td><input type="checkbox" data-rm="' + e(x.code) + '"></td></tr>';
+    h += '</table><div class="mi-row" style="margin-top:8px"><select class="mi-in" data-addcode><option value="">➕ הוספת פריט שלא נשקל בטופס…</option>' +
+      addable.map((i) => '<option value="' + e(i.barcode) + '">' + e(i.grp + ' · ' + i.name) + '</option>').join('') + '</select><input class="mi-in" type="number" step="0.01" min="0" data-addnet placeholder="ק״ג" style="width:90px">' +
+      '<button class="mi-btn" data-savecount>💾 שמירת התיקון</button><span data-cst style="font-size:13px"></span></div>';
+    if ((c.edits || []).length) h += '<div class="mi-note"><b>תיקונים:</b><br>' + c.edits.slice().reverse().map((x) => dmy(ilDay(x.at)) + ' ' + hm(x.at) + ' · ' + e(x.by) + ' · ' + e(x.name) + ': ' + (x.from == null ? 'לא נספר' : kg(x.from, 2)) + ' → ' + (x.to == null ? 'הוסר' : kg(x.to, 2)) + ' ק"ג').join('<br>') + '</div>';
+    return h + '</div>';
+  }
+  function wireCountEditor(body) {
+    body.querySelectorAll('[data-savecount]').forEach((btn) => btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const box = btn.closest('[data-cid]'), id = Number(box.dataset.cid), changes = [];
+      box.querySelectorAll('input[data-code]').forEach((i) => {
+        const rm = box.querySelector('[data-rm="' + i.dataset.code + '"]');
+        if (rm && rm.checked) changes.push({ code: i.dataset.code, name: i.dataset.name, net: null });
+        else if (i.value !== '' && Number(i.value) !== Number(i.dataset.old)) changes.push({ code: i.dataset.code, name: i.dataset.name, net: Number(i.value) });
+      });
+      const ac = box.querySelector('[data-addcode]').value, an = box.querySelector('[data-addnet]').value;
+      if (ac && an !== '') changes.push({ code: ac, name: (D.itemMap[ac] || {}).name || ac, net: Number(an) });
+      const st = box.querySelector('[data-cst]');
+      if (!changes.length) { st.textContent = 'אין שינויים'; return; }
+      st.textContent = 'שומר…';
+      const r = await apiPost({ action: 'meatCountUpdate', ...mAuth(), id, changes }).catch(() => null);
+      if (r && r.ok) { await load(true); tab = 'counts'; openRow = 'c' + id; render(); }
+      else st.innerHTML = '<span class="mi-badge mi-bad">' + e((r && r.error) || 'השמירה נכשלה') + '</span>';
+    }));
+    body.querySelectorAll('.det [data-cid]').forEach((el) => el.addEventListener('click', (ev) => ev.stopPropagation()));
   }
 
   /* ================= catalog ================= */
