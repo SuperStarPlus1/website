@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>פנקס — חיבור לגוגל</title></head>
+<body style="font-family:system-ui;text-align:center;padding:40px">
+<!-- Google's sign-in window returns here (js/backup.js driveToken): the token goes back to the app's window, same site only -->
+<p id="m">מתחבר…</p>
+<script>
+  const p = new URLSearchParams(location.hash.slice(1));
+  const msg = { type: 'pk-oauth', token: p.get('access_token'), expires: p.get('expires_in'), state: p.get('state'), error: p.get('error') || new URLSearchParams(location.search).get('error') };
+  history.replaceState(null, '', location.pathname);
+  // Google's page may cut the link to the opening window (COOP) — so also through this site's storage (a "storage" event there)
+  try { localStorage.setItem('pk_oauth', JSON.stringify({ ...msg, at: Date.now() })); } catch (e) {}
+  try { if (window.opener) window.opener.postMessage(msg, location.origin); } catch (e) {}
+  document.getElementById('m').textContent = '✓ מחובר — אפשר לסגור את החלון ולחזור לפנקס.';
+  setTimeout(() => window.close(), 300);
+</script>
+</body></html>
