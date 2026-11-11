@@ -668,6 +668,16 @@
       window.render._tk = true;
     }
   }
+  /** 🛠 תפעול ← פתיחת / סגירת סניף (menus.js): today's task of the signed-in person whose title matches — its form;
+   *  none → the managers' tasks screen (who did it in the branch) */
+  async function openByTitle(re, label) {
+    await fetchMine();
+    const t = mine.find((x) => re.test(String(x.title || '')) && x.status !== 'done') || mine.find((x) => re.test(String(x.title || '')));
+    if (!t) { say('אין לך היום משימת "' + label + '" — פותח את המשימות של הסניף'); return openMgr(); }
+    if (t.status === 'done') { say(label + ' כבר בוצעה' + (t.doneBy ? ' ע"י ' + t.doneBy : '') + ' ✓', 'ok'); return; }
+    openFill(t);
+  }
+  window.openTaskByTitle = openByTitle;
   window.openMyTasks = openMine;
   window.openTasksAdmin = openMgr;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
