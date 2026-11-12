@@ -149,7 +149,7 @@
       '<div><div style="font-size:18px;font-weight:800">' + e(r.employee) + '</div>' +
       '<div style="font-size:12.5px;color:var(--muted)">' + (r.f101 ? 'טופס 101 לשנת ' + r.f101.year + ' · הוגש ' + e(r.f101.submitted) : 'העובד עוד לא הגיש טופס 101 במערכת') + '</div></div></div>';
     const c = r.contact;
-    if (c && (c.email || c.phone || c.address)) html += h4('פרטי קשר' + (c.setByEmployee ? ' (עודכנו על ידי העובד)' : '')) +
+    if (c && (c.email || c.phone || c.address)) html += h4('פרטי קשר' + (c.setByEmployee ? ' (מהאזור האישי / מכרטיס העובד)' : ' (מטופס 101)')) +
       row('כתובת מגורים', c.address) + row('טלפון', c.phone) + row('אימייל', c.email);
     if (p) {
       html += h4('פרטים אישיים') + row('שם מלא', p.firstName + ' ' + p.lastName) + row('מספר זהות', p.idNumber) + row('דרכון', p.passportNumber) +
@@ -234,6 +234,8 @@
       '<div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' +
       '<label class="mrow">מספר עובד (לתלושים)<input id="emNo" dir="ltr" maxlength="30" value="' + e(E.empNo) + '"></label>' +
       '<label class="mrow">מספר עובד בשעון נוכחות<input id="emClock" dir="ltr" maxlength="30" value="' + e(E.clockEmpNo) + '"></label>' +
+      // 📞 the phone (12/11/2026) — the employee's own field (personal area); empty here → what he wrote in Form 101
+      '<label class="mrow">📞 טלפון נייד<input id="emPhone" type="tel" dir="ltr" maxlength="20" autocomplete="off" placeholder="05X-XXXXXXX" value="' + e(E.phone || (r.contact && r.contact.phone) || '') + '"></label>' +
       '<label class="mrow">תאריך תחילת עבודה<input id="emStart" type="date" value="' + e(E.startDate) + '"></label>' +
       '<label class="mrow">🎂 תאריך לידה<input id="emBirth" type="date" value="' + e(E.birthDate) + '" title="לברכת יום הולדת אוטומטית ב-8:00"></label>' +
       '<label class="mrow" id="emRateW">ערך שעה (₪)<input id="emRate" type="number" min="0" step="0.01" dir="ltr" placeholder="ריק = שכר מינימום" value="' + (E.hourRate || '') + '"></label>' +
@@ -285,7 +287,7 @@
   }
   async function saveContract(errEl, done) {
     // the employment fields first (saveEmployment), then the contract — one button for both
-    const employment = { empNo: $('emNo').value.trim(), clockEmpNo: $('emClock').value.trim(), startDate: $('emStart').value, birthDate: $('emBirth').value,
+    const employment = { empNo: $('emNo').value.trim(), clockEmpNo: $('emClock').value.trim(), phone: $('emPhone').value.trim(), startDate: $('emStart').value, birthDate: $('emBirth').value,
       empType: $('conType').value === 'hourly' ? 'שעתי' : 'חודשי', hourRate: $('emRate').value, monthlyHours: $('emHours').value,
       vacQuota: $('emVacQ').value, f101: $('emF101').value, autoBreakDeduct: $('emBreak').checked,
       vacBalance: $('emVacB').value, sickBalance: $('emSickB').value, recoveryBalance: $('emRecB').value };
