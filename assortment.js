@@ -1,9 +1,11 @@
 // 🎯 אופטימייזר מגוון (11/11/2026, the owner — after an Excel "FAST FOCUS" dashboard, and laid out like it). Admin only:
 // ⚙ אדמין ← 🎯 אופטימייזר מגוון. Full screen. The health of the product mix (SKU) and its effect on the business.
-// Data: api biAssortment (sales-bi.ts → bi_assortment, migrations 20261111100000 + 20261111140000) — whole months of
+// Data: api biAssortment (sales-bi.ts → bi_assortment, migrations 20261111100000 + 20261111140000 + 20261112130000) — whole months of
 // bi_month_item. The rules are here (so the screen can show them):
 //   active SKU = a barcode sold in the period that is still carried: it sold in the period's last month, or it has
 //     stock in Comax (packaged). Sold in the period but neither → "יצאו מהמדף" (counted apart, not ranked)
+//     12/11/2026: an SKU moved to Comax's archive (Prt_Del → bi_products.archived, migration 20261112130000) is out
+//     at once (🗄), and the MQI card shows the last MQI after the archive (the productive share without them)
 //   the ranking (ABC by the share of the sales before the SKU): רבי מכר – VIP < 70% · חזקים טובים 70–90% ·
 //     הבסיס הרחב 90–96.5% · חלשים – לשיקול דעת 96.5–99.2% · דלי-מכר – לצמצום the last 0.8%
 //   a weak / slow SKU is protected (never recommended out) when new (< 3 months), profitable (gross margin ≥ 35% and
@@ -154,11 +156,12 @@
     const months = monthsBetween(r.from, r.to) + 1;
     const all = (r.items || []).map((a) => {
       const it = { barcode: a[0], name: a[1], dep: a[2], grp: a[3], spk: a[4], qty: +a[5] || 0, sales: +a[6] || 0, net: +a[7] || 0, cost: +a[8] || 0,
-        months: a[9] || 0, first: a[10] ? String(a[10]).slice(0, 7) : '', last: a[11] ? String(a[11]).slice(0, 7) : '', stock: a[12], price: +a[13] || 0, ucost: +a[14] || 0, weighed: !!a[15] };
+        months: a[9] || 0, first: a[10] ? String(a[10]).slice(0, 7) : '', last: a[11] ? String(a[11]).slice(0, 7) : '', stock: a[12], price: +a[13] || 0, ucost: +a[14] || 0, weighed: !!a[15], arc: a[16] ? String(a[16]).slice(0, 10) : '' };
       it.profit = it.cost > 0 && it.net > 0 ? it.net - it.cost : null;
       it.margin = it.profit != null ? it.profit / it.net : null;
       if (it.margin != null && (it.margin < -0.5 || it.margin > 0.9)) { it.profit = null; it.margin = null; }   // a broken cost in Comax
-      it.active = it.last === r.to || (!it.weighed && Number(it.stock) > 0);
+      it.onShelf = it.last === r.to || (!it.weighed && Number(it.stock) > 0);
+      it.active = it.onShelf && !it.arc;   // 12/11/2026: moved to Comax's archive → out at once
       return it;
     }).sort((a, b) => b.sales - a.sales);
     const items = all.filter((x) => x.active), gone = all.filter((x) => !x.active);
@@ -182,7 +185,7 @@
       it.act = it.prot.length ? 'protected' : it.g === 'E' ? 'cut' : 'consider';
     });
     const dead = (r.dead || []).map((a) => ({ barcode: a[0], name: a[1], dep: a[2], grp: a[3], spk: a[4], stock: +a[5] || 0, ucost: +a[6] || 0, price: +a[7] || 0,
-      last: a[8] ? String(a[8]).slice(0, 7) : '', value: (+a[5] || 0) * (+a[6] || 0) })).sort((a, b) => b.value - a.value);
+      last: a[8] ? String(a[8]).slice(0, 7) : '', arc: a[9] ? String(a[9]).slice(0, 10) : '', value: (+a[5] || 0) * (+a[6] || 0) })).sort((a, b) => b.value - a.value);
     const sum = (arr, f) => arr.reduce((s, x) => s + (f(x) || 0), 0);
     const stockVal = (x) => x.stock > 0 && !x.weighed ? x.stock * x.ucost : 0;
     const groups = G.map((g) => { const xs = items.filter((x) => x.g === g.k);
@@ -199,10 +202,21 @@
     const mq = valid[valid.length - 1] || null;
     const mqPrev = valid[valid.length - 2] || null, mqFirst = ms.find((m) => m.valid) || null;
     const lastM = ms.find((m) => m.ym === r.to), prevM = ms.find((m) => m.ym === addM(r.to, -1));
+    // the archive (12/11/2026): SKUs that would be on the shelf but were moved to Comax's archive. The months' MQI is
+    // history (they sold then); "after the archive" = the last MQI with the productive share without them — as the simulator
+    const arcOut = all.filter((x) => x.arc && x.onShelf);
+    let mqiArc = null;
+    if (mq && arcOut.length) {
+      const u = items.concat(arcOut), da = {};
+      u.forEach((x) => { const d = da[x.dep] || (da[x.dep] = { s: 0, c: 0 }); d.s += x.sales; d.c++; });
+      const before = u.filter((x) => x.sales >= 0.2 * da[x.dep].s / da[x.dep].c).length / u.length;
+      const after = items.filter((x) => x.productive).length / Math.max(items.length, 1);
+      mqiArc = Math.max(0, Math.min(100, Math.round(10 * (mq.mqi + 100 * MQ.prod * (after - before))) / 10));
+    }
     return { names, months, items, gone, total, groups, cut, consider, prot, dead, c80, deps: Object.values(deps).sort((a, b) => b.sales - a.sales),
       cutSales: sum(cut, (x) => x.sales), considerSales: sum(consider, (x) => x.sales), stockVal,
       deadVal: sum(dead, (x) => x.value), margin: netWithCost > 0 ? profitAll / netWithCost : null,
-      productive: items.filter((x) => x.productive).length, ms, mq, mqPrev, mqFirst,
+      productive: items.filter((x) => x.productive).length, ms, mq, mqPrev, mqFirst, arcOut, mqiArc,
       lastSales: lastM ? lastM.sales : null, prevSales: prevM && prevM.full ? prevM.sales : null,
       vipNoStock: items.filter((x) => x.g === 'A' && !x.weighed && x.stock != null && Number(x.stock) <= 0) };
   }
@@ -257,7 +271,8 @@
       num(w.cut.length) + ' דלי-מכר לצמצום מיידי</div><span class="ff-tag">נתוני ' + e(per) + '</span></div>' + go('rules', 'איך זה מחושב') + '</div>';
     const skuCard = '<div class="ff-c"><div class="in"><div class="ff-kt" style="color:#4c1d95">מספר SKU פעילים <span style="font-size:22px">📦</span></div>' +
       '<div class="ff-kv" style="color:#4c1d95">' + num(w.items.length) + '</div><div class="ff-ks">' + e(per) + '</div>' +
-      (w.gone.length ? '<div class="ff-kd" style="color:#64748b">+ ' + num(w.gone.length) + ' שנמכרו בתקופה ויצאו מהמדף</div>' : '') + '</div>' + go('all') + '</div>';
+      (w.arcOut.length ? '<div class="ff-kd" style="color:#64748b">🗄 ' + num(w.arcOut.length) + ' הועברו לארכיון בקומקס ולא נספרים</div>' : '') +
+      (w.gone.length > w.arcOut.length ? '<div class="ff-kd" style="color:#64748b">+ ' + num(w.gone.length - w.arcOut.length) + ' שנמכרו בתקופה ויצאו מהמדף</div>' : '') + '</div>' + go('all') + '</div>';
     const dS = w.lastSales != null && w.prevSales ? w.lastSales / w.prevSales - 1 : null;
     const salesCard = '<div class="ff-c"><div class="in"><div class="ff-kt" style="color:#1e40af">מכירות כוללות <span style="font-size:22px">💰</span></div>' +
       '<div class="ff-kv" style="color:#1d4ed8">' + nisM(w.total) + '</div><div class="ff-ks">' + e(per) + ' · ' + nisM(w.total / w.months) + ' לחודש</div>' +
@@ -266,6 +281,7 @@
     const dFirst = mq && w.mqFirst && w.mqFirst !== mq ? mq.mqi - w.mqFirst.mqi : null;
     const mqiCard = '<div class="ff-c" style="background:linear-gradient(180deg,#f0fdf4,#fff)"><div class="in"><div class="ff-kt" style="color:#14532d">מדד יעילות מסחרית MQI ' + (mq ? '· ' + mShort(mq.ym) : '') + ' <span style="font-size:20px">〰</span></div>' +
       (mq ? '<div class="ff-kv" style="color:#14532d">' + num(mq.mqi, 1) + '</div><div class="ff-ks" style="color:' + rt[2] + '">' + rt[1] + '</div>' +
+        (w.mqiArc != null ? '<div class="ff-kd" style="color:#14532d">🗄 אחרי הארכיון (' + num(w.arcOut.length) + ' SKU): <b>' + num(w.mqiArc, 1) + '</b></div>' : '') +
         (dFirst != null ? '<div class="ff-kd" style="color:' + (dFirst >= 0 ? '#15803d' : '#dc2626') + '">' + (dFirst >= 0 ? '▲ ' : '▼ ') + num(Math.abs(dFirst), 1) + ' נק\' מתחילת המדידה (' + mShort(w.mqFirst.ym) + ')</div>' : '')
         : '<div class="ff-ks" style="margin-top:14px">צריך לפחות שני חודשים מלאים ברצף</div>') + '</div>' + go('rules') + '</div>';
     const row1 = '<div class="ff-row ff-r1">' + bl + skuCard + salesCard + mqiCard + '</div>';
@@ -348,7 +364,7 @@
       const xs = w.dead.filter(match);
       body = '<table class="sd-tbl"><tr><th>SKU</th><th class="o">מחלקה</th><th class="o">ספק</th><th class="n">מלאי</th><th class="n">שווי בעלות</th><th class="n o">נמכר לאחרונה</th></tr>' +
         xs.slice(0, limit).map((x) => '<tr><td><b>' + e(x.name) + '</b><div class="ff-rule" dir="ltr" style="text-align:right">' + e(x.barcode) + '</div></td><td class="o">' + e(w.names.dep[x.dep] || '') + '</td><td class="o">' + e(w.names.spk[x.spk] || '') + '</td>' +
-          '<td class="n">' + num(x.stock, 1) + '</td><td class="n">' + (x.value ? nis(x.value) : '—') + '</td><td class="n o">' + (x.last ? mName(x.last) : 'לא נמכר מאז ' + mName(FIRST)) + '</td></tr>').join('') + '</table>' +
+          '<td class="n">' + num(x.stock, 1) + '</td><td class="n">' + (x.value ? nis(x.value) : '—') + '</td><td class="n o">' + (x.last ? mName(x.last) : 'לא נמכר מאז ' + mName(FIRST)) + (x.arc ? ' · 🗄 בארכיון' : '') + '</td></tr>').join('') + '</table>' +
         (xs.length > limit ? '<button class="ff-more" id="asMore">עוד ' + num(Math.min(200, xs.length - limit)) + ' מתוך ' + num(xs.length - limit) + '</button>' : '');
     } else {
       const src = tab === 'sim' ? simulate().xs : tab === 'gone' ? w.gone : tab === 'vipOut' ? w.vipNoStock : w.items.filter((x) => tab === 'all' || x.act === tab || x.g === tab);
@@ -359,12 +375,12 @@
           return '<tr><td><b>' + e(x.name) + '</b><div class="ff-rule" dir="ltr" style="text-align:right">' + e(x.barcode) + '</div></td><td class="o">' + e(w.names.dep[x.dep] || '') + '</td><td class="o">' + e(w.names.spk[x.spk] || '') + '</td>' +
             '<td class="n">' + num(x.qty, x.weighed ? 1 : 0) + '</td><td class="n">' + nis(x.sales) + '</td><td class="n o">' + (x.share == null ? '' : share(x.share)) + '</td>' +
             '<td class="n o">' + (x.margin == null ? '—' : pct(x.margin, 1)) + '</td><td class="n o">' + x.months + '/' + w.months + '</td><td class="n o">' + (x.stock == null ? '' : num(x.stock, 1)) + '</td>' +
-            '<td>' + (g ? '<span class="ff-g" style="background:' + g.bg + ';color:' + g.c + '">' + g.short + '</span>' : '<span class="ff-g" style="background:#f1f5f9;color:#64748b">יצא מהמדף</span>') +
+            '<td>' + (g ? '<span class="ff-g" style="background:' + g.bg + ';color:' + g.c + '">' + g.short + '</span>' : '<span class="ff-g" style="background:#f1f5f9;color:#64748b">' + (x.arc ? '🗄 בארכיון מ-' + x.arc.split('-').reverse().slice(0, 2).join('/') : 'יצא מהמדף') + '</span>') +
             (x.prot || []).map((p) => '<span class="ff-p">' + PROT[p] + '</span>').join('') + '</td></tr>'; }).join('') + '</table>' +
         (xs.length > limit ? '<button class="ff-more" id="asMore">עוד ' + num(Math.min(200, xs.length - limit)) + ' מתוך ' + num(xs.length - limit) + '</button>' : '') +
         (!xs.length ? '<div class="sd-empty">אין SKU ברשימה</div>' : '');
     }
-    const note = tab === 'gone' ? 'נמכרו בתקופה, אבל לא ב' + mShort(D.to) + ' ואין להם מלאי בקומקס — כבר לא על המדף, ולכן לא נכנסים לדירוג.' :
+    const note = tab === 'gone' ? 'נמכרו בתקופה, אבל לא ב' + mShort(D.to) + ' ואין להם מלאי בקומקס, או שהועברו לארכיון בקומקס (🗄) — כבר לא על המדף, ולכן לא נכנסים לדירוג.' :
       tab === 'vipOut' ? 'רבי מכר שהמלאי שלהם בקומקס 0 או פחות — כל יום בלי מלאי הוא מכירות שהולכות למתחרים (או שהמלאי בקומקס לא מעודכן).' : '';
     return '<div class="sd-card wide" id="asList"><h3>📋 רשימת ה-SKU <small>' + (tab === 'cut' || tab === 'consider' || tab === 'protected' || tab === 'sim' ? 'מהנמכר פחות' : 'מהנמכר יותר') + '</small>' +
       '<span style="flex:1"></span><input class="ff-search" id="asSearch" placeholder="חיפוש: שם, ברקוד או ספק" value="' + e(search) + '"></h3>' + tabs +
@@ -373,7 +389,7 @@
 
   function rulesCard() {
     return '<div class="sd-card wide" id="asRules"><h3>ℹ איך זה מחושב</h3><div class="ff-rule">' +
-      '<b>SKU פעיל</b> — ברקוד שנמכר בתקופה ועדיין על המדף: נמכר בחודש האחרון של התקופה, או שיש לו מלאי בקומקס. SKU שנמכר בתקופה אבל לא בחודש האחרון ואין לו מלאי — "יצא מהמדף", ולא נכנס לדירוג. ' +
+      '<b>SKU פעיל</b> — ברקוד שנמכר בתקופה ועדיין על המדף: נמכר בחודש האחרון של התקופה, או שיש לו מלאי בקומקס. SKU שנמכר בתקופה אבל לא בחודש האחרון ואין לו מלאי — "יצא מהמדף", ולא נכנס לדירוג. SKU שהועבר לארכיון בקומקס יוצא מיד (🗄, תוך רבע שעה מההעברה). ' +
       'לא נספרים: שורות הנחה של מבצעים, מתנת הסל ה-41, קופונים, תווי קנייה, תשלומים ועמלות.<br>' +
       '<b>הדירוג (ABC)</b> — ה-SKU ממוינים לפי המכירות (כולל מע"מ), וכל SKU שייך לקבוצה לפי חלק המכירות של ה-SKU שלפניו: ' +
       '<b>רבי מכר – VIP</b> עד 70% · <b>חזקים טובים</b> 70–90% · <b>הבסיס הרחב</b> 90–96.5% · <b>חלשים – לשיקול דעת</b> 96.5–99.2% · <b>דלי-מכר</b> 0.8% האחרונים.<br>' +
@@ -383,7 +399,7 @@
       Math.round(MQ.cont * 100) + '% <b>רציפות</b> — כמה מה-SKU נמכרו גם בחודש הקודם (מגוון יציב, לא קניות חד-פעמיות) · ' +
       Math.round(MQ.margin * 100) + '% <b>רווחיות</b> — הרווח הגולמי מול יעד של ' + Math.round(MQ.marginTarget * 100) + '%. ' +
       'דירוג: 80+ מצוין · 70–80 טוב מאוד · 60–70 טוב · 50–60 בינוני · מתחת ל-50 דורש טיפול. חודש נכנס למדד רק כשגם הוא וגם החודש שלפניו מלאים.<br>' +
-      '<b>הסימולטור</b> — מוציא את ה-SKU הפעילים עם המכירות הנמוכות ביותר (בלי המוגנים, אם מסומן) ומראה מה בסיכון ומה משתחרר. MQI צפוי = המדד האחרון אחרי שינוי הפריון בלעדיהם.<br>' +
+      '<b>הסימולטור</b> — מוציא את ה-SKU הפעילים עם המכירות הנמוכות ביותר (בלי המוגנים, אם מסומן) ומראה מה בסיכון ומה משתחרר. MQI צפוי = המדד האחרון אחרי שינוי הפריון בלעדיהם. כך מחושב גם <b>MQI אחרי הארכיון</b> — בלי ה-SKU שהועברו לארכיון (המדד של החודשים שעברו לא משתנה: אז הם עוד נמכרו).<br>' +
       '<b>מלאי מת</b> — SKU ארוזים עם מלאי בקומקס שלא נמכרו בכלל בתקופה (השווי לפי עלות לפני מע"מ).<br>' +
       'העלות והרווח הגולמי לפי מחירון 108 בקומקס, לפני מע"מ — אצל חלק מה-SKU היא לא מעודכנת, ולכן הם סימן בלבד. המלאי של פירות, ירקות ובשר לא מדויק בקומקס. ' +
       'כדאי לבחור תקופה של 3 חודשים לפחות, ולבדוק SKU עונתיים (חגים, קיץ) לפני הוצאה.' +
@@ -479,8 +495,8 @@
     const wb = X.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
     const S = [[{ v: 'אופטימייזר מגוון — ' + per + (P.dep ? ' — ' + (w.names.dep[P.dep] || '') : ''), f: { bold: true, sz: 16, color: { rgb: '0B1530' } } }], [],
       [H('מדד'), H('ערך')],
-      [T('מכירות כוללות (כולל מע"מ)'), N(w.total, FMT.money)], [T('מספר SKU פעילים'), N(w.items.length, FMT.n0)], [T('SKU שיצאו מהמדף'), N(w.gone.length, FMT.n0)],
-      [T('מדד יעילות מסחרית MQI' + (w.mq ? ' — ' + mName(w.mq.ym) : '')), N(w.mq ? w.mq.mqi : null, FMT.n1)],
+      [T('מכירות כוללות (כולל מע"מ)'), N(w.total, FMT.money)], [T('מספר SKU פעילים'), N(w.items.length, FMT.n0)], [T('SKU שיצאו מהמדף'), N(w.gone.length, FMT.n0)], [T('מהם הועברו לארכיון בקומקס'), N(w.arcOut.length, FMT.n0)],
+      [T('מדד יעילות מסחרית MQI' + (w.mq ? ' — ' + mName(w.mq.ym) : '')), N(w.mq ? w.mq.mqi : null, FMT.n1)], [T('MQI אחרי הארכיון'), N(w.mqiArc, FMT.n1)],
       [T('SKU שעושים 80% מהמכירות'), N(w.c80, FMT.n0)], [T('דלי-מכר לצמצום מיידי'), N(w.cut.length, FMT.n0)], [T('המכירות שלהם'), N(w.cutSales, FMT.money)],
       [T('% מהמכירות'), N(w.cutSales / w.total, FMT.pct2)], [T('חלשים לשיקול'), N(w.consider.length, FMT.n0)], [T('חלשים מוגנים'), N(w.prot.length, FMT.n0)],
       [T('מלאי מת — SKU'), N(w.dead.length, FMT.n0)], [T('מלאי מת — שווי בעלות'), N(w.deadVal, FMT.money)], [],
