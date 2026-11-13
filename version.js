@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.27.1',
+  version: '2.27.2',
   date: '13/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    '🎯 אופטימיזציית מגוון: אוקטובר–נובמבר 2025 מסומנים כחלקיים (קומקס שומרת כשנה אחורה) ולא נכנסים ל-MQI',
     '🎯 אופטימיזציית מגוון: תוקנו נתוני המכירות של חודשים ישנים (לפני אוגוסט נשמר רק סוף החודש) — 6 ו-12 חודשים מציגים עכשיו את כל המכירות',
     '🗂 כרטיס עובד: אפשר להקליד את הטלפון הנייד של העובד (בלשונית העסקה וחוזה, למעלה), ולשמור',
     '🗄 אופטימייזר מגוון: פריט שהועבר לארכיון בקומקס יוצא מיד מה-SKU הפעילים, ובכרטיס ה-MQI מופיע המדד אחרי הארכיון',

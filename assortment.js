@@ -136,7 +136,7 @@
       prod: +m.productive || 0, cont: +m.cont || 0, net: +m.mnet || 0, profit: +m.mprofit || 0 }));
     const max = Math.max(1, ...ms.map((m) => m.sales));
     ms.forEach((m, i) => {
-      m.full = m.sales >= 0.4 * max;
+      m.full = m.sales >= 0.4 * max && m.ym > '2025-11';   // per product only from 12/11/2025 (Comax keeps a year)
       const prev = ms[i - 1];
       m.valid = m.full && !!prev && prev.full && prev.ym === addM(m.ym, -1) && m.items > 0;
       m.pProd = m.items ? m.prod / m.items : 0;
@@ -254,8 +254,9 @@
     const partial = r.to === cur ? '<div class="sd-warn">החודש הנוכחי עדיין לא נגמר — SKU שנמכרים לאט ייראו חלשים מהמציאות. עדיף לבחור חודשים שלמים.</div>' : '';
     // 13/11/2026: was a fixed "before July 2026" — the short old months were a server bug (migration 20261113100000);
     // now only a month in the range whose sales are short (under 40% of the best month) is named
-    const shortM = (w.ms || []).filter((m) => m.ym >= r.from && m.ym <= r.to && m.ym !== cur && !m.full).map((m) => mShort(m.ym));
-    const old = shortM.length ? '<div class="sd-warn">חסרים נתוני מכירות ל' + (shortM.length > 1 ? 'חודשים ' : 'חודש ') + shortM.join(', ') + ' — הם עדיין נשלחים מהמחשב בחנות. עד שיסתיים, המכירות של התקופה חלקיות, והחודשים האלה לא נכנסים למדד MQI.</div>' : '';
+    // Comax's registers keep about a year: per product only from 12/11/2025 (Oct 2025 and 1–11/11/2025 are gone)
+    const shortM = (w.ms || []).filter((m) => m.ym >= r.from && m.ym <= r.to && m.ym !== cur && (!m.full || m.ym <= '2025-11')).map((m) => mName(m.ym));
+    const old = shortM.length ? '<div class="sd-warn">ל' + (shortM.length > 1 ? 'חודשים ' : 'חודש ') + shortM.join(', ') + ' אין נתוני מכירות מלאים לפי פריט (הקופות בקומקס שומרות כשנה אחורה — מ-12/11/2025). המכירות והמגוון של התקופה חלקיים. עדיף לבחור מדצמבר 2025.</div>' : '';
     const go = (t, lab) => '<button class="ff-go" data-go="' + t + '">☞ ' + (lab || 'לחץ לפרטים') + '</button>';
 
     // ---- row 1: the bottom line · active SKU · total sales · MQI
