@@ -252,7 +252,10 @@
     $('asPer').textContent = '📅 ' + per;
     $('asScope').textContent = P.dep ? '🏷 ' + (w.names.dep[P.dep] || 'מחלקה') : '🏪 החנות שלי';
     const partial = r.to === cur ? '<div class="sd-warn">החודש הנוכחי עדיין לא נגמר — SKU שנמכרים לאט ייראו חלשים מהמציאות. עדיף לבחור חודשים שלמים.</div>' : '';
-    const old = r.from < '2026-07' ? '<div class="sd-warn">לפני יולי 2026 לא כל הקופות דיווחו — המכירות והמגוון של החודשים האלה חלקיים, והם לא נכנסים למדד MQI.</div>' : '';
+    // 13/11/2026: was a fixed "before July 2026" — the short old months were a server bug (migration 20261113100000);
+    // now only a month in the range whose sales are short (under 40% of the best month) is named
+    const shortM = (w.ms || []).filter((m) => m.ym >= r.from && m.ym <= r.to && m.ym !== cur && !m.full).map((m) => mShort(m.ym));
+    const old = shortM.length ? '<div class="sd-warn">חסרים נתוני מכירות ל' + (shortM.length > 1 ? 'חודשים ' : 'חודש ') + shortM.join(', ') + ' — הם עדיין נשלחים מהמחשב בחנות. עד שיסתיים, המכירות של התקופה חלקיות, והחודשים האלה לא נכנסים למדד MQI.</div>' : '';
     const go = (t, lab) => '<button class="ff-go" data-go="' + t + '">☞ ' + (lab || 'לחץ לפרטים') + '</button>';
 
     // ---- row 1: the bottom line · active SKU · total sales · MQI
