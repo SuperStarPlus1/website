@@ -32,7 +32,7 @@
     menuBizDrop: ['§דוחות', 'crMgrBtn', 'sdMgrBtn', 'asMgrBtn', 'miMgrBtn', 'bzMeatCount', 'ccMgrBtn',
       '§טפסים ותלושים', 'dsMgrBtn', 'payBtn', 'f101AdminBtn', 'f106AllBtn',
       '§הגדרות ותקשורת', 'msgBtn', 'annBtn', 'holBtn', 'coSetBtn', 'coBillBtn',
-      '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'bfMgrBtn', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],
+      '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'bfMgrBtn', 'invMgrBtn', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],
     menuMeDrop: ['mpwBtn', 'mfaMenuBtn', 'myAlertsBtn', 'mgrPushBtn2'],
   };
   // [old menu, new menu, sub-menu] — what is (or later comes) into an old menu goes to the end of that sub-menu
