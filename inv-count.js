@@ -5,6 +5,9 @@
 // and the time of each count (the phone's time of the scan, also when the line was sent later). The camera: html5-qrcode
 // 2.3.8 from cdnjs (the page's security policy allows cdnjs only — ZXing from jsdelivr was blocked, so the camera did not
 // open on phones without the browser's own BarcodeDetector, e.g. iPhones); it uses BarcodeDetector where there is one.
+// 15/11 (the owner): typing the last 6 digits (4–7) finds the item — several → a list to choose. An item NOT in the
+// catalog needs its full barcode, and a typed one is checked: 8 / 12 / 13 / 14 digits — the check digit (GS1); another
+// length — typed a second time. A scanned one (the camera, or a scanner — its keys come < 35 ms apart) is trusted.
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
 //   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, how many times and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
@@ -37,6 +40,11 @@
   const span = (a, b) => (!a ? '' : hm(a) === hm(b) || !b ? dm(a) + ' ' + hm(a) : dm(a) + ' ' + hm(a) + '–' + (dm(a) === dm(b) ? '' : dm(b) + ' ') + hm(b));
   const PEND = 'invPend';
   const fine = () => window.matchMedia && matchMedia('(pointer:fine)').matches;
+  // the same check as the server (inventory-count.ts barcodeCheck): 'ok' / 'bad' (a wrong check digit) / 'confirm'
+  const gs1Ok = (d) => { let sum = 0; for (let i = d.length - 2, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += Number(d[i]) * w; return (10 - (sum % 10)) % 10 === Number(d[d.length - 1]); };
+  const upcE2A = (e8) => { const m = e8.slice(1, 7), x = m[5]; return e8[0] + (x <= '2' ? m.slice(0, 2) + x + '0000' + m.slice(2, 5) : x === '3' ? m.slice(0, 3) + '00000' + m.slice(3, 5) : x === '4' ? m.slice(0, 4) + '00000' + m[4] : m.slice(0, 5) + '0000' + x) + e8[7]; };
+  const bcCheck = (b) => !/^\d+$/.test(b) ? 'confirm' : [12, 13, 14].includes(b.length) ? (gs1Ok(b) ? 'ok' : 'bad') : b.length === 8 ? (gs1Ok(b) || (/^[01]/.test(b) && gs1Ok(upcE2A(b))) ? 'ok' : 'bad') : 'confirm';
+  let kt = [];   // the barcode field's key times: a scanner types the whole code in a burst
 
   let view = 'list', L = null, cur = null, mine = [], item = null, merge = null, mIds = [], mFilter = 'all', mQ = '', camOn = false, busy = false;
   let pend = []; try { pend = JSON.parse(store.get(PEND) || '[]'); } catch (_) { pend = []; }
@@ -172,14 +180,24 @@
     view = 'count'; cur = c; item = null; head('📦 ' + c.title, true);
     $('ivBody').innerHTML = '<div id="ivPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 סופר/ת: <span style="color:#0f172a">' + e(myName()) + '</span> — השם נרשם על כל שורה</div><div class="iv-scan">' +
       '<div id="ivCamBox"></div>' +
-      '<div class="iv-row"><input class="iv-in" id="ivBc" inputmode="numeric" autocomplete="off" placeholder="ברקוד — סריקה או הקלדה + Enter" dir="ltr" style="text-align:right">' +
+      '<div class="iv-row"><input class="iv-in" id="ivBc" inputmode="numeric" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות + Enter" dir="ltr" style="text-align:right">' +
       '<button class="iv-btn iv-pri" id="ivCam" title="סריקה במצלמה">📷</button></div>' +
       '<div class="iv-row" style="margin-top:8px;align-items:center"><span class="iv-mut" style="white-space:nowrap">📍 איפה:</span><input class="iv-in" id="ivArea" style="font-size:14px;padding:8px 10px" placeholder="למשל מדף 4, מחסן (לא חובה)" value="' + e(store.get('invArea') || '') + '"></div>' +
       '<div id="ivItem"></div></div>' +
       '<div class="iv-h" id="ivMineH">הספירה שלי</div><div class="iv-card" id="ivMine" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
       (isMgr() ? '<div class="iv-acts"><button class="iv-btn" id="ivToMerge">📊 איחוד וייצוא</button></div>' : '');
     $('ivArea').addEventListener('change', () => store.set('invArea', $('ivArea').value.trim()));
-    $('ivBc').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); const v = $('ivBc').value.trim(); if (v) lookup(v); } });
+    $('ivBc').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        const v = $('ivBc').value.replace(/\s+/g, '');
+        const fast = kt.length >= 6 && kt.length >= v.length - 1 && (kt[kt.length - 1] - kt[0]) / (kt.length - 1) < 35;
+        kt = [];
+        if (v) lookup(v, fast ? 'scan' : 'typed');
+      } else if (ev.key.length === 1) kt.push(performance.now());
+    });
+    $('ivBc').addEventListener('input', () => { if (!$('ivBc').value) kt = []; });
+    $('ivBc').addEventListener('paste', () => { kt = []; });
     $('ivCam').onclick = () => (camOn ? camStop() : camStart());
     if ($('ivToMerge')) $('ivToMerge').onclick = () => { camStop(); showMerge([cur.id]); };
     if (fine()) $('ivBc').focus();
@@ -228,14 +246,44 @@
     };
   }
 
-  async function lookup(code) {
+  const big = (b) => '<div class="bc" style="font-size:20px;font-weight:900;color:#0f172a;letter-spacing:1.5px">' + e(b) + '</div>';
+  function stop(msg) {
+    item = null;
+    $('ivItem').innerHTML = '<div class="iv-item u">' + msg + '<div class="iv-acts"><button class="iv-btn" id="ivSkip">ביטול</button></div></div>';
+    $('ivSkip').onclick = next;
+    beep(220, 0.18);
+  }
+  async function lookup(code, src, exact) {
     code = String(code).replace(/\s+/g, '');
+    src = src || 'typed';
     $('ivBc').value = code;
     $('ivItem').innerHTML = '<div class="iv-mut" style="padding:12px 2px">🔎 מחפש ' + e(code) + '…</div>';
-    const r = await api('invLookup', { barcode: code, countId: cur.id });
+    const r = await api('invLookup', { barcode: code, countId: cur.id, exact: exact || src === 'scan' });
     if (view !== 'count') return;
     if (!r.ok && !r.net) { $('ivItem').innerHTML = '<div class="iv-warn">' + e(r.error) + '</div>'; return; }
-    item = r.ok ? r : { barcode: code, offline: true };
+    // the last digits: several items end with them → choose
+    if (r.tooMany) return stop('<div class="nm">🔎 יותר מדי מוצרים מסתיימים ב-' + e(code) + '</div><div class="iv-mut">הקלידו עוד ספרות מהסוף, או את הברקוד המלא.</div>');
+    if (r.multi) {
+      item = null; beep(880, 0.06);
+      $('ivItem').innerHTML = '<div class="iv-item k"><div class="nm">נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:</div>' +
+        r.multi.map((x) => '<button type="button" class="iv-btn" data-pick="' + e(x.barcode) + '" style="display:block;width:100%;text-align:right;margin-top:8px"><b>' + e(x.name) + '</b>' +
+          (x.archived ? ' <span class="iv-badge" style="background:#f1f5f9;color:#64748b">ארכיון</span>' : '') + '<div class="bc">' + e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b></div></button>').join('') +
+        '<div class="iv-acts"><button class="iv-btn" id="ivSkip">ביטול</button></div></div>';
+      $('ivItem').querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => lookup(b.dataset.pick, 'pick', true)));
+      $('ivSkip').onclick = next;
+      return;
+    }
+    if (!r.ok && /^\d{4,7}$/.test(code) && src !== 'scan') return stop('<div class="nm">📡 אין חיבור</div><div class="iv-mut">חיפוש לפי הספרות האחרונות צריך חיבור. סרקו את המוצר או הקלידו את הברקוד המלא.</div>');
+    item = r.ok ? r : { barcode: code, offline: true, check: bcCheck(code) };
+    item.src = src;
+    // an item not in the catalog: its full barcode, checked (a scanned one is trusted)
+    item.needConfirm = false;
+    if (!item.known && src !== 'scan') {
+      if (item.check === 'bad') return stop('<div class="nm">⚠ פריט לא בקטלוג — והברקוד לא תקין</div>' + big(item.barcode) +
+        '<div class="iv-warn">הספרה האחרונה (ספרת הביקורת) לא מתאימה לשאר המספר — כנראה טעות הקלדה. בדקו את המספר על האריזה, או סרקו אותו.</div>');
+      item.needConfirm = item.check !== 'ok';
+    }
+    if (r.ok && r.short) item.shortMiss = true;
     if (r.ok && !r.known) beep(220, 0.18); else beep(1100, 0.07);
     const pp = pend.filter((p) => p.countId === cur.id && p.barcode === item.barcode);
     const already = (item.already || 0) + pp.reduce((s, p) => s + Number(p.qty || 0), 0), times = (item.times || 0) + pp.length;
@@ -243,9 +291,14 @@
     const seen = times ? '<div class="iv-nums"><div><small>כבר נספר בספירה הזו</small><b>' + fmt(already) + '</b></div><div><small>כמה פעמים נספר</small><b>' + times + (times === 1 ? ' פעם' : ' פעמים') + '</b></div></div>' +
       (last ? '<div class="iv-mut">אחרון: ' + hm(last.at) + (last.by ? ' · ' + e(last.by) : '') + '</div>' : '') : '<div class="iv-mut" style="margin:8px 0">עוד לא נספר בספירה הזו.</div>';
     let h;
-    if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי בקטלוג</div><div class="bc">' + e(code) + '</div><div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות מה המוצר.</div>';
+    const conf = item.needConfirm ? '<div class="iv-mut" style="margin-top:8px;font-weight:700;color:#0f172a">' +
+      (item.shortMiss ? 'אם זה פריט שלא בקטלוג — סרקו אותו או הקלידו את הברקוד המלא (בדרך כלל 13 ספרות). ואם ' + e(item.barcode) + ' הוא באמת הברקוד המלא שלו — הקלידו אותו שוב לאישור:'
+        : 'לברקוד באורך ' + item.barcode.length + ' ספרות אין ספרת ביקורת — כדי לוודא שאין טעות, הקלידו אותו שוב:') +
+      '</div><input class="iv-in" id="ivConf" inputmode="numeric" autocomplete="off" dir="ltr" style="text-align:right;margin-top:6px" placeholder="הברקוד שוב">' : '';
+    const ok = !item.known && item.src !== 'scan' && item.check === 'ok' ? '<div class="iv-mut" style="color:#166534;font-weight:700">✓ הברקוד תקין (ספרת הביקורת מתאימה)</div>' : '';
+    if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי בקטלוג</div>' + big(code) + '<div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות מה המוצר.</div>' + ok + conf;
     else if (item.known) h = '<div class="iv-item k"><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div>' + seen;
-    else h = '<div class="iv-item u"><div class="nm">⚠ פריט לא קיים בקטלוג</div><div class="bc">' + e(item.barcode) + '</div>' +
+    else h = '<div class="iv-item u"><div class="nm">' + (item.shortMiss ? '🔎 לא נמצא מוצר שהברקוד שלו מסתיים ב-' + e(item.barcode) : '⚠ פריט לא קיים בקטלוג') + '</div>' + big(item.barcode) + ok + conf +
       '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + seen;
     h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" placeholder="כמות" autocomplete="off">' +
       '<div class="iv-quick">' + [1, 2, 3, 6, 12, 24].map((n) => '<button type="button" data-q="' + n + '">' + n + '</button>').join('') + '</div>' +
@@ -253,7 +306,8 @@
       '<div class="iv-acts">' + (item.known ? '<button class="iv-btn" id="ivNoteBtn" style="font-size:13px">+ הערה</button>' : '') +
       '<button class="iv-btn iv-ok" id="ivSave" style="flex:1;font-size:16px">✓ שמירה</button><button class="iv-btn" id="ivSkip">ביטול</button></div></div>';
     $('ivItem').innerHTML = h;
-    $('ivQty').focus();
+    if ($('ivConf')) $('ivConf').focus(); else $('ivQty').focus();
+    if ($('ivConf')) $('ivConf').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); $('ivQty').focus(); } });
     $('ivQty').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (!item.known && !$('ivNote').value.trim()) $('ivNote').focus(); else save(); } });
     $('ivNote').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); save(); } });
     $('ivItem').querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => { $('ivQty').value = b.dataset.q; $('ivQty').focus(); }));
@@ -269,10 +323,11 @@
     if (!item) return;
     const qv = Number(String($('ivQty').value).replace(',', '.').trim()), note = $('ivNote').value.trim();
     if ($('ivQty').value.trim() === '' || !Number.isFinite(qv) || qv < 0) { say('הקלידו כמות', 'err'); $('ivQty').focus(); return; }
+    if (item.needConfirm && ($('ivConf').value || '').replace(/\s+/g, '') !== item.barcode) { say('הברקוד שהוקלד שוב לא זהה — בדקו את המספר', 'err'); $('ivConf').focus(); return; }
     if (item.known === false && !note) { say('פריט לא קיים בקטלוג — כתבו בהערות מה המוצר', 'err'); $('ivNote').focus(); return; }
     const area = $('ivArea').value.trim(); store.set('invArea', area);
     pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, by: myName(), at: new Date().toISOString(), barcode: item.barcode, qty: qv, note, area,
-      name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known });
+      name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known, src: item.src, confirmed: !!item.needConfirm });
     savePend();
     say('✓ נשמר: ' + (item.name || item.barcode) + ' × ' + fmt(qv));
     if (navigator.vibrate) navigator.vibrate(40);
@@ -314,7 +369,7 @@
       const me = new Html5Qrcode(rid, { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
       hq = me;
       await me.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.max(160, Math.floor(w * 0.86)), height: Math.max(90, Math.floor(Math.min(h * 0.5, w * 0.45))) }) },
-        (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text); }, () => {});
+        (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text, 'scan', true); }, () => {});
       if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} }
     } catch (err) {
       const m = String((err && (err.name || err.message)) || err || '');
