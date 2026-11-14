@@ -17,6 +17,8 @@
 // "📸 צילום" — a photo of the barcode decoded (scanFile, made ≤ 1600 px) when the live picture does not catch it.
 // The barcode field and the item card are <form>s: the phone keyboard's ✓ / Go submits them (it sends no Enter key);
 // a 🔎 button next to the field.
+// 15/11 (the owner): the product's photo when it is scanned — the site's catalog photo (public, <barcode>.webp): big on the
+// item card, small in the choice list and in "my lines" (a missing one simply hides).
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
 //   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, how many times and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
@@ -52,6 +54,8 @@
   const dt = (s) => (s ? dm(s) + '/' + new Date(s).getFullYear() + ' ' + hm(s) : '');
   const span = (a, b) => (!a ? '' : hm(a) === hm(b) || !b ? dm(a) + ' ' + hm(a) : dm(a) + ' ' + hm(a) + '–' + (dm(a) === dm(b) ? '' : dm(b) + ' ') + hm(b));
   const PEND = 'invPend';
+  const IMG = 'https://otjhhljgdevazanrretx.supabase.co/storage/v1/object/public/products/';
+  const pic = (bc, size, cls) => '<img class="iv-pic' + (cls ? ' ' + cls : '') + '" src="' + IMG + encodeURIComponent(bc) + '.webp" alt="" loading="lazy" width="' + size + '" height="' + size + '" onerror="this.remove()">';
   const fine = () => window.matchMedia && matchMedia('(pointer:fine)').matches;
   // the same check as the server (inventory-count.ts barcodeCheck): 'ok' / 'bad' (a wrong check digit) / 'confirm'
   const gs1Ok = (d) => { let sum = 0; for (let i = d.length - 2, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += Number(d[i]) * w; return (10 - (sum % 10)) % 10 === Number(d[d.length - 1]); };
@@ -93,6 +97,7 @@
     '@keyframes ivScan{from{transform:translateY(-60px)}to{transform:translateY(60px)}}' +
     '.iv-item{margin-top:12px;border-radius:16px;padding:14px;animation:ivIn .25s ease}' +
     '.iv-item.k{background:linear-gradient(135deg,#eff6ff,#eef2ff);border:1.5px solid #c7d2fe}.iv-item.u{background:#fff7ed;border:1.5px solid #fdba74}' +
+    '.iv-pic{object-fit:contain;background:#fff;border-radius:12px;flex:none;border:1px solid #e2e8f0}.iv-head{display:flex;gap:12px;align-items:center}.iv-head>div{flex:1;min-width:0}' +
     '.iv-item .nm{font-size:18px;font-weight:900;line-height:1.3}.iv-item .bc{font-size:12.5px;color:#64748b;direction:ltr;text-align:right}' +
     '.iv-nums{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.iv-nums div{background:#fff;border-radius:12px;padding:8px 10px}' +
     '.iv-nums b{display:block;font-size:20px;font-weight:900}.iv-nums small{color:#64748b;font-size:12px;font-weight:700}' +
@@ -244,7 +249,7 @@
     const units = all.reduce((s, x) => s + Number(x.qty || 0), 0);
     $('ivMineH').textContent = 'הספירה שלי — ' + all.length + ' שורות · ' + fmt(units) + ' יחידות';
     if (!all.length) { $('ivMine').innerHTML = '<div class="iv-mut" style="padding:10px 0">עוד לא ספרתם כאן. סרקו ברקוד כדי להתחיל.</div>'; return; }
-    $('ivMine').innerHTML = all.slice(0, 200).map((l) => '<div class="iv-ln' + (l.p ? ' p' : '') + (l.err ? ' err' : '') + '" data-id="' + (l.p ? 'p:' + l.clientId : l.id) + '">' +
+    $('ivMine').innerHTML = all.slice(0, 200).map((l) => '<div class="iv-ln' + (l.p ? ' p' : '') + (l.err ? ' err' : '') + '" data-id="' + (l.p ? 'p:' + l.clientId : l.id) + '">' + (l.known !== false ? pic(l.barcode, 38) : '') +
       '<div class="t"><b>' + e(l.name || (l.known === false ? '⚠ ' + (l.note || 'לא בקטלוג') : l.barcode)) + '</b><small dir="ltr">' + e(l.barcode) + '</small><small> · ' +
       '🕒 ' + hm(l.at) + (l.p ? ' · ' + (l.err ? '⚠ ' + e(l.err) : '⏳ מחכה לשליחה') : '') + (l.area ? ' · 📍' + e(l.area) : '') + (l.note && l.known !== false ? ' · ' + e(l.note) : '') + '</small></div>' +
       '<span class="q">' + fmt(l.qty) + '</span>' + (l.p && !l.err ? '' : '<button class="ed">✎</button><button class="del">✕</button>') + '</div>').join('');
@@ -299,8 +304,8 @@
     if (r.multi) {
       item = null; beep(880, 0.06);
       $('ivItem').innerHTML = '<div class="iv-item k"><div class="nm">נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:</div>' +
-        r.multi.map((x) => '<button type="button" class="iv-btn" data-pick="' + e(x.barcode) + '" style="display:block;width:100%;text-align:right;margin-top:8px"><b>' + e(x.name) + '</b>' +
-          (x.archived ? ' <span class="iv-badge" style="background:#f1f5f9;color:#64748b">ארכיון</span>' : '') + '<div class="bc">' + e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b></div></button>').join('') +
+        r.multi.map((x) => '<button type="button" class="iv-btn iv-head" data-pick="' + e(x.barcode) + '" style="width:100%;text-align:right;margin-top:8px">' + (x.img ? pic(x.barcode, 52) : '') + '<div><b>' + e(x.name) + '</b>' +
+          (x.archived ? ' <span class="iv-badge" style="background:#f1f5f9;color:#64748b">ארכיון</span>' : '') + '<div class="bc">' + e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b></div></div></button>').join('') +
         '<div class="iv-acts"><button class="iv-btn" id="ivSkip">ביטול</button></div></div>';
       $('ivItem').querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => lookup(b.dataset.pick, 'pick', true)));
       $('ivSkip').onclick = next;
@@ -330,7 +335,7 @@
       '</div><input class="iv-in" id="ivConf" inputmode="numeric" autocomplete="off" dir="ltr" style="text-align:right;margin-top:6px" placeholder="הברקוד שוב">' : '';
     const ok = !item.known && item.src !== 'scan' && item.check === 'ok' ? '<div class="iv-mut" style="color:#166534;font-weight:700">✓ הברקוד תקין (ספרת הביקורת מתאימה)</div>' : '';
     if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי בקטלוג</div>' + big(code) + '<div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות מה המוצר.</div>' + ok + conf;
-    else if (item.known) h = '<div class="iv-item k"><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div>' + seen;
+    else if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' + seen;
     else h = '<div class="iv-item u"><div class="nm">' + (item.shortMiss ? '🔎 לא נמצא מוצר שהברקוד שלו מסתיים ב-' + e(item.barcode) : '⚠ פריט לא קיים בקטלוג') + '</div>' + big(item.barcode) + ok + conf +
       '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + seen;
     h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" enterkeyhint="done" placeholder="כמות" autocomplete="off">' +
