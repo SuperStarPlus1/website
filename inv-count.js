@@ -1,13 +1,17 @@
 // 📦 ספירת מלאי (15/11/2026, the owner): 💼 ניהול העסק ▸ תפעול ▸ 📦 ספירת מלאי (the managers) and
 // 📅 סידור עבודה ונוכחות ▸ 📦 ספירת מלאי (every employee — "open to all the employees; the system knows who counted":
 // the line's name comes from the sign-in, shown as "👤 סופר/ת"). The employees count; the merge / export / close — managers.
+// 15/11 (the owner): no Comax stock anywhere — the catalog only names the barcode; instead "how many times it was counted"
+// and the time of each count (the phone's time of the scan, also when the line was sent later). The camera: html5-qrcode
+// 2.3.8 from cdnjs (the page's security policy allows cdnjs only — ZXing from jsdelivr was blocked, so the camera did not
+// open on phones without the browser's own BarcodeDetector, e.g. iPhones); it uses BarcodeDetector where there is one.
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
-//   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, Comax's stock and
+//   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, how many times and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
 //              → the quantity → ✓. Several people count into the same count at once; "where" (a shelf / an aisle) is
 //              optional. Each line goes to the server at once; without a connection it waits on the phone and is sent
 //              later (the same line is never doubled — clientId). My lines: fix the quantity / the note, delete.
-//   the merge  one row per barcode over the chosen counts: counted, Comax's stock, the difference; the unknown ones
+//   the merge  one row per barcode over the chosen counts: the quantity, how many times, when; the unknown ones
 //              with their notes → ⬇ the file for Comax (barcode + quantity, the catalog's items) · ⬇ the full report
 // Server: api inv* (inventory-count.ts; migration 20261115100000_inventory_count.sql). Comax is never written to.
 // Uses the app's globals: apiPost, mgrAuth, state, toast.
@@ -28,7 +32,9 @@
   const hm = (s) => { const d = new Date(s); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const today = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
   const XS_URL = '/vendor/xlsx-js-style-1.2.0.min.js';
-  const ZX_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+  const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+  const dt = (s) => (s ? dm(s) + '/' + new Date(s).getFullYear() + ' ' + hm(s) : '');
+  const span = (a, b) => (!a ? '' : hm(a) === hm(b) || !b ? dm(a) + ' ' + hm(a) : dm(a) + ' ' + hm(a) + '–' + (dm(a) === dm(b) ? '' : dm(b) + ' ') + hm(b));
   const PEND = 'invPend';
   const fine = () => window.matchMedia && matchMedia('(pointer:fine)').matches;
 
@@ -58,7 +64,7 @@
     '.iv-in{border:2px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;font-size:17px;background:#fff;width:100%;box-sizing:border-box}' +
     '.iv-in:focus{outline:none;border-color:#0076DA;box-shadow:0 0 0 4px rgba(0,118,218,.15)}' +
     '.iv-cam{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:10px;aspect-ratio:4/3;max-height:46vh}' +
-    '.iv-cam video{width:100%;height:100%;object-fit:cover;display:block}' +
+    '.iv-cam video{width:100%!important;height:100%!important;object-fit:cover;display:block}.iv-cam>div[id^=ivReader]{width:100%;height:100%;border:0!important}' +
     '.iv-cam .ln{position:absolute;inset-inline:12%;top:50%;height:2px;background:#ef4444;box-shadow:0 0 12px #ef4444;animation:ivScan 1.6s ease-in-out infinite alternate}' +
     '.iv-cam .fr{position:absolute;inset:22% 10%;border:2.5px solid rgba(255,255,255,.85);border-radius:14px}' +
     '.iv-cam button{position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:10px;padding:6px 11px;font:inherit;font-weight:800;cursor:pointer}' +
@@ -194,7 +200,7 @@
     if (!all.length) { $('ivMine').innerHTML = '<div class="iv-mut" style="padding:10px 0">עוד לא ספרתם כאן. סרקו ברקוד כדי להתחיל.</div>'; return; }
     $('ivMine').innerHTML = all.slice(0, 200).map((l) => '<div class="iv-ln' + (l.p ? ' p' : '') + (l.err ? ' err' : '') + '" data-id="' + (l.p ? 'p:' + l.clientId : l.id) + '">' +
       '<div class="t"><b>' + e(l.name || (l.known === false ? '⚠ ' + (l.note || 'לא בקטלוג') : l.barcode)) + '</b><small dir="ltr">' + e(l.barcode) + '</small><small> · ' +
-      (l.p ? (l.err ? '⚠ ' + e(l.err) : '⏳ מחכה לשליחה') : hm(l.at)) + (l.area ? ' · 📍' + e(l.area) : '') + (l.note && l.known !== false ? ' · ' + e(l.note) : '') + '</small></div>' +
+      '🕒 ' + hm(l.at) + (l.p ? ' · ' + (l.err ? '⚠ ' + e(l.err) : '⏳ מחכה לשליחה') : '') + (l.area ? ' · 📍' + e(l.area) : '') + (l.note && l.known !== false ? ' · ' + e(l.note) : '') + '</small></div>' +
       '<span class="q">' + fmt(l.qty) + '</span>' + (l.p && !l.err ? '' : '<button class="ed">✎</button><button class="del">✕</button>') + '</div>').join('');
     $('ivMine').querySelectorAll('.iv-ln').forEach((row) => {
       const id = row.dataset.id, ed = row.querySelector('.ed'), del = row.querySelector('.del');
@@ -231,14 +237,16 @@
     if (!r.ok && !r.net) { $('ivItem').innerHTML = '<div class="iv-warn">' + e(r.error) + '</div>'; return; }
     item = r.ok ? r : { barcode: code, offline: true };
     if (r.ok && !r.known) beep(220, 0.18); else beep(1100, 0.07);
-    const pAlready = pend.filter((p) => p.countId === cur.id && p.barcode === item.barcode).reduce((s, p) => s + Number(p.qty || 0), 0);
-    const already = (item.already || 0) + pAlready;
+    const pp = pend.filter((p) => p.countId === cur.id && p.barcode === item.barcode);
+    const already = (item.already || 0) + pp.reduce((s, p) => s + Number(p.qty || 0), 0), times = (item.times || 0) + pp.length;
+    const lastP = pp.length ? { at: pp[pp.length - 1].at, by: pp[pp.length - 1].by } : null, last = lastP || item.last;
+    const seen = times ? '<div class="iv-nums"><div><small>כבר נספר בספירה הזו</small><b>' + fmt(already) + '</b></div><div><small>כמה פעמים נספר</small><b>' + times + (times === 1 ? ' פעם' : ' פעמים') + '</b></div></div>' +
+      (last ? '<div class="iv-mut">אחרון: ' + hm(last.at) + (last.by ? ' · ' + e(last.by) : '') + '</div>' : '') : '<div class="iv-mut" style="margin:8px 0">עוד לא נספר בספירה הזו.</div>';
     let h;
     if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי בקטלוג</div><div class="bc">' + e(code) + '</div><div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות מה המוצר.</div>';
-    else if (item.known) h = '<div class="iv-item k"><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + (item.archived ? ' · <b style="color:#c2410c">בארכיון בקומקס</b>' : '') + '</div>' +
-      '<div class="iv-nums"><div><small>במלאי בקומקס</small><b>' + fmt(item.stock) + '</b></div><div><small>כבר נספר בספירה הזו</small><b>' + fmt(already) + '</b></div></div>';
+    else if (item.known) h = '<div class="iv-item k"><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div>' + seen;
     else h = '<div class="iv-item u"><div class="nm">⚠ פריט לא קיים בקטלוג</div><div class="bc">' + e(item.barcode) + '</div>' +
-      '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + (already ? '<div class="iv-mut">כבר נספר בספירה הזו: ' + fmt(already) + '</div>' : '');
+      '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + seen;
     h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" placeholder="כמות" autocomplete="off">' +
       '<div class="iv-quick">' + [1, 2, 3, 6, 12, 24].map((n) => '<button type="button" data-q="' + n + '">' + n + '</button>').join('') + '</div>' +
       '<input class="iv-in" id="ivNote" style="margin-top:8px;font-size:14px;padding:9px 10px' + (item.known ? ';display:none' : '') + '" placeholder="' + (item.known ? 'הערה (לא חובה)' : 'מה המוצר? למשל: במבה 80 גרם אסם') + '" maxlength="200">' +
@@ -263,7 +271,7 @@
     if ($('ivQty').value.trim() === '' || !Number.isFinite(qv) || qv < 0) { say('הקלידו כמות', 'err'); $('ivQty').focus(); return; }
     if (item.known === false && !note) { say('פריט לא קיים בקטלוג — כתבו בהערות מה המוצר', 'err'); $('ivNote').focus(); return; }
     const area = $('ivArea').value.trim(); store.set('invArea', area);
-    pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, by: myName(), barcode: item.barcode, qty: qv, note, area,
+    pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, by: myName(), at: new Date().toISOString(), barcode: item.barcode, qty: qv, note, area,
       name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known });
     savePend();
     say('✓ נשמר: ' + (item.name || item.barcode) + ' × ' + fmt(qv));
@@ -288,47 +296,42 @@
     if (pend.some((p) => !p.err)) setTimeout(flush, 15000);
   }
 
-  /* ---------- the camera: the browser's own BarcodeDetector, or ZXing ---------- */
-  let stream = null, det = null, zx = null, loopT = 0, camWanted = false;
+  /* ---------- the camera: html5-qrcode (cdnjs — allowed by the page; the browser's BarcodeDetector inside when there is one) ---------- */
+  let hq = null, camWanted = false, camSeq = 0;
   async function camStart() {
     camWanted = true;
     if (camOn) return;
     const box = $('ivCamBox'); if (!box) return;
-    box.innerHTML = '<div class="iv-cam"><video id="ivVid" playsinline muted></video><div class="fr"></div><div class="ln"></div><button type="button" id="ivCamX">✕ בלי מצלמה</button></div>';
+    const rid = 'ivReader' + (++camSeq);
+    box.innerHTML = '<div class="iv-cam"><div id="' + rid + '"></div><div class="ln"></div><button type="button" id="ivCamX">✕ בלי מצלמה</button></div>';
     $('ivCamX').onclick = () => { camWanted = false; camStop(); };
     camOn = true;
-    const v = $('ivVid');
     try {
-      if ('BarcodeDetector' in window) {
-        const want = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'];
-        const sup = await BarcodeDetector.getSupportedFormats();
-        det = new BarcodeDetector({ formats: want.filter((f) => sup.includes(f)) });
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
-        if (!camOn) return camStop();
-        v.srcObject = stream; await v.play();
-        const tick = async () => {
-          if (!camOn) return;
-          try { const r = await det.detect(v); if (r && r.length) { const c = r[0].rawValue; camStop(true); lookup(c); return; } } catch (_) {}
-          loopT = setTimeout(tick, 120);
-        };
-        tick();
-      } else {
-        if (!window.ZXing) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = ZX_URL; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
-        if (!camOn) return camStop();
-        zx = new ZXing.BrowserMultiFormatReader();
-        await zx.decodeFromConstraints({ video: { facingMode: { ideal: 'environment' } } }, v, (res) => { if (res && camOn) { const c = res.getText(); camStop(true); lookup(c); } });
-      }
+      if (!window.Html5Qrcode) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = QR_URL; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
+      if (!camOn) return;
+      const F = window.Html5QrcodeSupportedFormats;
+      const fm = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE].filter((x) => x != null) : undefined;
+      const me = new Html5Qrcode(rid, { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
+      hq = me;
+      await me.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.max(160, Math.floor(w * 0.86)), height: Math.max(90, Math.floor(Math.min(h * 0.5, w * 0.45))) }) },
+        (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text); }, () => {});
+      if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} }
     } catch (err) {
+      const m = String((err && (err.name || err.message)) || err || '');
       camStop();
-      say('לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
+      say(/NotAllowed|Permission|denied/i.test(m) ? 'צריך לאשר לאתר גישה למצלמה (בהגדרות הדפדפן ← הרשאות האתר ← מצלמה)'
+        : /NotFound|Overconstrained|no camera/i.test(m) ? 'לא נמצאה מצלמה במכשיר — אפשר להקליד ברקוד'
+        : /load/.test(m) ? 'לא הצלחתי לטעון את רכיב הסריקה — בדקו את החיבור ונסו שוב'
+        : 'לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
     }
   }
   function camStop(keepWanted) {
     if (!keepWanted) camWanted = false;
-    camOn = false; clearTimeout(loopT);
-    if (zx) { try { zx.reset(); } catch (_) {} zx = null; }
-    if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
-    const box = $('ivCamBox'); if (box) box.innerHTML = '';
+    camOn = false;
+    const h = hq; hq = null;
+    const box = $('ivCamBox');
+    if (h) { Promise.resolve().then(() => h.stop()).catch(() => {}).finally(() => { try { h.clear(); } catch (_) {} if (!camOn && box && box.isConnected && !hq) box.innerHTML = ''; }); }
+    else if (box) box.innerHTML = '';
   }
   let ac = null;
   function beep(f, d) {
@@ -343,11 +346,11 @@
     if (view !== 'merge') return;
     if (!r.ok) { $('ivBody').innerHTML = '<div class="iv-card">' + e(r.error) + '</div>'; return; }
     merge = r;
-    for (const x of r.rows) { x.qty = Number(x.qty); x.stock = x.stock == null ? null : Number(x.stock); x.diff = x.known && x.stock != null ? x.qty - x.stock : null; }
+    for (const x of r.rows) { x.qty = Number(x.qty); x.lines = Number(x.lines) || 0; }
     drawMerge();
   }
   function drawMerge() {
-    const R = merge.rows, unk = R.filter((x) => !x.known), dif = R.filter((x) => x.diff != null && Math.abs(x.diff) >= 0.001);
+    const R = merge.rows, unk = R.filter((x) => !x.known), dif = R.filter((x) => x.lines > 1);
     const units = R.reduce((s, x) => s + x.qty, 0), people = new Set(R.flatMap((x) => String(x.counters || '').split(', ').filter(Boolean))).size;
     const one = merge.counts.length === 1 ? merge.counts[0] : null;
     let h = '<div class="iv-card" style="padding:12px 16px"><b>' + merge.counts.map((c) => e(c.title)).join(' + ') + '</b>' + (one && one.status === 'open' ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">עדיין פתוחה</span>' : '') + '</div>' +
@@ -358,9 +361,9 @@
       '<div class="iv-acts"><button class="iv-btn iv-pri" id="ivXc">⬇ קובץ לקומקס (ברקוד + כמות)</button><button class="iv-btn" id="ivXf">⬇ דוח מלא</button>' +
       (one && one.status === 'open' ? '<button class="iv-btn iv-ok" id="ivClose">🔒 סיום הספירה</button>' : '') + '</div></div>' +
       '<div class="iv-card"><div class="iv-chips"><button data-f="all"' + (mFilter === 'all' ? ' class="on"' : '') + '>הכול (' + R.length + ')</button>' +
-      '<button data-f="unk"' + (mFilter === 'unk' ? ' class="on"' : '') + '>⚠ לא בקטלוג (' + unk.length + ')</button><button data-f="dif"' + (mFilter === 'dif' ? ' class="on"' : '') + '>פער מהמלאי (' + dif.length + ')</button></div>' +
+      '<button data-f="unk"' + (mFilter === 'unk' ? ' class="on"' : '') + '>⚠ לא בקטלוג (' + unk.length + ')</button><button data-f="dif"' + (mFilter === 'dif' ? ' class="on"' : '') + '>נספר יותר מפעם אחת (' + dif.length + ')</button></div>' +
       '<input class="iv-in" id="ivQ" style="font-size:14px;padding:8px 10px" placeholder="🔎 חיפוש שם או ברקוד" value="' + e(mQ) + '">' +
-      '<div class="iv-wrap" style="margin-top:8px"><table class="iv-tbl"><thead><tr><th>פריט</th><th class="n">נספר</th><th class="n hide">במלאי</th><th class="n">פער</th></tr></thead><tbody id="ivRows"></tbody></table></div></div>';
+      '<div class="iv-wrap" style="margin-top:8px"><table class="iv-tbl"><thead><tr><th>פריט</th><th class="n">כמות</th><th class="n">פעמים</th><th class="n hide">מתי</th></tr></thead><tbody id="ivRows"></tbody></table></div></div>';
     $('ivBody').innerHTML = h;
     rows();
     $('ivBody').querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { mFilter = b.dataset.f; $('ivBody').querySelectorAll('[data-f]').forEach((x) => x.classList.toggle('on', x === b)); rows(); }));
@@ -377,12 +380,12 @@
   function rows() {
     let R = merge.rows;
     if (mFilter === 'unk') R = R.filter((x) => !x.known);
-    if (mFilter === 'dif') R = R.filter((x) => x.diff != null && Math.abs(x.diff) >= 0.001).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+    if (mFilter === 'dif') R = R.filter((x) => x.lines > 1).sort((a, b) => b.lines - a.lines);
     if (mQ) { const k = mQ.toLowerCase(); R = R.filter((x) => String(x.barcode).includes(k) || String(x.name || x.notes || '').toLowerCase().includes(k)); }
     $('ivRows').innerHTML = R.slice(0, 1500).map((x) => '<tr' + (x.known ? '' : ' class="u"') + '><td><b>' + e(x.known ? x.name : '⚠ ' + (x.notes || 'לא בקטלוג')) + '</b><span class="bc">' + e(x.barcode) + '</span>' +
-      (x.known && x.notes ? '<small class="iv-mut">' + e(x.notes) + '</small>' : '') + (x.areas ? '<small class="iv-mut"> 📍' + e(x.areas) + '</small>' : '') + '</td>' +
-      '<td class="n">' + fmt(x.qty) + '</td><td class="n hide">' + (x.known ? fmt(x.stock) : '') + '</td><td class="n" dir="ltr" style="color:' + (x.diff == null ? '#94a3b8' : x.diff < 0 ? '#b91c1c' : x.diff > 0 ? '#1d4ed8' : '#16a34a') + '">' +
-      (x.diff == null ? '' : (x.diff > 0 ? '+' : '') + fmt(x.diff)) + '</td></tr>').join('') + (R.length > 1500 ? '<tr><td colspan="4" class="iv-mut">מוצגות 1,500 שורות — כל השורות נמצאות בקבצים</td></tr>' : '') +
+      (x.known && x.notes ? '<small class="iv-mut">' + e(x.notes) + '</small>' : '') + (x.areas ? '<small class="iv-mut"> 📍' + e(x.areas) + '</small>' : '') +
+      (x.counters ? '<small class="iv-mut"> 👤' + e(x.counters) + '</small>' : '') + '</td>' +
+      '<td class="n">' + fmt(x.qty) + '</td><td class="n" style="color:' + (x.lines > 1 ? '#c2410c' : '#334155') + '">' + x.lines + '</td><td class="n hide" style="font-weight:600;font-size:12px">' + e(span(x.first_at, x.last_at)) + '</td></tr>').join('') + (R.length > 1500 ? '<tr><td colspan="4" class="iv-mut">מוצגות 1,500 שורות — כל השורות נמצאות בקבצים</td></tr>' : '') +
       (!R.length ? '<tr><td colspan="4" class="iv-mut">אין שורות</td></tr>' : '');
   }
   async function xlsx(full) {
@@ -399,12 +402,19 @@
       X.utils.book_append_sheet(wb, ws, 'ספירה');
       X.writeFile(wb, 'ספירת מלאי לקומקס ' + stamp + '.xlsx');
     } else {
-      const a = [hd(['ברקוד', 'שם', 'נספר', 'במלאי בקומקס', 'פער', 'איפה', 'מי ספר', 'הערות'])].concat(R.filter((x) => x.known).map((x) =>
-        [txt(x.barcode), x.name || '', nm(x.qty), nm(x.stock), nm(x.diff), x.areas || '', x.counters || '', x.notes || '']));
-      const ws = X.utils.aoa_to_sheet(a); ws['!cols'] = [{ wch: 16 }, { wch: 34 }, { wch: 9 }, { wch: 12 }, { wch: 9 }, { wch: 16 }, { wch: 18 }, { wch: 28 }];
+      const all = await api('invAllLines', { ids: mIds });
+      if (!all.ok) return say(all.error || 'לא הצלחתי להביא את השורות', 'err');
+      const names = {}; R.forEach((x) => { names[x.barcode] = x.known ? x.name : '⚠ ' + (x.notes || 'לא בקטלוג'); });
+      const a = [hd(['ברקוד', 'שם', 'כמות', 'כמה פעמים נספר', 'ספירה ראשונה', 'ספירה אחרונה', 'איפה', 'מי ספר', 'הערות'])].concat(R.filter((x) => x.known).map((x) =>
+        [txt(x.barcode), x.name || '', nm(x.qty), nm(x.lines), dt(x.first_at), dt(x.last_at), x.areas || '', x.counters || '', x.notes || '']));
+      const ws = X.utils.aoa_to_sheet(a); ws['!cols'] = [{ wch: 16 }, { wch: 34 }, { wch: 9 }, { wch: 13 }, { wch: 17 }, { wch: 17 }, { wch: 16 }, { wch: 18 }, { wch: 28 }];
       ws['!views'] = [{ RTL: true }]; X.utils.book_append_sheet(wb, ws, 'סיכום');
-      const u = [hd(['ברקוד', 'מה המוצר (הערות)', 'נספר', 'איפה', 'מי ספר'])].concat(R.filter((x) => !x.known).map((x) => [txt(x.barcode), x.notes || '', nm(x.qty), x.areas || '', x.counters || '']));
-      const wu = X.utils.aoa_to_sheet(u); wu['!cols'] = [{ wch: 16 }, { wch: 40 }, { wch: 9 }, { wch: 16 }, { wch: 18 }]; wu['!views'] = [{ RTL: true }];
+      const l = [hd(['תאריך ושעה', 'ברקוד', 'שם', 'כמות', 'מי ספר', 'איפה', 'הערה'])].concat(all.lines.map((x) =>
+        [dt(x.at), txt(x.barcode), names[x.barcode] || '', nm(x.qty), x.counted_by || '', x.area || '', x.note || '']));
+      const wl = X.utils.aoa_to_sheet(l); wl['!cols'] = [{ wch: 17 }, { wch: 16 }, { wch: 34 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 28 }]; wl['!views'] = [{ RTL: true }];
+      X.utils.book_append_sheet(wb, wl, 'כל הספירות');
+      const u = [hd(['ברקוד', 'מה המוצר (הערות)', 'כמות', 'כמה פעמים נספר', 'ספירה אחרונה', 'איפה', 'מי ספר'])].concat(R.filter((x) => !x.known).map((x) => [txt(x.barcode), x.notes || '', nm(x.qty), nm(x.lines), dt(x.last_at), x.areas || '', x.counters || '']));
+      const wu = X.utils.aoa_to_sheet(u); wu['!cols'] = [{ wch: 16 }, { wch: 40 }, { wch: 9 }, { wch: 13 }, { wch: 17 }, { wch: 16 }, { wch: 18 }]; wu['!views'] = [{ RTL: true }];
       X.utils.book_append_sheet(wb, wu, 'לא בקטלוג');
       X.writeFile(wb, 'ספירת מלאי - דוח מלא ' + stamp + '.xlsx');
     }
