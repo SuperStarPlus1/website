@@ -11,6 +11,12 @@
 // 15/11 (the owner): EVERY COUNT IS INDEPENDENT — one person's, its own unique date and time; nobody joins another's count,
 // a finished count is never reopened; the managers tick any counts and the merge makes the summaries (per count + all).
 // A quantity above 5,000 is refused until it is typed a second time (a pallet: 182 cartons × 24 = 4,368).
+// 15/11 (the owner: "the camera opens but does not scan; typing by hand — the keyboard has no Enter, only ✓, and nothing
+// happens"): the video is no longer stretched (object-fit:cover over a fixed frame moved the picture away from the area
+// html5-qrcode decodes); a sharper picture (1920×1080 ideal, continuous focus) and a wide box for 1-D barcodes;
+// "📸 צילום" — a photo of the barcode decoded (scanFile, made ≤ 1600 px) when the live picture does not catch it.
+// The barcode field and the item card are <form>s: the phone keyboard's ✓ / Go submits them (it sends no Enter key);
+// a 🔎 button next to the field.
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
 //   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, how many times and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
@@ -78,11 +84,12 @@
     '.iv-row{display:flex;gap:8px}.iv-row input{flex:1;min-width:0}' +
     '.iv-in{border:2px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;font-size:17px;background:#fff;width:100%;box-sizing:border-box}' +
     '.iv-in:focus{outline:none;border-color:#0076DA;box-shadow:0 0 0 4px rgba(0,118,218,.15)}' +
-    '.iv-cam{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:10px;aspect-ratio:4/3;max-height:46vh}' +
-    '.iv-cam video{width:100%!important;height:100%!important;object-fit:cover;display:block}.iv-cam>div[id^=ivReader]{width:100%;height:100%;border:0!important}' +
-    '.iv-cam .ln{position:absolute;inset-inline:12%;top:50%;height:2px;background:#ef4444;box-shadow:0 0 12px #ef4444;animation:ivScan 1.6s ease-in-out infinite alternate}' +
+    '.iv-cam{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:10px}' +
+    '.iv-cam video{display:block;width:100%!important;height:auto!important}.iv-cam>div[id^=ivReader]{width:100%;border:0!important}' +
+    '.iv-camb{display:flex;gap:8px;justify-content:space-between;padding:8px;background:#0b1220}' +
+    '.iv-camb button{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer}' +
     '.iv-cam .fr{position:absolute;inset:22% 10%;border:2.5px solid rgba(255,255,255,.85);border-radius:14px}' +
-    '.iv-cam button{position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:10px;padding:6px 11px;font:inherit;font-weight:800;cursor:pointer}' +
+
     '@keyframes ivScan{from{transform:translateY(-60px)}to{transform:translateY(60px)}}' +
     '.iv-item{margin-top:12px;border-radius:16px;padding:14px;animation:ivIn .25s ease}' +
     '.iv-item.k{background:linear-gradient(135deg,#eff6ff,#eef2ff);border:1.5px solid #c7d2fe}.iv-item.u{background:#fff7ed;border:1.5px solid #fdba74}' +
@@ -191,23 +198,25 @@
     view = 'count'; cur = c; item = null; head('📦 ' + (label(c) || 'ספירה') + ' · ' + when(c.opened_at), true);
     $('ivBody').innerHTML = '<div id="ivPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 סופר/ת: <span style="color:#0f172a">' + e(myName()) + '</span> — השם נרשם על כל שורה</div><div class="iv-scan">' +
       '<div id="ivCamBox"></div>' +
-      '<div class="iv-row"><input class="iv-in" id="ivBc" inputmode="numeric" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות + Enter" dir="ltr" style="text-align:right">' +
-      '<button class="iv-btn iv-pri" id="ivCam" title="סריקה במצלמה">📷</button></div>' +
+      '<form class="iv-row" id="ivBcF" action="#" autocomplete="off"><input class="iv-in" id="ivBc" inputmode="numeric" enterkeyhint="search" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות" dir="ltr" style="text-align:right">' +
+      '<button type="submit" class="iv-btn" title="חיפוש" style="font-size:18px;padding:9px 12px">🔎</button><button type="button" class="iv-btn iv-pri" id="ivCam" title="סריקה במצלמה" style="font-size:18px;padding:9px 12px">📷</button></form>' +
       '<div class="iv-row" style="margin-top:8px;align-items:center"><span class="iv-mut" style="white-space:nowrap">📍 איפה:</span><input class="iv-in" id="ivArea" style="font-size:14px;padding:8px 10px" placeholder="למשל מדף 4, מחסן (לא חובה)" value="' + e(store.get('invArea') || '') + '"></div>' +
       '<div id="ivItem"></div></div>' +
       '<div class="iv-h" id="ivMineH">הספירה שלי</div><div class="iv-card" id="ivMine" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
       '<div class="iv-acts"><button class="iv-btn iv-ok" id="ivFinish">✓ סיום הספירה</button>' + (isMgr() ? '<button class="iv-btn" id="ivToMerge">📊 סיכום</button>' : '') + '</div>' +
       '<div class="iv-mut" style="margin:6px 4px">אחרי הסיום אי אפשר להוסיף לספירה הזו. לספור שוב — פותחים ספירה חדשה.</div>';
     $('ivArea').addEventListener('change', () => store.set('invArea', $('ivArea').value.trim()));
+    const goBc = () => {
+      const v = $('ivBc').value.replace(/\s+/g, '');
+      const fast = kt.length >= 6 && kt.length >= v.length - 1 && (kt[kt.length - 1] - kt[0]) / (kt.length - 1) < 35;
+      kt = [];
+      if (v) { $('ivBc').blur(); lookup(v, fast ? 'scan' : 'typed'); } else say('הקלידו ברקוד או 6 ספרות אחרונות', 'err');
+    };
     $('ivBc').addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        const v = $('ivBc').value.replace(/\s+/g, '');
-        const fast = kt.length >= 6 && kt.length >= v.length - 1 && (kt[kt.length - 1] - kt[0]) / (kt.length - 1) < 35;
-        kt = [];
-        if (v) lookup(v, fast ? 'scan' : 'typed');
-      } else if (ev.key.length === 1) kt.push(performance.now());
+      if (ev.key === 'Enter') { ev.preventDefault(); goBc(); }
+      else if (ev.key.length === 1) kt.push(performance.now());
     });
+    $('ivBcF').addEventListener('submit', (ev) => { ev.preventDefault(); goBc(); });   // the phone keyboard's ✓ / Go
     $('ivBc').addEventListener('input', () => { if (!$('ivBc').value) kt = []; });
     $('ivBc').addEventListener('paste', () => { kt = []; });
     $('ivCam').onclick = () => (camOn ? camStop() : camStart());
@@ -324,19 +333,25 @@
     else if (item.known) h = '<div class="iv-item k"><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div>' + seen;
     else h = '<div class="iv-item u"><div class="nm">' + (item.shortMiss ? '🔎 לא נמצא מוצר שהברקוד שלו מסתיים ב-' + e(item.barcode) : '⚠ פריט לא קיים בקטלוג') + '</div>' + big(item.barcode) + ok + conf +
       '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + seen;
-    h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" placeholder="כמות" autocomplete="off">' +
+    h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" enterkeyhint="done" placeholder="כמות" autocomplete="off">' +
       '<div class="iv-quick">' + [1, 2, 3, 6, 12, 24].map((n) => '<button type="button" data-q="' + n + '">' + n + '</button>').join('') + '</div>' +
       '<input class="iv-in" id="ivNote" style="margin-top:8px;font-size:14px;padding:9px 10px' + (item.known ? ';display:none' : '') + '" placeholder="' + (item.known ? 'הערה (לא חובה)' : 'מה המוצר? למשל: במבה 80 גרם אסם') + '" maxlength="200">' +
-      '<div class="iv-acts">' + (item.known ? '<button class="iv-btn" id="ivNoteBtn" style="font-size:13px">+ הערה</button>' : '') +
-      '<button class="iv-btn iv-ok" id="ivSave" style="flex:1;font-size:16px">✓ שמירה</button><button class="iv-btn" id="ivSkip">ביטול</button></div></div>';
-    $('ivItem').innerHTML = h;
+      '<div class="iv-acts">' + (item.known ? '<button type="button" class="iv-btn" id="ivNoteBtn" style="font-size:13px">+ הערה</button>' : '') +
+      '<button type="submit" class="iv-btn iv-ok" id="ivSave" style="flex:1;font-size:16px">✓ שמירה</button><button type="button" class="iv-btn" id="ivSkip">ביטול</button></div></div>';
+    $('ivItem').innerHTML = '<form id="ivItemF" action="#" autocomplete="off">' + h + '</form>';
+    $('ivItemF').addEventListener('submit', (ev) => {   // the keyboard's ✓ on any field, or ✓ שמירה
+      ev.preventDefault();
+      const a = document.activeElement;
+      if (a && a.id === 'ivConf') return $('ivQty').focus();
+      if (a && a.id === 'ivQty' && item && !item.known && !$('ivNote').value.trim()) return $('ivNote').focus();
+      save();
+    });
     if ($('ivConf')) $('ivConf').focus(); else $('ivQty').focus();
     if ($('ivConf')) $('ivConf').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); $('ivQty').focus(); } });
     $('ivQty').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (!item.known && !$('ivNote').value.trim()) $('ivNote').focus(); else save(); } });
     $('ivNote').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); save(); } });
     $('ivItem').querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => { $('ivQty').value = b.dataset.q; $('ivQty').focus(); }));
     if ($('ivNoteBtn')) $('ivNoteBtn').onclick = () => { $('ivNote').style.display = ''; $('ivNoteBtn').remove(); $('ivNote').focus(); };
-    $('ivSave').onclick = save;
     $('ivSkip').onclick = next;
   }
   function next() {
@@ -391,18 +406,24 @@
     if (camOn) return;
     const box = $('ivCamBox'); if (!box) return;
     const rid = 'ivReader' + (++camSeq);
-    box.innerHTML = '<div class="iv-cam"><div id="' + rid + '"></div><div class="ln"></div><button type="button" id="ivCamX">✕ בלי מצלמה</button></div>';
+    box.innerHTML = '<div class="iv-cam"><div id="' + rid + '"></div><div class="iv-camb"><button type="button" id="ivSnap">📸 לא נקלט? צלמו תמונה</button><button type="button" id="ivCamX">✕ סגירה</button></div></div>' +
+      '<div class="iv-mut" style="margin:-4px 2px 8px">מחזיקים את הברקוד לרוחב, בתוך המסגרת, כ-15 ס״מ מהטלפון ובאור טוב.</div>';
     $('ivCamX').onclick = () => { camWanted = false; camStop(); };
+    $('ivSnap').onclick = photoScan;
     camOn = true;
     try {
-      if (!window.Html5Qrcode) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = QR_URL; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
+      await loadQR();
       if (!camOn) return;
-      const F = window.Html5QrcodeSupportedFormats;
-      const fm = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE].filter((x) => x != null) : undefined;
-      const me = new Html5Qrcode(rid, { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
+      const me = new Html5Qrcode(rid, qrOpts());
       hq = me;
-      await me.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.max(160, Math.floor(w * 0.86)), height: Math.max(90, Math.floor(Math.min(h * 0.5, w * 0.45))) }) },
-        (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text, 'scan', true); }, () => {});
+      const cfg = { fps: 10, disableFlip: true, qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.9)), height: Math.max(100, Math.floor(Math.min(h * 0.6, w * 0.5))) }) };
+      const onCode = (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text, 'scan', true); };
+      try {   // a sharp picture: 1-D barcodes need resolution and focus
+        await me.start({ facingMode: 'environment' }, Object.assign({}, cfg, { videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }), onCode, () => {});
+      } catch (e1) {
+        if (/NotAllowed|Permission|denied/i.test(String((e1 && (e1.name || e1.message)) || e1))) throw e1;
+        await me.start({ facingMode: 'environment' }, cfg, onCode, () => {});   // a camera that refuses those — the plain way
+      }
       if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} }
     } catch (err) {
       const m = String((err && (err.name || err.message)) || err || '');
@@ -412,6 +433,42 @@
         : /load/.test(m) ? 'לא הצלחתי לטעון את רכיב הסריקה — בדקו את החיבור ונסו שוב'
         : 'לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
     }
+  }
+  function loadQR() {
+    if (window.Html5Qrcode) return Promise.resolve();
+    return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = QR_URL; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
+  }
+  function qrOpts() {
+    const F = window.Html5QrcodeSupportedFormats;
+    const fm = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE].filter((x) => x != null) : undefined;
+    return { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false };
+  }
+  // 📸 a photo of the barcode (the phone's own camera app — focused and sharp), made ≤ 1600 px and decoded
+  function photoScan() {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment');
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      $('ivItem').innerHTML = '<div class="iv-mut" style="padding:12px 2px">🔎 קורא את הברקוד מהתמונה…</div>';
+      try {
+        await loadQR();
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
+        const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(img.src);
+        const small = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92));
+        if (!$('ivPhotoR')) document.body.insertAdjacentHTML('beforeend', '<div id="ivPhotoR" style="display:none"></div>');
+        const sc = new Html5Qrcode('ivPhotoR', qrOpts());
+        let text = '';
+        try { text = await sc.scanFile(new File([small], 'b.jpg', { type: 'image/jpeg' }), false); } finally { try { sc.clear(); } catch (_) {} }
+        lookup(text, 'scan', true);
+      } catch (_) {
+        $('ivItem').innerHTML = '';
+        say('לא הצלחתי לקרוא את הברקוד מהתמונה — צלמו קרוב יותר, ישר ובאור טוב, או הקלידו 6 ספרות אחרונות', 'err');
+      }
+    };
+    camStop(true);   // the live camera off while the camera app takes the photo
+    inp.click();
   }
   function camStop(keepWanted) {
     if (!keepWanted) camWanted = false;
