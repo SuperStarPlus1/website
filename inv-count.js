@@ -1,4 +1,6 @@
-// 📦 ספירת מלאי (15/11/2026, the owner): 💼 ניהול העסק ▸ תפעול ▸ 📦 ספירת מלאי — any manager.
+// 📦 ספירת מלאי (15/11/2026, the owner): 💼 ניהול העסק ▸ תפעול ▸ 📦 ספירת מלאי (the managers) and
+// 📅 סידור עבודה ונוכחות ▸ 📦 ספירת מלאי (every employee — "open to all the employees; the system knows who counted":
+// the line's name comes from the sign-in, shown as "👤 סופר/ת"). The employees count; the merge / export / close — managers.
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
 //   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, Comax's stock and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
@@ -15,7 +17,9 @@
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const isMgr = () => !!(appState() && appState().mgr);
-  const mAuth = () => (typeof mgrAuth === 'function' ? mgrAuth() : {});
+  const canUse = () => !!(appState() && (appState().mgr || appState().emp));
+  const mAuth = () => (typeof anyAuth === 'function' ? anyAuth() : typeof mgrAuth === 'function' ? mgrAuth() : {});
+  const myName = () => { const s = appState(); return (s && (s.mgr ? s.mgr.name : s.emp && s.emp.name)) || ''; };
   const say = (m, c) => { if (typeof toast === 'function') toast(m, c); };
   const api = (action, extra) => apiPost({ action, ...mAuth(), ...(extra || {}) }).catch(() => ({ ok: false, net: true, error: 'אין חיבור לשרת' }));
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} } };
@@ -88,7 +92,7 @@
 
   /* ================= the shell ================= */
   function open() {
-    if (!isMgr()) return;
+    if (!canUse()) return;
     if (!$('ivOv')) {
       document.body.insertAdjacentHTML('beforeend', '<div id="ivOv" class="hidden"><div class="iv-top"><button id="ivBack" hidden>→</button><h2 id="ivTitle">📦 ספירת מלאי</h2><span class="sp"></span>' +
         '<button id="ivX">✕ סגירה</button></div><div class="iv-body" id="ivBody"></div></div>');
@@ -113,13 +117,13 @@
     if (view !== 'list') return;
     if (!r.ok) { $('ivBody').innerHTML = '<div class="iv-card">' + e(r.error) + '<div class="iv-acts"><button class="iv-btn" id="ivRe">↻ שוב</button></div></div>'; $('ivRe').onclick = showList; return; }
     L = r;
-    const open_ = r.counts.filter((c) => c.status === 'open'), done = r.counts.filter((c) => c.status !== 'open');
+    const open_ = r.counts.filter((c) => c.status === 'open'), done = r.mgr ? r.counts.filter((c) => c.status !== 'open') : [];
     let h = pendBar() + '<div class="iv-card" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)"><h3>➕ ספירה חדשה</h3><div class="iv-mut">כמה אנשים יכולים לספור לתוך אותה ספירה בבת אחת. בסוף — איחוד וייצוא לאקסל לקומקס.</div>' +
       '<div class="iv-row" style="margin-top:10px"><input class="iv-in" id="ivNewT" style="font-size:15px" value="ספירת מלאי ' + today() + '"><button class="iv-btn iv-pri" id="ivNew">פתיחה</button></div></div>';
     if (open_.length) h += '<div class="iv-h">🟢 ספירות פתוחות</div>' + open_.map(card).join('');
     if (done.length) h += '<div class="iv-h">✓ ספירות שנסגרו (60 יום) — סמנו כמה כדי לאחד אותן</div>' + done.map(card).join('') +
       '<div class="iv-acts"><button class="iv-btn iv-pri" id="ivMergeSel" disabled>📊 איחוד הספירות שסומנו</button></div>';
-    if (!r.counts.length) h += '<div class="iv-mut" style="text-align:center;padding:20px">עוד אין ספירות.</div>';
+    if (!open_.length && !done.length) h += '<div class="iv-mut" style="text-align:center;padding:20px">' + (r.mgr ? 'עוד אין ספירות.' : 'אין עכשיו ספירה פתוחה — אפשר לפתוח אחת למעלה.') + '</div>';
     $('ivBody').innerHTML = h;
     $('ivNew').onclick = async () => {
       const b = $('ivNew'); b.disabled = true;
@@ -146,8 +150,8 @@
       (c.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(c.exported_at) + '</span>' : '') + '</h3>' +
       '<div class="iv-mut">נפתחה ' + dm(c.opened_at) + ' ' + hm(c.opened_at) + ' · ' + e(c.opened_by || '') + (c.last_at ? ' · שורה אחרונה ' + hm(c.last_at) : '') + '</div>' +
       '<div class="iv-pills"><span>' + fmt(c.items) + ' פריטים</span><span>' + fmt(c.units) + ' יחידות</span><span>' + fmt(c.people) + ' סופרים</span>' + (c.unknown ? '<span class="w">⚠ ' + c.unknown + ' לא בקטלוג</span>' : '') + '</div>' +
-      '<div class="iv-acts">' + (o ? '<button class="iv-btn iv-pri" data-go="' + c.id + '">▶ לספור</button>' : '') + '<button class="iv-btn" data-mg="' + c.id + '">📊 איחוד וייצוא</button>' +
-      (!o && (L.admin || c.opened_by === L.me) ? '<button class="iv-btn" data-re="' + c.id + '">🔓 לפתוח שוב</button>' : '') +
+      '<div class="iv-acts">' + (o ? '<button class="iv-btn iv-pri" data-go="' + c.id + '">▶ לספור</button>' : '') + (L.mgr ? '<button class="iv-btn" data-mg="' + c.id + '">📊 איחוד וייצוא</button>' : '') +
+      (!o && L.mgr ? '<button class="iv-btn" data-re="' + c.id + '">🔓 לפתוח שוב</button>' : '') +
       (L.admin ? '<button class="iv-btn" data-arc="' + c.id + '" style="margin-inline-start:auto;color:#64748b">🗄 לארכיון</button>' : '') + '</div></div></div></div>';
   }
   function pendBar() {
@@ -160,18 +164,18 @@
   async function startCount(c) {
     if (!c) return;
     view = 'count'; cur = c; item = null; head('📦 ' + c.title, true);
-    $('ivBody').innerHTML = '<div id="ivPendBar"></div><div class="iv-scan">' +
+    $('ivBody').innerHTML = '<div id="ivPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 סופר/ת: <span style="color:#0f172a">' + e(myName()) + '</span> — השם נרשם על כל שורה</div><div class="iv-scan">' +
       '<div id="ivCamBox"></div>' +
       '<div class="iv-row"><input class="iv-in" id="ivBc" inputmode="numeric" autocomplete="off" placeholder="ברקוד — סריקה או הקלדה + Enter" dir="ltr" style="text-align:right">' +
       '<button class="iv-btn iv-pri" id="ivCam" title="סריקה במצלמה">📷</button></div>' +
       '<div class="iv-row" style="margin-top:8px;align-items:center"><span class="iv-mut" style="white-space:nowrap">📍 איפה:</span><input class="iv-in" id="ivArea" style="font-size:14px;padding:8px 10px" placeholder="למשל מדף 4, מחסן (לא חובה)" value="' + e(store.get('invArea') || '') + '"></div>' +
       '<div id="ivItem"></div></div>' +
       '<div class="iv-h" id="ivMineH">הספירה שלי</div><div class="iv-card" id="ivMine" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
-      '<div class="iv-acts"><button class="iv-btn" id="ivToMerge">📊 איחוד וייצוא</button></div>';
+      (isMgr() ? '<div class="iv-acts"><button class="iv-btn" id="ivToMerge">📊 איחוד וייצוא</button></div>' : '');
     $('ivArea').addEventListener('change', () => store.set('invArea', $('ivArea').value.trim()));
     $('ivBc').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); const v = $('ivBc').value.trim(); if (v) lookup(v); } });
     $('ivCam').onclick = () => (camOn ? camStop() : camStart());
-    $('ivToMerge').onclick = () => { camStop(); showMerge([cur.id]); };
+    if ($('ivToMerge')) $('ivToMerge').onclick = () => { camStop(); showMerge([cur.id]); };
     if (fine()) $('ivBc').focus();
     loadMine();
   }
@@ -183,7 +187,7 @@
   function drawMine() {
     if (view !== 'count' || !$('ivMine')) return;
     $('ivPendBar').innerHTML = pendBar();
-    const pp = pend.filter((p) => p.countId === cur.id);
+    const pp = pend.filter((p) => p.countId === cur.id && (!p.by || p.by === myName()));
     const all = pp.map((p) => ({ ...p, p: true })).concat(mine);
     const units = all.reduce((s, x) => s + Number(x.qty || 0), 0);
     $('ivMineH').textContent = 'הספירה שלי — ' + all.length + ' שורות · ' + fmt(units) + ' יחידות';
@@ -259,7 +263,7 @@
     if ($('ivQty').value.trim() === '' || !Number.isFinite(qv) || qv < 0) { say('הקלידו כמות', 'err'); $('ivQty').focus(); return; }
     if (item.known === false && !note) { say('פריט לא קיים בקטלוג — כתבו בהערות מה המוצר', 'err'); $('ivNote').focus(); return; }
     const area = $('ivArea').value.trim(); store.set('invArea', area);
-    pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, barcode: item.barcode, qty: qv, note, area,
+    pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, by: myName(), barcode: item.barcode, qty: qv, note, area,
       name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known });
     savePend();
     say('✓ נשמר: ' + (item.name || item.barcode) + ' × ' + fmt(qv));
@@ -270,7 +274,7 @@
     if (busy || !pend.length) return;
     busy = true;
     for (const p of pend.slice()) {
-      if (p.err) continue;
+      if (p.err || (p.by && p.by !== myName())) continue;          // only the one who counted it sends it
       const r = await api('invAdd', p);
       if (r.net) break;                                          // still no connection — try again later
       if (r.ok) {
@@ -414,7 +418,16 @@
       drop.insertAdjacentHTML('beforeend', '<button id="invMgrBtn">📦 ספירת מלאי</button>');
       $('invMgrBtn').addEventListener('click', open);
     }
+    empItem();
   }
+  // the employees: "📅 סידור עבודה ונוכחות" (employee-menus.js builds it after the sign-in)
+  function empItem() {
+    const d = $('emSchedDrop');
+    if (!d || $('invEmpBtn')) return;
+    d.insertAdjacentHTML('beforeend', '<hr style="border:0;border-top:1px solid #e5e7eb;margin:3px 0"><button type="button" id="invEmpBtn" role="menuitem">📦 ספירת מלאי</button>');
+    $('invEmpBtn').addEventListener('click', open);
+  }
+  new MutationObserver(() => { if (!$('invEmpBtn') && $('emSchedDrop')) empItem(); }).observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.openInvCount = open;
 })();
