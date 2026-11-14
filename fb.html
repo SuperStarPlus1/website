@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>איך הייתה הקנייה? — סופרסטאר</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="logo.png">
+<!-- 💬 The faces in an e-mailed receipt copy (14/11/2026): fb?r=<receipt>&t=<its signature>&s=3|2|1 → the rating is saved
+     at once (api clubFeedbackRate — api/club-feedback.ts; the link opens only its own receipt; nothing personal shown);
+     the customer may change the face and add words. -->
+<style>
+  :root { --blue: #0076DA; --blue-d: #005bb0; --ink: #1f2937; --muted: #64748b; --bg: #eef4fa; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", Tahoma, Arial, sans-serif; }
+  .top { max-width: 560px; margin: 0 auto; padding: 12px 16px; }
+  .top img { height: 44px; }
+  .card { max-width: 560px; margin: 10px auto; background: #fff; border-radius: 20px; padding: 24px 18px; box-shadow: 0 8px 30px rgba(0, 60, 120, .08); text-align: center; }
+  @media (max-width: 600px) { .card { margin: 10px 16px; } }
+  h1 { color: var(--blue-d); font-size: 23px; margin: 4px 0 6px; }
+  .muted { color: var(--muted); font-size: 14.5px; }
+  .faces { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
+  .faces button { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px; padding: 8px 12px 6px; font: inherit; font-size: 13px; color: #334155; cursor: pointer; min-width: 78px; }
+  .faces button span { display: block; font-size: 34px; line-height: 1.2; }
+  .faces button.on { border-color: var(--blue); background: #e8f2fd; font-weight: 700; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 96px; margin-top: 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px; font: inherit; resize: vertical; }
+  .send { margin-top: 10px; width: 100%; background: var(--blue); color: #fff; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 700; cursor: pointer; }
+  .send:disabled { opacity: .55; }
+  .msg { margin-top: 10px; font-weight: 600; min-height: 1.4em; }
+  .msg.ok { color: #2e7d32; } .msg.bad { color: #c62828; }
+</style>
+</head>
+<body>
+<header class="top"><a href="/"><img src="logo.png" alt="סופרסטאר"></a></header>
+<main class="card" id="box"><p class="muted">רגע…</p></main>
+<script>
+(function () {
+  'use strict';
+  const API = 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api';
+  const p = new URLSearchParams(location.search);
+  const r = (p.get('r') || '').trim(), t = (p.get('t') || '').trim().toLowerCase();
+  let s = Number(p.get('s')) || 0;
+  const box = document.getElementById('box');
+  const FACES = [[3, '😀', 'מעולה'], [2, '😐', 'בסדר'], [1, '😞', 'לא טוב']];
+  const HEAD = { 3: 'איזה כיף לשמוע! 💛', 2: 'תודה על הדירוג', 1: 'מצטערים לשמוע 🙏' };
+  const ASK = { 3: 'רוצים לספר לנו מה אהבתם? (לא חובה)', 2: 'מה היה אפשר לעשות טוב יותר? (לא חובה)', 1: 'ספרו לנו מה קרה — נעביר למנהל החנות. (לא חובה)' };
+  const bad = () => { box.innerHTML = '<div style="font-size:46px">⚠️</div><h1>הקישור אינו תקין</h1><p class="muted">אפשר לדרג גם מהאזור האישי במועדון.</p>'; };
+  async function send(text) {
+    try { return await (await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'clubFeedbackRate', r, t, s, text: text || '' }) })).json(); } catch (e) { return { ok: false, error: 'אין חיבור — נסו שוב' }; }
+  }
+  function draw() {
+    box.innerHTML = '<h1>' + HEAD[s] + '</h1><p class="muted">הדירוג שלכם נשמר. אפשר לשנות:</p><div class="faces">' +
+      FACES.map(([v, f, l]) => '<button type="button" data-s="' + v + '"' + (v === s ? ' class="on"' : '') + '><span>' + f + '</span>' + l + '</button>').join('') + '</div>' +
+      '<textarea id="txt" maxlength="1000" placeholder="' + ASK[s] + '"></textarea><button type="button" class="send" id="go">שליחה</button><div class="msg" id="msg"></div>';
+    box.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', async () => {
+      const keep = document.getElementById('txt').value;
+      s = Number(b.dataset.s);
+      const res = await send('');
+      if (!res.ok) { document.getElementById('msg').className = 'msg bad'; document.getElementById('msg').textContent = res.error || 'שגיאה'; return; }
+      draw(); document.getElementById('txt').value = keep;
+    }));
+    document.getElementById('go').addEventListener('click', async () => {
+      const txt = document.getElementById('txt').value.trim(), m = document.getElementById('msg'), go = document.getElementById('go');
+      if (!txt) { m.className = 'msg bad'; m.textContent = 'כתבו כמה מילים, או פשוט סגרו את הדף — הדירוג כבר נשמר.'; return; }
+      go.disabled = true;
+      const res = await send(txt);
+      go.disabled = false;
+      if (!res.ok) { m.className = 'msg bad'; m.textContent = res.error || 'שגיאה'; return; }
+      box.innerHTML = '<div style="font-size:46px">💛</div><h1>קיבלנו, תודה!</h1><p class="muted">כל מילה מגיעה להנהלת החנות.</p>';
+    });
+  }
+  if (!r || !/^[0-9a-f]{24}$/.test(t) || ![1, 2, 3].includes(s)) { bad(); return; }
+  send('').then((res) => { if (!res.ok) bad(); else draw(); });
+})();
+</script>
+</body>
+</html>

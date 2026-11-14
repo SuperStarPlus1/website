@@ -431,12 +431,14 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
       (r.lines || []).filter((l) => l[0] !== '-99' && l[0] !== '5651356').map((l) => '<div class="ln"><span>' + esc(l[1]) + (l[2] !== 1 ? ' × ' + esc(l[2]) : '') + '</span><span class="num">' + esc(money(l[4])) + '</span></div>').join('') +
       (r.lines && r.lines.length ? '<button type="button" class="rcpdf" data-rk="' + esc(r.rkey) + '" data-at="' + esc(r.at.slice(0, 10)) + '">' + esc(t.rcPdf) + '</button><div class="msg err rcErr"></div>'
         : '<p class="muted" style="margin:6px 0 0;font-size:13px">' + esc(t.rcNone) + '</p>') +
+      (me.viewOnly ? '' : rateRow(r)) +
       '</details>').join('') +
       (me.viewOnly ? '' : '<label class="rsms"><input type="checkbox" id="rsms"' + (me.receiptSms !== false ? ' checked' : '') + '> <span>' + esc(t.rsms) + '</span></label>') + '</div>';
     if (p.top && p.top.length) h += '<div class="card"><h2>' + esc(t.topH) + '</h2><ul class="list">' + p.top.map((x) =>
       '<li><span>' + esc(x.name) + '</span><span class="n">' + esc(t.times(x.times)) + '</span></li>').join('') + '</ul></div>';
     h += '<div class="card"><h2>' + esc(t.searchH) + '</h2><form class="srch" id="srchF"><input class="tin" id="srchQ" maxlength="60" autocomplete="off" placeholder="' + esc(t.searchPh) + '">' +
       '<button class="btn" type="submit">' + esc(t.searchGo) + '</button></form><div id="srchR"></div></div>';
+    if (!me.viewOnly) h += contactCard();
     box.innerHTML = h;
   }
   /** "when did I buy X" (clubAppSearch): each hit with its copy */
@@ -513,6 +515,71 @@ window.APP_CONFIG = { API_URL: 'https://otjhhljgdevazanrretx.supabase.co/functio
     if (ev.target.type !== 'checkbox') return;
     const it = list.items.find((i) => i.id === ev.target.closest('li').dataset.id);
     if (it) { it.done = ev.target.checked; drawList(); saveList(); }
+  });
+
+  /* ---------- 💬 14/11/2026: how was it + a message to the store (clubAppFeedback — api/club-feedback.ts) ---------- */
+  const FBT = {
+    he: { q: 'איך הייתה הקנייה?', f: [[3, '😀', 'מעולה'], [2, '😐', 'בסדר'], [1, '😞', 'לא טוב']], thanks: 'תודה! הדירוג נשמר 💛', more: 'רוצים להוסיף משהו? (לא חובה)', send: 'שליחה',
+      ch: '💬 פנייה לחנות', cp: 'תלונה, הצעה, מחמאה או שאלה — זה מגיע ישר להנהלת החנות.', topics: [['complaint', 'תלונה'], ['suggestion', 'הצעה'], ['compliment', 'מחמאה'], ['question', 'שאלה']],
+      ph: 'כתבו כאן…', pickT: 'בחרו נושא', ok: 'קיבלנו, תודה! נחזור אליכם במידת הצורך.', sent: 'נשלח ✓' },
+    ar: { q: 'كيف كانت تجربة الشراء؟', f: [[3, '😀', 'ممتازة'], [2, '😐', 'جيدة'], [1, '😞', 'غير جيدة']], thanks: 'شكرًا! تم حفظ التقييم 💛', more: 'تريدون إضافة شيء؟ (اختياري)', send: 'إرسال',
+      ch: '💬 تواصل مع المتجر', cp: 'شكوى، اقتراح، مديح أو سؤال — يصل مباشرة إلى إدارة المتجر.', topics: [['complaint', 'شكوى'], ['suggestion', 'اقتراح'], ['compliment', 'مديح'], ['question', 'سؤال']],
+      ph: 'اكتبوا هنا…', pickT: 'اختاروا موضوعًا', ok: 'وصلتنا رسالتكم، شكرًا! سنعود إليكم عند الحاجة.', sent: 'أُرسل ✓' } };
+  document.head.insertAdjacentHTML('beforeend', '<style>' +
+    '.rate{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px}.rate .q{font-size:13.5px;font-weight:700;margin-bottom:4px}' +
+    '.rate .fc{display:inline-block;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:3px 9px;margin:0 0 0 6px;font:inherit;font-size:12.5px;cursor:pointer;color:#334155}' +
+    '.rate .fc b{font-size:22px;display:block;line-height:1.25;font-weight:400}.rate .fc.on{border-color:#0076DA;background:#e8f2fd;font-weight:700}' +
+    '.rate .more{display:flex;gap:6px;margin-top:6px}.rate .more input{flex:1;min-width:0;border:1.5px solid #cbd5e1;border-radius:10px;padding:7px 9px;font:inherit;font-size:14px}' +
+    '.fbt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.fbt button{border:1.5px solid #cbd5e1;background:#fff;border-radius:99px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer}' +
+    '.fbt button.on{background:#0076DA;border-color:#0076DA;color:#fff}#fbTxt{width:100%;box-sizing:border-box;min-height:90px;border:1.5px solid #cbd5e1;border-radius:12px;padding:10px;font:inherit;resize:vertical}' +
+    '</style>');
+  const fbt = () => FBT[ui] || FBT.he;
+  function rateRow(r) {
+    const t = fbt();
+    return '<div class="rate" data-rk="' + esc(r.rkey) + '"><div class="q">' + esc(t.q) + '</div>' +
+      t.f.map(([v, f, l]) => '<button type="button" class="fc' + (r.rating === v ? ' on' : '') + '" data-v="' + v + '"><b>' + f + '</b>' + esc(l) + '</button>').join('') +
+      '<div class="more"' + (r.rating ? '' : ' hidden') + '><input maxlength="300" placeholder="' + esc(t.more) + '"><button type="button" class="btn rsend">' + esc(t.send) + '</button></div><div class="msg ok rmsg"></div></div>';
+  }
+  function contactCard() {
+    const t = fbt();
+    return '<div class="card" id="fbCard"><h2>' + esc(t.ch) + '</h2><p class="muted" style="margin:0">' + esc(t.cp) + '</p><div class="fbt">' +
+      t.topics.map(([k, l]) => '<button type="button" data-tp="' + k + '">' + esc(l) + '</button>').join('') + '</div>' +
+      '<textarea id="fbTxt" maxlength="1500" placeholder="' + esc(t.ph) + '"></textarea><button type="button" class="btn" id="fbGo" style="margin-top:8px">' + esc(t.send) + '</button><p class="msg" id="fbMsg"></p></div>';
+  }
+  async function rate(row, v, text) {
+    const m = row.querySelector('.rmsg');
+    const r = await api({ action: 'clubAppFeedback', s: store.get('ss_club_s'), uiLang: ui, kind: 'rating', rkey: row.dataset.rk, rating: v, text: text || '' });
+    if (!r.ok) { m.className = 'msg err rmsg'; m.textContent = r.error || I[ui].net; return false; }
+    m.className = 'msg ok rmsg'; m.textContent = text ? fbt().sent : fbt().thanks;
+    row.querySelectorAll('.fc').forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === v));
+    row.querySelector('.more').hidden = false;
+    const p = (me.purchases && me.purchases.recent || []).find((x) => x.rkey === row.dataset.rk); if (p) p.rating = v;
+    return true;
+  }
+  $('purch').addEventListener('click', async (ev) => {
+    const fc = ev.target.closest('.rate .fc');
+    if (fc) { await rate(fc.closest('.rate'), Number(fc.dataset.v)); return; }
+    const rs = ev.target.closest('.rate .rsend');
+    if (rs) {
+      const row = rs.closest('.rate'), inp = row.querySelector('.more input'), on = row.querySelector('.fc.on');
+      if (!inp.value.trim() || !on) return;
+      rs.disabled = true;
+      if (await rate(row, Number(on.dataset.v), inp.value.trim())) inp.value = '';
+      rs.disabled = false;
+      return;
+    }
+    const tp = ev.target.closest('#fbCard [data-tp]');
+    if (tp) { document.querySelectorAll('#fbCard [data-tp]').forEach((b) => b.classList.toggle('on', b === tp)); return; }
+    if (ev.target.id === 'fbGo') {
+      const t = fbt(), m = $('fbMsg'), on = document.querySelector('#fbCard [data-tp].on'), txt = $('fbTxt').value.trim();
+      if (!on) { m.className = 'msg err'; m.textContent = t.pickT; return; }
+      ev.target.disabled = true;
+      const r = await api({ action: 'clubAppFeedback', s: store.get('ss_club_s'), uiLang: ui, kind: 'message', topic: on.dataset.tp, text: txt });
+      ev.target.disabled = false;
+      if (!r.ok) { m.className = 'msg err'; m.textContent = r.error || I[ui].net; return; }
+      $('fbTxt').value = ''; on.classList.remove('on');
+      m.className = 'msg ok'; m.textContent = t.ok;
+    }
   });
 
   /** the copy of a receipt (a PDF from the server) — saved / opened by the phone */

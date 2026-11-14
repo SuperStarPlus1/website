@@ -9,6 +9,7 @@
 //   api biAssortment (the last whole month) + assortment.js's compute: the MQI and the best sellers out of stock
 //   the site's /data/promos-he.json (Last-Modified): the promotions on the site
 //   🗂 the branch file (14/11/2026): deadlines late / within 30 days, faults open (biControl's bfDue / bfCalls)
+//   💬 the customers' feedback (14/11/2026): messages to handle (✓ טופל), the ratings of 30 days (biControl's feedback)
 // Three kinds: 🔴 to handle now · 🟠 to check · 🔵 good to know (not in the number) · ✓ all right (one line, at the end).
 // Each one opens the screen that handles it (the dashboard, the optimizer, the attendance report, the tasks) or a list.
 (function () {
@@ -55,6 +56,8 @@
     '.cr-note{color:#64748b;font-size:12.5px;margin-top:8px;line-height:1.5}' +
     '.cr-ok{background:#fff;border-radius:14px;padding:12px 14px;color:#166534;font-size:13.5px;line-height:1.9;box-shadow:0 2px 10px rgba(15,23,42,.06)}' +
     '.cr-ok b{font-size:14.5px}' +
+    '.cr-fb{border-bottom:1px solid #f1f5f9;padding:8px 2px;font-size:13.5px}.cr-fb small{color:#94a3b8}.cr-fb .t{margin:4px 0 6px;white-space:pre-wrap;color:#0f172a}' +
+    '.cr-fb button{border:1.5px solid #16a34a;color:#166534;background:#fff;border-radius:9px;padding:4px 10px;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}' +
     '.cr-load{color:#64748b;text-align:center;padding:40px 0}' +
     '#crMgrBtn .badge:empty{display:none}#crMgrBtn .badge{background:#dc2626;color:#fff;border-radius:99px;padding:0 7px;font-size:11px;margin-inline-start:6px}' +
     '@media (max-width:520px){.cr-h{gap:9px;padding:11px 11px}.cr-ic{font-size:21px;width:26px}.cr-v{font-size:16px}.cr-tx b{font-size:14px}}' +
@@ -177,6 +180,24 @@
         rows: bc.map((x) => [(x.urgent ? '🚨 ' : '') + x.title, days(x.opened_at) ? 'לפני ' + days(x.opened_at) + ' ימים' : 'היום', x.status === 'wait' ? 'ממתינה לטכנאי' : 'פתוחה']),
         acts: [['🗂 לתיק הסניף', () => openBf(), true]] });
       else add({ key: 'bfCalls', level: 'ok', okText: '🔧 אין תקלות פתוחות' });
+      // 💬 the customers' feedback (club-feedback.ts): the messages to handle, the ratings of the last 30 days
+      const fb = c.feedback;
+      if (fb) {
+        const op = fb.open || [];
+        if (op.length) add({ key: 'fbOpen', level: 'amber', ic: '💬', title: op.length === 1 ? 'פנייה אחת מלקוח מחכה' : op.length + ' פניות מלקוחות מחכות', value: op.map((x) => x.topic).slice(0, 3).join(', '),
+          sub: 'מהאזור האישי במועדון. אחרי שטיפלתם — "✓ טופל".', html: op.map((x) => '<div class="cr-fb" data-fb="' + x.id + '"><div><b>' + e(x.topic) + '</b> · ' + e(x.name || 'לקוח') +
+            (x.phone ? ' · <a href="tel:' + e(x.phone) + '" dir="ltr">' + e(x.phone) + '</a>' : '') + ' <small>' + dm(x.at) + '</small></div><div class="t">' + e(x.text) + '</div>' +
+            '<button type="button" data-done="' + x.id + '">✓ טופל</button></div>').join(''), bind: bindFb });
+        const g = fb.ratings || { good: 0, ok: 0, bad: 0 }, n = g.good + g.ok + g.bad, pc = (v) => n ? Math.round(v / n * 100) + '%' : '';
+        if (n) {
+          const line = '😀 ' + pc(g.good) + ' · 😐 ' + pc(g.ok) + ' · 😞 ' + pc(g.bad);
+          const w = fb.words || [];
+          if (w.length || (n >= 10 && g.bad / n >= 0.15)) add({ key: 'fbRate', level: n >= 10 && g.bad / n >= 0.15 ? 'amber' : 'info', ic: '⭐', title: 'דירוגי הלקוחות — ' + n + ' ב-30 יום', value: line,
+            sub: 'מהקבלות במייל ומהאזור האישי. למטה — מה כתבו לקוחות שלא היו מרוצים לגמרי.', head: ['', 'מה כתבו', 'לקוח', 'מתי'],
+            rows: w.map((x) => [x.face, x.text, (x.name || '') + (x.phone ? ' ' + x.phone : ''), dm(x.at)]) });
+          else add({ key: 'fbRate', level: 'ok', okText: '⭐ דירוגי הלקוחות (30 יום): ' + line + ' — ' + n + ' דירוגים' });
+        } else add({ key: 'fbRate', level: 'ok', okText: '⭐ עוד אין דירוגים מלקוחות — הם יגיעו מהקבלות במייל ומהאזור האישי' });
+      }
       // good to know — not in the number
       const ls = c.loss || [];
       if (ls.length) add({ key: 'loss', level: 'info', ic: '💸', title: ls.length + ' מוצרים נמכרו מתחת לעלות', value: nis(ls.reduce((s, x) => s + Number(x.loss || 0), 0)),
@@ -242,9 +263,10 @@
     if (!n('red') && !n('amber')) h += '<div class="cr-ok" style="margin-bottom:10px;color:#0f172a"><b>✓ הכול תקין.</b> אין משהו שדורש טיפול עכשיו.</div>';
     todo.forEach((x, i) => {
       h += '<div class="cr-card ' + x.level + (openKey === x.key ? ' open' : '') + '" data-k="' + x.key + '"><div class="cr-h" role="button" tabindex="0"><span class="cr-ic">' + x.ic + '</span>' +
-        '<span class="cr-tx"><b>' + e(x.title) + '</b>' + (x.sub && !(x.rows || x.acts) ? '<small>' + e(x.sub) + '</small>' : '') + '</span>' +
-        '<span class="cr-v">' + e(x.value) + '</span>' + (x.rows || x.acts ? '<span class="cr-ar">◀</span>' : '') + '</div>' +
-        (x.rows || x.acts ? '<div class="cr-d">' + (x.sub ? '<div class="cr-note" style="margin:0 0 8px">' + e(x.sub) + '</div>' : '') +
+        '<span class="cr-tx"><b>' + e(x.title) + '</b>' + (x.sub && !(x.rows || x.acts || x.html) ? '<small>' + e(x.sub) + '</small>' : '') + '</span>' +
+        '<span class="cr-v">' + e(x.value) + '</span>' + (x.rows || x.acts || x.html ? '<span class="cr-ar">◀</span>' : '') + '</div>' +
+        (x.rows || x.acts || x.html ? '<div class="cr-d">' + (x.sub ? '<div class="cr-note" style="margin:0 0 8px">' + e(x.sub) + '</div>' : '') +
+          (x.html ? '<div class="cr-list">' + x.html + '</div>' : '') +
           (x.rows ? '<div class="cr-list"><table><tr>' + x.head.map((t, j) => '<th' + (j ? ' class="n"' : '') + '>' + e(t) + '</th>').join('') + '</tr>' +
             x.rows.map((r) => '<tr>' + r.map((t, j) => '<td' + (j ? ' class="n"' : '') + '>' + e(t) + '</td>').join('') + '</tr>').join('') + '</table></div>' : '') +
           (x.acts ? '<div class="cr-acts">' + x.acts.map((a, j) => '<button data-a="' + i + ':' + j + '"' + (a[2] ? ' class="pri"' : '') + '>' + e(a[0]) + '</button>').join('') + '</div>' : '') +
@@ -261,6 +283,20 @@
       hd.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); t(); } });
     });
     body.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => { const [i, j] = b.dataset.a.split(':').map(Number); todo[i].acts[j][1](); }));
+    todo.forEach((x) => { if (x.bind) x.bind(body.querySelector('.cr-card[data-k="' + x.key + '"]')); });
+  }
+
+  // 💬 a customer's message handled (biFeedbackHandle)
+  function bindFb(card) {
+    if (!card) return;
+    card.querySelectorAll('[data-done]').forEach((b) => b.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      b.disabled = true;
+      const r = await apiPost({ action: 'biFeedbackHandle', ...mAuth(), id: Number(b.dataset.done) }).catch(() => null);
+      if (!r || !r.ok) { b.disabled = false; b.textContent = '✕ לא נשמר — שוב'; return; }
+      const row = b.closest('.cr-fb'); row.style.opacity = '.45'; b.textContent = '✓ סומן';
+      if (C && C.feedback) C.feedback.open = (C.feedback.open || []).filter((x) => x.id !== Number(b.dataset.done));
+    }));
   }
 
   /* ================= the club list → Excel ================= */
