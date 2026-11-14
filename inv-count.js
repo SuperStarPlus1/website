@@ -8,10 +8,13 @@
 // 15/11 (the owner): typing the last 6 digits (4–7) finds the item — several → a list to choose. An item NOT in the
 // catalog needs its full barcode, and a typed one is checked: 8 / 12 / 13 / 14 digits — the check digit (GS1); another
 // length — typed a second time. A scanned one (the camera, or a scanner — its keys come < 35 ms apart) is trusted.
+// 15/11 (the owner): EVERY COUNT IS INDEPENDENT — one person's, its own unique date and time; nobody joins another's count,
+// a finished count is never reopened; the managers tick any counts and the merge makes the summaries (per count + all).
+// A quantity above 5,000 is refused until it is typed a second time (a pallet: 182 cartons × 24 = 4,368).
 //   the list   the open counts (+ ספירה חדשה), the closed ones of 60 days; tick several → one merge
 //   counting   scan (the phone's camera, or a scanner / typing + Enter) → a known item shows its name, how many times and
 //              what was already counted here; an unknown one: "פריט לא קיים בקטלוג" + its name in the notes (required)
-//              → the quantity → ✓. Several people count into the same count at once; "where" (a shelf / an aisle) is
+//              → the quantity → ✓. Each person counts into his own count; "where" (a shelf / an aisle) is
 //              optional. Each line goes to the server at once; without a connection it waits on the phone and is sent
 //              later (the same line is never doubled — clientId). My lines: fix the quantity / the note, delete.
 //   the merge  one row per barcode over the chosen counts: the quantity, how many times, when; the unknown ones
@@ -33,6 +36,10 @@
   const fmt = (v) => (v == null || v === '' ? '—' : Number(v).toLocaleString('he-IL', { maximumFractionDigits: 3 }));
   const dm = (s) => (s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '');
   const hm = (s) => { const d = new Date(s); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const QTY_MAX = 5000;
+  const when = (s) => (s ? dm(s) + '/' + new Date(s).getFullYear() + ' ' + hm(s) : '');
+  const label = (c) => (c.title && c.title !== 'ספירה' ? c.title : '');
+  const cname = (c) => '👤 ' + (c.opened_by || '') + ' · ' + when(c.opened_at);
   const today = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
   const XS_URL = '/vendor/xlsx-js-style-1.2.0.min.js';
   const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
@@ -131,41 +138,45 @@
     if (view !== 'list') return;
     if (!r.ok) { $('ivBody').innerHTML = '<div class="iv-card">' + e(r.error) + '<div class="iv-acts"><button class="iv-btn" id="ivRe">↻ שוב</button></div></div>'; $('ivRe').onclick = showList; return; }
     L = r;
-    const open_ = r.counts.filter((c) => c.status === 'open'), done = r.mgr ? r.counts.filter((c) => c.status !== 'open') : [];
-    let h = pendBar() + '<div class="iv-card" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)"><h3>➕ ספירה חדשה</h3><div class="iv-mut">כמה אנשים יכולים לספור לתוך אותה ספירה בבת אחת. בסוף — איחוד וייצוא לאקסל לקומקס.</div>' +
-      '<div class="iv-row" style="margin-top:10px"><input class="iv-in" id="ivNewT" style="font-size:15px" value="ספירת מלאי ' + today() + '"><button class="iv-btn iv-pri" id="ivNew">פתיחה</button></div></div>';
-    if (open_.length) h += '<div class="iv-h">🟢 ספירות פתוחות</div>' + open_.map(card).join('');
-    if (done.length) h += '<div class="iv-h">✓ ספירות שנסגרו (60 יום) — סמנו כמה כדי לאחד אותן</div>' + done.map(card).join('') +
-      '<div class="iv-acts"><button class="iv-btn iv-pri" id="ivMergeSel" disabled>📊 איחוד הספירות שסומנו</button></div>';
-    if (!open_.length && !done.length) h += '<div class="iv-mut" style="text-align:center;padding:20px">' + (r.mgr ? 'עוד אין ספירות.' : 'אין עכשיו ספירה פתוחה — אפשר לפתוח אחת למעלה.') + '</div>';
+    const me = r.me, mineOpen = r.counts.filter((c) => c.status === 'open' && c.opened_by === me);
+    const others = r.counts.filter((c) => !(c.status === 'open' && c.opened_by === me));
+    let h = pendBar() + '<div class="iv-card" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)"><h3>➕ ספירה חדשה</h3><div class="iv-mut">כל ספירה עצמאית — שלכם בלבד, עם תאריך ושעה משלה. ' +
+      (r.mgr ? 'בסוף מסמנים את הספירות ומאחדים אותן לסיכום ולאקסל לקומקס.' : 'כשמסיימים — "✓ סיום הספירה"; את האיחוד עושה המנהל.') + '</div>' +
+      '<div class="iv-row" style="margin-top:10px"><input class="iv-in" id="ivNewT" style="font-size:15px" placeholder="מה סופרים / איפה (לא חובה)"><button class="iv-btn iv-pri" id="ivNew">פתיחה</button></div></div>';
+    if (mineOpen.length) h += '<div class="iv-h">🟢 הספירה הפתוחה שלי</div>' + mineOpen.map(card).join('');
+    if (others.length) h += '<div class="iv-h">' + (r.mgr ? '📋 כל הספירות (60 יום) — סמנו כדי לאחד' : '✓ הספירות שלי שהסתיימו') + '</div>' + others.map(card).join('') +
+      (r.mgr ? '<div class="iv-acts" style="position:sticky;bottom:10px"><button class="iv-btn iv-pri" id="ivMergeSel" disabled>📊 סמנו ספירות לאיחוד</button></div>' : '');
+    if (!mineOpen.length && !others.length) h += '<div class="iv-mut" style="text-align:center;padding:20px">עוד אין ספירות — פותחים אחת למעלה.</div>';
     $('ivBody').innerHTML = h;
     $('ivNew').onclick = async () => {
       const b = $('ivNew'); b.disabled = true;
-      const x = await api('invOpen', { title: $('ivNewT').value });
+      const x = await api('invOpen', { title: $('ivNewT').value.trim() });
       b.disabled = false;
       if (!x.ok) return say(x.error, 'err');
       startCount(x.count);
     };
     $('ivBody').querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => startCount(r.counts.find((c) => String(c.id) === b.dataset.go))));
     $('ivBody').querySelectorAll('[data-mg]').forEach((b) => b.addEventListener('click', () => showMerge([Number(b.dataset.mg)])));
-    $('ivBody').querySelectorAll('[data-re]').forEach((b) => b.addEventListener('click', async () => { const x = await api('invClose', { countId: Number(b.dataset.re), reopen: true }); if (!x.ok) say(x.error, 'err'); showList(); }));
     $('ivBody').querySelectorAll('[data-arc]').forEach((b) => b.addEventListener('click', async () => {
       if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'בטוח? לחצו שוב'; return; }
       const x = await api('invArchive', { countId: Number(b.dataset.arc) }); if (!x.ok) say(x.error, 'err'); showList();
     }));
     const sel = () => [...$('ivBody').querySelectorAll('.iv-sel:checked')].map((x) => Number(x.value));
-    $('ivBody').querySelectorAll('.iv-sel').forEach((c) => c.addEventListener('change', () => { $('ivMergeSel').disabled = !sel().length; $('ivMergeSel').textContent = '📊 איחוד ' + (sel().length > 1 ? sel().length + ' הספירות שסומנו' : 'הספירה שסומנה'); }));
+    $('ivBody').querySelectorAll('.iv-sel').forEach((c) => c.addEventListener('change', () => {
+      const n = sel().length; $('ivMergeSel').disabled = !n;
+      $('ivMergeSel').textContent = n ? '📊 איחוד ' + (n > 1 ? n + ' ספירות' : 'הספירה שסומנה') : '📊 סמנו ספירות לאיחוד';
+    }));
     if ($('ivMergeSel')) $('ivMergeSel').onclick = () => showMerge(sel());
   }
   function card(c) {
-    const o = c.status === 'open';
-    return '<div class="iv-card"><div style="display:flex;gap:10px;align-items:flex-start">' + (o ? '' : '<input type="checkbox" class="iv-sel" value="' + c.id + '">') +
-      '<div style="flex:1;min-width:0"><h3>' + e(c.title) + (o ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">פתוחה</span>' : '<span class="iv-badge" style="background:#f1f5f9;color:#475569">נסגרה ' + dm(c.closed_at) + '</span>') +
+    const o = c.status === 'open', own = c.opened_by === L.me;
+    return '<div class="iv-card"><div style="display:flex;gap:10px;align-items:flex-start">' + (L.mgr ? '<input type="checkbox" class="iv-sel" value="' + c.id + '">' : '') +
+      '<div style="flex:1;min-width:0"><h3>' + e(cname(c)) + (o ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">' + (own ? 'פתוחה' : 'סופרים עכשיו') + '</span>' : '<span class="iv-badge" style="background:#f1f5f9;color:#475569">הסתיימה ' + hm(c.closed_at) + '</span>') +
       (c.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(c.exported_at) + '</span>' : '') + '</h3>' +
-      '<div class="iv-mut">נפתחה ' + dm(c.opened_at) + ' ' + hm(c.opened_at) + ' · ' + e(c.opened_by || '') + (c.last_at ? ' · שורה אחרונה ' + hm(c.last_at) : '') + '</div>' +
-      '<div class="iv-pills"><span>' + fmt(c.items) + ' פריטים</span><span>' + fmt(c.units) + ' יחידות</span><span>' + fmt(c.people) + ' סופרים</span>' + (c.unknown ? '<span class="w">⚠ ' + c.unknown + ' לא בקטלוג</span>' : '') + '</div>' +
-      '<div class="iv-acts">' + (o ? '<button class="iv-btn iv-pri" data-go="' + c.id + '">▶ לספור</button>' : '') + (L.mgr ? '<button class="iv-btn" data-mg="' + c.id + '">📊 איחוד וייצוא</button>' : '') +
-      (!o && L.mgr ? '<button class="iv-btn" data-re="' + c.id + '">🔓 לפתוח שוב</button>' : '') +
+      (label(c) ? '<div class="iv-mut" style="font-weight:700;color:#334155">' + e(label(c)) + '</div>' : '') +
+      '<div class="iv-mut">' + (c.last_at ? 'שורה אחרונה ' + hm(c.last_at) : 'עוד אין שורות') + (!o && c.closed_at ? ' · הסתיימה ' + when(c.closed_at) : '') + '</div>' +
+      '<div class="iv-pills"><span>' + fmt(c.lines) + ' סריקות</span><span>' + fmt(c.items) + ' פריטים</span><span>' + fmt(c.units) + ' יחידות</span>' + (c.unknown ? '<span class="w">⚠ ' + c.unknown + ' לא בקטלוג</span>' : '') + '</div>' +
+      '<div class="iv-acts">' + (o && own ? '<button class="iv-btn iv-pri" data-go="' + c.id + '">▶ להמשיך לספור</button>' : '') + (L.mgr ? '<button class="iv-btn" data-mg="' + c.id + '">📊 סיכום</button>' : '') +
       (L.admin ? '<button class="iv-btn" data-arc="' + c.id + '" style="margin-inline-start:auto;color:#64748b">🗄 לארכיון</button>' : '') + '</div></div></div></div>';
   }
   function pendBar() {
@@ -177,7 +188,7 @@
   /* ================= counting ================= */
   async function startCount(c) {
     if (!c) return;
-    view = 'count'; cur = c; item = null; head('📦 ' + c.title, true);
+    view = 'count'; cur = c; item = null; head('📦 ' + (label(c) || 'ספירה') + ' · ' + when(c.opened_at), true);
     $('ivBody').innerHTML = '<div id="ivPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 סופר/ת: <span style="color:#0f172a">' + e(myName()) + '</span> — השם נרשם על כל שורה</div><div class="iv-scan">' +
       '<div id="ivCamBox"></div>' +
       '<div class="iv-row"><input class="iv-in" id="ivBc" inputmode="numeric" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות + Enter" dir="ltr" style="text-align:right">' +
@@ -185,7 +196,8 @@
       '<div class="iv-row" style="margin-top:8px;align-items:center"><span class="iv-mut" style="white-space:nowrap">📍 איפה:</span><input class="iv-in" id="ivArea" style="font-size:14px;padding:8px 10px" placeholder="למשל מדף 4, מחסן (לא חובה)" value="' + e(store.get('invArea') || '') + '"></div>' +
       '<div id="ivItem"></div></div>' +
       '<div class="iv-h" id="ivMineH">הספירה שלי</div><div class="iv-card" id="ivMine" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
-      (isMgr() ? '<div class="iv-acts"><button class="iv-btn" id="ivToMerge">📊 איחוד וייצוא</button></div>' : '');
+      '<div class="iv-acts"><button class="iv-btn iv-ok" id="ivFinish">✓ סיום הספירה</button>' + (isMgr() ? '<button class="iv-btn" id="ivToMerge">📊 סיכום</button>' : '') + '</div>' +
+      '<div class="iv-mut" style="margin:6px 4px">אחרי הסיום אי אפשר להוסיף לספירה הזו. לספור שוב — פותחים ספירה חדשה.</div>';
     $('ivArea').addEventListener('change', () => store.set('invArea', $('ivArea').value.trim()));
     $('ivBc').addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
@@ -200,6 +212,13 @@
     $('ivBc').addEventListener('paste', () => { kt = []; });
     $('ivCam').onclick = () => (camOn ? camStop() : camStart());
     if ($('ivToMerge')) $('ivToMerge').onclick = () => { camStop(); showMerge([cur.id]); };
+    $('ivFinish').onclick = async () => {
+      const b = $('ivFinish');
+      if (pend.some((p) => p.countId === cur.id)) return say('יש שורות שעוד לא נשלחו — חכו לחיבור ואז סיימו', 'err');
+      if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'לסיים? לחצו שוב'; setTimeout(() => { if (b.isConnected) { b.classList.remove('sure'); b.textContent = '✓ סיום הספירה'; } }, 4000); return; }
+      const x = await api('invClose', { countId: cur.id }); if (!x.ok) return say(x.error, 'err');
+      camStop(); say('✓ הספירה הסתיימה'); showList();
+    };
     if (fine()) $('ivBc').focus();
     loadMine();
   }
@@ -239,9 +258,14 @@
     const [qi, ni] = row.querySelectorAll('input'); qi.focus(); qi.select();
     row.querySelector('.sv').onclick = async () => {
       const qv = Number(String(qi.value).replace(',', '.'));
-      if (!Number.isFinite(qv) || qv < 0) return say('כמות לא תקינה', 'err');
-      if (p) { p.qty = qv; p.note = ni.value.trim(); p.err = ''; savePend(); drawMine(); flush(); return; }
-      const r = await api('invEdit', { id: Number(id), qty: qv, note: ni.value.trim() }); if (!r.ok) return say(r.error, 'err');
+      if (!Number.isFinite(qv) || qv < 0 || qv > 1e6) return say('כמות לא תקינה', 'err');
+      if (qv > QTY_MAX) {
+        let q2 = row.querySelector('.q2');
+        if (!q2) { qi.insertAdjacentHTML('afterend', '<input class="iv-in q2" style="width:90px;font-size:15px;padding:7px;border-color:#f59e0b" inputmode="decimal" placeholder="שוב">'); q2 = row.querySelector('.q2'); q2.focus(); return say('כמות מעל 5,000 — הקלידו אותה שוב לאישור', 'err'); }
+        if (Number(String(q2.value).replace(',', '.')) !== qv) { q2.focus(); return say('הכמות שהוקלדה שוב לא זהה', 'err'); }
+      }
+      if (p) { p.qty = qv; p.note = ni.value.trim(); p.err = ''; p.bigOk = qv > QTY_MAX; savePend(); drawMine(); flush(); return; }
+      const r = await api('invEdit', { id: Number(id), qty: qv, note: ni.value.trim(), bigOk: qv > QTY_MAX }); if (!r.ok) return say(r.error, 'err');
       l.qty = qv; l.note = ni.value.trim(); drawMine();
     };
   }
@@ -323,11 +347,20 @@
     if (!item) return;
     const qv = Number(String($('ivQty').value).replace(',', '.').trim()), note = $('ivNote').value.trim();
     if ($('ivQty').value.trim() === '' || !Number.isFinite(qv) || qv < 0) { say('הקלידו כמות', 'err'); $('ivQty').focus(); return; }
+    if (qv > 1e6) { say('כמות לא תקינה', 'err'); $('ivQty').focus(); return; }
+    if (qv > QTY_MAX) {
+      if (!$('ivQty2')) {
+        $('ivQty').insertAdjacentHTML('afterend', '<div class="iv-warn" style="margin-top:8px">⚠ כמות מעל 5,000 — בדקו את המספר. אם הוא נכון, הקלידו אותו שוב:</div><input class="iv-in iv-qty" id="ivQty2" inputmode="decimal" autocomplete="off" placeholder="הכמות שוב">');
+        $('ivQty2').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); save(); } });
+        beep(220, 0.18); say('כמות מעל 5,000 — בדקו והקלידו שוב לאישור', 'err'); $('ivQty2').focus(); return;
+      }
+      if (Number(String($('ivQty2').value).replace(',', '.').trim()) !== qv) { say('הכמות שהוקלדה שוב לא זהה — בדקו את המספר', 'err'); $('ivQty2').focus(); return; }
+    }
     if (item.needConfirm && ($('ivConf').value || '').replace(/\s+/g, '') !== item.barcode) { say('הברקוד שהוקלד שוב לא זהה — בדקו את המספר', 'err'); $('ivConf').focus(); return; }
     if (item.known === false && !note) { say('פריט לא קיים בקטלוג — כתבו בהערות מה המוצר', 'err'); $('ivNote').focus(); return; }
     const area = $('ivArea').value.trim(); store.set('invArea', area);
     pend.push({ clientId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), countId: cur.id, by: myName(), at: new Date().toISOString(), barcode: item.barcode, qty: qv, note, area,
-      name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known, src: item.src, confirmed: !!item.needConfirm });
+      name: item.known ? item.name : null, known: item.offline ? undefined : !!item.known, src: item.src, confirmed: !!item.needConfirm, bigOk: qv > QTY_MAX });
     savePend();
     say('✓ נשמר: ' + (item.name || item.barcode) + ' × ' + fmt(qv));
     if (navigator.vibrate) navigator.vibrate(40);
@@ -408,7 +441,12 @@
     const R = merge.rows, unk = R.filter((x) => !x.known), dif = R.filter((x) => x.lines > 1);
     const units = R.reduce((s, x) => s + x.qty, 0), people = new Set(R.flatMap((x) => String(x.counters || '').split(', ').filter(Boolean))).size;
     const one = merge.counts.length === 1 ? merge.counts[0] : null;
-    let h = '<div class="iv-card" style="padding:12px 16px"><b>' + merge.counts.map((c) => e(c.title)).join(' + ') + '</b>' + (one && one.status === 'open' ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">עדיין פתוחה</span>' : '') + '</div>' +
+    const openN = merge.counts.filter((c) => c.status === 'open').length;
+    let h = '<div class="iv-card" style="padding:12px 16px"><h3>' + (merge.counts.length === 1 ? 'סיכום ספירה' : 'סיכום ' + merge.counts.length + ' ספירות') + '</h3>' +
+      (openN ? '<div class="iv-warn" style="font-size:13px">' + (openN === 1 && one ? 'הספירה עדיין פתוחה — ' : openN + ' מהספירות עדיין פתוחות — ') + 'מה שייספר מעכשיו לא נכלל בסיכום הזה.</div>' : '') +
+      '<div class="iv-wrap" style="max-height:220px"><table class="iv-tbl"><thead><tr><th>ספירה</th><th class="n">סריקות</th><th class="n">פריטים</th><th class="n">יחידות</th></tr></thead><tbody>' +
+      merge.counts.map((c) => '<tr><td><b>' + e(cname(c)) + '</b>' + (label(c) ? '<small class="iv-mut"> · ' + e(label(c)) + '</small>' : '') + '<small class="iv-mut"> · ' + (c.status === 'open' ? 'פתוחה' : 'הסתיימה ' + hm(c.closed_at)) + '</small></td>' +
+        '<td class="n">' + fmt(c.lines) + '</td><td class="n">' + fmt(c.items) + '</td><td class="n">' + fmt(c.units) + '</td></tr>').join('') + '</tbody></table></div></div>' +
       '<div class="iv-kpis"><div class="iv-kpi"><b>' + fmt(R.length) + '</b><span>פריטים</span></div><div class="iv-kpi"><b>' + fmt(units) + '</b><span>יחידות</span></div>' +
       '<div class="iv-kpi"><b style="color:' + (unk.length ? '#c2410c' : '#16a34a') + '">' + unk.length + '</b><span>לא בקטלוג</span></div><div class="iv-kpi"><b>' + people + '</b><span>סופרים</span></div></div>' +
       '<div class="iv-card"><h3>⬇ ייצוא</h3><div class="iv-mut">הקובץ לקומקס: עמודת ברקוד ועמודת כמות — כמות אחת לכל ברקוד (סכום כל הסופרים).' +
@@ -464,9 +502,14 @@
         [txt(x.barcode), x.name || '', nm(x.qty), nm(x.lines), dt(x.first_at), dt(x.last_at), x.areas || '', x.counters || '', x.notes || '']));
       const ws = X.utils.aoa_to_sheet(a); ws['!cols'] = [{ wch: 16 }, { wch: 34 }, { wch: 9 }, { wch: 13 }, { wch: 17 }, { wch: 17 }, { wch: 16 }, { wch: 18 }, { wch: 28 }];
       ws['!views'] = [{ RTL: true }]; X.utils.book_append_sheet(wb, ws, 'סיכום');
-      const l = [hd(['תאריך ושעה', 'ברקוד', 'שם', 'כמות', 'מי ספר', 'איפה', 'הערה'])].concat(all.lines.map((x) =>
-        [dt(x.at), txt(x.barcode), names[x.barcode] || '', nm(x.qty), x.counted_by || '', x.area || '', x.note || '']));
-      const wl = X.utils.aoa_to_sheet(l); wl['!cols'] = [{ wch: 17 }, { wch: 16 }, { wch: 34 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 28 }]; wl['!views'] = [{ RTL: true }];
+      const cn = {}; merge.counts.forEach((c) => { cn[c.id] = (c.opened_by || '') + ' ' + dt(c.opened_at) + (label(c) ? ' (' + label(c) + ')' : ''); });
+      const sc = [hd(['ספירה — מי ומתי נפתחה', 'מה / איפה', 'הסתיימה', 'סריקות', 'פריטים', 'יחידות', 'לא בקטלוג'])].concat(merge.counts.map((c) =>
+        [(c.opened_by || '') + ' ' + dt(c.opened_at), label(c), c.status === 'open' ? 'פתוחה' : dt(c.closed_at), nm(c.lines), nm(c.items), nm(c.units), nm(c.unknown)]));
+      const wsc = X.utils.aoa_to_sheet(sc); wsc['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 17 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 11 }]; wsc['!views'] = [{ RTL: true }];
+      X.utils.book_append_sheet(wb, wsc, 'הספירות');
+      const l = [hd(['תאריך ושעה', 'ספירה', 'ברקוד', 'שם', 'כמות', 'מי ספר', 'איפה', 'הערה'])].concat(all.lines.map((x) =>
+        [dt(x.at), cn[x.count_id] || '', txt(x.barcode), names[x.barcode] || '', nm(x.qty), x.counted_by || '', x.area || '', x.note || '']));
+      const wl = X.utils.aoa_to_sheet(l); wl['!cols'] = [{ wch: 17 }, { wch: 30 }, { wch: 16 }, { wch: 34 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 28 }]; wl['!views'] = [{ RTL: true }];
       X.utils.book_append_sheet(wb, wl, 'כל הספירות');
       const u = [hd(['ברקוד', 'מה המוצר (הערות)', 'כמות', 'כמה פעמים נספר', 'ספירה אחרונה', 'איפה', 'מי ספר'])].concat(R.filter((x) => !x.known).map((x) => [txt(x.barcode), x.notes || '', nm(x.qty), nm(x.lines), dt(x.last_at), x.areas || '', x.counters || '']));
       const wu = X.utils.aoa_to_sheet(u); wu['!cols'] = [{ wch: 16 }, { wch: 40 }, { wch: 9 }, { wch: 13 }, { wch: 17 }, { wch: 16 }, { wch: 18 }]; wu['!views'] = [{ RTL: true }];
