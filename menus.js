@@ -5,7 +5,7 @@
 //                        ▸ נוכחות: בזמן אמת · דוח חודשי · אישורי שעות · לא התייצבו · שעון נוכחות · מיקום לדיווח
 //                        ▸ סידור: שיבוץ אוטומטי · העתק משבוע קודם · פרסום · איפוס · הגדרת משמרות · משמרות לפי מחלקה
 //                        ▸ בקשות ואישורים: בקשות הצוות · חופשה · אילוצים · החלפה · מחלה · הצטרפות · שרשרת אישורים
-//   💼 ניהול העסק        ▸ דוחות: לוח מכירות · אופטימייזר מגוון · מלאי בשר · טופס ספירת מלאי בשר · פנקס / clearcount
+//   💼 ניהול העסק        ▸ דוחות: 🚦 חדר בקרה (Superstar, 14/11) · לוח מכירות · אופטימייזר מגוון · מלאי בשר · טופס ספירת מלאי בשר · פנקס / clearcount
 //                        ▸ טפסים ותלושים: מסמכים · תלושים · 101 · 106
 //                        ▸ הגדרות ותקשורת: הודעה · לוח הודעות · לוח חגים · הגדרות חברה · חיוב
 //                        ▸ תפעול: משימות · ספירת מלאי בשר · 🏪 פתיחת סניף · 🔒 סגירת סניף (Superstar; today's task by name)
@@ -29,7 +29,7 @@
       '§נוכחות', 'liveBtn', 'attBtn', 'haMgrBtn', 'nsMenuBtn', 'clkMenuBtn', 'geoMgrBtn',
       '§סידור', 'autoBtn', 'copyPrev', 'publishBtn', 'resetBtn', 'scMenuBtn', 'sdMenuBtn',
       '§בקשות ואישורים', 'apMgrTeamBtn', 'reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
-    menuBizDrop: ['§דוחות', 'sdMgrBtn', 'asMgrBtn', 'miMgrBtn', 'bzMeatCount', 'ccMgrBtn',
+    menuBizDrop: ['§דוחות', 'crMgrBtn', 'sdMgrBtn', 'asMgrBtn', 'miMgrBtn', 'bzMeatCount', 'ccMgrBtn',
       '§טפסים ותלושים', 'dsMgrBtn', 'payBtn', 'f101AdminBtn', 'f106AllBtn',
       '§הגדרות ותקשורת', 'msgBtn', 'annBtn', 'holBtn', 'coSetBtn', 'coBillBtn',
       '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],

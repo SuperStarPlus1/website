@@ -21,7 +21,7 @@
   const addD = (d, k) => { const x = new Date(d); x.setDate(x.getDate() + k); return x; };
   const dm = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '';
   const P = { period: '7d', from: '', to: '', compare: 'prev', dep: '' };
-  let R = null, charts = [], timer = null, tab = 'topSales';
+  let R = null, charts = [], timer = null, tab = 'topSales', heatMode = 'sales';
 
   document.head.insertAdjacentHTML('beforeend', '<style>' +
     '#sdOv{position:fixed;inset:0;z-index:9000;background:#f1f5f9;overflow:auto;direction:rtl;font-family:inherit}' +
@@ -169,7 +169,10 @@
             '</td><td class="n">' + (d.cost > 0 || d.dep < 0 ? nis(pf) : '—') + '</td><td>' + (d.dep < 0 ? '' : mBadge(m)) + '</td></tr>'; }).join('') + '</table></div></div>' +
       '<div class="sd-card wide"><div class="sd-tabs">' + [['topSales', '🏆 הכי נמכרים'], ['topProfit', '💎 הכי רווחיים'], ['lowMargin', '⚠ רווח נמוך']].map(([k, l]) =>
         '<button class="sd-chip' + (tab === k ? ' on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('') + ' <small style="color:#64748b;align-self:center">' + (r.itemsBy === 'month' ? 'לפי חודשים שלמים' : '') + '</small></div><div id="sdItems"></div></div>' +
-      (!oneDay ? '<div class="sd-card wide"><h3>🔥 מתי קונים <small>ממוצע מכירות לשעה לפי יום בשבוע</small></h3><div class="sd-scroll" id="sdHeat"></div></div>' : '') +
+      (!oneDay ? '<div class="sd-card wide"><h3>🔥 מתי קונים <small id="sdHeatSub">' + HEAT[heatMode][1] + '</small></h3>' +
+        (r.labor ? '<div class="sd-tabs">' + Object.entries(HEAT).map(([k, v]) => '<button class="sd-chip' + (heatMode === k ? ' on' : '') + '" data-heat="' + k + '">' + v[0] + '</button>').join('') + '</div>' : '') +
+        '<div class="sd-scroll" id="sdHeat"></div></div>' : '') +
+      (r.labor ? planCard(r.labor) : '') +
       '<div class="sd-card"><h3>🚚 ספקים מובילים</h3><div style="height:300px"><canvas id="sdC3"></canvas></div></div>' +
       '<div class="sd-card"><h3>🖥 קופות</h3><div style="height:300px"><canvas id="sdC4"></canvas></div></div>' +
       '<div class="sd-card"><h3>📦 עומד להיגמר <small>פחות מ-3 ימי מלאי, לפי קצב 14 הימים האחרונים</small></h3>' + stockTbl(r.lowStock, 'low') + '</div>' +
@@ -182,6 +185,7 @@
     bindBar();
     drawItems();
     if (!oneDay) heat();
+    body.querySelectorAll('[data-heat]').forEach((b) => b.addEventListener('click', () => { heatMode = b.dataset.heat; body.querySelectorAll('[data-heat]').forEach((x) => x.classList.toggle('on', x === b)); $('sdHeatSub').textContent = HEAT[heatMode][1]; heat(); }));
     body.querySelectorAll('[data-dep]').forEach((tr) => tr.addEventListener('click', () => { if (tr.dataset.dep) { P.dep = tr.dataset.dep; load(); } }));
     body.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; body.querySelectorAll('[data-tab]').forEach((x) => x.classList.toggle('on', x === b)); drawItems(); }));
     if (window.Chart) chartsDraw(oneDay);
@@ -210,17 +214,78 @@
       : '<p style="color:#64748b;font-size:13px">אין נתונים לתקופה.</p>';
   }
 
+  // 14/11/2026 (after boosty.ai — the sales against the staff): the same grid, three views. The staff = the hours of work
+  // from the clock (כניסה/חזרה → הפסקה/יציאה, not "הנהלה"); a cashier = "קופאיות" / "קופה ראשית/גיבוי קופות" (bi_labor)
+  const HEAT = {
+    sales: ['💰 מכירות', 'ממוצע מכירות לשעה לפי יום בשבוע'],
+    staff: ['👥 עובדים בפועל', 'כמה עובדים היו בחנות בכל שעה (לפי שעון הנוכחות, בלי הנהלה)'],
+    load: ['🧾 קבלות לקופאית', 'כמה קבלות קופאית אחת טיפלה בשעה — אדום כהה = עומס בקופות'] };
   function heat() {
     const cells = {}; let max = 0, hmin = 23, hmax = 0;
-    (R.hours || []).forEach((x) => { cells[x.dow + '-' + x.hour] = x.avg_sales; max = Math.max(max, x.avg_sales); if (x.avg_sales > 0) { hmin = Math.min(hmin, x.hour); hmax = Math.max(hmax, x.hour); } });
-    if (!max) { $('sdHeat').innerHTML = ''; return; }
+    const lab = {}; ((R.labor && R.labor.hours) || []).forEach((x) => { lab[x.dow + '-' + x.hour] = x; });
+    const val = (x) => {
+      if (heatMode === 'sales') return x.avg_sales;
+      const l = lab[x.dow + '-' + x.hour]; if (!l) return 0;
+      if (heatMode === 'staff') return +l.staff || 0;
+      return +l.cash >= 0.5 && +l.receipts >= 3 ? +l.receipts / +l.cash : 0;
+    };
+    (R.hours || []).forEach((x) => { const v = val(x); cells[x.dow + '-' + x.hour] = v; max = Math.max(max, v); if (x.avg_sales > 0) { hmin = Math.min(hmin, x.hour); hmax = Math.max(hmax, x.hour); } });
+    if (!max) { $('sdHeat').innerHTML = heatMode === 'sales' ? '' : '<p style="color:#64748b;font-size:13px">אין עדיין נתוני נוכחות לתקופה.</p>'; return; }
     const hours = []; for (let k = hmin; k <= hmax; k++) hours.push(k);
+    const color = heatMode === 'load' ? (a) => 'rgba(220,38,38,' + (0.06 + a * 0.85).toFixed(2) + ')'
+      : heatMode === 'staff' ? (a) => 'rgba(13,148,136,' + (0.08 + a * 0.85).toFixed(2) + ')' : (a) => 'rgba(124,58,237,' + (0.08 + a * 0.85).toFixed(2) + ')';
+    const txt = (v) => heatMode === 'sales' ? Math.round(v / 100) / 10 + 'K' : heatMode === 'staff' ? num(v, 1) : num(v);
+    const tip = (d, k, v) => DAYS[d] + ' ' + k + ':00 — ' + (heatMode === 'sales' ? nis(v) : heatMode === 'staff' ? num(v, 1) + ' עובדים' : num(v) + ' קבלות לקופאית בשעה');
     let g = '<div class="sd-heat" style="grid-template-columns:52px repeat(' + hours.length + ',minmax(30px,1fr));min-width:' + (60 + hours.length * 32) + 'px"><div class="h"></div>' + hours.map((k) => '<div class="h">' + k + '</div>').join('');
     for (let d = 0; d < 7; d++) {
       g += '<div class="h">' + DAYS[d] + '</div>' + hours.map((k) => { const v = cells[d + '-' + k] || 0, a = v / max;
-        return '<div title="' + DAYS[d] + ' ' + k + ':00 — ' + nis(v) + '" style="background:' + (v ? 'rgba(124,58,237,' + (0.08 + a * 0.85).toFixed(2) + ')' : '#f8fafc') + ';color:' + (a > 0.55 ? '#fff' : '#1e1b4b') + '">' + (v ? Math.round(v / 100) / 10 + 'K' : '') + '</div>'; }).join('');
+        return '<div title="' + tip(d, k, v) + '" style="background:' + (v ? color(a) : '#f8fafc') + ';color:' + (a > 0.55 ? '#fff' : '#1e1b4b') + '">' + (v ? txt(v) : '') + '</div>'; }).join('');
     }
-    $('sdHeat').innerHTML = g + '</div>';
+    const from = R.labor && R.labor.staffFrom;
+    $('sdHeat').innerHTML = g + '</div>' + (heatMode !== 'sales' && from && from > R.from ? '<div class="sd-note" style="margin-top:6px">נתוני הנוכחות קיימים מ-' + dm(from) + '/' + from.slice(0, 4) + '.</div>' : '');
+  }
+
+  // 📅 the coming week's schedule against the receipts expected (the same weekday × hour, the last 8 weeks). The store's
+  // own pace — receipts per cashier-hour: an hour is short when the receipts expected per planned cashier pass what the
+  // cashiers handled in the busiest 10% of hours; "recommended" = the receipts ÷ a busy hour's pace (the top quarter).
+  // Only the shortages (the spare hours were mostly the closing hour — noise). Consecutive hours are joined.
+  function planCard(L) {
+    const base = {}; (L.base || []).forEach((b) => { base[b.dow + '-' + b.hour] = b; });
+    const loads = (L.base || []).filter((b) => +b.cash >= 0.5 && +b.receipts >= 5).map((b) => +b.receipts / +b.cash).sort((a, b) => a - b);
+    if (!loads.length) return '';
+    const plan = L.plan || [];
+    const head = '<div class="sd-card wide"><h3>📅 הסידור של השבוע הקרוב מול העומס בקופות <small>לפי הקבלות ב-8 השבועות האחרונים</small></h3>';
+    const pace = loads[Math.floor(loads.length * 0.75)], top = loads[Math.floor(loads.length * 0.9)];
+    const now = new Date(), today = iso(now), hourNow = now.getHours();
+    const days = [...new Set(plan.map((p) => String(p.day).slice(0, 10)))].filter((d) => d >= today).sort();
+    if (!days.length) return head + '<p style="color:#64748b;font-size:13px">אין עדיין סידור עבודה לימים הקרובים.</p></div>';
+    const P2 = {}; plan.forEach((p) => { P2[String(p.day).slice(0, 10) + '-' + p.hour] = p; });
+    const rows = [];
+    days.forEach((d) => {
+      const dow = new Date(d + 'T12:00:00').getDay();
+      let cur = null;
+      for (let h = 6; h <= 23; h++) {
+        const b = base[dow + '-' + h], p = P2[d + '-' + h];
+        let kind = '', need = 0, have = 0;
+        if (b && +b.receipts >= 8 && !(d === today && h <= hourNow)) {
+          need = +b.receipts / pace; have = p ? +p.cash || 0 : 0;
+          if (+b.receipts / Math.max(have, 0.5) > top && Math.ceil(need) > have) kind = 'short';
+        }
+        if (!kind) { cur = null; continue; }
+        if (cur && cur.kind === kind && cur.to === h) { cur.to = h + 1; cur.rc.push(+b.receipts); cur.need.push(need); cur.have.push(have); continue; }
+        cur = { d, kind, from: h, to: h + 1, rc: [+b.receipts], need: [need], have: [have] };
+        rows.push(cur);
+      }
+    });
+    const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+    rows.sort((a, b) => a.d.localeCompare(b.d) || a.from - b.from);
+    const body = rows.length ? '<div class="sd-scroll" style="max-height:330px;overflow:auto"><table class="sd-tbl"><tr><th></th><th>יום</th><th>שעות</th><th class="n">קבלות בשעה</th><th class="n">קופאיות בסידור</th><th class="n">מומלץ</th></tr>' +
+      rows.map((r) => '<tr><td><span class="sd-m" style="background:#fee2e2;color:#b91c1c">חסר</span></td>' +
+        '<td>' + DAYS[new Date(r.d + 'T12:00:00').getDay()] + ' ' + dm(r.d) + '</td><td>' + r.from + ':00–' + r.to + ':00</td>' +
+        '<td class="n">' + num(avg(r.rc)) + '</td><td class="n">' + num(Math.min(...r.have), 1) + '</td><td class="n">' + num(Math.ceil(Math.max(...r.need))) + '</td></tr>').join('') + '</table></div>'
+      : '<p style="color:#166534;font-size:14px;font-weight:700">✓ הסידור מתאים לעומס הצפוי בקופות.</p>';
+    return head + body + '<div class="sd-note" style="margin-top:8px">"חסר" = בשעות העמוסות ביותר קופאית מטפלת בעד ~' + num(top) + ' קבלות בשעה, ובסידור יוצא יותר מזה. "מומלץ" = הקבלות הצפויות חלקי ~' + num(pace) + ' לקופאית (קצב של שעה עמוסה ב-8 השבועות האחרונים). ' +
+      'קופאיות = מחלקת קופאיות וקופה ראשית/גיבוי קופות בסידור. עובדים ממחלקות אחרות שעוזרים בקופה לא נספרים.</div></div>';
   }
 
   function chartsDraw(oneDay) {
