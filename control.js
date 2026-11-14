@@ -8,6 +8,7 @@
 //     regular club customers who stopped coming, the store PC's last push
 //   api biAssortment (the last whole month) + assortment.js's compute: the MQI and the best sellers out of stock
 //   the site's /data/promos-he.json (Last-Modified): the promotions on the site
+//   🗂 the branch file (14/11/2026): deadlines late / within 30 days, faults open (biControl's bfDue / bfCalls)
 // Three kinds: 🔴 to handle now · 🟠 to check · 🔵 good to know (not in the number) · ✓ all right (one line, at the end).
 // Each one opens the screen that handles it (the dashboard, the optimizer, the attendance report, the tasks) or a list.
 (function () {
@@ -159,6 +160,23 @@
         sub: 'אתמול והיום.', head: ['משימה', 'יום'], rows: ms.map((x) => [x.title, dayName(x.day) + ' ' + dm(x.day)]),
         acts: [['📋 למשימות', () => go('tkMgrBtn'), true]] });
       else add({ key: 'missed', level: 'ok', okText: '📋 כל המשימות של אתמול והיום בוצעו' });
+      // 🗂 the branch file (branch-file.js): deadlines late / within 30 days, faults still open
+      const bd = c.bfDue || [], today = String(c.today).slice(0, 10);
+      const left = (d) => Math.round((Date.parse(String(d).slice(0, 10) + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 864e5);
+      const late = bd.filter((x) => left(x.due) < 0), soon = bd.filter((x) => left(x.due) >= 0);
+      const dRow = (x) => [x.title + (x.employee ? ' — ' + x.employee : ''), dm(x.due) + '/' + String(x.due).slice(2, 4), left(x.due) < 0 ? 'פג לפני ' + (-left(x.due)) + ' ימים' : left(x.due) === 0 ? 'היום' : 'עוד ' + left(x.due) + ' ימים'];
+      if (late.length) add({ key: 'bfLate', level: 'red', ic: '⛔', title: late.length === 1 ? 'מסמך / רישיון אחד פג תוקף' : late.length + ' מסמכים / רישיונות פגו', value: late.map((x) => x.title).slice(0, 2).join(', ') + (late.length > 2 ? '…' : ''),
+        sub: 'מתוך תיק הסניף — מועדים ורישוי.', head: ['מה', 'בתוקף עד', ''], rows: late.map(dRow), acts: [['🗂 לתיק הסניף', () => openBf(), true]] });
+      if (soon.length) add({ key: 'bfSoon', level: 'amber', ic: '⏳', title: soon.length === 1 ? 'מועד אחד מתקרב' : soon.length + ' מועדים מתקרבים', value: 'ב-30 יום',
+        sub: 'רישיונות, אישורים, ביטוחים, חוזים והסמכות שפגים בחודש הקרוב.', head: ['מה', 'בתוקף עד', ''], rows: soon.map(dRow), acts: [['🗂 לתיק הסניף', () => openBf(), true]] });
+      if (!late.length && !soon.length) add({ key: 'bf', level: 'ok', okText: '🗂 אין מועדים שפגים בחודש הקרוב' });
+      const bc = c.bfCalls || [], days = (t) => Math.floor((Date.now() - Date.parse(t)) / 864e5);
+      const hot = bc.filter((x) => x.urgent || days(x.opened_at) >= 3);
+      if (bc.length) add({ key: 'bfCalls', level: bc.some((x) => x.urgent) ? 'red' : hot.length ? 'amber' : 'info', ic: '🔧', title: bc.length === 1 ? 'תקלה פתוחה' : bc.length + ' תקלות פתוחות', value: num(bc.length),
+        sub: 'מתוך תיק הסניף — ציוד ותקלות.', head: ['תקלה', 'נפתחה', 'מצב'],
+        rows: bc.map((x) => [(x.urgent ? '🚨 ' : '') + x.title, days(x.opened_at) ? 'לפני ' + days(x.opened_at) + ' ימים' : 'היום', x.status === 'wait' ? 'ממתינה לטכנאי' : 'פתוחה']),
+        acts: [['🗂 לתיק הסניף', () => openBf(), true]] });
+      else add({ key: 'bfCalls', level: 'ok', okText: '🔧 אין תקלות פתוחות' });
       // good to know — not in the number
       const ls = c.loss || [];
       if (ls.length) add({ key: 'loss', level: 'info', ic: '💸', title: ls.length + ' מוצרים נמכרו מתחת לעלות', value: nis(ls.reduce((s, x) => s + Number(x.loss || 0), 0)),
@@ -196,6 +214,7 @@
   const go = (id) => leave(() => { const b = $(id); if (b) b.click(); });
   const openDash = () => leave(() => window.openSalesDash && window.openSalesDash());
   const openAs = () => leave(() => window.openAssortment && window.openAssortment());
+  const openBf = () => leave(() => window.openBranchFile && window.openBranchFile());
 
   async function load(fresh) {
     if (busy) return;

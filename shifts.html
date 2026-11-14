@@ -2335,7 +2335,8 @@ const MGR_ALERT_TYPES = [
   ['sick','בקשת מחלה'],
   ['form101','הגשת טופס 101'],
   ['manualPunch','הזנה ידנית לאישור'],
-  ['deptHours','חריגת שעות מחלקתית (אדמין)']
+  ['deptHours','חריגת שעות מחלקתית (אדמין)'],
+  ['bfile','תיק הסניף — מועדים ותקלות']
 ];
 // ברירת מחדל תואמת בדיוק את defaultMgrAlertPref_ בשרת — הכל מופעל, חוץ משתי התראות-מייל שהיו מוגבלות לאשרף בלבד
 function defaultMgrPref(name, key, channel){
@@ -6564,6 +6565,7 @@ document.getElementById('lgKioskLink').addEventListener('click', ()=>{
 <script src="meat-inv.js"></script>
 <script src="assortment.js"></script>
 <script src="control.js"></script>
+<script src="branch-file.js"></script>
 <script src="ledger.js"></script>
 <script src="sms-settings.js"></script>
 <script src="geo-settings.js"></script>

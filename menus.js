@@ -8,7 +8,7 @@
 //   💼 ניהול העסק        ▸ דוחות: 🚦 חדר בקרה (Superstar, 14/11) · לוח מכירות · אופטימייזר מגוון · מלאי בשר · טופס ספירת מלאי בשר · פנקס / clearcount
 //                        ▸ טפסים ותלושים: מסמכים · תלושים · 101 · 106
 //                        ▸ הגדרות ותקשורת: הודעה · לוח הודעות · לוח חגים · הגדרות חברה · חיוב
-//                        ▸ תפעול: משימות · ספירת מלאי בשר · 🏪 פתיחת סניף · 🔒 סגירת סניף (Superstar; today's task by name)
+//                        ▸ תפעול: משימות · 🗂 תיק הסניף (14/11) · ספירת מלאי בשר · 🏪 פתיחת סניף · 🔒 סגירת סניף (Superstar; today's task by name)
 //   👤 אזור אישי         the manager's own: החלפת סיסמה · אימות דו-שלבי · ההתראות שלי · Push
 // A sub-menu opens with a click on its title (one at a time; the last one opened is remembered); its title shows the
 // number of waiting items (the badges of its buttons). The old menus (📍 נוכחות's siblings 📅 סידור, ⚙ אדמין, 🛠 תפעול)
@@ -32,7 +32,7 @@
     menuBizDrop: ['§דוחות', 'crMgrBtn', 'sdMgrBtn', 'asMgrBtn', 'miMgrBtn', 'bzMeatCount', 'ccMgrBtn',
       '§טפסים ותלושים', 'dsMgrBtn', 'payBtn', 'f101AdminBtn', 'f106AllBtn',
       '§הגדרות ותקשורת', 'msgBtn', 'annBtn', 'holBtn', 'coSetBtn', 'coBillBtn',
-      '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],
+      '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'bfMgrBtn', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],
     menuMeDrop: ['mpwBtn', 'mfaMenuBtn', 'myAlertsBtn', 'mgrPushBtn2'],
   };
   // [old menu, new menu, sub-menu] — what is (or later comes) into an old menu goes to the end of that sub-menu
