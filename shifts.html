@@ -396,6 +396,10 @@ tr.totals b{display:block;color:var(--ink);font-size:12.5px}
   main{padding:0 6px 60px}
   select.hsel{max-width:130px}
 }
+  /* 15/11: the managers' menus stay hidden until menus.js has arranged them (html.menus-ready) — no flash of the old
+     order; after 4 s they show anyway (if menus.js did not run) */
+  html:not(.menus-ready) #adminTools .mgr-menu{visibility:hidden;animation:mnShow 0s 4s forwards}
+  @keyframes mnShow{to{visibility:visible}}
 </style>
 <script src="shift-config.js"></script>
 </head>

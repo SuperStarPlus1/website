@@ -201,5 +201,9 @@
     document.querySelectorAll('.mgr-dropdown').forEach((d) => mo.observe(d, { attributes: true, subtree: true, childList: true, characterData: true, attributeFilter: ['class', 'style'] }));
   }
   // every module adds its buttons on DOMContentLoaded (or at once) — this one, loaded last, runs after them
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(arrange, 0)); else setTimeout(arrange, 0);
+  // 15/11 (the owner: "on opening, this menu shows first and then it changes"): the page hides the menus until they are
+  // arranged (html.menus-ready — the page's CSS; a 4 s fallback there too), so the old order never flashes
+  const ready = () => document.documentElement.classList.add('menus-ready');
+  const run = () => { try { arrange(); } finally { ready(); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(run, 0)); else setTimeout(run, 0);
 })();
