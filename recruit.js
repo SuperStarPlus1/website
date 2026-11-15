@@ -611,8 +611,10 @@
     contract: (d) => ({ action: 'contractPdf', id: d.id }),
     cv: (d) => ({ action: 'candidateCv', id: d.id }),
     hr: (d) => ({ action: 'hrDocPdf', id: d.id }),
+    signed: (d) => ({ action: 'docsSignedCopy', linkId: d.id }),   // 15/11: a document the employee signed (📂 מסמכים)
+    tosign: (d) => ({ action: 'docsFile', id: d.id }),             //        … sent for signature, not signed yet
   };
-  const DOC_IC = { contract: '📝', cv: '📎', payslip: '🧾', f101: '📋', f106: '📄', hr: '⚖' };
+  const DOC_IC = { contract: '📝', cv: '📎', payslip: '🧾', f101: '📋', f106: '📄', hr: '⚖', signed: '✍', tosign: '⏳' };
   async function openDocs(emp, into) {
     const body = into || overlay('rcDocsOverlay', '📂 מסמכים — ' + emp, 'הסכם העסקה, קורות חיים, תלושים, טפסי 101 ו-106', 640);
     body.innerHTML = '<p class="rc-meta">טוען…</p>';
