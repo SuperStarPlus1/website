@@ -184,11 +184,13 @@
     if (D.needAck && !D.acked) wireAck();
   }
   function label() { const p = document.getElementById('pg'); if (p) p.textContent = 'עמוד ' + cur + ' מתוך ' + total; const g = document.getElementById('aGo'); if (g) g.disabled = maxPage < total; const h = document.getElementById('aHint'); if (h) h.style.display = maxPage < total ? '' : 'none'; }
-  const doneHtml = (n) => '<div class="done">✓ אישרת שקראת והבנת את המסמך' + (n ? ' — ' + e(n) : '') + '</div>';
-  const ackHtml = () => '<div class="ack" id="ack"><h2>✍ אישור קריאה</h2><p>בחתימתך את/ה מאשר/ת שקראת את המסמך במלואו והבנת אותו.</p>' +
+  // a consent document (D.consent): "I read it and I agree" — e.g. an employee's consent to a deduction from the salary
+  const doneHtml = (n) => '<div class="done">' + (D.consent ? '✓ חתמת על המסמך ואישרת את הסכמתך' : '✓ אישרת שקראת והבנת את המסמך') + (n ? ' — ' + e(n) : '') + '</div>';
+  const ackHtml = () => '<div class="ack" id="ack"><h2>' + (D.consent ? '✍ אישור והסכמה' : '✍ אישור קריאה') + '</h2><p>' +
+    (D.consent ? 'בחתימתך את/ה מאשר/ת שקראת את המסמך במלואו, הבנת אותו ואת/ה מסכים/ה לאמור בו. השם, החתימה, התאריך והשעה נשמרים.' : 'בחתימתך את/ה מאשר/ת שקראת את המסמך במלואו והבנת אותו.') + '</p>' +
     '<input id="aName" placeholder="שם מלא" value="' + e(D.recipient || '') + '">' +
     '<canvas class="sig" id="aSig"></canvas><div class="row"><button class="btn plain" id="aClr" type="button">ניקוי חתימה</button><span style="flex:1"></span>' +
-    '<button class="btn" id="aGo" disabled>קראתי והבנתי</button></div><div class="msg" id="aHint" style="color:#64748b;font-weight:400;font-size:13.5px">יש לגלול עד סוף המסמך לפני האישור</div><div class="msg" id="aMsg"></div></div>';
+    '<button class="btn" id="aGo" disabled>' + (D.consent ? 'קראתי, אני מסכים/ה וחותם/ת' : 'קראתי והבנתי') + '</button></div><div class="msg" id="aHint" style="color:#64748b;font-weight:400;font-size:13.5px">יש לגלול עד סוף המסמך לפני האישור</div><div class="msg" id="aMsg"></div></div>';
   function wireAck() {
     const c = document.getElementById('aSig'), ctx = c.getContext('2d');
     let drawn = 0, down = false;

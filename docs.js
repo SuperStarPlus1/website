@@ -125,7 +125,7 @@
     if (f.links - f.employees > 0) act.push((f.links - f.employees) + ' קישורים חיצוניים');
     if (f.opens) act.push(f.opens + ' פתיחות · ' + dur(f.seconds) + ' קריאה');
     return '<div class="ds-card" data-f="' + f.id + '"><span class="ic">' + ic + '</span><div style="flex:1;min-width:0"><span class="t">' + e(f.title) + '</span>' +
-      (f.folder ? '<span class="ds-fold">' + e(f.folder) + '</span>' : '') + (f.archived ? ' <span class="ds-st" style="background:#f3f4f6;color:#6b7280">ארכיון</span>' : '') +
+      (f.folder ? '<span class="ds-fold">' + e(f.folder) + '</span>' : '') + (f.archived ? ' <span class="ds-st" style="background:#f3f4f6;color:#6b7280">ארכיון</span>' : '') + (f.consent ? ' <span class="ds-st" style="background:#eef2ff;color:#4338ca">✍ הסכמה</span>' : '') +
       '<div class="ds-meta">' + meta.join(' · ') + (act.length ? ' — ' + act.join(' · ') : ' — עוד לא שותף') + '</div></div>' +
       '<span class="ds-meta ds-hide-m">' + (f.lastOpenAt ? 'נפתח ' + e(when(f.lastOpenAt)) : e(f.owner)) + '</span></div>';
   }
@@ -136,7 +136,8 @@
     body.innerHTML = '<div class="ds-f">' + (replace ? '' :
       '<label class="full">כותרת<input class="ds-in" id="dfTitle" maxlength="150" placeholder="למשל: נוהל בטיחות במחסן"></label>' +
       '<label>תיקייה<input class="ds-in" id="dfFold" maxlength="60" list="dfFolds" placeholder="ללא" value="' + e(folder) + '"><datalist id="dfFolds">' + (L ? L.folders.map((x) => '<option value="' + e(x) + '">').join('') : '') + '</datalist></label>' +
-      '<label class="ds-chk" style="align-self:end"><input type="checkbox" id="dfPers"' + (tab === 'me' ? ' checked' : '') + '> 🔒 מסמך אישי (רק אני רואה)</label>') +
+      '<label class="ds-chk" style="align-self:end"><input type="checkbox" id="dfPers"' + (tab === 'me' ? ' checked' : '') + '> 🔒 מסמך אישי (רק אני רואה)</label>' +
+      '<label class="ds-chk full"><input type="checkbox" id="dfCons"> ✍ מסמך הסכמה — העובד חותם "קראתי ואני מסכים/ה" (למשל הסכמה לניכוי מהשכר)</label>') +
       '<label class="full">קובץ<input class="ds-in" type="file" id="dfFile" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"></label></div>' +
       '<div style="margin-top:12px"><button class="btn primary" id="dfGo">' + (replace ? '🔄 העלאת הגרסה' : '⬆ העלאה') + '</button></div>';
     $('dfFile').addEventListener('change', () => { const f = $('dfFile').files[0]; if (f && $('dfTitle') && !$('dfTitle').value) $('dfTitle').value = f.name.replace(/\.[^.]+$/, ''); });
@@ -146,7 +147,7 @@
       if (rf.error) { err('dsForm', rf.error); return; }
       b.disabled = true; b.textContent = 'מעלה…';
       const r = replace ? await call({ action: 'docsReplace', id: file.id, ...rf })
-        : await call({ action: 'docsUpload', title: $('dfTitle').value.trim(), folder: $('dfFold').value.trim(), personal: $('dfPers').checked, ...rf });
+        : await call({ action: 'docsUpload', title: $('dfTitle').value.trim(), folder: $('dfFold').value.trim(), personal: $('dfPers').checked, consent: $('dfCons').checked, ...rf });
       b.disabled = false; b.textContent = replace ? '🔄 העלאת הגרסה' : '⬆ העלאה';
       if (!r.ok) { err('dsForm', r.error); return; }
       $('dsForm').classList.add('hidden');
@@ -223,10 +224,11 @@
     const f = F.file;
     const body = overlay('dsForm', '✏ ' + f.title, '', 520);
     body.innerHTML = '<div class="ds-f"><label class="full">כותרת<input class="ds-in" id="deT" maxlength="150" value="' + e(f.title) + '"></label>' +
-      '<label class="full">תיקייה<input class="ds-in" id="deF" maxlength="60" list="deFolds" value="' + e(f.folder) + '"><datalist id="deFolds">' + (L ? L.folders.map((x) => '<option value="' + e(x) + '">').join('') : '') + '</datalist></label></div>' +
+      '<label class="full">תיקייה<input class="ds-in" id="deF" maxlength="60" list="deFolds" value="' + e(f.folder) + '"><datalist id="deFolds">' + (L ? L.folders.map((x) => '<option value="' + e(x) + '">').join('') : '') + '</datalist></label>' +
+      '<label class="ds-chk full"><input type="checkbox" id="deC"' + (f.consent ? ' checked' : '') + '> ✍ מסמך הסכמה — העובד חותם "קראתי ואני מסכים/ה"</label></div>' +
       '<div style="margin-top:12px"><button class="btn primary" id="deGo">💾 שמירה</button></div>';
     $('deGo').addEventListener('click', async () => {
-      const x = await call({ action: 'docsUpdate', id: f.id, title: $('deT').value.trim(), folder: $('deF').value.trim() });
+      const x = await call({ action: 'docsUpdate', id: f.id, title: $('deT').value.trim(), folder: $('deF').value.trim(), consent: $('deC').checked });
       if (!x.ok) { err('dsForm', x.error); return; }
       $('dsForm').classList.add('hidden'); openFile(f.id); openLib();
     });
