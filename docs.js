@@ -182,7 +182,7 @@
       '<div class="ds-tile"><b>' + f.opens + '</b><span>פתיחות</span></div><div class="ds-tile"><b>' + dur(f.seconds) + '</b><span>זמן קריאה כולל</span></div>' +
       (emp.length ? '<div class="ds-tile"><b>' + f.empAcked + '/' + emp.length + '</b><span>עובדים אישרו</span></div>' : '') + '</div>' +
       (pend.length && f.canEdit ? '<div class="ds-acts" style="align-items:center"><span class="ds-meta">' + pend.length + ' עובדים עוד לא ' + (emp.some((l) => l.needAck) ? 'אישרו' : 'פתחו') + '</span>' +
-        '<button class="btn plain" id="dsRem">⏰ תזכורת (Push)</button><button class="btn plain" id="dsRemS">⏰ תזכורת + SMS</button></div>' : '') +
+        '<button class="btn plain" id="dsRem">⏰ תזכורת (Push)</button><button class="btn plain" id="dsRemS">⏰ תזכורת + SMS</button><button class="btn plain" id="dsRemM">⏰ תזכורת + 📧 מייל</button></div>' : '') +
       '<h4 style="margin:12px 0 4px">מי קיבל ומה עשה</h4>' +
       (F.links.length ? '<div class="ds-wrap"><table class="ds-tbl"><thead><tr><th>נמען</th><th>מצב</th><th>פתיחות</th><th>זמן</th><th>הגיע/ה עד</th><th class="ds-hide-m">פתיחה אחרונה</th><th></th></tr></thead><tbody>' +
         F.links.map((l) => '<tr><td><b>' + e(l.recipient) + '</b><div class="ds-meta">' + (l.audience === 'employee' ? '👤 עובד/ת' : '🔗 ' + e(l.phone || l.email || 'קישור')) +
@@ -206,8 +206,8 @@
       if (!x.ok) { err('dsFile', x.error); return; }
       $('dsFile').classList.add('hidden'); say('המסמך נמחק', 'ok'); openLib();
     });
-    const remind = async (sms) => { const x = await call({ action: 'docsRemind', id: f.id, sms }); if (!x.ok) { err('dsFile', x.error); return; } say('נשלחה תזכורת ל-' + x.reminded + ' עובדים' + (x.smsFail ? ' (' + x.smsFail + ' SMS לא נשלחו)' : ''), 'ok'); openFile(f.id); };
-    on('dsRem', () => remind(false)); on('dsRemS', () => remind(true));
+    const remind = async (sms, email) => { const x = await call({ action: 'docsRemind', id: f.id, sms, email }); if (!x.ok) { err('dsFile', x.error); return; } say('נשלחה תזכורת ל-' + x.reminded + ' עובדים' + (x.smsFail ? ' (' + x.smsFail + ' SMS לא נשלחו)' : '') + (x.mailFail ? ' (' + x.mailFail + ' מיילים לא נשלחו)' : '') + (x.noMail ? ' (ל-' + x.noMail + ' אין מייל במערכת)' : ''), x.mailFail ? 'err' : 'ok'); openFile(f.id); };
+    on('dsRem', () => remind(false)); on('dsRemS', () => remind(true)); on('dsRemM', () => remind(false, true));
     const byId = (id) => F.links.find((l) => l.id === Number(id));
     body.querySelectorAll('[data-cp]').forEach((b) => b.addEventListener('click', () => copy(byId(b.dataset.cp).url)));
     body.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => views(byId(b.dataset.v))));
@@ -254,6 +254,7 @@
       '<div class="ds-f" style="margin-top:10px"><label class="ds-chk full"><input type="checkbox" id="seAck" checked> ✍ לבקש אישור "קראתי והבנתי" בחתימה</label>' +
       '<label class="ds-chk"><input type="checkbox" id="seWm" checked> סימן מים עם שם העובד/ת</label><label class="ds-chk"><input type="checkbox" id="seDl"> לאפשר הורדה</label>' +
       '<label class="ds-chk full"><input type="checkbox" id="seSms"> לשלוח גם SMS עם הקישור</label>' +
+      '<label class="ds-chk full"><input type="checkbox" id="seMail"> 📧 לשלוח גם במייל עם הקישור (לעובדים שיש להם מייל במערכת)</label>' +
       '<label class="full">הודעה (לא חובה)<textarea class="ds-in" id="seMsg" rows="2" maxlength="400" placeholder="למשל: נא לקרוא עד יום חמישי"></textarea></label></div>' +
       '<div style="margin-top:12px"><button class="btn primary" id="seGo">📨 שליחה</button></div>';
     const pick = new Set();
@@ -279,11 +280,11 @@
       if (!pick.size) { err('dsForm', 'לא נבחרו עובדים'); return; }
       const b = ev.currentTarget; b.disabled = true; b.textContent = 'שולח…';
       const x = await call({ action: 'docsShareEmployees', id: f.id, employees: [...pick], needAck: $('seAck').checked, watermark: $('seWm').checked, allowDownload: $('seDl').checked,
-        sms: $('seSms').checked, message: $('seMsg').value.trim() });
+        sms: $('seSms').checked, email: $('seMail').checked, message: $('seMsg').value.trim() });
       b.disabled = false; b.textContent = '📨 שליחה';
       if (!x.ok) { err('dsForm', x.error); return; }
       $('dsForm').classList.add('hidden');
-      say('נשלח ל-' + x.made + ' עובדים' + (x.skipped ? ' (' + x.skipped + ' כבר קיבלו)' : '') + (x.smsFail ? ' · ' + x.smsFail + ' SMS לא נשלחו' : ''), 'ok');
+      say('נשלח ל-' + x.made + ' עובדים' + (x.skipped ? ' (' + x.skipped + ' כבר קיבלו)' : '') + (x.smsFail ? ' · ' + x.smsFail + ' SMS לא נשלחו' : '') + (x.mailFail ? ' · ' + x.mailFail + ' מיילים לא נשלחו' : '') + (x.noMail ? ' · ל-' + x.noMail + ' אין מייל במערכת' : ''), 'ok');
       openFile(f.id); openLib();
     });
   }
