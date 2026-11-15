@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.32.2',
+  version: '2.33.0',
   date: '14/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    '📂 מסמכים: ⬇ עותק חתום — המסמך + דף אישור עם החתימה, ב-PDF אחד',
     '📂 מסמכים: תוקן — אי אפשר היה לחתום בתיבת החתימה',
     '📂 מסמכים: שליחה ותזכורת לעובדים גם במייל',
     '📂 מסמכים: מסמך הסכמה (חתימה "קראתי ואני מסכים/ה") + טופס הסכמה לניכוי רכישות בהקפה מהשכר',

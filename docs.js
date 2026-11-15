@@ -190,7 +190,7 @@
           '<td>' + chip(l.status) + (l.ackAt ? '<div class="ds-meta">' + e(l.ackName) + ' · ' + e(when(l.ackAt)) + '</div>' : '') + '</td><td>' + l.opens + '</td><td>' + dur(l.seconds) + '</td>' +
           '<td>' + (l.opens ? l.maxPage + '/' + f.pages + ' (' + l.done + '%)' : '—') + '</td><td class="ds-hide-m">' + e(when(l.lastOpenAt)) + '</td><td style="white-space:nowrap">' +
           (l.audience === 'external' && !l.revoked ? '<button data-cp="' + l.id + '" title="העתקת הקישור">📋</button>' : '') + (l.opens ? '<button data-v="' + l.id + '" title="כל הפתיחות">📊</button>' : '') +
-          (l.hasSig ? '<button data-sg="' + l.id + '" title="החתימה">✍</button>' : '') +
+          (l.hasSig ? '<button data-sc="' + l.id + '" title="עותק חתום (PDF)">⬇ עותק חתום</button><button data-sg="' + l.id + '" title="החתימה">✍</button>' : '') +
           (f.canEdit ? (l.revoked ? '<button data-un="' + l.id + '" title="החזרת הגישה">♻</button>' : '<button data-rv="' + l.id + '" title="ביטול הגישה">⛔</button>') : '') + '</td></tr>').join('') +
         '</tbody></table></div>' : '<p class="ds-meta">המסמך עוד לא שותף. "👥 שליחה לעובדים" או "🔗 קישור חיצוני".</p>') +
       (F.opened && f.pages > 1 ? '<h4 style="margin:14px 0 4px">זמן קריאה לפי עמוד</h4><p class="ds-meta" style="margin:0 0 6px">כמה זמן קראו בכל עמוד (כל הקוראים יחד), וכמה קוראים הגיעו אליו — כאן רואים איפה מפסיקים לקרוא</p>' +
@@ -211,6 +211,7 @@
     const byId = (id) => F.links.find((l) => l.id === Number(id));
     body.querySelectorAll('[data-cp]').forEach((b) => b.addEventListener('click', () => copy(byId(b.dataset.cp).url)));
     body.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => views(byId(b.dataset.v))));
+    body.querySelectorAll('[data-sc]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const t = b.textContent; b.textContent = 'מכין…'; const x = await call({ action: 'docsSignedCopy', linkId: Number(b.dataset.sc) }); b.disabled = false; b.textContent = t; if (x.ok && typeof openBlobFile === 'function') openBlobFile(x.data, x.filename, x.mimeType); else err('dsFile', x.error); }));
     body.querySelectorAll('[data-sg]').forEach((b) => b.addEventListener('click', async () => { const x = await call({ action: 'docsAckSig', linkId: Number(b.dataset.sg) }); if (x.ok && typeof openBlobFile === 'function') openBlobFile(x.data, x.filename, x.mimeType); else err('dsFile', x.error); }));
     const setRev = async (id, revoked) => { const x = await call({ action: 'docsLinkUpdate', linkId: Number(id), revoked }); if (!x.ok) { err('dsFile', x.error); return; } say(revoked ? 'הגישה בוטלה — הקישור לא ייפתח יותר' : 'הגישה הוחזרה', 'ok'); openFile(f.id); };
     body.querySelectorAll('[data-rv]').forEach((b) => b.addEventListener('click', () => { if (confirm('לבטל את הגישה של ' + byId(b.dataset.rv).recipient + '?')) setRev(b.dataset.rv, true); }));
