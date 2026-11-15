@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.31.6',
+  version: '2.31.7',
   date: '14/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    '📦 ספירת מלאי: שעות לכל ספירה (נפתחה, סריקה ראשונה ואחרונה, נסגרה, משך) + 🗄 ספירות ישנות וארכיון',
     '📦 ספירת מלאי: תמונת המוצר מופיעה כשסורקים',
     '📦 ספירת מלאי: המצלמה קוראת ברקודים (ו"📸 צלמו תמונה" כשלא נקלט); ✓ במקלדת הטלפון מחפש ושומר',
     '📦 ספירת מלאי: כל ספירה עצמאית (של אדם אחד, תאריך ושעה משלה); האיחוד מסכם; כמות מעל 5,000 — מקלידים שוב לאישור',

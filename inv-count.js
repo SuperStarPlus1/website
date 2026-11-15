@@ -54,6 +54,12 @@
   const dt = (s) => (s ? dm(s) + '/' + new Date(s).getFullYear() + ' ' + hm(s) : '');
   const span = (a, b) => (!a ? '' : hm(a) === hm(b) || !b ? dm(a) + ' ' + hm(a) : dm(a) + ' ' + hm(a) + '–' + (dm(a) === dm(b) ? '' : dm(b) + ' ') + hm(b));
   const PEND = 'invPend';
+  // 15/11 (the owner): a count time for every count — opened / first scan / last scan / closed + how long it took
+  const dur = (a, b) => { const m = Math.round((new Date(b) - new Date(a)) / 6e4); return !a || !b || !(m >= 0) ? '' : m < 60 ? m + ' דק׳' : Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' שע׳'; };
+  const endOf = (c) => (c.status === 'open' ? c.last_at : c.closed_at || c.last_at);
+  const times = (c) => '🕒 נפתחה ' + when(c.opened_at) + (c.first_at ? ' · סריקה ראשונה ' + hm(c.first_at) + ' · אחרונה ' + hm(c.last_at) : ' · עוד אין סריקות') +
+    (c.status !== 'open' && c.closed_at ? ' · נסגרה ' + (dm(c.closed_at) === dm(c.opened_at) ? '' : dm(c.closed_at) + ' ') + hm(c.closed_at) : '') +
+    (dur(c.opened_at, endOf(c)) ? ' · ⏱ ' + dur(c.opened_at, endOf(c)) : '');
   const IMG = 'https://otjhhljgdevazanrretx.supabase.co/storage/v1/object/public/products/';
   const pic = (bc, size, cls) => '<img class="iv-pic' + (cls ? ' ' + cls : '') + '" src="' + IMG + encodeURIComponent(bc) + '.webp" alt="" loading="lazy" width="' + size + '" height="' + size + '" onerror="this.remove()">';
   const fine = () => window.matchMedia && matchMedia('(pointer:fine)').matches;
@@ -130,7 +136,7 @@
       document.body.insertAdjacentHTML('beforeend', '<div id="ivOv" class="hidden"><div class="iv-top"><button id="ivBack" hidden>→</button><h2 id="ivTitle">📦 ספירת מלאי</h2><span class="sp"></span>' +
         '<button id="ivX">✕ סגירה</button></div><div class="iv-body" id="ivBody"></div></div>');
       $('ivX').addEventListener('click', close);
-      $('ivBack').addEventListener('click', () => { camStop(); showList(); });
+      $('ivBack').addEventListener('click', () => { camStop(); if (view === 'merge' && L && L.old) showOld(); else showList(); });
       document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && $('ivOv') && !$('ivOv').classList.contains('hidden') && !camOn) close(); });
       window.addEventListener('online', flush);
     }
@@ -143,6 +149,18 @@
   function head(title, back) { $('ivTitle').textContent = title; $('ivBack').hidden = !back; }
 
   /* ================= the list ================= */
+  async function showOld() {
+    view = 'list'; head('🗄 ספירות ישנות וארכיון', true);
+    $('ivBody').innerHTML = '<div class="iv-mut" style="text-align:center;padding:30px">טוען…</div>';
+    const r = await api('invList', { old: true });
+    if (view !== 'list') return;
+    if (!r.ok) { $('ivBody').innerHTML = '<div class="iv-card">' + e(r.error) + '</div>'; return; }
+    L = r;
+    $('ivBody').innerHTML = '<div class="iv-mut" style="margin:0 4px 10px">ספירות שהועברו לארכיון, וספירות שהסתיימו לפני יותר מ-60 יום. ' + (r.mgr ? 'אפשר לסמן ולאחד / לייצא אותן כרגיל.' : '') + '</div>' +
+      (r.counts.length ? r.counts.map(card).join('') + (r.mgr ? '<div class="iv-acts" style="position:sticky;bottom:10px"><button class="iv-btn iv-pri" id="ivMergeSel" disabled>📊 סמנו ספירות לאיחוד</button></div>' : '')
+        : '<div class="iv-mut" style="text-align:center;padding:20px">אין ספירות בארכיון.</div>');
+    wire(r, showOld);
+  }
   async function showList() {
     view = 'list'; head('📦 ספירת מלאי', false);
     $('ivBody').innerHTML = '<div class="iv-mut" style="text-align:center;padding:30px">טוען…</div>';
@@ -159,7 +177,9 @@
     if (others.length) h += '<div class="iv-h">' + (r.mgr ? '📋 כל הספירות (60 יום) — סמנו כדי לאחד' : '✓ הספירות שלי שהסתיימו') + '</div>' + others.map(card).join('') +
       (r.mgr ? '<div class="iv-acts" style="position:sticky;bottom:10px"><button class="iv-btn iv-pri" id="ivMergeSel" disabled>📊 סמנו ספירות לאיחוד</button></div>' : '');
     if (!mineOpen.length && !others.length) h += '<div class="iv-mut" style="text-align:center;padding:20px">עוד אין ספירות — פותחים אחת למעלה.</div>';
+    h += '<div class="iv-acts" style="justify-content:center;margin-top:16px"><button class="iv-btn" id="ivOld">🗄 ספירות ישנות וארכיון</button></div>';
     $('ivBody').innerHTML = h;
+    $('ivOld').onclick = showOld;
     $('ivNew').onclick = async () => {
       const b = $('ivNew'); b.disabled = true;
       const x = await api('invOpen', { title: $('ivNewT').value.trim() });
@@ -167,11 +187,17 @@
       if (!x.ok) return say(x.error, 'err');
       startCount(x.count);
     };
+    wire(r, showList);
+  }
+  function wire(r, again) {
     $('ivBody').querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => startCount(r.counts.find((c) => String(c.id) === b.dataset.go))));
     $('ivBody').querySelectorAll('[data-mg]').forEach((b) => b.addEventListener('click', () => showMerge([Number(b.dataset.mg)])));
     $('ivBody').querySelectorAll('[data-arc]').forEach((b) => b.addEventListener('click', async () => {
       if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'בטוח? לחצו שוב'; return; }
-      const x = await api('invArchive', { countId: Number(b.dataset.arc) }); if (!x.ok) say(x.error, 'err'); showList();
+      const x = await api('invArchive', { countId: Number(b.dataset.arc) }); if (!x.ok) say(x.error, 'err'); again();
+    }));
+    $('ivBody').querySelectorAll('[data-unarc]').forEach((b) => b.addEventListener('click', async () => {
+      const x = await api('invUnarchive', { countId: Number(b.dataset.unarc) }); if (!x.ok) return say(x.error, 'err'); say('✓ הספירה הוחזרה מהארכיון'); again();
     }));
     const sel = () => [...$('ivBody').querySelectorAll('.iv-sel:checked')].map((x) => Number(x.value));
     $('ivBody').querySelectorAll('.iv-sel').forEach((c) => c.addEventListener('change', () => {
@@ -184,12 +210,14 @@
     const o = c.status === 'open', own = c.opened_by === L.me;
     return '<div class="iv-card"><div style="display:flex;gap:10px;align-items:flex-start">' + (L.mgr ? '<input type="checkbox" class="iv-sel" value="' + c.id + '">' : '') +
       '<div style="flex:1;min-width:0"><h3>' + e(cname(c)) + (o ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">' + (own ? 'פתוחה' : 'סופרים עכשיו') + '</span>' : '<span class="iv-badge" style="background:#f1f5f9;color:#475569">הסתיימה ' + hm(c.closed_at) + '</span>') +
-      (c.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(c.exported_at) + '</span>' : '') + '</h3>' +
+      (c.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(c.exported_at) + '</span>' : '') +
+      (c.archived ? '<span class="iv-badge" style="background:#f1f5f9;color:#64748b">🗄 ארכיון</span>' : '') + '</h3>' +
       (label(c) ? '<div class="iv-mut" style="font-weight:700;color:#334155">' + e(label(c)) + '</div>' : '') +
-      '<div class="iv-mut">' + (c.last_at ? 'שורה אחרונה ' + hm(c.last_at) : 'עוד אין שורות') + (!o && c.closed_at ? ' · הסתיימה ' + when(c.closed_at) : '') + '</div>' +
+      '<div class="iv-mut">' + times(c) + '</div>' +
       '<div class="iv-pills"><span>' + fmt(c.lines) + ' סריקות</span><span>' + fmt(c.items) + ' פריטים</span><span>' + fmt(c.units) + ' יחידות</span>' + (c.unknown ? '<span class="w">⚠ ' + c.unknown + ' לא בקטלוג</span>' : '') + '</div>' +
       '<div class="iv-acts">' + (o && own ? '<button class="iv-btn iv-pri" data-go="' + c.id + '">▶ להמשיך לספור</button>' : '') + (L.mgr ? '<button class="iv-btn" data-mg="' + c.id + '">📊 סיכום</button>' : '') +
-      (L.admin ? '<button class="iv-btn" data-arc="' + c.id + '" style="margin-inline-start:auto;color:#64748b">🗄 לארכיון</button>' : '') + '</div></div></div></div>';
+      (L.admin ? (c.archived ? '<button class="iv-btn" data-unarc="' + c.id + '" style="margin-inline-start:auto;color:#64748b">↩ החזרה מהארכיון</button>'
+        : '<button class="iv-btn" data-arc="' + c.id + '" style="margin-inline-start:auto;color:#64748b">🗄 לארכיון</button>') : '') + '</div></div></div></div>';
   }
   function pendBar() {
     if (!pend.length) return '';
@@ -506,8 +534,8 @@
     const openN = merge.counts.filter((c) => c.status === 'open').length;
     let h = '<div class="iv-card" style="padding:12px 16px"><h3>' + (merge.counts.length === 1 ? 'סיכום ספירה' : 'סיכום ' + merge.counts.length + ' ספירות') + '</h3>' +
       (openN ? '<div class="iv-warn" style="font-size:13px">' + (openN === 1 && one ? 'הספירה עדיין פתוחה — ' : openN + ' מהספירות עדיין פתוחות — ') + 'מה שייספר מעכשיו לא נכלל בסיכום הזה.</div>' : '') +
-      '<div class="iv-wrap" style="max-height:220px"><table class="iv-tbl"><thead><tr><th>ספירה</th><th class="n">סריקות</th><th class="n">פריטים</th><th class="n">יחידות</th></tr></thead><tbody>' +
-      merge.counts.map((c) => '<tr><td><b>' + e(cname(c)) + '</b>' + (label(c) ? '<small class="iv-mut"> · ' + e(label(c)) + '</small>' : '') + '<small class="iv-mut"> · ' + (c.status === 'open' ? 'פתוחה' : 'הסתיימה ' + hm(c.closed_at)) + '</small></td>' +
+      '<div class="iv-wrap" style="max-height:260px"><table class="iv-tbl"><thead><tr><th>ספירה</th><th class="n">סריקות</th><th class="n">פריטים</th><th class="n">יחידות</th></tr></thead><tbody>' +
+      merge.counts.map((c) => '<tr><td><b>' + e(cname(c)) + '</b>' + (label(c) ? '<small class="iv-mut"> · ' + e(label(c)) + '</small>' : '') + '<small class="iv-mut"> · ' + (c.status === 'open' ? 'פתוחה' : 'הסתיימה') + '</small><div class="iv-mut" style="font-size:12px">' + times(c) + '</div></td>' +
         '<td class="n">' + fmt(c.lines) + '</td><td class="n">' + fmt(c.items) + '</td><td class="n">' + fmt(c.units) + '</td></tr>').join('') + '</tbody></table></div></div>' +
       '<div class="iv-kpis"><div class="iv-kpi"><b>' + fmt(R.length) + '</b><span>פריטים</span></div><div class="iv-kpi"><b>' + fmt(units) + '</b><span>יחידות</span></div>' +
       '<div class="iv-kpi"><b style="color:' + (unk.length ? '#c2410c' : '#16a34a') + '">' + unk.length + '</b><span>לא בקטלוג</span></div><div class="iv-kpi"><b>' + people + '</b><span>סופרים</span></div></div>' +
@@ -565,9 +593,10 @@
       const ws = X.utils.aoa_to_sheet(a); ws['!cols'] = [{ wch: 16 }, { wch: 34 }, { wch: 9 }, { wch: 13 }, { wch: 17 }, { wch: 17 }, { wch: 16 }, { wch: 18 }, { wch: 28 }];
       ws['!views'] = [{ RTL: true }]; X.utils.book_append_sheet(wb, ws, 'סיכום');
       const cn = {}; merge.counts.forEach((c) => { cn[c.id] = (c.opened_by || '') + ' ' + dt(c.opened_at) + (label(c) ? ' (' + label(c) + ')' : ''); });
-      const sc = [hd(['ספירה — מי ומתי נפתחה', 'מה / איפה', 'הסתיימה', 'סריקות', 'פריטים', 'יחידות', 'לא בקטלוג'])].concat(merge.counts.map((c) =>
-        [(c.opened_by || '') + ' ' + dt(c.opened_at), label(c), c.status === 'open' ? 'פתוחה' : dt(c.closed_at), nm(c.lines), nm(c.items), nm(c.units), nm(c.unknown)]));
-      const wsc = X.utils.aoa_to_sheet(sc); wsc['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 17 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 11 }]; wsc['!views'] = [{ RTL: true }];
+      const sc = [hd(['ספירה — מי ומתי נפתחה', 'מה / איפה', 'נפתחה', 'סריקה ראשונה', 'סריקה אחרונה', 'הסתיימה', 'משך', 'סריקות', 'פריטים', 'יחידות', 'לא בקטלוג'])].concat(merge.counts.map((c) =>
+        [(c.opened_by || '') + ' ' + dt(c.opened_at), label(c), dt(c.opened_at), dt(c.first_at), dt(c.last_at), c.status === 'open' ? 'פתוחה' : dt(c.closed_at), dur(c.opened_at, endOf(c)),
+          nm(c.lines), nm(c.items), nm(c.units), nm(c.unknown)]));
+      const wsc = X.utils.aoa_to_sheet(sc); wsc['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 17 }, { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 11 }]; wsc['!views'] = [{ RTL: true }];
       X.utils.book_append_sheet(wb, wsc, 'הספירות');
       const l = [hd(['תאריך ושעה', 'ספירה', 'ברקוד', 'שם', 'כמות', 'מי ספר', 'איפה', 'הערה'])].concat(all.lines.map((x) =>
         [dt(x.at), cn[x.count_id] || '', txt(x.barcode), names[x.barcode] || '', nm(x.qty), x.counted_by || '', x.area || '', x.note || '']));
