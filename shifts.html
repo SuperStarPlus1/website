@@ -2328,6 +2328,8 @@ async function openMgrs(){
     show('mgrsOverlay');
   }catch(e){ toast('שגיאה: '+e.message,'err'); }
 }
+// 🗂 the full employee card, part by part (18/11/2026) — the same keys as the server's HR_PARTS (_shared/hr-access.ts)
+const MGR_HR_PARTS = [['details','👤 פרטים אישיים, 101 ו-106'],['bank','🏦 חשבון בנק'],['contract','💼 העסקה, שכר וחוזה'],['docs','📂 מסמכים ותלושים'],['hr','⚖ שימוע ופיטורים']];
 const MGR_ALERT_TYPES = [
   ['late','איחור עובד'],
   ['longBreak','הפסקה ארוכה'],
@@ -2368,6 +2370,10 @@ function mgrRowEl(m){
     <button class="del" title="הסרה">✕</button>
     <button type="button" class="bell" title="הגדרת התראות">🔔</button>
     <label class="i-rc" title="גישה למודול גיוס העובדים — לאדמין תמיד" style="grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;${m.role===ROLE_ADMIN?'display:none':''}"><input type="checkbox" class="i-recruit" style="width:auto" ${m.recruit?'checked':''}>🧲 גישה למודול גיוס עובדים</label>
+    <div class="i-hr" title="כרטיס עובד מלא — לאדמין תמיד" style="grid-column:1/-1;font-size:13px;${m.role===ROLE_ADMIN?'display:none':''}">
+      <b>🗂 כרטיס עובד מלא</b> <span style="color:var(--muted)">— לכל העובדים בכל הסניפים:</span>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px">${MGR_HR_PARTS.map(([k,l])=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="i-hrp" data-k="${k}" style="width:auto" ${(m.hr||[]).includes(k)?'checked':''}>${l}</label>`).join('')}</div>
+    </div>
     <div class="mgr-prefs-panel hidden">
       <div class="mgr-pref-row head"><div class="lbl">סוג התראה</div><div class="cb">מייל</div><div class="cb">Push</div></div>
       ${MGR_ALERT_TYPES.map(([key,label])=>{
@@ -2384,6 +2390,7 @@ function mgrRowEl(m){
   div.querySelector('.i-role').addEventListener('change',e=>{
     div.querySelector('.i-branch').style.display = e.target.value===ROLE_ADMIN ? 'none' : '';
     div.querySelector('.i-rc').style.display = e.target.value===ROLE_ADMIN ? 'none' : 'flex';   // an admin always has the recruitment
+    div.querySelector('.i-hr').style.display = e.target.value===ROLE_ADMIN ? 'none' : '';      // … and the full employee card
   });
   div.querySelector('.bell').addEventListener('click',(e)=>{
     e.preventDefault();
@@ -2412,7 +2419,8 @@ document.getElementById('mgrsOk').addEventListener('click',async ()=>{
     branch: r.querySelector('.i-branch').value,
     empNo: r.querySelector('.i-empno').value.trim(),
     prefs: mgrRowPrefsJson(r),
-    recruit: r.querySelector('.i-recruit').checked
+    recruit: r.querySelector('.i-recruit').checked,
+    hr: [...r.querySelectorAll('.i-hrp')].filter(x=>x.checked).map(x=>x.dataset.k)
   })).filter(m=>m.name && m.password);
   if(!list.some(m=>m.role===ROLE_ADMIN)){
     document.getElementById('mgrErr').textContent='חייב להישאר לפחות אדמין אחד'; return;

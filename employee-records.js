@@ -119,7 +119,12 @@
     chips.insertAdjacentHTML('afterend', '<div id="empRecBtns" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
       '<button type="button" class="btn plain" id="empDetBtn" style="padding:5px 10px;font-size:12.5px">📋 פרטים נוספים</button>' +
       '<button type="button" class="btn plain" id="empConBtn" style="padding:5px 10px;font-size:12.5px">📄 חוזה עבודה</button></div>');
-    const sync = () => $('empRecBtns').classList.toggle('hidden', !isAdmin());
+    // an admin, or a manager given parts of the full card (🗂 in 👑 מנהלים — hr.js loads them, 18/11/2026)
+    const sync = () => {
+      const has = () => isAdmin() || !!(window.hrCardParts && window.hrCardParts().length);
+      $('empRecBtns').classList.toggle('hidden', !has());
+      if (!isAdmin() && window.hrCardPartsLoad) window.hrCardPartsLoad().then(() => $('empRecBtns').classList.toggle('hidden', !has())).catch(() => {});
+    };
     // re-checked whenever an employee card is shown (and on sign-in / role changes)
     const card = $('empCard');
     if (card) new MutationObserver(sync).observe(card, { attributes: true, attributeFilter: ['class'] });

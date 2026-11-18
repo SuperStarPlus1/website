@@ -13,6 +13,25 @@
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const appState = () => (typeof state !== 'undefined' ? state : null);
   const isAdmin = () => !!(appState() && appState().mgr && appState().mgr.role === 'אדמין');
+  // 🗂 18/11/2026: the parts of the card this manager may open (api hrAccess — 👑 מנהלים); an admin — all of them
+  const PARTS = ['details', 'bank', 'contract', 'docs', 'hr'];
+  const perm = { who: null, parts: [] };
+  async function loadParts() {
+    const s = appState();
+    if (!s || !s.mgr) { perm.who = null; perm.parts = []; return []; }
+    if (isAdmin()) return PARTS;
+    const who = s.mgr.name + '|' + s.mgr.role;
+    if (perm.who !== who) {
+      perm.who = who; perm.parts = [];
+      const r = await apiPost({ action: 'hrAccess', ...mAuth() }).catch(() => null);
+      perm.parts = r && r.ok && Array.isArray(r.parts) ? r.parts : [];
+    }
+    return perm.parts;
+  }
+  const parts = () => (isAdmin() ? PARTS : perm.parts);
+  const canCard = () => parts().length > 0;
+  window.hrCardParts = parts;          // employee-records.js: the "🗂 כרטיס עובד מלא" button in the employee's card
+  window.hrCardPartsLoad = loadParts;
   const say = (msg, cls) => { if (typeof toast === 'function') toast(msg, cls); };
   const mAuth = () => (typeof mgrAuth === 'function' ? mgrAuth() : {});
   const empAuth = () => { const s = appState(); return s && s.emp ? { username: s.emp.username, password: s.emp.pw } : {}; };
@@ -63,11 +82,13 @@
   /* ================= the full card ================= */
   let C = null, emp = '', tab = 'details';
   async function openCard(name, startTab) {
-    if (!isAdmin() || !name) return;
-    emp = name; tab = startTab || 'details';
-    const body = overlay('hrOverlay', '🗂 כרטיס עובד — ' + name, 'כל המידע והמסמכים של העובד/ת במקום אחד · אדמין בלבד', 900);
-    body.innerHTML = '<div class="rc-tabs"><button data-t="details">👤 פרטים</button><button data-t="bank">🏦 חשבון בנק</button><button data-t="contract">💼 העסקה וחוזה</button>' +
-      '<button data-t="docs">📂 מסמכים</button><button data-t="hr">⚖ שימוע ופיטורים</button></div><div id="hrPane"></div>';
+    await loadParts();
+    if (!canCard() || !name) { if (name) say('אין לך הרשאה לכרטיס העובד המלא', 'err'); return; }
+    const P = parts();
+    emp = name; tab = P.includes(startTab) ? startTab : P[0];
+    const body = overlay('hrOverlay', '🗂 כרטיס עובד — ' + name, 'כל המידע והמסמכים של העובד/ת במקום אחד · ' + (isAdmin() ? 'אדמין בלבד' : 'לפי ההרשאות שלך'), 900);
+    const T = { details: '👤 פרטים', bank: '🏦 חשבון בנק', contract: '💼 העסקה וחוזה', docs: '📂 מסמכים', hr: '⚖ שימוע ופיטורים' };
+    body.innerHTML = '<div class="rc-tabs">' + P.map((k) => '<button data-t="' + k + '">' + T[k] + '</button>').join('') + '</div><div id="hrPane"></div>';
     body.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.t; drawTab(); }));
     C = null;
     drawTab();
@@ -264,8 +285,9 @@
   }
 
   /* ---------- picking an employee (⚙ ניהול ← 🗂 כרטיס עובד) ---------- */
-  function openPicker() {
-    if (!isAdmin()) { say('אדמין בלבד', 'err'); return; }
+  async function openPicker() {
+    await loadParts();
+    if (!canCard()) { say('אין לך הרשאה לכרטיס העובד המלא', 'err'); return; }
     const body = overlay('hrPickOverlay', '🗂 כרטיס עובד', 'בחירת עובד/ת — כולל עובדים שאינם פעילים', 520);
     const list = ((appState() && appState().employees) || []).slice().sort((a, b) => (a.active === false) - (b.active === false) || String(a.name).localeCompare(String(b.name), 'he'));
     body.innerHTML = '<input class="rc-in" id="hpQ" placeholder="חיפוש שם / מחלקה…"><div id="hpList" style="margin-top:8px;max-height:60vh;overflow:auto"></div>';
@@ -338,7 +360,9 @@
     if (drop && !$('hrMenuBtn')) {
       drop.insertAdjacentHTML('beforeend', '<button id="hrMenuBtn">🗂 כרטיס עובד</button>');
       $('hrMenuBtn').addEventListener('click', openPicker);
-      $('menuAdminBtn')?.addEventListener('click', () => { $('hrMenuBtn').style.display = isAdmin() ? '' : 'none'; }, true);
+      const sync = async () => { $('hrMenuBtn').style.display = isAdmin() ? '' : 'none'; await loadParts(); $('hrMenuBtn').style.display = canCard() ? '' : 'none'; };
+      $('menuAdminBtn')?.addEventListener('click', sync, true);
+      sync();
     }
     const links = document.querySelector('#empHome .eh-links');
     if (links && !$('ehLetters')) {
