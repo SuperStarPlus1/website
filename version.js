@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.35.0',
+  version: '2.35.1',
   date: '23/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    '👥 ניהול מועדון לקוחות בתפריט 💼 ניהול העסק (אדמין) — נפתח כבר מחובר, בלי קוד במייל',
     '🎨 לוח מכירות, אופטימייזר וחדר בקרה בעיצוב KPI מודרני — כרטיסים לבנים, מספרים גדולים, עלייה בירוק וירידה באדום; כפתור "🎨 עיצוב קלאסי" מחזיר את העיצוב הקודם',
     '📦 ספירת מלאי: קורא ברקודים חדש ומהיר — קורא בכל זווית (גם באלכסון), אותו דבר באייפון ובאנדרואיד; המצלמה נשארת מוכנה בין מוצר למוצר',
     '📋 טופס משימה (פתיחה / סגירת סניף): מה שמילאת נשמר בטלפון — אם המסך נסגר, פתיחה מחדש מחזירה אותו',

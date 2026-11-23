@@ -21,6 +21,13 @@
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const store = { get(k) { try { return sessionStorage.getItem(k) || ''; } catch (x) { return ''; } }, set(k, v) { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch (x) { /* private mode */ } } };
   let ct = store.get('clubSendToken'), me = store.get('clubSendEmail');
+  // 23/11/2026: opened from the management system (💼 ניהול העסק ▸ 👥 ניהול מועדון לקוחות) by a signed-in admin — the
+  // session it got for this page (clubSendFromApp) is taken from the window that opened it, once (never in the address)
+  try {
+    const h = window.opener && window.opener.location.origin === location.origin && window.opener.__clubHandoff;
+    if (h && h.token && Date.now() - (h.at || 0) < 60000) { ct = h.token; me = h.email || ''; store.set('clubSendToken', ct); store.set('clubSendEmail', me); }
+    if (window.opener) window.opener.__clubHandoff = null;
+  } catch (_) { /* another origin — the regular sign-in */ }
   const say = (m, c) => { const t = document.createElement('div'); t.className = 'toast' + (c === 'err' ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); };
   const loadScript = (src) => new Promise((res, rej) => { if (document.querySelector('script[src="' + src + '"]')) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   async function api(body) {

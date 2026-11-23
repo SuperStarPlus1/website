@@ -31,7 +31,7 @@
       '§בקשות ואישורים', 'apMgrTeamBtn', 'reqVacBtn', 'reqConsBtn', 'reqSwapBtn', 'sickMgrBtn', 'rgMgrBtn', 'apChainBtn', 'consBtn'],   // consBtn: hidden (all together)
     menuBizDrop: ['§דוחות', 'crMgrBtn', 'sdMgrBtn', 'asMgrBtn', 'miMgrBtn', 'bzMeatCount', 'ccMgrBtn',
       '§טפסים ותלושים', 'dsMgrBtn', 'payBtn', 'f101AdminBtn', 'f106AllBtn',
-      '§הגדרות ותקשורת', 'msgBtn', 'annBtn', 'holBtn', 'coSetBtn', 'coBillBtn',
+      '§הגדרות ותקשורת', 'msgBtn', 'annBtn', 'clubMgrBtn', 'holBtn', 'coSetBtn', 'coBillBtn',
       '§תפעול', 'tkMgrBtn', 'tkMgrMine', 'bfMgrBtn', 'invMgrBtn', 'opMeatCount', 'opOpenBtn', 'opCloseBtn'],
     menuMeDrop: ['mpwBtn', 'mfaMenuBtn', 'myAlertsBtn', 'mgrPushBtn2'],
   };
