@@ -432,68 +432,150 @@
     if (pend.some((p) => !p.err)) setTimeout(flush, 15000);
   }
 
-  /* ---------- the camera: html5-qrcode (cdnjs — allowed by the page; the browser's BarcodeDetector inside when there is one) ---------- */
-  // 23/11/2026 (the owner: "the camera does not recognise barcodes, though it did before"): the library worked (checked on
-  // the live site — a photo of an EAN-13 read right); the suspect is the phone browser's own BarcodeDetector, which the
-  // live camera used when there is one — after a browser update it can be there and read nothing. Now: used only when it
-  // says it reads EAN-13; and when the live picture reads nothing for 8 seconds, the camera restarts once with the
-  // library's own reader (for the rest of the session).
-  let hq = null, camWanted = false, camSeq = 0, nativeOff = false, camTimer = null;
-  async function nativeOk() {
-    if (nativeOff || !('BarcodeDetector' in window)) return false;
-    try { const f = await window.BarcodeDetector.getSupportedFormats(); return Array.isArray(f) && f.includes('ean_13'); } catch (_) { return false; }
+  /* ---------- the camera ----------
+   * 23/11/2026 (the owner: "the camera works, but at some angles not quickly — an iPhone; it must suit every phone"): the
+   * reader is zxing-cpp (zxing-wasm 3.1.6, MIT — served from this site: vendor/zxing-reader-3.1.6.js + its .wasm; the
+   * page's policy allows 'wasm-unsafe-eval'). The same on every phone: our own video, a frame every ~90 ms, the middle of
+   * the picture, tryHarder + tryRotate (sideways / upside down) — a tilted barcode is read too. The stream stays open
+   * between items (60 s), so the next scan starts at once. If the reader cannot load: the old one (html5-qrcode). */
+  const ZX_JS = 'vendor/zxing-reader-3.1.6.js', ZX_WASM = '/vendor/zxing_reader-3.1.6.wasm';
+  const ZX_OPTS = { formats: ['EAN13', 'EAN8', 'UPCA', 'UPCE', 'Code128', 'ITF', 'Code39', 'QRCode'], tryHarder: true, tryRotate: true, tryInvert: false, tryDownscale: true, maxNumberOfSymbols: 1 };
+  let zxReady = null;
+  function zxLoad() {
+    if (zxReady) return zxReady;
+    zxReady = new Promise((res, rej) => {
+      const go = () => {
+        try { window.ZXingWASM.prepareZXingModule({ overrides: { locateFile: (p, pre) => (p.endsWith('.wasm') ? ZX_WASM : pre + p) }, fireImmediately: true }); } catch (_) {}
+        res(window.ZXingWASM);
+      };
+      if (window.ZXingWASM) return go();
+      const sc = document.createElement('script'); sc.src = ZX_JS; sc.onload = go; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc);
+    }).catch((x) => { zxReady = null; throw x; });
+    return zxReady;
   }
+  // a diagonal barcode: the reader takes straight (±20°) and sideways / upside down (tryRotate); the angles between are
+  // read from the picture turned by these (checked: every angle 0–180° in 3° steps read)
+  const ZX_TURN = [25, 35, 45, 55, 65];
+  function turned(src, deg) {
+    const w = src.width, h = src.height, d = Math.ceil(Math.hypot(w, h)), k = Math.min(1, 1280 / d);
+    const c = document.createElement('canvas'); c.width = c.height = Math.round(d * k);
+    const g = c.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.translate(c.width / 2, c.height / 2); g.rotate(-deg * Math.PI / 180); g.scale(k, k); g.drawImage(src, -w / 2, -h / 2);
+    return g.getImageData(0, 0, c.width, c.height);
+  }
+  async function zxRead(src) {   // ImageData / Blob → the code, or ''
+    const Z = await zxLoad();
+    const r = await Z.readBarcodes(src, ZX_OPTS);
+    const ok = (r || []).find((x) => x && x.isValid !== false && x.text);
+    return ok ? String(ok.text).trim() : '';
+  }
+
+  let hq = null, camWanted = false, camSeq = 0, stream = null, streamTimer = null, loopOn = false;
+  function frameHtml(inner) {
+    return '<div class="iv-cam">' + inner + '<div class="fr"></div><div class="iv-camb"><button type="button" id="ivSnap">📸 לא נקלט? צלמו תמונה</button><button type="button" id="ivCamX">✕ סגירה</button></div></div>' +
+      '<div class="iv-mut" style="margin:-4px 2px 8px">מכוונים את הברקוד למסגרת, כ-15 ס״מ מהטלפון ובאור טוב — גם בזווית.</div>';
+  }
+  async function openStream() {
+    clearTimeout(streamTimer);
+    if (stream && stream.getVideoTracks().some((t) => t.readyState === 'live')) return stream;
+    const want = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: Object.assign({ advanced: [{ focusMode: 'continuous' }] }, want), audio: false }); }
+    catch (e1) {
+      if (/NotAllowed|Permission|denied|Security/i.test(String((e1 && (e1.name || e1.message)) || e1))) throw e1;
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    }
+    return stream;
+  }
+  function closeStream() { clearTimeout(streamTimer); if (stream) stream.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} }); stream = null; }
+
   async function camStart() {
     camWanted = true;
     if (camOn) return;
     const box = $('ivCamBox'); if (!box) return;
+    camOn = true;
+    const seq = ++camSeq;
+    box.innerHTML = frameHtml('<video id="ivVid" playsinline muted autoplay></video>');
+    $('ivCamX').onclick = () => { camWanted = false; camStop(); };
+    $('ivSnap').onclick = photoScan;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no camera');
+      const [s] = await Promise.all([openStream(), zxLoad()]);
+      if (!camOn || seq !== camSeq) return;
+      const v = $('ivVid');
+      v.srcObject = s;
+      try { await v.play(); } catch (_) {}
+      scanLoop(v, seq);
+    } catch (err) {
+      const m = String((err && (err.name || err.message)) || err || '');
+      if (/load/.test(m) && camOn && seq === camSeq) { camOn = false; closeStream(); return oldCamStart(); }   // the new reader did not load → the old one
+      camStop();
+      say(/NotAllowed|Permission|denied|Security/i.test(m) ? 'צריך לאשר לאתר גישה למצלמה (בהגדרות הדפדפן ← הרשאות האתר ← מצלמה)'
+        : /NotFound|Overconstrained|no camera/i.test(m) ? 'לא נמצאה מצלמה במכשיר — אפשר להקליד ברקוד'
+        : 'לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
+    }
+  }
+  function scanLoop(v, seq) {
+    const cv = document.createElement('canvas'), g = cv.getContext('2d', { willReadFrequently: true });
+    let n = 0, turn = 0;
+    loopOn = true;
+    const tick = async () => {
+      if (!camOn || seq !== camSeq) { loopOn = false; return; }
+      const W = v.videoWidth, H = v.videoHeight;
+      if (W && H) {
+        // the middle of the picture (where the frame is); every 4th frame the whole picture — a barcode near the edge
+        const full = (++n % 4) === 0;
+        const sw = full ? W : Math.round(W * 0.86), sh = full ? H : Math.round(H * 0.62);
+        const sx = Math.round((W - sw) / 2), sy = Math.round((H - sh) / 2);
+        const k = Math.min(1, 1280 / Math.max(sw, sh));
+        cv.width = Math.round(sw * k); cv.height = Math.round(sh * k);
+        g.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+        let text = '';
+        try {
+          text = await zxRead(g.getImageData(0, 0, cv.width, cv.height));
+          for (let j = 0; j < 2 && !text && camOn && seq === camSeq; j++) text = await zxRead(turned(cv, ZX_TURN[(turn++) % ZX_TURN.length]));
+        } catch (_) {}
+        if (text && camOn && seq === camSeq) {
+          if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {}
+          camStop(true); lookup(text, 'scan', true); loopOn = false; return;
+        }
+      }
+      setTimeout(tick, 90);
+    };
+    tick();
+  }
+
+  /* the old reader (html5-qrcode from cdnjs) — only when the new one could not load */
+  async function oldCamStart() {
+    const box = $('ivCamBox'); if (!box) return;
     const rid = 'ivReader' + (++camSeq);
-    box.innerHTML = '<div class="iv-cam"><div id="' + rid + '"></div><div class="iv-camb"><button type="button" id="ivSnap">📸 לא נקלט? צלמו תמונה</button><button type="button" id="ivCamX">✕ סגירה</button></div></div>' +
-      '<div class="iv-mut" style="margin:-4px 2px 8px">מחזיקים את הברקוד לרוחב, בתוך המסגרת, כ-15 ס״מ מהטלפון ובאור טוב.</div>';
+    box.innerHTML = frameHtml('<div id="' + rid + '"></div>').replace('<div class="fr"></div>', '');
     $('ivCamX').onclick = () => { camWanted = false; camStop(); };
     $('ivSnap').onclick = photoScan;
     camOn = true;
     try {
       await loadQR();
       if (!camOn) return;
-      const native = await nativeOk();
-      const me = new Html5Qrcode(rid, qrOpts(native));
+      const me = new Html5Qrcode(rid, qrOpts());
       hq = me;
       const cfg = { fps: 10, disableFlip: true, qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.9)), height: Math.max(100, Math.floor(Math.min(h * 0.6, w * 0.5))) }) };
-      const onCode = (text) => { if (!camOn || hq !== me) return; clearTimeout(camTimer); camStop(true); lookup(text, 'scan', true); };
-      try {   // a sharp picture: 1-D barcodes need resolution and focus
-        await me.start({ facingMode: 'environment' }, Object.assign({}, cfg, { videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }), onCode, () => {});
-      } catch (e1) {
-        if (/NotAllowed|Permission|denied/i.test(String((e1 && (e1.name || e1.message)) || e1))) throw e1;
-        await me.start({ facingMode: 'environment' }, cfg, onCode, () => {});   // a camera that refuses those — the plain way
-      }
-      if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} return; }
-      clearTimeout(camTimer);
-      if (native) camTimer = setTimeout(() => {   // nothing read with the browser's reader → the library's own, once
-        if (!camOn || hq !== me) return;
-        nativeOff = true;
-        say('מחליף לשיטת סריקה אחרת — המשיכו לכוון לברקוד', 'ok');
-        camStop(true);
-        setTimeout(() => { if (camWanted) camStart(); }, 400);
-      }, 8000);
+      const onCode = (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text, 'scan', true); };
+      await me.start({ facingMode: 'environment' }, cfg, onCode, () => {});
+      if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} }
     } catch (err) {
-      const m = String((err && (err.name || err.message)) || err || '');
       camStop();
-      say(/NotAllowed|Permission|denied/i.test(m) ? 'צריך לאשר לאתר גישה למצלמה (בהגדרות הדפדפן ← הרשאות האתר ← מצלמה)'
-        : /NotFound|Overconstrained|no camera/i.test(m) ? 'לא נמצאה מצלמה במכשיר — אפשר להקליד ברקוד'
-        : /load/.test(m) ? 'לא הצלחתי לטעון את רכיב הסריקה — בדקו את החיבור ונסו שוב'
-        : 'לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
+      say('לא הצלחתי לפתוח את המצלמה — אפשר להקליד ברקוד או להשתמש בסורק', 'err');
     }
   }
   function loadQR() {
     if (window.Html5Qrcode) return Promise.resolve();
     return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = QR_URL; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
   }
-  function qrOpts(native) {
+  function qrOpts() {
     const F = window.Html5QrcodeSupportedFormats;
     const fm = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE].filter((x) => x != null) : undefined;
-    return { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: !!native }, verbose: false };
+    return { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: false }, verbose: false };
   }
+
   // 📸 a photo of the barcode (the phone's own camera app — focused and sharp), made ≤ 1600 px and decoded
   function photoScan() {
     const inp = document.createElement('input');
@@ -502,33 +584,44 @@
       const f = inp.files && inp.files[0]; if (!f) return;
       $('ivItem').innerHTML = '<div class="iv-mut" style="padding:12px 2px">🔎 קורא את הברקוד מהתמונה…</div>';
       try {
-        await loadQR();
         const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
         const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
         const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
-        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(img.src);
-        const small = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92));
-        if (!$('ivPhotoR')) document.body.insertAdjacentHTML('beforeend', '<div id="ivPhotoR" style="display:none"></div>');
-        const sc = new Html5Qrcode('ivPhotoR', qrOpts(false));   // a photo: the library's own reader (works everywhere)
+        const g = cv.getContext('2d'); g.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(img.src);
         let text = '';
-        try { text = await sc.scanFile(new File([small], 'b.jpg', { type: 'image/jpeg' }), false); } finally { try { sc.clear(); } catch (_) {} }
+        try {
+          text = await zxRead(g.getImageData(0, 0, cv.width, cv.height));
+          for (const a of ZX_TURN) { if (text) break; text = await zxRead(turned(cv, a)); }
+        } catch (_) { text = ''; }
+        if (!text) {   // the old reader as a second try
+          await loadQR();
+          const small = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92));
+          if (!$('ivPhotoR')) document.body.insertAdjacentHTML('beforeend', '<div id="ivPhotoR" style="display:none"></div>');
+          const sc = new Html5Qrcode('ivPhotoR', qrOpts());
+          try { text = await sc.scanFile(new File([small], 'b.jpg', { type: 'image/jpeg' }), false); } finally { try { sc.clear(); } catch (_) {} }
+        }
+        if (!text) throw new Error('none');
         lookup(text, 'scan', true);
       } catch (_) {
         $('ivItem').innerHTML = '';
         say('לא הצלחתי לקרוא את הברקוד מהתמונה — צלמו קרוב יותר, ישר ובאור טוב, או הקלידו 6 ספרות אחרונות', 'err');
       }
     };
-    camStop(true);   // the live camera off while the camera app takes the photo
+    camStop(true);
+    closeStream();   // the phone's camera app needs the camera
     inp.click();
   }
   function camStop(keepWanted) {
     if (!keepWanted) camWanted = false;
-    clearTimeout(camTimer);
     camOn = false;
+    camSeq++;
     const h = hq; hq = null;
     const box = $('ivCamBox');
     if (h) { Promise.resolve().then(() => h.stop()).catch(() => {}).finally(() => { try { h.clear(); } catch (_) {} if (!camOn && box && box.isConnected && !hq) box.innerHTML = ''; }); }
     else if (box) box.innerHTML = '';
+    // the stream: kept for the next item (fast), closed after 60 s unused — or at once when the camera is not wanted
+    clearTimeout(streamTimer);
+    if (stream) { if (keepWanted) streamTimer = setTimeout(closeStream, 60000); else closeStream(); }
   }
   let ac = null;
   function beep(f, d) {
