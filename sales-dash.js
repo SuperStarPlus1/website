@@ -110,7 +110,7 @@
   function delta(cur, prev, money) {
     if (!prev) return '<span class="d">' + (money ? 'אין נתון להשוואה' : '—') + '</span>';
     const d = (cur - prev) / Math.abs(prev) * 100;
-    return '<span class="d">' + (d >= 0 ? '▲ ' : '▼ ') + pct(Math.abs(d)) + ' ' + (R.compare === 'year' ? 'משנה שעברה' : R.compare === 'week' ? 'מאותו יום בשבוע שעבר' : 'מהתקופה הקודמת') + '</span>';
+    return '<span class="d ' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '▲ ' : '▼ ') + pct(Math.abs(d)) + ' ' + (R.compare === 'year' ? 'משנה שעברה' : R.compare === 'week' ? 'מאותו יום בשבוע שעבר' : 'מהתקופה הקודמת') + '</span>';
   }
   const marginColor = (m) => m == null ? '#e2e8f0;#475569' : m < 10 ? '#fee2e2;#b91c1c' : m < 20 ? '#fef3c7;#92400e' : m < 30 ? '#dcfce7;#166534' : '#d1fae5;#065f46';
   const mBadge = (m) => { const [bg, fg] = marginColor(m).split(';'); return '<span class="sd-m" style="background:' + bg + ';color:' + fg + '">' + pct(m) + '</span>'; };
@@ -148,7 +148,7 @@
     const c = r.cur, p = r.cmp, cr = r.curR, pr = r.cmpR;
     const profit = c.net_c - c.cost, pprofit = p.net_c - p.cost, margin = c.net_c ? profit / c.net_c * 100 : null;
     const basket = cr.receipts ? cr.sales / cr.receipts : 0, pbasket = pr.receipts ? pr.sales / pr.receipts : 0;
-    const kpi = (ic, l, v, d, g) => '<div class="sd-kpi" style="background:' + g + '"><span class="ic">' + ic + '</span><div class="l">' + l + '</div><div class="v">' + v + '</div>' + (d || '') + '</div>';
+    const kpi = (ic, l, v, d, g) => '<div class="sd-kpi" style="background:' + g + ';--g:' + g + '"><span class="ic">' + ic + '</span><div class="l">' + l + '</div><div class="v">' + v + '</div>' + (d || '') + '</div>';
     h += '<div class="sd-kpis">' +
       kpi('💰', 'מכירות (כולל מע"מ)', nis(c.sales), delta(c.sales, p.sales, 1), 'linear-gradient(135deg,#6366f1,#8b5cf6)') +
       kpi('📈', 'רווח גולמי (לפני מע"מ)', nis(profit), delta(profit, pprofit, 1), 'linear-gradient(135deg,#059669,#10b981)') +
