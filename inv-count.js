@@ -433,7 +433,16 @@
   }
 
   /* ---------- the camera: html5-qrcode (cdnjs — allowed by the page; the browser's BarcodeDetector inside when there is one) ---------- */
-  let hq = null, camWanted = false, camSeq = 0;
+  // 23/11/2026 (the owner: "the camera does not recognise barcodes, though it did before"): the library worked (checked on
+  // the live site — a photo of an EAN-13 read right); the suspect is the phone browser's own BarcodeDetector, which the
+  // live camera used when there is one — after a browser update it can be there and read nothing. Now: used only when it
+  // says it reads EAN-13; and when the live picture reads nothing for 8 seconds, the camera restarts once with the
+  // library's own reader (for the rest of the session).
+  let hq = null, camWanted = false, camSeq = 0, nativeOff = false, camTimer = null;
+  async function nativeOk() {
+    if (nativeOff || !('BarcodeDetector' in window)) return false;
+    try { const f = await window.BarcodeDetector.getSupportedFormats(); return Array.isArray(f) && f.includes('ean_13'); } catch (_) { return false; }
+  }
   async function camStart() {
     camWanted = true;
     if (camOn) return;
@@ -447,17 +456,26 @@
     try {
       await loadQR();
       if (!camOn) return;
-      const me = new Html5Qrcode(rid, qrOpts());
+      const native = await nativeOk();
+      const me = new Html5Qrcode(rid, qrOpts(native));
       hq = me;
       const cfg = { fps: 10, disableFlip: true, qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.9)), height: Math.max(100, Math.floor(Math.min(h * 0.6, w * 0.5))) }) };
-      const onCode = (text) => { if (!camOn || hq !== me) return; camStop(true); lookup(text, 'scan', true); };
+      const onCode = (text) => { if (!camOn || hq !== me) return; clearTimeout(camTimer); camStop(true); lookup(text, 'scan', true); };
       try {   // a sharp picture: 1-D barcodes need resolution and focus
         await me.start({ facingMode: 'environment' }, Object.assign({}, cfg, { videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }), onCode, () => {});
       } catch (e1) {
         if (/NotAllowed|Permission|denied/i.test(String((e1 && (e1.name || e1.message)) || e1))) throw e1;
         await me.start({ facingMode: 'environment' }, cfg, onCode, () => {});   // a camera that refuses those — the plain way
       }
-      if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} }
+      if (!camOn || hq !== me) { try { await me.stop(); } catch (_) {} return; }
+      clearTimeout(camTimer);
+      if (native) camTimer = setTimeout(() => {   // nothing read with the browser's reader → the library's own, once
+        if (!camOn || hq !== me) return;
+        nativeOff = true;
+        say('מחליף לשיטת סריקה אחרת — המשיכו לכוון לברקוד', 'ok');
+        camStop(true);
+        setTimeout(() => { if (camWanted) camStart(); }, 400);
+      }, 8000);
     } catch (err) {
       const m = String((err && (err.name || err.message)) || err || '');
       camStop();
@@ -471,10 +489,10 @@
     if (window.Html5Qrcode) return Promise.resolve();
     return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = QR_URL; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
   }
-  function qrOpts() {
+  function qrOpts(native) {
     const F = window.Html5QrcodeSupportedFormats;
     const fm = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE].filter((x) => x != null) : undefined;
-    return { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false };
+    return { formatsToSupport: fm, experimentalFeatures: { useBarCodeDetectorIfSupported: !!native }, verbose: false };
   }
   // 📸 a photo of the barcode (the phone's own camera app — focused and sharp), made ≤ 1600 px and decoded
   function photoScan() {
@@ -491,7 +509,7 @@
         cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(img.src);
         const small = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92));
         if (!$('ivPhotoR')) document.body.insertAdjacentHTML('beforeend', '<div id="ivPhotoR" style="display:none"></div>');
-        const sc = new Html5Qrcode('ivPhotoR', qrOpts());
+        const sc = new Html5Qrcode('ivPhotoR', qrOpts(false));   // a photo: the library's own reader (works everywhere)
         let text = '';
         try { text = await sc.scanFile(new File([small], 'b.jpg', { type: 'image/jpeg' }), false); } finally { try { sc.clear(); } catch (_) {} }
         lookup(text, 'scan', true);
@@ -505,6 +523,7 @@
   }
   function camStop(keepWanted) {
     if (!keepWanted) camWanted = false;
+    clearTimeout(camTimer);
     camOn = false;
     const h = hq; hq = null;
     const box = $('ivCamBox');

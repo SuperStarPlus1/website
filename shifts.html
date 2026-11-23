@@ -6068,7 +6068,9 @@ let _lastActivity = Date.now();
   document.addEventListener(ev, () => { _lastActivity = Date.now(); }, { passive:true, capture:true }));
 setInterval(() => {
   if(!authed()) return;
-  const limitMin = 30;                       // 30 minutes (user, 21/10/2026); was 15, before that 5 for managers
+  // 30 minutes (user, 21/10/2026); was 15, before that 5 for managers. 23/11/2026 (the owner): 2 hours while a work
+  // screen is open (a count, a task's form — the phone is put down between scans / fridges)
+  const limitMin = document.querySelector('.overlay:not(.hidden), [id$="Ov"]:not(.hidden)') ? 120 : 30;
   if(Date.now() - _lastActivity >= limitMin*60000){
     fullLogout_();
     toast('התנתקת אוטומטית עקב '+limitMin+' דקות חוסר פעילות','err');
@@ -6313,6 +6315,9 @@ if ('serviceWorker' in navigator) {
     if (sessionStorage.getItem('sp_sw_reloaded')) return;
     const reloadNow = () => {
       if (typeof hasDirty === 'function' && hasDirty()) return false;
+      // 23/11/2026 (the owner: "the operations screens close by themselves"): never while a screen is open (a count,
+      // a task's form…) — it waits for the next time the app goes to the background on the main screen, or the next launch
+      if (document.querySelector('.overlay:not(.hidden), [id$="Ov"]:not(.hidden)')) return false;
       sessionStorage.setItem('sp_sw_reloaded', '1');
       window.location.reload();
       return true;

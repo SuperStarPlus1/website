@@ -184,7 +184,13 @@
     const body = overlay('tkFill', (mark ? '✓ סימון כבוצעה — ' : '📋 ') + t.title);
     $('tkFillSub').textContent = mark ? dmy(t.date) + ' · ' + t.when : t.when + (t.status === 'late' ? ' · עבר מועד היעד — עדיין אפשר למלא' : '') +
       (t.status === 'returned' ? ' · הוחזר לתיקון: ' + t.approvalNote : '') + (t.needsApproval ? ' · הדיווח יעבור לאישור מנהל' : '');
-    const stamp = (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
+    // 23/11/2026 (the owner): a draft on this phone — if the screen closes (the phone, a reload) the form comes back as
+    // it was; removed when sent. Not for a manager's marking.
+    const dKey = mark ? '' : 'tk_draft_' + t.id + '_' + t.date;
+    try { Object.keys(localStorage).filter((k) => k.startsWith('tk_draft_')).forEach((k) => { const d = JSON.parse(localStorage.getItem(k) || '{}'); if (!d.at || Date.now() - d.at > 3 * 86400000) localStorage.removeItem(k); }); } catch (_) {}
+    let draft = null;
+    try { draft = dKey ? JSON.parse(localStorage.getItem(dKey) || 'null') : null; } catch (_) { draft = null; }
+    const stamp = (draft && draft.stamp) || (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
     const fields = (t.form && t.form.fields) || [];
     const ans = {}; fields.forEach((f) => { ans[f.id] = { photos: [] }; });
     const pending = new Set();
@@ -214,7 +220,12 @@
       }).join('') +
       '<div class="tk-f"><div class="lbl">הערה <small>(לא חובה)</small></div><textarea rows="2" id="tkNote"></textarea></div>' +
       '<div class="merr" id="tkErr"></div><button class="tk-btn" id="tkSend" style="width:100%;padding:12px">' + (mark ? '✓ סימון כבוצעה' : '✓ שליחה') + '</button>';
+    const saveDraft = () => {
+      if (!dKey) return;
+      try { localStorage.setItem(dKey, JSON.stringify({ stamp, ans, note: $('tkNote') ? $('tkNote').value : '', at: Date.now() })); } catch (_) {}
+    };
     const prog = () => {
+      saveDraft();
       const p = $('tkProg'); if (!p) return;
       const done = fields.filter((f) => f.type === 'check' ? ans[f.id].done : f.type === 'number' ? (ans[f.id].values || []).filter((v) => v !== null && v !== '').length >= (f.readings || 1)
         : f.type === 'photo' ? ans[f.id].photos.length : f.type === 'yesno' ? ans[f.id].value !== undefined : !!ans[f.id].value).length;
@@ -277,6 +288,30 @@
       };
       inp.click();
     }));
+    if ($('tkNote')) $('tkNote').addEventListener('input', saveDraft);
+    // the draft back: what was filled before the screen closed
+    const filled = (a) => a && (a.done || a.value !== undefined && a.value !== '' || (a.values || []).some((v) => v !== null && v !== undefined) || (a.photos || []).length);
+    if (draft && draft.ans && (fields.some((f) => filled(draft.ans[f.id])) || draft.note)) {
+      fields.forEach((f) => {
+        const a = draft.ans[f.id];
+        if (!a) return;
+        if (f.type === 'check' && a.done) { const c = body.querySelector('input[type=checkbox][data-f="' + f.id + '"]'); if (c) { c.checked = true; ans[f.id].done = true; } }
+        if (f.type === 'yesno' && a.value !== undefined) { const b = body.querySelector('.tk-yn[data-f="' + f.id + '"] button[data-v="' + (a.value ? '1' : '0') + '"]'); if (b) b.click(); }
+        if (f.type === 'number' && Array.isArray(a.values)) a.values.forEach((v, i) => {
+          if (v === null || v === undefined) return;
+          const inp = body.querySelector('input[data-f="' + f.id + '"][data-r="' + i + '"]');
+          if (inp) { inp.value = String(v); inp.dispatchEvent(new Event('input')); }
+        });
+        if ((f.type === 'text' || f.type === 'select') && a.value) { const c = body.querySelector('[data-f="' + f.id + '"]'); if (c) { c.value = a.value; c.dispatchEvent(new Event('input')); } }
+        if (Array.isArray(a.photos) && a.photos.length) {
+          ans[f.id].photos = a.photos.slice();
+          const pics = body.querySelector('[data-pics="' + f.id + '"]');
+          if (pics) pics.insertAdjacentHTML('afterbegin', '<span class="tk-meta">📷 ' + a.photos.length + ' צילומים נשמרו </span>');
+        }
+      });
+      if (draft.note && $('tkNote')) $('tkNote').value = draft.note;
+      say('ממשיכים מאיפה שהפסקת — מה שמילאת נשמר', 'ok');
+    }
     prog();
     $('tkSend').addEventListener('click', async () => {
       const err = $('tkErr');
@@ -299,6 +334,7 @@
           : await apiPost({ action: 'submitTask', ...meAuth(), taskId: t.id, date: t.date, stamp, answers: ans, note: $('tkNote').value });
         if (!r.ok) { err.textContent = r.error || 'שגיאה'; return; }
         $('tkFill').classList.add('hidden');
+        if (dKey) try { localStorage.removeItem(dKey); } catch (_) {}
         if (r.share) waShare(r.share);
         if (mark) { say('המשימה סומנה כבוצעה ✓', 'ok'); mark.done(); return; }
         say((r.pending ? 'הדיווח נשלח ✓ — ממתין לאישור מנהל' : 'המשימה נשלחה ✓') + (r.flags ? ' · ' + r.flags + ' סעיפים לתשומת לב המנהל' : ''), 'ok');
