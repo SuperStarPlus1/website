@@ -4146,13 +4146,14 @@ document.getElementById('attMgrAddHours').addEventListener('click', async ()=>{
   dlg.querySelector('#addHoursCancel').addEventListener('click', ()=>dlg.remove());
   const r = await apiPost({ action:'attendanceDetailed', ...mgrAuth(), month, branch: attReportBranch()||undefined });
   if(!r.ok){ dlg.querySelector('#addHoursBody').innerHTML = `<span style="color:#b91c1c">${esc(r.error||'שגיאה בטעינת רשימת העובדים')}</span>`; return; }
-  const emps = (r.employees||[]).slice().sort((a,b)=>a.employee.localeCompare(b.employee,'he'));
+  // 23/11/2026 (the owner): one whose employment ended stays until the 15th of the next month (the final pay) — last, marked
+  const emps = (r.employees||[]).slice().sort((a,b)=>(!!a.ended)-(!!b.ended) || a.employee.localeCompare(b.employee,'he'));
   if(!emps.length){ dlg.querySelector('#addHoursBody').innerHTML = '<span style="color:#b91c1c">אין עובדים פעילים בסניף/חודש שנבחרו</span>'; return; }
   dlg.querySelector('#addHoursBody').innerHTML = `
     <div class="mrow" style="text-align:right">
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">עובד</label>
       <select id="addHoursEmp" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px">
-        ${emps.map(e=>`<option value="${esc(e.employee)}">${esc(e.employee)}${e.branch?' · '+esc(e.branch):''}</option>`).join('')}
+        ${emps.map(e=>`<option value="${esc(e.employee)}">${esc(e.employee)}${e.branch?' · '+esc(e.branch):''}${e.ended?' · סיים/ה עבודה '+esc(e.ended.slice(8,10)+'/'+e.ended.slice(5,7)):''}</option>`).join('')}
       </select>
     </div>`;
   if(window._addHoursPick){   // back from the hours editor: the same employee chosen

@@ -57,7 +57,11 @@
         '<header><h3 id="' + id + 'T"></h3><p id="' + id + 'S"></p></header>' +
         '<div class="mbody" id="' + id + 'B"></div><div class="merr" id="' + id + 'E" style="padding:0 18px"></div>' +
         '<div class="mfoot"><span class="spacer"></span><button class="btn plain" data-close>סגירה</button></div></div></div>');
-      $(id).querySelector('[data-close]').addEventListener('click', () => $(id).classList.add('hidden'));
+      $(id).querySelector('[data-close]').addEventListener('click', () => {
+        $(id).classList.add('hidden');
+        // 23/11/2026 (the owner): a card opened from the picker closes back to the picker (the search kept)
+        if (id === 'hrOverlay' && backToPicker && $('hrPickOverlay')) { $('hrPickOverlay').classList.remove('hidden'); if ($('hpQ')) $('hpQ').focus(); }
+      });
     }
     $(id + 'T').textContent = title; $(id + 'S').textContent = sub || ''; $(id + 'E').textContent = '';
     $(id).classList.remove('hidden');
@@ -80,10 +84,11 @@
   const addDays = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + Math.ceil(n)); return t.toISOString().slice(0, 10); };
 
   /* ================= the full card ================= */
-  let C = null, emp = '', tab = 'details';
-  async function openCard(name, startTab) {
+  let C = null, emp = '', tab = 'details', backToPicker = false;
+  async function openCard(name, startTab, fromPicker) {
     await loadParts();
     if (!canCard() || !name) { if (name) say('אין לך הרשאה לכרטיס העובד המלא', 'err'); return; }
+    backToPicker = !!fromPicker;
     const P = parts();
     emp = name; tab = P.includes(startTab) ? startTab : P[0];
     const body = overlay('hrOverlay', '🗂 כרטיס עובד — ' + name, 'כל המידע והמסמכים של העובד/ת במקום אחד · ' + (isAdmin() ? 'אדמין בלבד' : 'לפי ההרשאות שלך'), 900);
@@ -288,16 +293,21 @@
   async function openPicker() {
     await loadParts();
     if (!canCard()) { say('אין לך הרשאה לכרטיס העובד המלא', 'err'); return; }
-    const body = overlay('hrPickOverlay', '🗂 כרטיס עובד', 'בחירת עובד/ת — כולל עובדים שאינם פעילים', 520);
+    const body = overlay('hrPickOverlay', '🗂 כרטיס עובד', 'בחירת עובד/ת', 520);
     const list = ((appState() && appState().employees) || []).slice().sort((a, b) => (a.active === false) - (b.active === false) || String(a.name).localeCompare(String(b.name), 'he'));
-    body.innerHTML = '<input class="rc-in" id="hpQ" placeholder="חיפוש שם / מחלקה…"><div id="hpList" style="margin-top:8px;max-height:60vh;overflow:auto"></div>';
+    // 23/11/2026 (the owner): only the active employees; the inactive ones (their files) behind a checkbox
+    const off = list.filter((x) => x.active === false).length;
+    body.innerHTML = '<input class="rc-in" id="hpQ" placeholder="חיפוש שם / מחלקה…">' +
+      (off ? '<label class="rc-meta" style="display:block;margin-top:6px;cursor:pointer"><input type="checkbox" id="hpOff"> הצגת עובדים שאינם פעילים (' + off + ')</label>' : '') +
+      '<div id="hpList" style="margin-top:8px;max-height:60vh;overflow:auto"></div>';
     const draw = () => {
       const q = $('hpQ').value.trim();
-      $('hpList').innerHTML = list.filter((x) => !q || (x.name + ' ' + (x.dept || x.department || '')).includes(q)).map((x) => '<div class="rc-card" data-n="' + e(x.name) + '"><span class="t">' + e(x.name) + '</span> ' +
+      const withOff = !!($('hpOff') && $('hpOff').checked);
+      $('hpList').innerHTML = list.filter((x) => (withOff || x.active !== false) && (!q || (x.name + ' ' + (x.dept || x.department || '')).includes(q))).map((x) => '<div class="rc-card" data-n="' + e(x.name) + '"><span class="t">' + e(x.name) + '</span> ' +
         '<span class="rc-meta">' + e(x.dept || x.department || '') + (x.active === false ? ' · לא פעיל/ה' : '') + '</span></div>').join('') || '<p class="rc-meta">לא נמצא</p>';
-      $('hpList').querySelectorAll('[data-n]').forEach((c) => c.addEventListener('click', () => { $('hrPickOverlay').classList.add('hidden'); openCard(c.dataset.n); }));
+      $('hpList').querySelectorAll('[data-n]').forEach((c) => c.addEventListener('click', () => { $('hrPickOverlay').classList.add('hidden'); openCard(c.dataset.n, undefined, true); }));
     };
-    $('hpQ').addEventListener('input', draw); draw(); setTimeout(() => $('hpQ').focus(), 50);
+    $('hpQ').addEventListener('input', draw); if ($('hpOff')) $('hpOff').addEventListener('change', draw); draw(); setTimeout(() => $('hpQ').focus(), 50);
   }
 
   /* ================= the employee: letters from the employer ================= */
