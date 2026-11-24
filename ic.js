@@ -152,7 +152,7 @@
     const r = await api('icGet', { docId: id });
     if (view !== 'doc') return;
     if (!r.ok) { $('icBody').innerHTML = '<div class="iv-card">' + e(r.error) + '</div>'; return; }
-    D = r.doc; rows = D.rows || []; opts = Object.assign({ vatRate: 18 }, D.opts || {}); links = r.links || []; receipts = r.receipts || []; received = r.received; D.mgr = r.mgr;
+    D = r.doc; rows = D.rows || []; opts = Object.assign({ vatRate: 18 }, D.opts || {}); links = r.links || []; receipts = r.receipts || []; received = r.received; D.mgr = r.mgr; D.equiv = r.equiv || [];
     vatAuto = !!(D.opts && 'vatIncluded' in D.opts);
     draw();
     if (fresh && !links.length) setTimeout(() => $('icShot') && $('icShot').click(), 50);
@@ -167,7 +167,7 @@
       (ro() ? '' : '<div class="iv-acts"><button class="iv-btn iv-pri" id="icShot" style="flex:1">📷 צילום עמוד' + (links.length ? ' נוסף' : '') + '</button><button class="iv-btn" id="icGal">🖼 מהגלריה / PDF</button></div>' +
         '<div class="iv-mut" id="icProg" style="margin-top:6px">' + (links.length ? 'עמוד נוסף? מצלמים אותו — השורות שלו מתווספות.' : 'מצלמים את העמוד הראשון. דף שלם, ישר, באור טוב.') + '</div>') + '</div>';
     // header
-    h += '<div class="iv-card"><h3>פרטי החשבונית</h3><div class="ic-f">' +
+    h += '<div class="iv-card"><h3>פרטי החשבונית</h3>' + (ro() ? '' : '<div class="iv-acts" style="margin:0 0 6px"><button class="iv-btn" id="icSupBtn" style="font-size:13px">' + (D.supplier ? '🔄 החלפת ספק' : '🔎 בחירת הספק מקומקס') + '</button>' + (D.supplier ? '<span class="iv-mut" style="align-self:center">✓ מקושר לספק בקומקס</span>' : '<span class="iv-mut" style="align-self:center;color:#c2410c">הספק לא מקושר לקומקס — בחרו אותו כדי לראות את קבלות הסחורה</span>') + '</div><div id="icSupBox"></div>') + '<div class="ic-f">' +
       fld('ספק', 'supplier_name', D.supplier_name) + fld('מספר חשבונית', 'invoice_no', D.invoice_no) + fld('תאריך', 'invoice_date', D.invoice_date) + fld('סה"כ נטו (חייב מע"מ)', 'subtotal', D.subtotal, 1) +
       fld('מע"מ', 'vat', D.vat, 1) + fld('סה"כ לתשלום', 'total', D.total, 1) + '</div>' +
       (D.ai_supplier && D.ai_supplier !== D.supplier_name ? '<div class="iv-mut" style="margin-top:6px">נקרא מהחשבונית: ' + e(D.ai_supplier) + (D.supplier ? '' : ' — לא נמצא ספק תואם בקומקס, אפשר לתקן את השם') + '</div>' : '') +
@@ -192,6 +192,7 @@
       $('icBody').querySelectorAll('[data-f]').forEach((i) => i.addEventListener('input', () => { D[i.dataset.f] = i.value; if (i.dataset.f === 'supplier_name') D.supplier = null; queue(true); refresh(); }));
       [['icO1', 'priceFromTotal'], ['icO2', 'packMode'], ['icO3', 'vatIncluded']].forEach(([id, k]) => $(id).addEventListener('change', () => { opts[k] = $(id).checked; if (k === 'vatIncluded') vatAuto = true; queue(); refresh(); drawRows(); }));
     }
+    if ($('icSupBtn')) $('icSupBtn').onclick = supPick;
     if ($('icRcv')) $('icRcv').onchange = async () => { D.receipt_id = Number($('icRcv').value) || null; await api('icSave', { docId: D.id, receiptId: D.receipt_id }); showDoc(D.id); };
     drawRows(); drawCmp(); drawEnd();
   }
@@ -283,24 +284,118 @@
     });
   }
 
-  /* ---- 📥 the receipt: charged vs received ---- */
+  /* ---- 📥 the receipt: charged vs received ----
+   * 24/11 (the owner): the Comax file is what was CHARGED (the invoice); the differences go out separately, to charge
+   * the supplier. And "different barcodes for the same product" (milk 3% carton / the בד"ץ one; one supplier types one
+   * code, another the other): a confirmed pair (🔗, ic_equiv) joins its barcodes into one product here — in this
+   * comparison and in every later one. A charged-not-received line and a received-not-charged one with similar names
+   * (or the same quantity) are offered as a pair to confirm. */
+  const dg = (b) => String(b || '').replace(/\D/g, '');
+  const words = (t) => new Set(String(t || '').replace(/["'״׳*.,()\-]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter((w) => w.length > 1));
+  const like = (a, b) => { const A = words(a), B = words(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return n / Math.min(A.size, B.size); };
+  function groups() {
+    const par = {}, find = (x) => (par[x] === undefined || par[x] === x ? (par[x] = x) : (par[x] = find(par[x]))), join = (a, b) => { par[find(a)] = find(b); };
+    (D.equiv || []).forEach((p) => join(p.a, p.b));
+    const G = {};
+    const g = (b) => { const k = find(b); return G[k] || (G[k] = { bcs: new Set(), iq: 0, rq: 0, money: 0, iname: '', rname: '' }); };
+    rows.forEach((r) => { const b = dg(r.barcode); if (!b) return; const x = g(b), q = effQty(r, opts), u = unitOut(r, opts);
+      x.bcs.add(b); if (isFinite(q)) { x.iq += q; if (isFinite(u)) x.money += q * u; } x.iname = x.iname || (r.catName || r.name); });
+    (received || []).forEach((r) => { const b = dg(r.barcode); const x = g(b); x.bcs.add(b); x.rq += Number(r.qty) || 0; x.rname = x.rname || r.name; });
+    return Object.values(G).map((x) => {
+      const price = x.iq ? x.money / x.iq : null, k = x.iq && !x.rq ? 'ch' : x.rq && !x.iq ? 'rc' : Math.abs(x.iq - x.rq) > 0.001 ? 'df' : 'ok';
+      return { ...x, bcs: [...x.bcs], linked: x.bcs.size > 1, price, k, name: x.iname || x.rname };
+    });
+  }
   function drawCmp() {
     const box = $('icCmp'); if (!box) return;
     if (!received) { box.innerHTML = ''; return; }
-    const inv = {};
-    rows.forEach((r) => { const b = String(r.barcode).replace(/\D/g, ''); if (!b) return; const q = effQty(r, opts); inv[b] = (inv[b] || 0) + (isFinite(q) ? q : 0); });
-    const rec = {}; received.forEach((x) => { rec[x.barcode] = x; });
-    const all = [...new Set([...Object.keys(inv), ...Object.keys(rec)])];
-    const L = all.map((b) => { const iq = inv[b] || 0, rq = rec[b] ? rec[b].qty : 0, row = rows.find((r) => String(r.barcode).replace(/\D/g, '') === b);
-      return { b, iq, rq, name: (row && (row.catName || row.name)) || (rec[b] && rec[b].name) || '', k: iq && !rq ? 'ch' : rq && !iq ? 'rc' : Math.abs(iq - rq) > 0.001 ? 'df' : 'ok' }; });
-    const n = { ch: 0, rc: 0, df: 0, ok: 0 }; L.forEach((x) => n[x.k]++);
-    const T = { ch: ['💸 חויב ולא התקבל', '#fef2f2', '#991b1b'], rc: ['📦 התקבל ולא חויב', '#f5f3ff', '#6d28d9'], df: ['⚠ כמות שונה', '#fff7ed', '#9a3412'] };
-    const bad = L.filter((x) => x.k !== 'ok');
+    const L = groups(), n = { ch: 0, rc: 0, df: 0, ok: 0 }; L.forEach((x) => n[x.k]++);
+    const T = { ch: ['💸 חויב ולא התקבל', '#fef2f2', '#991b1b'], rc: ['📦 התקבל ולא חויב', '#f5f3ff', '#6d28d9'], df: ['⚠ כמות שונה', '#fff7ed', '#9a3412'], ok: ['✓', '#fff', '#166534'] };
+    const bad = L.filter((x) => x.k !== 'ok'), claim = L.filter((x) => x.iq > x.rq + 0.001);
+    const sumClaim = claim.reduce((t, x) => t + (x.price != null ? (x.iq - x.rq) * x.price : 0), 0);
+    // 🔗 offers: a received-not-charged line ↔ a charged-not-received one (similar name, or the same quantity)
+    const ch = L.filter((x) => x.k === 'ch'), rc = L.filter((x) => x.k === 'rc');
+    const offer = (r) => ch.map((c) => ({ c, s: like(r.rname, c.iname) + (Math.abs(c.iq - r.rq) < 0.001 ? 0.35 : 0) })).sort((a, b) => b.s - a.s);
+    const linked = L.filter((x) => x.linked);
     box.innerHTML = '<div class="iv-pills" style="margin-top:8px"><span style="background:#fef2f2;color:#991b1b">💸 ' + n.ch + ' חויבו ולא התקבלו</span><span style="background:#fff7ed;color:#9a3412">⚠ ' + n.df + ' כמות שונה</span><span style="background:#f5f3ff;color:#6d28d9">📦 ' + n.rc + ' התקבלו ולא חויבו</span><span style="background:#dcfce7;color:#166534">✓ ' + n.ok + ' תואמים</span></div>' +
-      (bad.length ? '<div class="iv-wrap" style="max-height:300px;margin-top:6px"><table class="iv-tbl" style="min-width:0"><thead><tr><th>פריט</th><th class="n">בחשבונית</th><th class="n">התקבל</th></tr></thead><tbody>' +
-        bad.map((x) => '<tr style="background:' + T[x.k][1] + '"><td><b>' + e(x.name) + '</b><span class="bc">' + e(x.b) + '</span><small style="color:' + T[x.k][2] + ';font-weight:800">' + T[x.k][0] + '</small></td><td class="n">' + fmt(x.iq) + '</td><td class="n">' + fmt(x.rq) + '</td></tr>').join('') + '</tbody></table></div>'
+      (bad.length ? '<div class="iv-wrap" style="max-height:340px;margin-top:6px"><table class="iv-tbl" style="min-width:0"><thead><tr><th>פריט</th><th class="n">חויב</th><th class="n">התקבל</th></tr></thead><tbody>' +
+        bad.map((x) => '<tr style="background:' + T[x.k][1] + '"><td><b>' + e(x.name) + '</b><span class="bc">' + e(x.bcs.join(' = ')) + '</span><small style="color:' + T[x.k][2] + ';font-weight:800">' + T[x.k][0] + '</small>' +
+          (x.k === 'rc' && ch.length && !ro() ? (() => { const o = offer(x); return '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select class="iv-in" data-pair="' + e(x.bcs[0]) + '" style="flex:1;min-width:150px;font-size:13px;padding:6px">' +
+            '<option value="">🔗 אותו מוצר כמו…</option>' + o.map((y, i) => '<option value="' + e(y.c.bcs[0]) + '"' + (i === 0 && y.s >= 0.5 ? ' selected' : '') + '>' + (i === 0 && y.s >= 0.5 ? '⭐ ' : '') + e(y.c.iname) + ' (' + e(y.c.bcs[0]) + ' · חויב ' + fmt(y.c.iq) + ')</option>').join('') +
+            '</select><button class="iv-btn" data-pairgo="' + e(x.bcs[0]) + '" style="padding:6px 10px;font-size:13px">🔗 אישור</button></div>'; })() : '') +
+          '</td><td class="n">' + fmt(x.iq) + '</td><td class="n">' + fmt(x.rq) + '</td></tr>').join('') + '</tbody></table></div>'
         : '<div class="ic-ban g" style="margin-top:6px">✓ החשבונית תואמת לקבלת הסחורה.</div>') +
-      '<div class="iv-mut" style="margin-top:4px">הכמות בחשבונית = כמות' + (opts.packMode ? ' × מארז' : '') + '. ברקוד שתוקן בחשבונית מושווה אחרי השמירה.</div>';
+      (linked.length ? '<div class="iv-mut" style="margin-top:6px">🔗 ברקודים זהים בהשוואה הזו: ' + linked.map((x) => e(x.bcs.join(' = ')) + (ro() ? '' : ' <button class="iv-btn" data-unpair="' + e(x.bcs.join(',')) + '" style="padding:2px 8px;font-size:12px">ביטול</button>')).join(' · ') + '</div>' : '') +
+      (claim.length ? '<div class="ic-ban o" style="margin-top:8px">💸 לחיוב הספק: ' + claim.length + ' פריטים · ' + money(sumClaim) + ' לפני מע"מ<div class="iv-acts" style="margin-top:6px"><button class="iv-btn" id="icDiffX">⬇ קובץ הפרשים לחיוב</button><button class="iv-btn" id="icDiffS">📤 שליחה לספק</button></div></div>' : '') +
+      '<div class="iv-mut" style="margin-top:4px">לקומקס נכנס מה שחויב (החשבונית). ההפרשים — בקובץ הנפרד. הכמות בחשבונית = כמות' + (opts.packMode ? ' × מארז' : '') + '.</div>';
+    box.querySelectorAll('[data-pairgo]').forEach((b) => b.onclick = async () => {
+      const sel = box.querySelector('select[data-pair="' + b.dataset.pairgo + '"]'), other = sel && sel.value;
+      if (!other) return say('בחרו את הפריט שחויב', 'err');
+      const x = await api('icEquiv', { a: b.dataset.pairgo, b: other, on: true }); if (!x.ok) return say(x.error, 'err');
+      (D.equiv = D.equiv || []).push({ a: b.dataset.pairgo, b: other }); say('✓ נשמר — מעכשיו שני הברקודים נחשבים אותו מוצר'); drawCmp();
+    });
+    box.querySelectorAll('[data-unpair]').forEach((b) => b.onclick = async () => {
+      const bcs = b.dataset.unpair.split(','), drop = (D.equiv || []).filter((p) => bcs.includes(p.a) && bcs.includes(p.b));
+      for (const p of drop) { const x = await api('icEquiv', { a: p.a, b: p.b, on: false }); if (!x.ok) return say(x.error, 'err'); }
+      D.equiv = (D.equiv || []).filter((p) => !drop.includes(p)); drawCmp();
+    });
+    if ($('icDiffX')) $('icDiffX').onclick = () => diffXlsx(L);
+    if ($('icDiffS')) $('icDiffS').onclick = () => diffShare(L);
+  }
+  // 💸 the differences, to charge the supplier: charged more than received (the missing qty × the invoice's unit price)
+  function diffText(L) {
+    const c = L.filter((x) => x.iq > x.rq + 0.001);
+    const tot = c.reduce((t, x) => t + (x.price != null ? (x.iq - x.rq) * x.price : 0), 0);
+    return 'הפרשים בחשבונית ' + (D.invoice_no || '') + ' (' + (D.invoice_date || '') + ') — סופרסטאר פלוס\nספק: ' + (D.supplier_name || '') + '\n\n' +
+      c.map((x, i) => (i + 1) + '. ' + x.name + ' — ברקוד ' + x.bcs.join(' / ') + '\n   חויב ' + fmt(x.iq) + ', התקבל ' + fmt(x.rq) + ', חסר ' + fmt(x.iq - x.rq) + (x.price != null ? ' × ' + money(x.price) + ' = ' + money((x.iq - x.rq) * x.price) : '')).join('\n') +
+      '\n\nסה"כ לזיכוי: ' + money(tot) + ' לפני מע"מ';
+  }
+  async function diffShare(L) {
+    const t = diffText(L);
+    if (navigator.share) { try { await navigator.share({ title: 'הפרשים בחשבונית', text: t }); return; } catch (x) { if (/Abort/i.test(String(x && x.name))) return; } }
+    try { await navigator.clipboard.writeText(t); say('✓ ההפרשים הועתקו — הדביקו בוואטסאפ או במייל לספק'); } catch (_) { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); }
+  }
+  async function diffXlsx(L) {
+    let X = window.XLSX;
+    try { const prev = window.XLSX; await new Promise((res, rej) => { const s = document.createElement('script'); s.src = XS_URL; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); X = window.XLSX; if (prev) window.XLSX = prev; }
+    catch (_) { if (!X) return say('לא הצלחתי לטעון את רכיב האקסל', 'err'); }
+    const t = (v) => ({ t: 's', v: String(v) }), n = (v) => (v == null || !isFinite(v) ? '' : { t: 'n', v: Math.round(Number(v) * 100) / 100 });
+    const hd = (a) => a.map((v) => ({ t: 's', v, s: { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } } }));
+    const c = L.filter((x) => x.iq > x.rq + 0.001), ex = L.filter((x) => x.rq > x.iq + 0.001);
+    const tot = c.reduce((s2, x) => s2 + (x.price != null ? (x.iq - x.rq) * x.price : 0), 0);
+    const a1 = [[t('ספק: ' + (D.supplier_name || '') + ' · חשבונית ' + (D.invoice_no || '') + ' · ' + (D.invoice_date || ''))], []]
+      .concat([hd(['ברקוד', 'שם', 'חויב', 'התקבל', 'חסר', 'מחיר ליחידה (לפני מע"מ)', 'לזיכוי'])])
+      .concat(c.map((x) => [t(x.bcs.join(' / ')), x.name, n(x.iq), n(x.rq), n(x.iq - x.rq), n(x.price), n(x.price != null ? (x.iq - x.rq) * x.price : null)]))
+      .concat([[], ['', 'סה"כ לזיכוי (לפני מע"מ)', '', '', '', '', n(tot)]]);
+    const ws = X.utils.aoa_to_sheet(a1); ws['!cols'] = [{ wch: 18 }, { wch: 34 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 14 }, { wch: 12 }]; ws['!views'] = [{ RTL: true }];
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'לחיוב הספק');
+    if (ex.length) {
+      const w2 = X.utils.aoa_to_sheet([hd(['ברקוד', 'שם', 'חויב', 'התקבל', 'עודף'])].concat(ex.map((x) => [t(x.bcs.join(' / ')), x.name, n(x.iq), n(x.rq), n(x.rq - x.iq)])));
+      w2['!cols'] = [{ wch: 18 }, { wch: 34 }, { wch: 8 }, { wch: 8 }, { wch: 8 }]; w2['!views'] = [{ RTL: true }];
+      X.utils.book_append_sheet(wb, w2, 'התקבל ולא חויב');
+    }
+    const clean = (s2) => String(s2 || '').replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 40);
+    X.writeFile(wb, 'הפרשים לחיוב - ' + (clean(D.supplier_name) || 'ספק') + ' - ' + (clean(D.invoice_no) || D.id) + '.xlsx');
+  }
+
+  /* ---- the supplier from Comax's list (the reading's guess may not match — then its receipts are not offered) ---- */
+  let sups = null;
+  async function supPick() {
+    const box = $('icSupBox'); if (!box) return;
+    if (box.innerHTML) { box.innerHTML = ''; return; }
+    box.innerHTML = '<input class="iv-in" id="icSupQ" style="font-size:14px;margin-top:6px" placeholder="🔎 ספק — הקלידו חלק מהשם"><div class="gr-sup" id="icSupL"><div class="iv-mut" style="padding:10px">טוען ספקים…</div></div>';
+    if (!sups) { const r = await api('rcvSuppliers'); sups = r.ok ? r.suppliers : []; }
+    const draw = () => {
+      const q2 = $('icSupQ').value.trim(), hit = q2 ? sups.filter((x) => x.name.includes(q2)) : sups.slice(0, 12);
+      $('icSupL').innerHTML = hit.slice(0, 40).map((x) => '<button type="button" data-c="' + x.code + '"><span>' + e(x.name) + '</span><small>' + (x.items ? x.items + ' פריטים' : '') + '</small></button>').join('') || '<div class="iv-mut" style="padding:10px">לא נמצא</div>';
+      $('icSupL').querySelectorAll('[data-c]').forEach((b) => b.onclick = async () => {
+        const s2 = sups.find((x) => String(x.code) === b.dataset.c);
+        await flushSave();
+        const x = await api('icSupplier', { docId: D.id, supplier: s2.code, supplierName: s2.name }); if (!x.ok) return say(x.error, 'err');
+        say('✓ הספק: ' + s2.name); showDoc(D.id);
+      });
+    };
+    $('icSupQ').addEventListener('input', draw); draw(); $('icSupQ').focus();
   }
 
   /* ---- the end: done + export ---- */
