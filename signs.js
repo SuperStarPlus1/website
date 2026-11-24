@@ -16,7 +16,7 @@
 //   no promotion the same paper: the name, the price and the code only
 // Everything can be fixed by hand before printing. The data: the site's files (data/promos-he.json, products-he.json —
 // from the main register every morning; Comax is never written to).
-// Printing: the phone's own print (AirPrint) of an A4 page without margins; 📐 כיול — a test page on plain paper, held
+// Printing: a one-page A4 PDF (the sign drawn at 250 dpi) — opened or shared from the phone, then printed (AirPrint); 📐 כיול — a test page on plain paper, held
 // over the printed paper against the light, and arrows that move the print (mm) and a size %, kept per paper kind on
 // this device (localStorage signCal_<kind>).
 // Uses the app's globals: state, toast.
@@ -150,8 +150,6 @@
     '.sg-pick{display:block;width:100%;text-align:right;margin-top:6px}' +
     '.sg-badge{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:900}.sg-badge.p{background:#fff7ed;color:#c2410c}.sg-badge.r{background:#f1f5f9;color:#334155}' +
     '.sg-cal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:260px;margin:8px auto}.sg-cal button{padding:10px 0}' +
-    '#sgPrint{display:none}' +
-    '@media print{body.sg-printing>*:not(#sgPrint){display:none!important}body.sg-printing #sgPrint{display:block!important}body.sg-printing{background:#fff!important;margin:0!important}}' +
     '</style>');
 
   function open() {
@@ -381,46 +379,144 @@
   function closeStream() { if (stream) stream.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} }); stream = null; }
   function camStop() { camOn = false; camSeq++; closeStream(); const b = $('sgCamBox'); if (b) b.innerHTML = ''; }
 
-  /* ---------- printing ----------
-   * 25/11/2026 (the owner: "pressing print does not print"): the page is printed from its own window (like the app's
-   * other print-outs) — opened inside the click, the A4 page written into it, and its print called once the fonts are in;
-   * a "🖨️ הדפסה" bar on top (not printed) prints again. The app's own window is never touched — on a phone print() does
-   * not wait, so hiding the app while printing (as before) gave the printer the app instead of the sign. */
-  function print(test, k) {
+  /* ---------- printing: a PDF ----------
+   * 25/11/2026 (the owner: "pressing print does not print" → then "it shows the preview but no print dialog"): a page's
+   * print() does nothing in the app installed on the phone. So the sign becomes a PDF, like the payslips that the phone
+   * opens and prints: the A4 page is laid out by the browser (the same HTML as the preview), every text run and line is
+   * drawn on a 250 dpi canvas at its exact place, and the picture goes into a one-page A4 PDF. Then "🖨️ פתיחה להדפסה"
+   * (the phone's PDF viewer → share → print) or "📤 שיתוף" (the share sheet, with הדפסה on an iPhone). */
+  const DPI = 250;
+  function fontOf(cs) { return (cs.fontStyle !== 'normal' ? cs.fontStyle + ' ' : '') + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily; }
+  // the lines of one text node as laid out (a name may wrap): [{text, rect}]
+  function textLines(node) {
+    const r = document.createRange(), t = node.nodeValue;
+    r.selectNodeContents(node);
+    const rects = r.getClientRects();
+    if (rects.length <= 1) return rects.length ? [{ text: t.trim(), rect: rects[0] }] : [];
+    const lines = [], re = /\S+/g; let m;
+    while ((m = re.exec(t))) {
+      r.setStart(node, m.index); r.setEnd(node, m.index + m[0].length);
+      const b = r.getBoundingClientRect();
+      let L = lines.find((x) => Math.abs(x.top - b.top) < b.height / 2);
+      if (!L) { L = { top: b.top, words: [], left: b.left, right: b.right, bottom: b.bottom }; lines.push(L); }
+      L.words.push(m[0]); L.left = Math.min(L.left, b.left); L.right = Math.max(L.right, b.right); L.bottom = Math.max(L.bottom, b.bottom);
+    }
+    return lines.map((L) => ({ text: L.words.join(' '), rect: { left: L.left, right: L.right, top: L.top, bottom: L.bottom, height: L.bottom - L.top } }));
+  }
+  async function renderCanvas(k, test) {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-30000px;top:0;width:210mm;height:297mm;background:#fff;direction:rtl;pointer-events:none';
+    host.innerHTML = pageHtml(k, slots, cal(k), test);
+    document.body.appendChild(host);
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const page = host.firstElementChild, pr = page.getBoundingClientRect();
+      const W = Math.round(210 / 25.4 * DPI), H = Math.round(297 / 25.4 * DPI), K = W / pr.width;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.dir = 'rtl';
+      const g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+      const X = (x) => (x - pr.left) * K, Y = (y) => (y - pr.top) * K;
+      // lines: the agorot's underline (border-bottom), the test page's dashed frames and its marks
+      for (const el of page.querySelectorAll('*')) {
+        const cs = getComputedStyle(el), b = el.getBoundingClientRect();
+        if (!b.width && !b.height) continue;
+        const side = (w, st, col, x1, y1, x2, y2) => {
+          const lw = parseFloat(w) * K; if (!(lw > 0) || st === 'none') return;
+          g.save(); g.strokeStyle = col; g.lineWidth = lw; g.setLineDash(st === 'dashed' ? [lw * 4, lw * 3] : []);
+          g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.restore();
+        };
+        const l = X(b.left), r = X(b.right), t = Y(b.top), bt = Y(b.bottom);
+        side(cs.borderTopWidth, cs.borderTopStyle, cs.borderTopColor, l, t, r, t);
+        side(cs.borderBottomWidth, cs.borderBottomStyle, cs.borderBottomColor, l, bt, r, bt);
+        side(cs.borderLeftWidth, cs.borderLeftStyle, cs.borderLeftColor, l, t, l, bt);
+        side(cs.borderRightWidth, cs.borderRightStyle, cs.borderRightColor, r, t, r, bt);
+      }
+      // the text, run by run, each at its laid-out place and in its own direction
+      const tw = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = tw.nextNode())) {
+        if (!n.nodeValue.trim()) continue;
+        const cs = getComputedStyle(n.parentElement);
+        const px = parseFloat(cs.fontSize) * K;
+        g.font = fontOf(cs).replace(cs.fontSize, px + 'px');
+        g.fillStyle = cs.color;
+        const rtl = cs.direction === 'rtl';
+        g.direction = rtl ? 'rtl' : 'ltr';
+        g.textAlign = rtl ? 'right' : 'left';
+        g.textBaseline = 'alphabetic';
+        if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : (parseFloat(cs.letterSpacing) * K) + 'px';
+        for (const ln of textLines(n)) {
+          const mt = g.measureText(ln.text);
+          const asc = mt.fontBoundingBoxAscent || px * 0.93, desc = mt.fontBoundingBoxDescent || px * 0.27;
+          const top = Y(ln.rect.top), h = ln.rect.height * K;
+          g.fillText(ln.text, rtl ? X(ln.rect.right) : X(ln.rect.left), top + (h - (asc + desc)) / 2 + asc);
+        }
+      }
+      return cv;
+    } finally { host.remove(); }
+  }
+  // a one-page A4 PDF around one JPEG
+  async function pdfOf(cv) {
+    const jpg = new Uint8Array(await (await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.95))).arrayBuffer());
+    const enc = new TextEncoder(), parts = [], offs = [];
+    let len = 0;
+    const add = (x) => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+    const obj = (i, body, stream) => { offs[i] = len; add(i + ' 0 obj\n' + body + (stream ? '\nstream\n' : '\nendobj\n')); if (stream) { add(stream); add('\nendstream\nendobj\n'); } };
+    const PW = 595.28, PH = 841.89, content = 'q ' + PW + ' 0 0 ' + PH + ' 0 0 cm /Im0 Do Q';
+    add('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    obj(4, '<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>', jpg);
+    obj(5, '<< /Length ' + content.length + ' >>', enc.encode(content));
+    const x = len;
+    add('xref\n0 6\n0000000000 65535 f \n' + [1, 2, 3, 4, 5].map((i) => String(offs[i]).padStart(10, '0') + ' 00000 n \n').join('') +
+      'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF\n');
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  let lastPdf = null;
+  async function print(test, k) {
     k = k || kind;
     if (!test && !slots.some(Boolean)) return;
     camStop();
-    const page = pageHtml(k, slots, cal(k), test);
-    const w = window.open('', '_blank');
-    if (w && w.document) {
-      w.document.open();
-      w.document.write('<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<title>' + (test ? 'דף בדיקה' : 'שילוט') + ' — ' + PAPERS[k].name + '</title>' +
-        '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">' +
-        '<style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0;background:#e5e7eb}' +
-        '.bar{position:sticky;top:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:10px;background:#0b1220;color:#fff;font:700 14px Heebo,Arial,sans-serif;z-index:2}' +
-        '.bar button{border:0;border-radius:10px;padding:10px 18px;font:800 15px Heebo,Arial,sans-serif}.bar .p{background:#22c55e;color:#fff}' +
-        '.sheet{width:210mm;height:297mm;background:#fff;margin:12px auto;box-shadow:0 4px 18px rgba(0,0,0,.25)}' +
-        '@media print{.bar{display:none!important}html,body{background:#fff}.sheet{margin:0;box-shadow:none}}' +
-        '@media screen and (max-width:820px){.sheet{zoom:' + '0.45' + '}}</style></head><body>' +
-        '<div class="bar"><button class="p" onclick="window.print()">🖨️ הדפסה</button><button onclick="window.close()">✕ סגירה</button>' +
-        '<span style="font-weight:600;font-size:12.5px">A4 · מגש ידני · בלי התאמה לעמוד</span></div>' +
-        '<div class="sheet">' + page + '</div>' +
-        '<script>(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function(){setTimeout(function(){window.focus();window.print();},250);});<\/script>' +
-        '</body></html>');
-      w.document.close();
-      return;
+    const name = (test ? 'דף בדיקה' : 'שילוט') + ' - ' + PAPERS[k].name + '.pdf';
+    showReady(null, name);
+    let blob;
+    try { blob = await pdfOf(await renderCanvas(k, test)); }
+    catch (x) { closeReady(); return say('לא הצלחתי להכין את הקובץ להדפסה — נסו שוב', 'err'); }
+    if (lastPdf) URL.revokeObjectURL(lastPdf.url);
+    lastPdf = { blob, url: URL.createObjectURL(blob), name };
+    showReady(lastPdf, name);
+  }
+  // the PDF is ready: open it (the phone's viewer → share → print) or share it (the share sheet has הדפסה)
+  function showReady(pdf, name) {
+    let d = $('sgReady');
+    if (!d) {
+      document.body.insertAdjacentHTML('beforeend', '<div id="sgReady" style="position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,.55);display:grid;place-items:center;direction:rtl;padding:16px"><div class="sg-card" style="max-width:380px;width:100%" id="sgReadyIn"></div></div>');
+      d = $('sgReady');
+      d.addEventListener('click', (ev) => { if (ev.target === d) closeReady(); });
     }
-    // the window was blocked: print this page itself (the app hidden only until the print dialog closes)
-    let host = $('sgPrint');
-    if (!host) { host = document.createElement('div'); host.id = 'sgPrint'; document.body.appendChild(host); }
-    host.innerHTML = pageHtml(k, slots, cal(k), test);
-    const pg = document.createElement('style'); pg.id = 'sgPage'; pg.textContent = '@page{size:A4 portrait;margin:0}';
-    document.head.appendChild(pg);
-    document.body.classList.add('sg-printing');
-    const done = () => { document.body.classList.remove('sg-printing'); const p = $('sgPage'); if (p) p.remove(); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    window.print();
+    d.style.display = 'grid';
+    const canShare = pdf && navigator.canShare && (() => { try { return navigator.canShare({ files: [new File([pdf.blob], pdf.name, { type: 'application/pdf' })] }); } catch (_) { return false; } })();
+    $('sgReadyIn').innerHTML = !pdf ? '<b style="font-size:16px">🖨️ מכין את הקובץ להדפסה…</b><div class="sg-mut" style="margin-top:6px">רגע אחד.</div>'
+      : '<b style="font-size:16px">🖨️ ' + e(name.replace(/\.pdf$/, '')) + ' — מוכן</b>' +
+        '<div class="sg-mut" style="margin:6px 0 10px">בוחרים את מדפסת הלייזר, נייר A4, ומכניסים את הנייר המודפס למגש הידני.</div>' +
+        (canShare ? '<button class="sg-btn sg-ok" id="sgShare" style="width:100%;font-size:16px">📤 שיתוף ← הדפסה</button>' : '') +
+        '<button class="sg-btn ' + (canShare ? '' : 'sg-ok') + '" id="sgOpenPdf" style="width:100%;margin-top:8px;font-size:15px">📄 פתיחת הקובץ להדפסה</button>' +
+        '<button class="sg-btn" id="sgReadyX" style="width:100%;margin-top:8px">סגירה</button>' +
+        '<div class="sg-mut" style="margin-top:8px">באייפון: "שיתוף" ← <b>הדפסה</b>. בקובץ שנפתח — כפתור השיתוף ← הדפסה.</div>';
+    if (!pdf) return;
+    if ($('sgShare')) $('sgShare').addEventListener('click', async () => {
+      try { await navigator.share({ files: [new File([pdf.blob], pdf.name, { type: 'application/pdf' })], title: pdf.name }); }
+      catch (x) { if (!/Abort/i.test(String(x && x.name))) openPdf(pdf); }
+    });
+    $('sgOpenPdf').addEventListener('click', () => openPdf(pdf));
+    $('sgReadyX').addEventListener('click', closeReady);
+  }
+  function closeReady() { const d = $('sgReady'); if (d) d.style.display = 'none'; }
+  function openPdf(pdf) {
+    const w = window.open(pdf.url, '_blank');
+    if (!w) { const a = document.createElement('a'); a.href = pdf.url; a.download = pdf.name; document.body.appendChild(a); a.click(); a.remove(); }
   }
 
   /* ---------- 📐 the calibration, per paper kind ---------- */

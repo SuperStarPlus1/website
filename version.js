@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.36.2',
+  version: '2.36.3',
   date: '23/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'שילוט: ההדפסה דרך קובץ PDF — "📤 שיתוף ← הדפסה" או "📄 פתיחת הקובץ להדפסה" (באפליקציה בטלפון חלון ההדפסה לא נפתח)',
     'שילוט: תיקון הדפסה — השלט נפתח בחלון משלו עם כפתור 🖨️ הדפסה (בטלפון ההדפסה לא יצאה)',
     'שילוט: פריט עם כמה מבצעים — בוחרים איזה מבצע להדפיס (או מחיר רגיל), ו-🔁 להחלפה',
     '🏷️ שילוט פתוח לכל העובדים: 📅 סידור עבודה ונוכחות ← 🏷️ שילוט',
