@@ -381,11 +381,37 @@
   function closeStream() { if (stream) stream.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} }); stream = null; }
   function camStop() { camOn = false; camSeq++; closeStream(); const b = $('sgCamBox'); if (b) b.innerHTML = ''; }
 
-  /* ---------- printing ---------- */
+  /* ---------- printing ----------
+   * 25/11/2026 (the owner: "pressing print does not print"): the page is printed from its own window (like the app's
+   * other print-outs) — opened inside the click, the A4 page written into it, and its print called once the fonts are in;
+   * a "🖨️ הדפסה" bar on top (not printed) prints again. The app's own window is never touched — on a phone print() does
+   * not wait, so hiding the app while printing (as before) gave the printer the app instead of the sign. */
   function print(test, k) {
     k = k || kind;
     if (!test && !slots.some(Boolean)) return;
     camStop();
+    const page = pageHtml(k, slots, cal(k), test);
+    const w = window.open('', '_blank');
+    if (w && w.document) {
+      w.document.open();
+      w.document.write('<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>' + (test ? 'דף בדיקה' : 'שילוט') + ' — ' + PAPERS[k].name + '</title>' +
+        '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">' +
+        '<style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0;background:#e5e7eb}' +
+        '.bar{position:sticky;top:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:10px;background:#0b1220;color:#fff;font:700 14px Heebo,Arial,sans-serif;z-index:2}' +
+        '.bar button{border:0;border-radius:10px;padding:10px 18px;font:800 15px Heebo,Arial,sans-serif}.bar .p{background:#22c55e;color:#fff}' +
+        '.sheet{width:210mm;height:297mm;background:#fff;margin:12px auto;box-shadow:0 4px 18px rgba(0,0,0,.25)}' +
+        '@media print{.bar{display:none!important}html,body{background:#fff}.sheet{margin:0;box-shadow:none}}' +
+        '@media screen and (max-width:820px){.sheet{zoom:' + '0.45' + '}}</style></head><body>' +
+        '<div class="bar"><button class="p" onclick="window.print()">🖨️ הדפסה</button><button onclick="window.close()">✕ סגירה</button>' +
+        '<span style="font-weight:600;font-size:12.5px">A4 · מגש ידני · בלי התאמה לעמוד</span></div>' +
+        '<div class="sheet">' + page + '</div>' +
+        '<script>(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function(){setTimeout(function(){window.focus();window.print();},250);});<\/script>' +
+        '</body></html>');
+      w.document.close();
+      return;
+    }
+    // the window was blocked: print this page itself (the app hidden only until the print dialog closes)
     let host = $('sgPrint');
     if (!host) { host = document.createElement('div'); host.id = 'sgPrint'; document.body.appendChild(host); }
     host.innerHTML = pageHtml(k, slots, cal(k), test);
@@ -394,7 +420,7 @@
     document.body.classList.add('sg-printing');
     const done = () => { document.body.classList.remove('sg-printing'); const p = $('sgPage'); if (p) p.remove(); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
-    setTimeout(() => { try { window.print(); } finally { setTimeout(done, 1500); } }, 60);
+    window.print();
   }
 
   /* ---------- 📐 the calibration, per paper kind ---------- */
