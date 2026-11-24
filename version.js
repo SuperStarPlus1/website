@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.35.2',
+  version: '2.35.3',
   date: '23/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'דוח משימה: חוסר בספירה מול הבסיס מופיע רק בטבלת הספירה (באדום) — לא חוזר בתיבה "דורש תשומת לב" למעלה',
     'ספירה מול מלאי בסיס (למשל ספירת עגלות): בדוח המשימה, במייל וב-PDF — טבלה: כמות בסיס, נספר היום, הפרש מבסיס, נספר אתמול והפרש מאתמול',
     '👥 ניהול מועדון לקוחות בתפריט 💼 ניהול העסק (אדמין) — נפתח כבר מחובר, בלי קוד במייל',
     '🎨 לוח מכירות, אופטימייזר וחדר בקרה בעיצוב KPI מודרני — כרטיסים לבנים, מספרים גדולים, עלייה בירוק וירידה באדום; כפתור "🎨 עיצוב קלאסי" מחזיר את העיצוב הקודם',

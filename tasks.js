@@ -412,6 +412,9 @@
     $('tkRunTitle').textContent = '📋 ' + r.task.title;
     $('tkRunSub').textContent = dmy(run.date) + ' · ' + run.employee + ' · ' + hm(run.doneAt) + (run.late ? ' · באיחור' : '') + (run.markedBy ? ' · סומן ע״י ' + run.markedBy : '');
     const flagged = new Set((run.flags || []).map((f) => f.field));
+    // 24/11/2026 (the owner: "the report doesn't need all that big text at the top"): a shortage against a base is in
+    // its count table below — not repeated in the box at the top
+    const topFl = (run.flags || []).filter((f) => !(String(f.why || '').startsWith('חסרות ') && Array.isArray((run.answers[f.field] || {}).base)));
     const txt = (f, a) => {
       if (!a) return '—';
       if (f.type === 'check') return a.done ? 'בוצע' : 'לא בוצע';
@@ -453,7 +456,7 @@
       : run.approval === 'approved' ? '<p>' + apChip('approved') + ' <span class="tk-meta">' + e(run.approvedBy) + ' ' + hm(run.approvedAt) + (run.approvalNote ? ' · ' + e(run.approvalNote) : '') + '</span></p>'
       : run.approval === 'returned' ? '<p>' + apChip('returned') + ' <span class="tk-meta">' + e(run.approvedBy) + ': ' + e(run.approvalNote) + '</span></p>' : '';
     body.innerHTML = apBox + '<div class="tk-tools"><button class="tk-btn light" id="tkRunPdf">📄 PDF עם כל התמונות</button></div>' +
-      ((run.flags || []).length ? '<div class="tk-flags"><b>⚠ דורש תשומת לב:</b> ' + run.flags.map((f) => e(f.label) + ': ' + e(f.value)).join(' · ') + '</div>' : '') +
+      (topFl.length ? '<div class="tk-flags"><b>⚠ דורש תשומת לב:</b> ' + topFl.map((f) => e(f.label) + ': ' + e(f.value)).join(' · ') + '</div>' : '') +
       (run.note ? '<p><b>הערה:</b> ' + e(run.note) + '</p>' : '') +
       fields.map((f) => {
         const a = run.answers[f.id] || {};
