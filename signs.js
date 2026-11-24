@@ -209,8 +209,8 @@
     const where = P.n > 1 ? 'מסגרת ' + (sel + 1) + ' מתוך ' + P.n : 'השלט';
     let h = '<div class="sg-row" style="justify-content:space-between"><b style="font-size:15px">' + where + '</b>' +
       (s ? '<span class="sg-badge ' + (s.promo ? 'p">מבצע' : 'r">מחיר רגיל') + '</span>' : '') + '</div>' +
-      '<form id="sgFind" class="sg-row" style="margin-top:10px" autocomplete="off"><input class="sg-in" id="sgBc" inputmode="numeric" enterkeyhint="search" dir="ltr" style="text-align:right" placeholder="ברקוד או 6 ספרות אחרונות">' +
-      '<button type="submit" class="sg-btn">🔎</button><button type="button" class="sg-btn sg-pri" id="sgCam">📷 סריקה</button></form>' +
+      '<form id="sgFind" class="sg-row" style="margin-top:10px" autocomplete="off"><input class="sg-in" id="sgBc" inputmode="numeric" enterkeyhint="search" dir="auto" style="text-align:right" placeholder="ברקוד, 6 ספרות אחרונות או שם">' +
+      '<button type="submit" class="sg-btn">🔎</button><button type="button" class="sg-btn" id="sgAbc" title="חיפוש לפי שם — מקלדת אותיות">אבג</button><button type="button" class="sg-btn sg-pri" id="sgCam">📷 סריקה</button></form>' +
       '<div id="sgCamBox"></div><div id="sgRes"></div>';
     if (s) {
       h += '<label class="sg-lbl">שם</label><input class="sg-in" data-f="name" value="' + e(s.name) + '">' +
@@ -228,6 +228,7 @@
     $('sgEdit').innerHTML = h;
     $('sgFind').addEventListener('submit', (ev) => { ev.preventDefault(); const v = $('sgBc').value.trim(); if (v) find(v, false); });
     $('sgCam').addEventListener('click', () => (camOn ? camStop() : camStart()));
+    $('sgAbc').addEventListener('click', () => { const i = $('sgBc'), t = i.inputMode !== 'text'; i.inputMode = t ? 'text' : 'numeric'; i.placeholder = t ? 'שם הפריט — למשל עגבניה' : 'ברקוד, 6 ספרות אחרונות או שם'; $('sgAbc').textContent = t ? '123' : 'אבג'; i.blur(); setTimeout(() => i.focus(), 50); });
     $('sgEdit').querySelectorAll('[data-f]').forEach((el) => el.addEventListener('input', () => {
       if (!slots[sel]) return;
       slots[sel][el.dataset.f] = el.dataset.f === 'price' ? el.value.replace(/[^\d.]/g, '') : el.value;
@@ -241,9 +242,22 @@
 
   async function find(code, scanned) {
     const box = $('sgRes');
-    code = String(code).replace(/\s+/g, '');
+    const byName = !scanned && /[֐-׿A-Za-z]/.test(String(code));
+    code = byName ? String(code).trim().replace(/\s+/g, ' ') : String(code).replace(/\s+/g, '');
     if (box) box.innerHTML = '<div class="sg-mut" style="margin-top:10px">🔎 מחפש ' + e(code) + '…</div>';
     try { await load(); } catch (_) { if (box) box.innerHTML = '<div class="sg-mut" style="color:#b91c1c;margin-top:10px">אין חיבור — לא הצלחתי לטעון את המחירים</div>'; return; }
+    // 24/11 (the owner: "a search by name — not every product has a barcode, e.g. vegetables"): every word in the name
+    if (byName) {
+      const words = code.split(' ').filter(Boolean), hit = [];
+      for (const p of data.prods.values()) if (words.every((w) => String(p.Name || '').includes(w))) hit.push(p);
+      hit.sort((a, b) => (findPromo(b.Barcode) ? 1 : 0) - (findPromo(a.Barcode) ? 1 : 0) || String(a.Name).length - String(b.Name).length);
+      if (!hit.length) { box.innerHTML = '<div class="sg-mut" style="color:#b91c1c;font-weight:800;margin-top:10px">לא נמצא פריט בשם "' + e(code) + '" — נסו חלק מהשם</div>'; return; }
+      if (hit.length === 1) return find(hit[0].Barcode, true);
+      box.innerHTML = '<div class="sg-mut" style="margin-top:10px;font-weight:800;color:#0f172a">' + (hit.length > 20 ? 'יותר מ-20' : hit.length) + ' פריטים בשם "' + e(code) + '" — בחרו:</div>' +
+        hit.slice(0, 20).map((p) => '<button class="sg-btn sg-pick" data-bc="' + e(p.Barcode) + '">' + e(p.Name) + ' <span class="sg-mut" dir="ltr">' + e(p.Barcode) + '</span>' + (findPromo(p.Barcode) ? ' <span class="sg-badge p">מבצע</span>' : '') + '</button>').join('');
+      box.querySelectorAll('[data-bc]').forEach((b) => b.addEventListener('click', () => find(b.dataset.bc, true)));
+      return;
+    }
     const k = nb(code);
     let hit = data.prods.get(k) ? [data.prods.get(k)] : [];
     let promo = findPromo(code);

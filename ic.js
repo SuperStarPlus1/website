@@ -92,6 +92,7 @@
   /* ================= the list ================= */
   async function showList(old) {
     view = 'list'; D = null; head(old ? '🗄 חשבוניות ישנות וארכיון' : '🧾 קליטת חשבונית', !!old);
+    $('icBody').ondragover = null; $('icBody').ondrop = null;   // a dropped file belongs to an open invoice only
     $('icBody').innerHTML = '<div class="iv-mut" style="text-align:center;padding:30px">טוען…</div>';
     const r = await api('icList', old ? { old: true } : {});
     if (view !== 'list') return;
@@ -164,8 +165,9 @@
     let h = '';
     // pages
     h += '<div class="iv-card"><h3>📄 עמודים (' + links.length + ')</h3><div class="ic-pages">' + links.map((u, i) => u ? '<a href="' + e(u) + '" target="_blank" rel="noopener"><img src="' + e(u) + '" alt="עמוד ' + (i + 1) + '" onerror="this.replaceWith(\'📄\')"></a>' : '<a>📄</a>').join('') + '</div>' +
-      (ro() ? '' : '<div class="iv-acts"><button class="iv-btn iv-pri" id="icShot" style="flex:1">📷 צילום עמוד' + (links.length ? ' נוסף' : '') + '</button><button class="iv-btn" id="icGal">🖼 מהגלריה / PDF</button></div>' +
-        '<div class="iv-mut" id="icProg" style="margin-top:6px">' + (links.length ? 'עמוד נוסף? מצלמים אותו — השורות שלו מתווספות.' : 'מצלמים את העמוד הראשון. דף שלם, ישר, באור טוב.') + '</div>') + '</div>';
+      (ro() ? '' : '<div class="iv-acts"><button class="iv-btn iv-pri" id="icShot" style="flex:1">📷 צילום עמוד' + (links.length ? ' נוסף' : '') + '</button><button class="iv-btn" id="icGal">📎 קובץ PDF / תמונה</button></div>' +
+        '<div class="iv-mut" id="icProg" style="margin-top:6px">' + (links.length ? 'עמוד נוסף? מצלמים אותו — השורות שלו מתווספות.' : 'מצלמים את העמוד הראשון (דף שלם, ישר, באור טוב), או מעלים קובץ סרוק — PDF של כמה עמודים מתפצל לבד.') +
+        (window.matchMedia && matchMedia('(pointer:fine)').matches ? ' במחשב אפשר גם לגרור את הקובץ לכאן.' : '') + '</div>') + '</div>';
     // header
     h += '<div class="iv-card"><h3>פרטי החשבונית</h3>' + (ro() ? '' : '<div class="iv-acts" style="margin:0 0 6px"><button class="iv-btn" id="icSupBtn" style="font-size:13px">' + (D.supplier ? '🔄 החלפת ספק' : '🔎 בחירת הספק מקומקס') + '</button>' + (D.supplier ? '<span class="iv-mut" style="align-self:center">✓ מקושר לספק בקומקס</span>' : '<span class="iv-mut" style="align-self:center;color:#c2410c">הספק לא מקושר לקומקס — בחרו אותו כדי לראות את קבלות הסחורה</span>') + '</div><div id="icSupBox"></div>') + '<div class="ic-f">' +
       fld('ספק', 'supplier_name', D.supplier_name) + fld('מספר חשבונית', 'invoice_no', D.invoice_no) + fld('תאריך', 'invoice_date', D.invoice_date) + fld('סה"כ נטו (חייב מע"מ)', 'subtotal', D.subtotal, 1) +
@@ -188,6 +190,10 @@
     if (!ro()) {
       $('icShot').onclick = () => pick(true);
       $('icGal').onclick = () => pick(false);
+      // a file dragged onto the invoice (on a computer)
+      const zone = $('icBody');
+      zone.ondragover = (ev) => { ev.preventDefault(); };
+      zone.ondrop = (ev) => { ev.preventDefault(); const fs = [...((ev.dataTransfer && ev.dataTransfer.files) || [])].filter((f) => isPdf(f) || /^image\//.test(f.type)); if (fs.length) send(fs); else say('גררו קובץ PDF או תמונה', 'err'); };
       $('icAdd').onclick = () => { rows.push({ id: rid(), barcode: '', name: '', qty: '', price: '', total: '', pack: '1', promo: false, known: false }); drawRows(); queue(); };
       $('icBody').querySelectorAll('[data-f]').forEach((i) => i.addEventListener('input', () => { D[i.dataset.f] = i.value; if (i.dataset.f === 'supplier_name') D.supplier = null; queue(true); refresh(); }));
       [['icO1', 'priceFromTotal'], ['icO2', 'packMode'], ['icO3', 'vatIncluded']].forEach(([id, k]) => $(id).addEventListener('change', () => { opts[k] = $(id).checked; if (k === 'vatIncluded') vatAuto = true; queue(); refresh(); drawRows(); }));
@@ -465,13 +471,13 @@
   /* ---- 📷 the pages ---- */
   function pick(camera) {
     const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = camera ? 'image/*' : 'image/*,application/pdf'; inp.multiple = !camera;
+    inp.type = 'file'; inp.accept = camera ? 'image/*' : 'image/*,application/pdf,.pdf'; inp.multiple = !camera;
     if (camera) inp.setAttribute('capture', 'environment');
     inp.onchange = () => { const fs = [...(inp.files || [])]; if (fs.length) send(fs); };
     inp.click();
   }
   async function shrink(f) {
-    if (f.type === 'application/pdf') return { mime: f.type, data: await b64(f) };
+    if (isPdf(f)) return { mime: 'application/pdf', data: await b64(f) };
     const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
     const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
     const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
@@ -480,6 +486,21 @@
     return { mime: 'image/jpeg', data: await b64(blob) };
   }
   const b64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+  // 24/11 (the owner: "allow uploading a scanned PDF or an image too"): a PDF is split into its pages (pdf-lib, like the
+  // old app — one request per page reads a dense invoice far better than one for the whole file)
+  const PDFLIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+  const isPdf = (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+  async function pdfPages(f) {
+    if (!window.PDFLib) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFLIB; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    const src = await window.PDFLib.PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true });
+    const out = [];
+    for (let i = 0; i < src.getPageCount(); i++) {
+      const doc = await window.PDFLib.PDFDocument.create();
+      const [pg] = await doc.copyPages(src, [i]); doc.addPage(pg);
+      out.push(new Blob([await doc.save()], { type: 'application/pdf' }));
+    }
+    return out;
+  }
   async function send(files) {
     if (busy) return;
     busy = true;
@@ -487,11 +508,19 @@
     const prog = (t) => { if ($('icProg')) $('icProg').innerHTML = t; };
     ['icShot', 'icGal'].forEach((id) => { if ($(id)) $(id).disabled = true; });
     let added = 0, fails = 0;
-    for (let i = 0; i < files.length; i++) {
-      prog('⏳ קורא עמוד ' + (i + 1) + (files.length > 1 ? ' מתוך ' + files.length : '') + '… (עד דקה לעמוד צפוף)');
+    // every file → its pages (a PDF: one per page; an image: itself)
+    const pages = [];
+    for (const f of files) {
+      if (!isPdf(f)) { pages.push(f); continue; }
+      prog('⏳ מפצל את ' + e(f.name || 'הקובץ') + ' לעמודים…');
+      try { (await pdfPages(f)).forEach((b) => pages.push(b)); }
+      catch (_) { pages.push(f); }   // could not split (an unusual PDF) — sent whole
+    }
+    for (let i = 0; i < pages.length; i++) {
+      prog('⏳ קורא עמוד ' + (i + 1) + (pages.length > 1 ? ' מתוך ' + pages.length : '') + '… (עד דקה לעמוד צפוף)');
       try {
-        const p = await shrink(files[i]);
-        if (p.data.length > 8e6) { fails++; say('הקובץ גדול מדי', 'err'); continue; }
+        const p = await shrink(pages[i]);
+        if (p.data.length > 8e6) { fails++; say('עמוד ' + (i + 1) + ' גדול מדי (מעל 6MB) — סרקו ברזולוציה נמוכה יותר או צלמו אותו', 'err'); continue; }
         const x = await api('icPage', { docId: D.id, ...p });
         if (x.ok) added += x.added; else { fails++; say(x.error, 'err'); }
       } catch (_) { fails++; say('לא הצלחתי לקרוא את הקובץ', 'err'); }

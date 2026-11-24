@@ -150,14 +150,14 @@
     view = 'ord'; cur = d; item = null; head('📝 ' + oname(d), true);
     $('poBody').innerHTML = '<div id="poPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 מזמין/ה: <span style="color:#0f172a">' + e(myName()) + '</span> · 📝 ' + e(oname(d)) + '</div><div class="iv-scan">' +
       '<div id="poCamBox"></div>' +
-      '<form class="iv-row" id="poBcF" action="#" autocomplete="off"><input class="iv-in" id="poBc" inputmode="numeric" enterkeyhint="search" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות" dir="ltr" style="text-align:right">' +
-      '<button type="submit" class="iv-btn" title="חיפוש" style="font-size:18px;padding:9px 12px">🔎</button><button type="button" class="iv-btn iv-pri" id="poCam" title="סריקה במצלמה" style="font-size:18px;padding:9px 12px">📷</button></form>' +
+      '<form class="iv-row" id="poBcF" action="#" autocomplete="off"><input class="iv-in" id="poBc" inputmode="numeric" enterkeyhint="search" autocomplete="off" placeholder="ברקוד, 6 ספרות אחרונות או שם" dir="auto" style="text-align:right">' +
+      '<button type="submit" class="iv-btn" title="חיפוש" style="font-size:18px;padding:9px 12px">🔎</button><button type="button" class="iv-btn" id="poAbc" title="חיפוש לפי שם — מקלדת אותיות" style="font-size:14px;padding:9px 10px">אבג</button><button type="button" class="iv-btn iv-pri" id="poCam" title="סריקה במצלמה" style="font-size:18px;padding:9px 12px">📷</button></form>' +
       '<div id="poItem"></div></div>' +
       '<div class="iv-h" id="poLinesH">בהזמנה</div><div class="iv-card" id="poLines" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
       '<div class="iv-acts"><button class="iv-btn iv-ok" id="poSend">📤 סיום ושליחת ההזמנה</button><button class="iv-btn" id="poToSum">📊 סיכום</button></div>' +
       '<div class="iv-mut" style="margin:6px 4px">אחרי "סיום ושליחה" ההזמנה ננעלת, ואפשר לשלוח אותה לספק ולייצא לקומקס.</div>';
     const goBc = () => {
-      const v = $('poBc').value.replace(/\s+/g, '');
+      const raw = $('poBc').value.trim(), v = /[\u0590-\u05FFA-Za-z]/.test(raw) ? raw.replace(/\s+/g, ' ') : raw.replace(/\s+/g, '');
       const fast = kt.length >= 6 && kt.length >= v.length - 1 && (kt[kt.length - 1] - kt[0]) / (kt.length - 1) < 35;
       kt = [];
       if (v) { $('poBc').blur(); lookup(v, fast ? 'scan' : 'typed'); } else say('הקלידו ברקוד או 6 ספרות אחרונות', 'err');
@@ -166,6 +166,7 @@
     $('poBcF').addEventListener('submit', (ev) => { ev.preventDefault(); goBc(); });
     $('poBc').addEventListener('input', () => { if (!$('poBc').value) kt = []; });
     $('poBc').addEventListener('paste', () => { kt = []; });
+    $('poAbc').onclick = () => { const i = $('poBc'), t = i.inputMode !== 'text'; i.inputMode = t ? 'text' : 'numeric'; i.placeholder = t ? 'שם המוצר — למשל עגבניה' : 'ברקוד, 6 ספרות אחרונות או שם'; $('poAbc').textContent = t ? '123' : 'אבג'; i.blur(); setTimeout(() => i.focus(), 50); };
     $('poCam').onclick = () => (window.ScanCam && ScanCam.on() ? camOff() : cam());
     $('poToSum').onclick = () => { camOff(); showSum(cur); };
     $('poSend').onclick = () => sendOrder($('poSend'));
@@ -244,19 +245,20 @@
     $('poSkip').onclick = next; beep(220, 0.18);
   }
   async function lookup(code, src, exact) {
-    code = String(code).replace(/\s+/g, '');
+    code = /[\u0590-\u05FFA-Za-z]/.test(String(code)) ? String(code).trim().replace(/\s+/g, ' ') : String(code).replace(/\s+/g, '');
     $('poBc').value = code;
     $('poItem').innerHTML = '<div class="iv-mut" style="padding:12px 2px">🔎 מחפש ' + e(code) + '…</div>';
     const r = await api('poLookup', { barcode: code, orderId: cur.id, exact: exact || src === 'scan' });
     if (view !== 'ord') return;
     if (!r.ok && !r.net) { $('poItem').innerHTML = '<div class="iv-warn">' + e(r.error) + '</div>'; return; }
     if (r.tooMany) return stopMsg('<div class="nm">🔎 יותר מדי מוצרים מסתיימים ב-' + e(code) + '</div><div class="iv-mut">הקלידו עוד ספרות מהסוף, או את הברקוד המלא.</div>');
+    if (r.byName && !r.multi.length) return stopMsg('<div class="nm">🔎 לא נמצא מוצר בשם "' + e(code) + '"</div><div class="iv-mut">נסו מילה אחרת או חלק מהשם (למשל "עגב"), או סרקו ברקוד.</div>');
     if (r.multi) {
       item = null; beep(880, 0.06);
-      $('poItem').innerHTML = '<div class="iv-item k"><div class="nm">נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:</div>' +
+      $('poItem').innerHTML = '<div class="iv-item k"><div class="nm">' + (r.byName ? 'נמצאו ' + r.multi.length + (r.multi.length === 30 ? '+' : '') + ' מוצרים בשם "' + e(code) + '" — בחרו:' : 'נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:') + '</div>' +
         r.multi.map((x) => '<button type="button" class="iv-btn iv-head" data-pick="' + e(x.barcode) + '" style="width:100%;text-align:right;margin-top:8px">' + (x.img ? pic(x.barcode, 52) : '') + '<div><b>' + e(x.name) + '</b>' +
           (x.mine ? ' <span class="iv-badge" style="background:#dcfce7;color:#166534">של הספק</span>' : '') + (x.archived ? ' <span class="iv-badge" style="background:#f1f5f9;color:#64748b">ארכיון</span>' : '') +
-          '<div class="bc">' + e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b></div></div></button>').join('') +
+          '<div class="bc">' + (r.byName ? e(x.barcode) : e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b>') + '</div></div></button>').join('') +
         '<div class="iv-acts"><button class="iv-btn" id="poSkip">ביטול</button></div></div>';
       $('poItem').querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => lookup(b.dataset.pick, 'pick', true)));
       $('poSkip').onclick = next;

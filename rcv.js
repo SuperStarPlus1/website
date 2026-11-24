@@ -170,14 +170,14 @@
     view = 'doc'; cur = d; item = null; head('📥 ' + dname(d), true);
     $('grBody').innerHTML = '<div id="grPendBar"></div><div class="iv-mut" style="margin:0 4px 8px;font-weight:800">👤 סורק/ת: <span style="color:#0f172a">' + e(myName()) + '</span> · 🚚 ' + e(dname(d)) + '</div><div class="iv-scan">' +
       '<div id="grCamBox"></div>' +
-      '<form class="iv-row" id="grBcF" action="#" autocomplete="off"><input class="iv-in" id="grBc" inputmode="numeric" enterkeyhint="search" autocomplete="off" placeholder="ברקוד מלא או 6 ספרות אחרונות" dir="ltr" style="text-align:right">' +
-      '<button type="submit" class="iv-btn" title="חיפוש" style="font-size:18px;padding:9px 12px">🔎</button><button type="button" class="iv-btn iv-pri" id="grCam" title="סריקה במצלמה" style="font-size:18px;padding:9px 12px">📷</button></form>' +
+      '<form class="iv-row" id="grBcF" action="#" autocomplete="off"><input class="iv-in" id="grBc" inputmode="numeric" enterkeyhint="search" autocomplete="off" placeholder="ברקוד, 6 ספרות אחרונות או שם" dir="auto" style="text-align:right">' +
+      '<button type="submit" class="iv-btn" title="חיפוש" style="font-size:18px;padding:9px 12px">🔎</button><button type="button" class="iv-btn" id="grAbc" title="חיפוש לפי שם — מקלדת אותיות" style="font-size:14px;padding:9px 10px">אבג</button><button type="button" class="iv-btn iv-pri" id="grCam" title="סריקה במצלמה" style="font-size:18px;padding:9px 12px">📷</button></form>' +
       '<div id="grItem"></div></div>' +
       '<div class="iv-h" id="grLinesH">מה התקבל</div><div class="iv-card" id="grLines" style="padding:6px 14px"><div class="iv-mut" style="padding:10px 0">טוען…</div></div>' +
       '<div class="iv-acts"><button class="iv-btn iv-ok" id="grFinish">✓ סיום הקבלה</button><button class="iv-btn" id="grToSum">📊 סיכום וייצוא</button></div>' +
       '<div class="iv-mut" style="margin:6px 4px">פריט באדום = לא במגוון. הוא נקלט, אבל צריך להקים אותו בקומקס לפני הזנת החשבונית.</div>';
     const goBc = () => {
-      const v = $('grBc').value.replace(/\s+/g, '');
+      const raw = $('grBc').value.trim(), v = /[\u0590-\u05FFA-Za-z]/.test(raw) ? raw.replace(/\s+/g, ' ') : raw.replace(/\s+/g, '');
       const fast = kt.length >= 6 && kt.length >= v.length - 1 && (kt[kt.length - 1] - kt[0]) / (kt.length - 1) < 35;
       kt = [];
       if (v) { $('grBc').blur(); lookup(v, fast ? 'scan' : 'typed'); } else say('הקלידו ברקוד או 6 ספרות אחרונות', 'err');
@@ -186,6 +186,7 @@
     $('grBcF').addEventListener('submit', (ev) => { ev.preventDefault(); goBc(); });
     $('grBc').addEventListener('input', () => { if (!$('grBc').value) kt = []; });
     $('grBc').addEventListener('paste', () => { kt = []; });
+    $('grAbc').onclick = () => { const i = $('grBc'), t = i.inputMode !== 'text'; i.inputMode = t ? 'text' : 'numeric'; i.placeholder = t ? 'שם המוצר — למשל עגבניה' : 'ברקוד, 6 ספרות אחרונות או שם'; $('grAbc').textContent = t ? '123' : 'אבג'; i.blur(); setTimeout(() => i.focus(), 50); };
     $('grCam').onclick = () => (window.ScanCam && ScanCam.on() ? camOff() : cam());
     $('grToSum').onclick = () => { camOff(); showSum(cur, true); };
     $('grFinish').onclick = async () => {
@@ -260,19 +261,20 @@
     $('grSkip').onclick = next; beep(220, 0.18);
   }
   async function lookup(code, src, exact) {
-    code = String(code).replace(/\s+/g, '');
+    code = /[\u0590-\u05FFA-Za-z]/.test(String(code)) ? String(code).trim().replace(/\s+/g, ' ') : String(code).replace(/\s+/g, '');
     $('grBc').value = code;
     $('grItem').innerHTML = '<div class="iv-mut" style="padding:12px 2px">🔎 מחפש ' + e(code) + '…</div>';
     const r = await api('rcvLookup', { barcode: code, docId: cur.id, exact: exact || src === 'scan' });
     if (view !== 'doc') return;
     if (!r.ok && !r.net) { $('grItem').innerHTML = '<div class="iv-warn">' + e(r.error) + '</div>'; return; }
     if (r.tooMany) return stopMsg('<div class="nm">🔎 יותר מדי מוצרים מסתיימים ב-' + e(code) + '</div><div class="iv-mut">הקלידו עוד ספרות מהסוף, או את הברקוד המלא.</div>');
+    if (r.byName && !r.multi.length) return stopMsg('<div class="nm">🔎 לא נמצא מוצר בשם "' + e(code) + '"</div><div class="iv-mut">נסו מילה אחרת או חלק מהשם (למשל "עגב"), או סרקו ברקוד.</div>');
     if (r.multi) {
       item = null; beep(880, 0.06);
-      $('grItem').innerHTML = '<div class="iv-item k"><div class="nm">נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:</div>' +
+      $('grItem').innerHTML = '<div class="iv-item k"><div class="nm">' + (r.byName ? 'נמצאו ' + r.multi.length + (r.multi.length === 30 ? '+' : '') + ' מוצרים בשם "' + e(code) + '" — בחרו:' : 'נמצאו ' + r.multi.length + ' מוצרים שמסתיימים ב-' + e(code) + ' — בחרו:') + '</div>' +
         r.multi.map((x) => '<button type="button" class="iv-btn iv-head" data-pick="' + e(x.barcode) + '" style="width:100%;text-align:right;margin-top:8px">' + (x.img ? pic(x.barcode, 52) : '') + '<div><b>' + e(x.name) + '</b>' +
           (x.mine ? ' <span class="iv-badge" style="background:#dcfce7;color:#166534">של הספק</span>' : '') + (x.archived ? ' <span class="iv-badge" style="background:#f1f5f9;color:#64748b">ארכיון</span>' : '') +
-          '<div class="bc">' + e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b></div></div></button>').join('') +
+          '<div class="bc">' + (r.byName ? e(x.barcode) : e(x.barcode.slice(0, -code.length)) + '<b style="color:#0076DA">' + e(x.barcode.slice(-code.length)) + '</b>') + '</div></div></button>').join('') +
         '<div class="iv-acts"><button class="iv-btn" id="grSkip">ביטול</button></div></div>';
       $('grItem').querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => lookup(b.dataset.pick, 'pick', true)));
       $('grSkip').onclick = next;
