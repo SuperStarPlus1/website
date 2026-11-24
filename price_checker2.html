@@ -660,7 +660,7 @@ function showSingleResult(barcode, product, offer) {
         promoDetails.style.display = 'block';
         document.getElementById('promo-name').textContent  = desc || 'מבצע';
         document.getElementById('promo-desc').textContent  = unitPrice ? `${priceLabel}: ₪${unitPrice}` : '';
-        document.getElementById('promo-valid').textContent = valid ? `בתוקף עד: ${valid}` : '';
+        document.getElementById('promo-valid').textContent = !valid ? '' : offer.ValidFrom ? `בתוקף: ${offer.ValidFrom} – ${valid}` : `בתוקף עד: ${valid}`;   // 25/11/2026: the start date
     } else {
         badge.style.display        = 'none';
         promoDetails.style.display = 'none';

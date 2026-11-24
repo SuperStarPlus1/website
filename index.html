@@ -910,10 +910,12 @@
     }
 
     // פותח lightbox עם פרטי מבצע
-    function zoomPromo(url, desc, unitPrice, valid, regularPrice, promoNote) {
+    // 25/11/2026: with the start date (ValidFrom) — "בתוקף: from – to"
+    function validText(t, from, to) { return to ? (from ? `${t.promo_range||'בתוקף:'} ${from} – ${to}` : `${t.promo_valid||'בתוקף עד:'} ${to}`) : ''; }
+    function zoomPromo(url, desc, unitPrice, valid, regularPrice, promoNote, vFrom) {
         const t = TRANSLATIONS[currentLang] || TRANSLATIONS['he'];
         const extra = [
-            valid        ? `${t.promo_valid||'בתוקף עד:'} ${valid}` : '',
+            validText(t, vFrom, valid),
             regularPrice ? `${t.promo_regular||'מחיר רגיל: ₪'}${regularPrice}` : '',
             promoNote    ? promoNote : ''
         ].filter(Boolean).join('  |  ');
@@ -923,7 +925,7 @@
     function zoomPromoByIdx(idx) {
         const d = window._promoData && window._promoData[idx];
         if (!d) return;
-        zoomPromo(d.url, d.desc, d.price, d.valid, d.regularPrice, d.promoNote);
+        zoomPromo(d.url, d.desc, d.price, d.valid, d.regularPrice, d.promoNote, d.vFrom);
     }
 
     function showPromoItems(idx) {
@@ -1237,7 +1239,7 @@
             // פריטים שנמכרים בקג — הצג בקג לא יחידות
             const isWeight = qty === 0.01;
             const sIdx = window._promoData.length;
-            window._promoData.push({url, desc, price, valid, regularPrice, promoNote});
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote, vFrom: o.ValidFrom || ''});
             return `
                 <div style="text-align:center;cursor:pointer;min-width:160px;padding:0 5px"
                     data-pidx="${sIdx}"
@@ -1297,7 +1299,7 @@
             if (!allBcs.length) allBcs = [barcode];
             if (!window._promoData) window._promoData = [];
             const pIdx = window._promoData.length;
-            window._promoData.push({url, desc, price, valid, regularPrice, promoNote, allBcs});
+            window._promoData.push({url, desc, price, valid, regularPrice, promoNote, allBcs, vFrom: o.ValidFrom || ''});
             return `
                 <div class="card" role="listitem" tabindex="0"
                     data-pidx="${pIdx}"
@@ -1310,7 +1312,7 @@
                         <span style="font-size:0.75rem; color:#888;">${qty === 0.01 ? t.promo_kg : t.promo_unit}</span><br>₪${price}
                     </div>` : ""}
                     ${regularPrice ? `<div style="color:#999; font-size:0.75rem; margin-top:4px;">${t.promo_regular}${regularPrice}</div>` : ""}
-                    ${valid ? `<div class="barcode">${t.promo_valid} ${valid}</div>` : ""}
+                    ${valid ? `<div class="barcode">${validText(t, o.ValidFrom, valid)}</div>` : ""}
                     ${promoNote ? `<div style="font-size:0.72rem;color:#ef6c00;font-weight:bold;margin-top:3px;padding:2px 6px;background:#fff3e0;border-radius:6px;">${promoNote}</div>` : ""}
                     ${allBcs.length > 1 ? `<button class="promo-more-btn" onclick="event.stopPropagation(); showPromoItems(${pIdx})">+ ${allBcs.length - 1} פריטים נוספים</button>` : ""}
                 </div>`;
@@ -1820,7 +1822,7 @@ const TRANSLATIONS = {
         banner_btn: "למבצעים",
         video_fallback: "הדפדפן שלך אינו תומך בהצגת וידאו.",
         promo_showing: "מציג {n} מוצרים", promo_regular: "מחיר רגיל: ₪", promo_unit: "מחיר ליח' במבצע:",
-        promo_kg: 'מחיר ק"ג במבצע:', promo_valid: "בתוקף עד:", barcode_label: "ברקוד:",
+        promo_kg: 'מחיר ק"ג במבצע:', promo_valid: "בתוקף עד:", promo_range: "בתוקף:", barcode_label: "ברקוד:",
         a11y_bar_label: "סרגל נגישות", cat_all: "כל הקטגוריות"
     },
 
@@ -1884,7 +1886,7 @@ const TRANSLATIONS = {
         banner_btn: "إلى العروض",
         video_fallback: "متصفحك لا يدعم تشغيل الفيديو.",
         promo_showing: "عرض {n} منتجاً", promo_regular: "السعر العادي: ₪", promo_unit: "سعر الوحدة في العرض:",
-        promo_kg: "سعر الكيلو في العرض:", promo_valid: "صالح حتى:", barcode_label: "الباركود:",
+        promo_kg: "سعر الكيلو في العرض:", promo_valid: "صالح حتى:", promo_range: "صالح:", barcode_label: "الباركود:",
         a11y_bar_label: "شريط إمكانية الوصول", cat_all: "جميع الفئات"
     },
 
@@ -1948,7 +1950,7 @@ const TRANSLATIONS = {
         banner_btn: "See deals",
         video_fallback: "Your browser does not support video playback.",
         promo_showing: "Showing {n} products", promo_regular: "Regular price: ₪", promo_unit: "Unit deal price:",
-        promo_kg: "Price per kg:", promo_valid: "Valid until:", barcode_label: "Barcode:",
+        promo_kg: "Price per kg:", promo_valid: "Valid until:", promo_range: "Valid:", barcode_label: "Barcode:",
         a11y_bar_label: "Accessibility toolbar", cat_all: "All categories"
     }
 };
