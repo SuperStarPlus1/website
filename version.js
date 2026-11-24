@@ -1,10 +1,12 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.36.0',
+  version: '2.36.1',
   date: '23/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'שילוט: פריט עם כמה מבצעים — בוחרים איזה מבצע להדפיס (או מחיר רגיל), ו-🔁 להחלפה',
+    '🏷️ שילוט פתוח לכל העובדים: 📅 סידור עבודה ונוכחות ← 🏷️ שילוט',
     '🏷️ שילוט (ניהול העסק ← תפעול): שלטי מבצע ומחיר על הנייר המודפס של הסופר — שליש, חצי או דף שלם; סריקה במצלמת הטלפון, תיקון לפני הדפסה, הדפסה ב-AirPrint וכיול לכל סוג נייר',
     'מבצעים באתר ובבודק המחירים: "בתוקף: מתאריך – עד תאריך" (תאריך ההתחלה מקומקס)',
     'דוח משימה: חוסר בספירה מול הבסיס מופיע רק בטבלת הספירה (באדום) — לא חוזר בתיבה "דורש תשומת לב" למעלה',

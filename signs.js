@@ -1,10 +1,11 @@
 // 🏷️ שילוט (25/11/2026, the owner: "a shelf-sign printing system connected to Comax: a barcode scan pulls the item's
 // name and price; an item with an active promotion — its description as on the site, with the dates and the limits.
 // With the phone and its camera, no scanner; the network laser printer (Brother MFC-L5750DW, AirPrint), the manual
-// feed tray"). Superstar only: 💼 ניהול העסק ▸ תפעול ▸ 🏷️ שילוט (the managers).
+// feed tray"). Superstar only: 💼 ניהול העסק ▸ תפעול ▸ 🏷️ שילוט (the managers) and 📅 ▸ 🏷️ שילוט (the employees).
 // The paper is the store's own, already printed (the logo, the frame, "מבצע!"): three kinds, A4 — a whole page (one
 // sign), halves (two) and thirds (three). Only the text is printed, into the white frames (the places measured on the
-// owner's paper and his Word / Publisher templates). Per sign, as on his printed samples:
+// owner's paper and his Word / Publisher templates).
+// 25/11/2026 (the owner): open to ALL the employees too — 📅 סידור עבודה ונוכחות ▸ 🏷️ שילוט (like the inventory count). Per sign, as on his printed samples:
 //   the name     the promotion's description without its price part ("קופסת גבינת אלרוחה 700 גרם 35.90 ש"ח" → the name)
 //   the price    big, the agorot small and underlined, ₪ at the left; a deal for a quantity reads right to left:
 //                "2 ק"ג ב 15 ₪" — the quantity on the right, then ב, then the price
@@ -24,7 +25,7 @@
   const $ = (id) => document.getElementById(id);
   const e = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const appState = () => (typeof state !== 'undefined' ? state : null);
-  const isMgr = () => !!(appState() && appState().mgr);
+  const canUse = () => !!(appState() && (appState().mgr || appState().emp));   // managers and every signed-in employee
   const say = (m, c) => { if (typeof toast === 'function') toast(m, c); };
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} } };
 
@@ -60,6 +61,8 @@
     return dataP;
   }
   const findPromo = (bc) => data.promos.find((o) => o._keys.has(nb(bc)));
+  // 25/11/2026 (the owner: "some items have more than one promotion — how do I choose which to print?"): all of them
+  const promosFor = (bc) => data.promos.filter((o) => o._keys.has(nb(bc)));
   // "קופסת גבינת אלרוחה 700 גרם 35.90 ש"ח" / "תפוזים ברשת 4 ק"ג ב 10 ש"ח" / "... 2 ב 10" → the name, the quantity, the price
   const PRICE_RE = /\s*(?:(\d+(?:\.\d+)?)\s*(ק"ג|קג|ק״ג|יח'?|יח׳)?\s*ב[-\s]*)?(\d+(?:\.\d+)?)\s*(ש"ח|ש״ח|ש"|₪)?\s*$/;
   const money = (v) => { const n = Number(v); return isFinite(n) ? n.toFixed(2) : ''; };
@@ -152,7 +155,7 @@
     '</style>');
 
   function open() {
-    if (!isMgr()) return say('שילוט — למנהלים', 'err');
+    if (!canUse()) return say('צריך להיכנס למערכת', 'err');
     if (!$('sgOv')) {
       document.body.insertAdjacentHTML('beforeend', '<div id="sgOv" class="hidden"><div class="sg-top"><h2>🏷️ שילוט</h2><button id="sgCalBtn">📐 כיול</button><button id="sgX">✕ סגירה</button></div><div class="sg-body" id="sgBody"></div></div>');
       $('sgX').addEventListener('click', close);
@@ -218,7 +221,8 @@
         '<div style="flex:1.2"><label class="sg-lbl">מחיר ₪</label><input class="sg-in" data-f="price" inputmode="decimal" value="' + e(s.price) + '"></div></div>' +
         (s.promo ? '' : '<label class="sg-lbl">ליד ה-₪</label><select class="sg-in" data-f="per">' + ['', 'לק"ג', "ליח'"].map((u) => '<option value="' + e(u) + '"' + (u === s.per ? ' selected' : '') + '>' + (u || '—') + '</option>').join('') + '</select>') +
         '<label class="sg-lbl">שורות הפרטים (שורה לכל פרט)</label><textarea class="sg-in" data-f="lines" rows="6" style="font-size:14px;line-height:1.45">' + e(s.lines) + '</textarea>' +
-        '<div class="sg-acts"><button class="sg-btn" id="sgClear">🗑 ניקוי המסגרת</button>' +
+        '<div class="sg-acts">' + (data && s.bc && (promosFor(s.bc).length > 1 || (s.promo && data.prods.get(nb(s.bc))) || (!s.promo && promosFor(s.bc).length)) ?
+          '<button class="sg-btn" id="sgAlt">🔁 מבצע אחר / מחיר רגיל</button>' : '') + '<button class="sg-btn" id="sgClear">🗑 ניקוי המסגרת</button>' +
         (P.n > 1 && sel < P.n - 1 ? '<button class="sg-btn sg-pri" id="sgNext" style="flex:1">למסגרת הבאה ←</button>' : '') + '</div>';
     } else {
       h += '<div class="sg-mut" style="margin-top:12px">סרקו את הברקוד של הפריט במצלמה, או הקלידו אותו (אפשר 6 ספרות אחרונות). פריט במבצע מקבל את פרטי המבצע; פריט בלי מבצע — שם, מחיר וקוד.</div>';
@@ -233,6 +237,7 @@
     }));
     $('sgEdit').querySelectorAll('[data-f=price]').forEach((el) => el.addEventListener('change', () => { if (slots[sel] && slots[sel].price !== '') { slots[sel].price = money(slots[sel].price); el.value = slots[sel].price; refreshPaper(); } }));
     if ($('sgClear')) $('sgClear').addEventListener('click', () => { slots[sel] = null; draw(); });
+    if ($('sgAlt')) $('sgAlt').addEventListener('click', () => choose(slots[sel].bc, true));
     if ($('sgNext')) $('sgNext').addEventListener('click', () => { sel++; draw(); });
   }
 
@@ -256,9 +261,28 @@
     }
     if (!hit.length && !promo) { if (box) box.innerHTML = '<div class="sg-mut" style="color:#b91c1c;font-weight:800;margin-top:10px">לא נמצא פריט עם הברקוד ' + e(code) + '</div>'; return; }
     const bc = hit[0] ? hit[0].Barcode : code;
-    slots[sel] = promo ? fromPromo(promo, bc) : fromProduct(hit[0]);
     if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {}
+    if (promosFor(bc).length > 1) return choose(bc, false);   // more than one promotion → the user chooses
+    slots[sel] = promo ? fromPromo(promo, bc) : fromProduct(hit[0]);
     draw();
+  }
+  // the item's promotions to choose from (each with its price, dates and limits) + its regular price
+  function choose(bc, again) {
+    const box = $('sgRes'); if (!box) return;
+    const list = promosFor(bc), prod = data.prods.get(nb(bc));
+    const cur = slots[sel];
+    box.innerHTML = '<div class="sg-mut" style="margin-top:10px;font-weight:800;color:#0f172a">' + (list.length > 1 ? 'לפריט יש ' + list.length + ' מבצעים — איזה להדפיס?' : 'מה להדפיס?') + '</div>' +
+      list.map((o, i) => { const t = fromPromo(o, bc), on = again && cur && cur.promo && cur.name === t.name && cur.price === t.price;
+        return '<button class="sg-btn sg-pick" data-o="' + i + '"' + (on ? ' style="border-color:#0076DA;background:#eff6ff"' : '') + '><span class="sg-badge p">מבצע</span> <b>' + e(o.Discreption) + '</b>' +
+          '<div class="sg-mut">' + e((o.ValidFrom ? o.ValidFrom + ' – ' : 'עד ') + o.Valid) + (o.PromoNote ? ' · ' + e(o.PromoNote.replace(/\s*\|\s*/g, ' · ')) : '') + '</div></button>'; }).join('') +
+      (prod ? '<button class="sg-btn sg-pick" data-o="reg"><span class="sg-badge r">מחיר רגיל</span> <b>' + e(prod.Name) + ' — ' + money(prod.Price) + ' ₪</b><div class="sg-mut">בלי פרטי מבצע</div></button>' : '') +
+      (again ? '<button class="sg-btn" id="sgAltX" style="margin-top:8px">ביטול</button>' : '');
+    box.querySelectorAll('[data-o]').forEach((b) => b.addEventListener('click', () => {
+      slots[sel] = b.dataset.o === 'reg' ? fromProduct(prod) : fromPromo(list[Number(b.dataset.o)], bc);
+      draw();
+    }));
+    if ($('sgAltX')) $('sgAltX').addEventListener('click', () => { box.innerHTML = ''; });
+    box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   /* ---------- the camera (the same reader as the inventory count: zxing-wasm, self-hosted) ---------- */
@@ -407,7 +431,16 @@
       drop.insertAdjacentHTML('beforeend', '<button id="signsBtn">🏷️ שילוט</button>');
       $('signsBtn').addEventListener('click', open);
     }
+    empItem();
   }
+  // the employees: "📅 סידור עבודה ונוכחות" (employee-menus.js builds it after the sign-in)
+  function empItem() {
+    const d = $('emSchedDrop');
+    if (!d || $('signsEmpBtn')) return;
+    d.insertAdjacentHTML('beforeend', '<button type="button" id="signsEmpBtn" role="menuitem">🏷️ שילוט</button>');
+    $('signsEmpBtn').addEventListener('click', open);
+  }
+  new MutationObserver(() => { if (!$('signsEmpBtn') && $('emSchedDrop')) empItem(); }).observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.openSigns = open;
 })();
