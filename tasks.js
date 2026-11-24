@@ -424,6 +424,29 @@
       if (f.type === 'photo') return '';
       return a.value || '—';
     };
+    // 24/11/2026 (the owner: "in the cart count add a comparison to the previous day's count beside the base, as a
+    // table"): a count against a base — base · today · difference · the previous run's count (r.prev) · difference
+    const prevDay = new Date(Date.parse(run.date + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10);
+    const pd = r.prev && r.prev.date !== prevDay ? dmy(r.prev.date).slice(0, 5) : '';
+    const sg = (d) => d === null ? '—' : d > 0 ? '+' + d : d < 0 ? '−' + -d : '0';
+    const cl = (d) => d === null || d === 0 ? '' : d < 0 ? 'color:#b91c1c;font-weight:700' : 'color:#1d4ed8';
+    const cntTable = (f, a) => {
+      if (f.type !== 'number' || !Array.isArray(a.base)) return '';
+      const pv = (r.prev && r.prev.answers && r.prev.answers[f.id] && r.prev.answers[f.id].values) || [], n = f.readings || 1;
+      const nm = (x) => x === null || x === undefined || x === '' || isNaN(Number(x)) ? null : Number(x);
+      const td = 'padding:5px 8px;border:1px solid #e2e8f0;text-align:center';
+      return '<div style="overflow:auto;margin-top:4px"><table style="border-collapse:collapse;font-size:13.5px;color:#0f172a"><tr>' +
+        ['סוג', 'כמות בסיס', 'נספר היום', 'הפרש מבסיס', pd ? 'נספר ב-' + pd : 'נספר אתמול', pd ? 'הפרש מ-' + pd : 'הפרש מאתמול']
+          .map((h) => '<th style="' + td + ';background:#f1f5f9;white-space:nowrap">' + e(h) + '</th>').join('') + '</tr>' +
+        Array.from({ length: n }, (_, i) => {
+          const v = nm((a.values || [])[i]), b = nm(a.base[i]), p = nm(pv[i]);
+          const db = v !== null && b !== null ? v - b : null, dp = v !== null && p !== null ? v - p : null;
+          return '<tr><td style="' + td + ';text-align:right;font-weight:600">' + e((f.readingLabels && f.readingLabels[i]) || (n > 1 ? 'קריאה ' + (i + 1) : f.label)) +
+            '</td><td style="' + td + '">' + (b ?? '—') + '</td><td style="' + td + ';font-weight:800">' + (v ?? '—') +
+            '</td><td dir="ltr" style="' + td + ';' + cl(db) + '">' + sg(db) + '</td><td style="' + td + '">' + (p ?? '—') +
+            '</td><td dir="ltr" style="' + td + ';' + cl(dp) + '">' + sg(dp) + '</td></tr>';
+        }).join('') + '</table></div>';
+    };
     const apBox = run.approval === 'pending' ? '<div class="tk-appr"><b>🕓 הדיווח ממתין לאישורך</b>' +
         '<input class="tk-in" id="tkApNote" maxlength="500" placeholder="הערה לעובד (חובה בהחזרה לתיקון)">' +
         '<div class="tk-tools" style="margin:0"><button class="tk-btn" id="tkApOk">✔ אישור</button><button class="tk-btn red" id="tkApBack">↩ החזרה לתיקון</button></div><div class="merr" id="tkApErr"></div></div>'
@@ -435,7 +458,9 @@
       fields.map((f) => {
         const a = run.answers[f.id] || {};
         const pics = (a.photos || []).map((p) => r.photos[p] ? '<a href="' + e(r.photos[p]) + '" target="_blank" rel="noopener"><img src="' + e(r.photos[p]) + '" alt=""></a>' : '').join('');
-        return '<div class="tk-f' + (flagged.has(f.id) ? ' bad' : '') + '"><div class="lbl">' + e(f.label) + '</div><div style="font-weight:700;color:' + (flagged.has(f.id) ? '#b91c1c' : '#166534') + '">' + e(txt(f, a)) + '</div>' +
+        const tb = cntTable(f, a);
+        return '<div class="tk-f' + (flagged.has(f.id) ? ' bad' : '') + '"><div class="lbl">' + e(f.label) + '</div>' +
+          (tb || '<div style="font-weight:700;color:' + (flagged.has(f.id) ? '#b91c1c' : '#166534') + '">' + e(txt(f, a)) + '</div>') +
           (pics ? '<div class="tk-pics">' + pics + '</div>' : '') + '</div>';
       }).join('');
     const decide = async (decision) => {
