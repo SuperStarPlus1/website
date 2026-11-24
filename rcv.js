@@ -12,6 +12,9 @@
 //   the summary  one row per barcode; the red ones on top; ⬇ the file for Comax (the invoices' "SAP מערכת" template:
 //                serial / barcode / name / qty / blank / blank / price — the price empty; catalog items only)
 //                ⬇ the full report (the summary, "להקמה בקומקס", every line)
+// 24/11 (📝 הזמנות, po.js): a new receipt offers the chosen supplier's sent orders (🔗 לקבל לפי הזמנה); linked —
+// the item card says how many were ordered / are still missing, the summary compares ordered vs received
+// (❌ לא הגיע / ⚠ חלקית / ➕ עודף), and the full report has a sheet for it. Finishing the receipt marks the order received.
 // Server: api rcv* (goods-receiving.ts; migration 20261124100000_goods_receiving.sql). Comax is never written to.
 // Uses the app's globals: apiPost, anyAuth/mgrAuth, state, toast; the .iv-* styles of inv-count.js; ScanCam (scan-cam.js).
 (function () {
@@ -86,7 +89,7 @@
     const openD = r.docs.filter((d) => d.status === 'open'), done = r.docs.filter((d) => d.status !== 'open');
     let h = pendBar();
     if (!old) h += '<div class="iv-card" style="background:linear-gradient(135deg,#ecfdf5,#eff6ff)"><h3>➕ קבלה חדשה</h3><div class="iv-mut">משאית / משלוח אחד = קבלה אחת. בוחרים ספק, ואם יש — מספר תעודת המשלוח.</div>' +
-      '<input class="iv-in" id="grSupQ" style="margin-top:10px;font-size:15px" placeholder="🔎 ספק — הקלידו חלק מהשם" autocomplete="off"><div class="gr-sup" id="grSupL"><div class="iv-mut" style="padding:10px">טוען ספקים…</div></div>' +
+      '<input class="iv-in" id="grSupQ" style="margin-top:10px;font-size:15px" placeholder="🔎 ספק — הקלידו חלק מהשם" autocomplete="off"><div class="gr-sup" id="grSupL"><div class="iv-mut" style="padding:10px">טוען ספקים…</div></div><div id="grOrd"></div>' +
       '<div class="iv-row" style="margin-top:8px"><input class="iv-in" id="grDocNo" style="font-size:15px" inputmode="numeric" placeholder="מספר תעודת משלוח (לא חובה)"></div>' +
       '<input class="iv-in" id="grNote" style="margin-top:8px;font-size:14px" placeholder="הערה (לא חובה)" maxlength="200">' +
       '<div class="iv-acts"><button class="iv-btn iv-pri" id="grNew" style="flex:1" disabled>פתיחת קבלה</button></div></div>';
@@ -107,14 +110,30 @@
     const o = d.status === 'open';
     return '<div class="iv-card"><h3>🚚 ' + e(dname(d)) + (o ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">פתוחה</span>' : '<span class="iv-badge" style="background:#f1f5f9;color:#475569">הסתיימה ' + dm(d.closed_at) + ' ' + hm(d.closed_at) + '</span>') +
       (d.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(d.exported_at) + '</span>' : '') + (d.archived ? '<span class="iv-badge" style="background:#f1f5f9;color:#64748b">🗄 ארכיון</span>' : '') + '</h3>' +
-      '<div class="iv-mut">👤 ' + e(d.opened_by || '') + ' · נפתחה ' + when(d.opened_at) + (d.note ? ' · ' + e(d.note) : '') + '</div>' +
+      '<div class="iv-mut">👤 ' + e(d.opened_by || '') + ' · נפתחה ' + when(d.opened_at) + (d.order_id ? ' · 🔗 לפי הזמנה ' + d.order_id : '') + (d.note ? ' · ' + e(d.note) : '') + '</div>' +
       '<div class="iv-pills"><span>' + fmt(d.items) + ' פריטים</span><span>' + fmt(d.units) + ' יחידות</span>' + (d.people > 1 ? '<span>' + d.people + ' סורקים</span>' : '') +
       (d.unknown ? '<span style="background:#fef2f2;color:#b91c1c">⛔ ' + d.unknown + ' לא במגוון</span>' : '') + '</div>' +
       '<div class="iv-acts">' + (o ? '<button class="iv-btn iv-pri" data-go="' + d.id + '">▶ לסרוק לקבלה</button>' : '') + '<button class="iv-btn" data-sum="' + d.id + '">📊 סיכום וייצוא</button>' +
       (L.admin ? '<button class="iv-btn" data-arc="' + d.id + '" data-back="' + (d.archived ? '1' : '0') + '" style="margin-inline-start:auto;color:#64748b">' + (d.archived ? '↩ החזרה מהארכיון' : '🗄 לארכיון') + '</button>' : '') + '</div></div>';
   }
   async function supPicker() {
-    let chosen = null;
+    let chosen = null, ordSel = 0, ordSeq = 0;
+    // 📝 the chosen supplier's sent orders: the delivery is received against one of them (or without an order)
+    const orders = async () => {
+      ordSel = 0; const box = $('grOrd'); if (!box) return;
+      box.innerHTML = '';
+      if (!chosen) return;
+      const my = ++ordSeq, r = await api('poForSup', { supplier: chosen.code, supplierName: chosen.name });
+      if (my !== ordSeq || !$('grOrd') || !r.ok || !r.orders.length) return;
+      if (r.orders.length === 1) ordSel = r.orders[0].id;
+      const drawO = () => {
+        box.innerHTML = '<div class="iv-mut" style="margin:10px 2px 4px;font-weight:800;color:#0f172a">🔗 לקבל לפי הזמנה?</div><div class="gr-sup" style="max-height:none">' +
+          r.orders.map((o) => '<button type="button" data-o="' + o.id + '"' + (ordSel === o.id ? ' class="on"' : '') + '><span>' + (ordSel === o.id ? '✓ ' : '') + '📝 הזמנה ' + o.id + ' · נשלחה ' + when(o.sent_at) + '</span><small>' + fmt(o.items) + ' פריטים</small></button>').join('') +
+          '<button type="button" data-o="0"' + (!ordSel ? ' class="on"' : '') + '><span>' + (!ordSel ? '✓ ' : '') + 'בלי הזמנה</span><small></small></button></div>';
+        box.querySelectorAll('[data-o]').forEach((b) => b.addEventListener('click', () => { ordSel = Number(b.dataset.o); drawO(); }));
+      };
+      drawO();
+    };
     const draw = () => {
       const qv = $('grSupQ').value.trim();
       const list = sups || [];
@@ -123,16 +142,16 @@
         hit.slice(0, 40).map((s) => '<button type="button" data-c="' + s.code + '"' + (chosen && chosen.code === s.code ? ' class="on"' : '') + '><span>' + e(s.name) + '</span><small>' + (s.items ? s.items + ' פריטים' : '') + '</small></button>').join('') +
         (qv && sups ? '<button type="button" data-free="1"' + (chosen && !chosen.code ? ' class="on"' : '') + '><span>✍ ספק שלא ברשימה: "' + e(qv) + '"</span><small>ידני</small></button>' : '') +
         (!qv && sups ? '<div class="iv-mut" style="padding:8px 12px">מוצגים הספקים עם הכי הרבה פריטים — הקלידו כדי לחפש בכל ' + sups.length + ' הספקים.</div>' : '');
-      $('grSupL').querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { chosen = sups.find((s) => String(s.code) === b.dataset.c); $('grSupQ').value = chosen.name; draw(); $('grNew').disabled = false; }));
+      $('grSupL').querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { chosen = sups.find((s) => String(s.code) === b.dataset.c); $('grSupQ').value = chosen.name; draw(); $('grNew').disabled = false; orders(); }));
       const fr = $('grSupL').querySelector('[data-free]');
-      if (fr) fr.addEventListener('click', () => { chosen = { code: 0, name: $('grSupQ').value.trim() }; draw(); $('grNew').disabled = false; });
+      if (fr) fr.addEventListener('click', () => { chosen = { code: 0, name: $('grSupQ').value.trim() }; draw(); $('grNew').disabled = false; orders(); });
     };
-    $('grSupQ').addEventListener('input', () => { if (chosen && $('grSupQ').value.trim() !== chosen.name) { chosen = null; $('grNew').disabled = true; } draw(); });
+    $('grSupQ').addEventListener('input', () => { if (chosen && $('grSupQ').value.trim() !== chosen.name) { chosen = null; $('grNew').disabled = true; orders(); } draw(); });
     draw();
     $('grNew').onclick = async () => {
       if (!chosen) return say('בחרו ספק מהרשימה', 'err');
       const b = $('grNew'); b.disabled = true;
-      const x = await api('rcvOpen', { supplier: chosen.code, supplierName: chosen.name, docNo: $('grDocNo').value.trim(), note: $('grNote').value.trim() });
+      const x = await api('rcvOpen', { supplier: chosen.code, supplierName: chosen.name, docNo: $('grDocNo').value.trim(), note: $('grNote').value.trim(), orderId: ordSel || undefined });
       b.disabled = false;
       if (!x.ok) return say(x.error, 'err');
       startDoc(x.doc);
@@ -270,7 +289,10 @@
     if (r.ok && !r.known) beep(220, 0.25); else beep(1100, 0.07);
     const pp = pend.filter((p) => p.docId === cur.id && p.barcode === item.barcode);
     const already = (item.already || 0) + pp.reduce((s, p) => s + Number(p.qty || 0), 0), times = (item.times || 0) + pp.length;
-    const seen = times ? '<div class="iv-nums"><div><small>כבר התקבל בקבלה הזו</small><b>' + fmt(already) + '</b></div><div><small>כמה שורות</small><b>' + times + '</b></div></div>' : '';
+    // 📝 against the order: how many were ordered and how many are still missing; not in the order — a soft note
+    const ord = !item.linked ? '' : item.ordered == null ? '<div class="gr-soft" style="background:#fff7ed;color:#c2410c">📝 הפריט לא בהזמנה (יסומן כעודף)</div>'
+      : '<div class="iv-nums"><div><small>📝 הוזמן</small><b>' + fmt(item.ordered) + '</b></div><div><small>' + (item.ordered - already > 0 ? 'עוד חסר' : item.ordered - already < 0 ? 'עודף עד עכשיו' : 'הושלם') + '</small><b style="color:' + (item.ordered - already > 0 ? '#c2410c' : item.ordered - already < 0 ? '#b91c1c' : '#16a34a') + '">' + fmt(Math.abs(item.ordered - already)) + '</b></div></div>';
+    const seen = ord + (times ? '<div class="iv-nums"><div><small>כבר התקבל בקבלה הזו</small><b>' + fmt(already) + '</b></div><div><small>כמה שורות</small><b>' + times + '</b></div></div>' : '');
     const conf = item.needConfirm ? '<div class="iv-mut" style="margin-top:8px;font-weight:700;color:#0f172a">' +
       (item.shortMiss ? 'אין במגוון מוצר שמסתיים ב-' + e(item.barcode) + '. סרקו אותו או הקלידו את הברקוד המלא (בדרך כלל 13 ספרות). ואם זה באמת הברקוד המלא — הקלידו אותו שוב:'
         : 'לברקוד באורך ' + item.barcode.length + ' ספרות אין ספרת ביקורת — הקלידו אותו שוב לאישור:') +
@@ -283,7 +305,7 @@
       '<div class="iv-warn" style="color:#b91c1c">כתבו את שם המוצר (שם, גודל, יצרן) — חובה. הפריט ייקלט כרגיל.</div>' + seen;
     h += '<input class="iv-in iv-qty" id="grQty" inputmode="decimal" enterkeyhint="done" placeholder="כמות" autocomplete="off">' +
       '<div class="iv-quick">' + [1, 6, 12, 24, 48].map((n) => '<button type="button" data-q="' + n + '">' + n + '</button>').join('') + '</div>' +
-      '<input class="iv-in" id="grNote2" style="margin-top:8px;font-size:14px;padding:9px 10px' + (item.known ? ';display:none' : ';border-color:#ef4444') + '" placeholder="' + (item.known ? 'הערה (לא חובה)' : 'שם המוצר — למשל: במבה 80 גרם אסם') + '" maxlength="200">' +
+      '<input class="iv-in" id="grNote2" style="margin-top:8px;font-size:14px;padding:9px 10px' + (item.known ? ';display:none' : ';border-color:#ef4444') + '" placeholder="' + (item.known ? 'הערה (לא חובה)' : 'שם המוצר — למשל: במבה 80 גרם אסם') + '" maxlength="200" value="' + e(!item.known && item.ordName ? item.ordName : '') + '">' +
       '<div class="iv-acts">' + (item.known ? '<button type="button" class="iv-btn" id="grNoteBtn" style="font-size:13px">+ הערה</button>' : '') +
       '<button type="submit" class="iv-btn iv-ok" style="flex:1;font-size:16px">✓ שמירה</button><button type="button" class="iv-btn" id="grSkip">ביטול</button></div></div>';
     $('grItem').innerHTML = '<form id="grItemF" action="#" autocomplete="off">' + h + '</form>';
@@ -358,11 +380,11 @@
     const R = sum.rows, d = sum.doc, red = R.filter((x) => !x.known), oth = R.filter((x) => x.other);
     const units = R.reduce((s, x) => s + x.qty, 0), o = d.status === 'open';
     let h = '<div class="iv-card" style="padding:12px 16px"><h3>🚚 ' + e(dname(d)) + (o ? '<span class="iv-badge" style="background:#dcfce7;color:#166534">פתוחה</span>' : '<span class="iv-badge" style="background:#f1f5f9;color:#475569">הסתיימה</span>') + '</h3>' +
-      '<div class="iv-mut">👤 ' + e(d.opened_by || '') + ' · נפתחה ' + when(d.opened_at) + (d.closed_at ? ' · הסתיימה ' + when(d.closed_at) + (d.closed_by ? ' (' + e(d.closed_by) + ')' : '') : '') + (d.note ? ' · ' + e(d.note) : '') + '</div>' +
+      '<div class="iv-mut">👤 ' + e(d.opened_by || '') + ' · נפתחה ' + when(d.opened_at) + (d.closed_at ? ' · הסתיימה ' + when(d.closed_at) + (d.closed_by ? ' (' + e(d.closed_by) + ')' : '') : '') + (d.order_id ? ' · 🔗 לפי הזמנה ' + d.order_id : '') + (d.note ? ' · ' + e(d.note) : '') + '</div>' +
       (o ? '<div class="iv-warn" style="font-size:13px">הקבלה עדיין פתוחה — מה שייסרק מעכשיו לא נכלל כאן.</div>' : '') + '</div>' +
       '<div class="iv-kpis"><div class="iv-kpi"><b>' + fmt(R.length) + '</b><span>פריטים</span></div><div class="iv-kpi"><b>' + fmt(units) + '</b><span>יחידות</span></div>' +
       '<div class="iv-kpi"><b style="color:' + (red.length ? '#b91c1c' : '#16a34a') + '">' + red.length + '</b><span>לא במגוון</span></div><div class="iv-kpi"><b>' + oth.length + '</b><span>רשומים אצל ספק אחר</span></div></div>' +
-      (red.length ? '<div class="iv-card gr-red" style="padding:12px 16px"><h3 style="color:#b91c1c">⛔ ' + red.length + ' פריטים לא במגוון</h3><div class="iv-mut">צריך להקים אותם בקומקס לפני הזנת החשבונית. הם לא נכנסים לקובץ לקומקס — אחרי ההקמה והעדכון הלילי הם יופיעו כרגילים, ואז מייצאים שוב.</div></div>' : '') +
+      (red.length ? '<div class="iv-card gr-red" style="padding:12px 16px"><h3 style="color:#b91c1c">⛔ ' + red.length + ' פריטים לא במגוון</h3><div class="iv-mut">צריך להקים אותם בקומקס לפני הזנת החשבונית. הם לא נכנסים לקובץ לקומקס — אחרי ההקמה והעדכון הלילי הם יופיעו כרגילים, ואז מייצאים שוב.</div></div>' : '') + vsCard() +
       '<div class="iv-card"><h3>⬇ ייצוא</h3><div class="iv-mut">הקובץ לקומקס בתבנית של החשבוניות ("SAP מערכת"): מספר שורה, ברקוד, שם, כמות, (ריק), (ריק), מחיר — המחיר ריק בקבלת סחורה.</div>' +
       '<div class="iv-acts"><button class="iv-btn iv-pri" id="grXc">⬇ קובץ לקומקס</button><button class="iv-btn" id="grXf">⬇ דוח מלא</button>' +
       (o ? '<button class="iv-btn" id="grGo">▶ להמשיך לסרוק</button><button class="iv-btn iv-ok" id="grClose">✓ סיום הקבלה</button>' : (sum.mgr ? '<button class="iv-btn" id="grReopen">↩ פתיחה מחדש</button>' : '')) + '</div></div>' +
@@ -370,7 +392,8 @@
       '<input class="iv-in" id="grQ" style="font-size:14px;padding:8px 10px" placeholder="🔎 חיפוש שם או ברקוד">' +
       '<div class="iv-wrap" style="margin-top:8px"><table class="iv-tbl" style="min-width:0"><thead><tr><th>פריט</th><th class="n">כמות</th><th class="n hide">שורות</th></tr></thead><tbody id="grRows"></tbody></table></div></div>';
     $('grBody').innerHTML = h;
-    sRows();
+    sRows(); vsRows();
+    $('grBody').querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => { vF = b.dataset.v; $('grBody').querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b)); vsRows(); }));
     $('grBody').querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { sFilter = b.dataset.f; $('grBody').querySelectorAll('[data-f]').forEach((x) => x.classList.toggle('on', x === b)); sRows(); }));
     $('grQ').addEventListener('input', () => { sQ = $('grQ').value.trim(); sRows(); });
     $('grXc').onclick = () => xlsx(false);
@@ -388,6 +411,27 @@
       const x = await api('rcvClose', { docId: d.id, reopen: true }); if (!x.ok) return say(x.error, 'err');
       say('✓ הקבלה נפתחה מחדש'); d.status = 'open'; startDoc(d);
     };
+  }
+  /* 📝 against the order (24/11): every barcode of the order or of the receipt — missing / partly / extra / as ordered */
+  let vF = 'diff';
+  const vsKind = (x) => (x.ordered > 0 && x.received === 0 ? 'miss' : x.received < x.ordered ? 'part' : x.received > x.ordered ? 'extra' : 'ok');
+  const VS = { miss: ['❌ לא הגיע', '#b91c1c', '#fef2f2'], part: ['⚠ הגיע חלקית', '#c2410c', '#fff7ed'], extra: ['➕ עודף / לא הוזמן', '#7c3aed', '#f5f3ff'], ok: ['✓ כמו שהוזמן', '#166534', '#fff'] };
+  function vsCard() {
+    if (!sum.vs || !sum.order) return '';
+    const n = { miss: 0, part: 0, extra: 0, ok: 0 }; sum.vs.forEach((x) => n[vsKind(x)]++);
+    return '<div class="iv-card"><h3>📝 מול הזמנה ' + sum.order.id + '</h3><div class="iv-mut">ההזמנה של ' + e(sum.order.opened_by || '') + ' · ' + when(sum.order.opened_at) + (sum.doc.status === 'open' ? ' — הקבלה עוד פתוחה, ההשוואה מתעדכנת בכל כניסה.' : '') + '</div>' +
+      '<div class="iv-pills"><span style="background:#fef2f2;color:#b91c1c">❌ ' + n.miss + ' לא הגיעו</span><span style="background:#fff7ed;color:#c2410c">⚠ ' + n.part + ' חלקית</span><span style="background:#f5f3ff;color:#7c3aed">➕ ' + n.extra + ' עודף</span><span style="background:#dcfce7;color:#166534">✓ ' + n.ok + ' תקין</span></div>' +
+      '<div class="iv-chips"><button data-v="diff"' + (vF === 'diff' ? ' class="on"' : '') + '>רק הפרשים (' + (n.miss + n.part + n.extra) + ')</button><button data-v="all"' + (vF === 'all' ? ' class="on"' : '') + '>הכול (' + sum.vs.length + ')</button></div>' +
+      '<div class="iv-wrap" style="max-height:340px"><table class="iv-tbl" style="min-width:0"><thead><tr><th>פריט</th><th class="n">הוזמן</th><th class="n">התקבל</th><th class="n">הפרש</th></tr></thead><tbody id="grVs"></tbody></table></div></div>';
+  }
+  function vsRows() {
+    if (!$('grVs')) return;
+    const order = { miss: 0, part: 1, extra: 2, ok: 3 };
+    const R = sum.vs.filter((x) => vF === 'all' || vsKind(x) !== 'ok').sort((a, b) => order[vsKind(a)] - order[vsKind(b)]);
+    $('grVs').innerHTML = R.map((x) => { const k = vsKind(x), d = x.received - x.ordered;
+      return '<tr style="background:' + VS[k][2] + '"><td><b>' + e(x.known ? x.name : '⛔ ' + (x.new_name || 'לא במגוון')) + '</b><span class="bc">' + e(x.barcode) + '</span><small style="color:' + VS[k][1] + ';font-weight:800">' + VS[k][0] + '</small></td>' +
+        '<td class="n">' + fmt(x.ordered) + '</td><td class="n">' + fmt(x.received) + '</td><td class="n" style="color:' + VS[k][1] + '">' + (d > 0 ? '+' : '') + fmt(d) + '</td></tr>'; }).join('') ||
+      '<tr><td colspan="4" class="iv-mut">✓ הכול הגיע בדיוק כמו שהוזמן</td></tr>';
   }
   function sRows() {
     let R = sum.rows.slice().sort((a, b) => (a.known === b.known ? String(a.name || a.notes || '').localeCompare(String(b.name || b.notes || ''), 'he') : a.known ? 1 : -1));
@@ -423,6 +467,11 @@
       const s2 = X.utils.aoa_to_sheet([hd(['ברקוד', 'שם המוצר (מההערות)', 'כמות', 'מי סרק'])].concat(red.map((x) => [txt(x.barcode), x.notes || '', nm(x.qty), x.people || ''])));
       s2['!cols'] = [{ wch: 16 }, { wch: 40 }, { wch: 9 }, { wch: 18 }]; s2['!views'] = [{ RTL: true }];
       X.utils.book_append_sheet(wb, s2, 'להקמה בקומקס');
+      if (sum.vs) {
+        const s4 = X.utils.aoa_to_sheet([hd(['ברקוד', 'שם', 'הוזמן', 'התקבל', 'הפרש', 'מצב'])].concat(sum.vs.map((x) => [txt(x.barcode), x.known ? x.name || '' : x.new_name || '', nm(x.ordered), nm(x.received), nm(x.received - x.ordered), VS[vsKind(x)][0]])));
+        s4['!cols'] = [{ wch: 16 }, { wch: 34 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 18 }]; s4['!views'] = [{ RTL: true }];
+        X.utils.book_append_sheet(wb, s4, 'מול הזמנה ' + sum.order.id);
+      }
       const all = await api('rcvLines', { docId: d.id });
       if (all.ok) {
         const s3 = X.utils.aoa_to_sheet([hd(['תאריך ושעה', 'ברקוד', 'שם', 'כמות', 'מי סרק', 'הערה'])].concat(all.lines.slice().reverse().map((x) => [when(x.at), txt(x.barcode), x.known ? x.name : '⛔ ' + (x.note || ''), nm(x.qty), x.by_name || '', x.known ? x.note || '' : 'לא במגוון'])));
