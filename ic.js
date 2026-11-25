@@ -265,6 +265,7 @@
       if (!r.known) tags.push(['⛔ לא בקומקס', '#fee2e2', '#991b1b']);
       if (st === 'invalid') tags.push(['❌ ברקוד לא תקין', '#fee2e2', '#991b1b']);
       if (r.suffix) tags.push(['הושלם מ-' + r.suffix + ' ספרות', '#e0f2fe', '#075985']);
+      if (r.altOf) tags.push(['🔗 ברקוד נוסף ' + r.altOf + ' ← הראשי', '#e0f2fe', '#075985']);
       if (promo) tags.push(['מבצע', '#fef3c7', '#92400e']);
       if (overSale(r)) tags.push(['מעל מחיר המכירה ' + money(r.salePrice), '#ffedd5', '#9a3412']);
       if (costOff(r)) tags.push(['עלות בקומקס ' + money(r.cost), '#e0e7ff', '#3730a3']);

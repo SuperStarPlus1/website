@@ -365,7 +365,7 @@
       '</div><input class="iv-in" id="ivConf" inputmode="numeric" autocomplete="off" dir="ltr" style="text-align:right;margin-top:6px" placeholder="הברקוד שוב">' : '';
     const ok = !item.known && item.src !== 'scan' && item.check === 'ok' ? '<div class="iv-mut" style="color:#166534;font-weight:700">✓ הברקוד תקין (ספרת הביקורת מתאימה)</div>' : '';
     if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי בקטלוג</div>' + big(code) + '<div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות מה המוצר.</div>' + ok + conf;
-    else if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' + seen;
+    else if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' + (item.alt ? '<div class="gr-soft" style="background:#e0f2fe;color:#075985">🔗 נסרק ברקוד נוסף ' + e(item.alt) + ' — נרשם תחת הברקוד הראשי בקומקס</div>' : '') + seen;
     else h = '<div class="iv-item u"><div class="nm">' + (item.shortMiss ? '🔎 לא נמצא מוצר שהברקוד שלו מסתיים ב-' + e(item.barcode) : '⚠ פריט לא קיים בקטלוג') + '</div>' + big(item.barcode) + ok + conf +
       '<div class="iv-warn">כתבו בהערות מה המוצר (שם, גודל, יצרן) — חובה.</div>' + seen;
     h += '<input class="iv-in iv-qty" id="ivQty" inputmode="decimal" enterkeyhint="done" placeholder="כמות" autocomplete="off">' +

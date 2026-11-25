@@ -282,7 +282,7 @@
     const pv = item.prevNew || {};
     let vat = typeof pv.priceVat === 'boolean' ? pv.priceVat : null;
     let h;
-    if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' +
+    if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' + (item.alt ? '<div class="gr-soft" style="background:#e0f2fe;color:#075985">🔗 נסרק ברקוד נוסף ' + e(item.alt) + ' — נרשם תחת הברקוד הראשי בקומקס</div>' : '') +
       (item.archived ? '<div class="gr-soft">🗄 הפריט בארכיון בקומקס</div>' : '') + (item.otherSupplier ? '<div class="gr-soft">ℹ בקומקס הפריט רשום אצל ספק אחר: ' + e(item.otherSupplier) + '</div>' : '') + seen;
     else h = '<div class="iv-item po-new"><div class="nm">🆕 פריט לא בקטלוג</div>' + big(item.barcode) + conf +
       '<label class="po-chk"><input type="checkbox" id="poIsNew"' + (pv.name ? ' checked' : '') + '>🆕 זה פריט חדש (חובה לסמן)</label>' +

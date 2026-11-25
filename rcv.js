@@ -301,7 +301,7 @@
       '</div><input class="iv-in" id="grConf" inputmode="numeric" autocomplete="off" dir="ltr" style="text-align:right;margin-top:6px" placeholder="הברקוד שוב">' : '';
     let h;
     if (item.offline) h = '<div class="iv-item u"><div class="nm">📡 אין חיבור — לא בדקתי במגוון</div>' + big(code) + '<div class="iv-mut">הכמות תישמר בטלפון ותישלח כשיחזור החיבור. כדאי לכתוב בהערות את שם המוצר.</div>' + conf;
-    else if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' +
+    else if (item.known) h = '<div class="iv-item k"><div class="iv-head">' + (item.img ? pic(item.barcode, 96) : '') + '<div><div class="nm">' + e(item.name) + '</div><div class="bc">' + e(item.barcode) + '</div></div></div>' + (item.alt ? '<div class="gr-soft" style="background:#e0f2fe;color:#075985">🔗 נסרק ברקוד נוסף ' + e(item.alt) + ' — נרשם תחת הברקוד הראשי בקומקס</div>' : '') +
       (item.archived ? '<div class="gr-soft">🗄 הפריט בארכיון בקומקס</div>' : '') + (item.otherSupplier ? '<div class="gr-soft">ℹ בקומקס הפריט רשום אצל ספק אחר: ' + e(item.otherSupplier) + '</div>' : '') + seen;
     else h = '<div class="iv-item gr-red"><div class="nm">⛔ לא במגוון</div><span class="gr-tag">להקים בקומקס לפני הזנת החשבונית</span>' + big(item.barcode) + conf +
       '<div class="iv-warn" style="color:#b91c1c">כתבו את שם המוצר (שם, גודל, יצרן) — חובה. הפריט ייקלט כרגיל.</div>' + seen;
