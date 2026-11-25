@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.39.3',
-  date: '24/11/2026',
+  version: '2.39.4',
+  date: '25/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'סוג תעודה: בקבלת סחורה ובקליטת חשבונית בוחרים 📄 תעודת משלוח או 🧾 חשבונית (בקליטה — המערכת מזהה לבד מהכותרת, ואפשר להחליף)',
     '🔗 ברקודים נוספים מקומקס: מוצר שנסרק בברקוד הנוסף שלו (למשל חלב בד"ץ) מזוהה כמוצר עצמו — בספירת מלאי, קבלת סחורה, הזמנות וחשבוניות',
     'קליטת חשבונית: 📎 העלאת קובץ סרוק — PDF (מתפצל לבד לעמודים) או תמונה; במחשב אפשר לגרור את הקובץ',
     '🔎 חיפוש לפי שם (למשל ירקות בלי ברקוד) בספירת מלאי, קבלת סחורה, הזמנות ושילוט: מקלידים חלק מהשם — כפתור "אבג" פותח מקלדת אותיות',

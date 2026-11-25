@@ -377,7 +377,7 @@
     const units = R.reduce((t, x) => t + x.qty, 0);
     let h = '<div class="iv-card" style="padding:12px 16px"><h3>📝 ' + e(oname(d)) + '<span class="iv-badge" style="background:' + s[1] + ';color:' + s[2] + '">' + s[0] + '</span></h3>' +
       '<div class="iv-mut">👤 ' + e(d.opened_by || '') + ' · נפתחה ' + when(d.opened_at) + (d.sent_at ? ' · נשלחה ' + when(d.sent_at) + (d.sent_by ? ' (' + e(d.sent_by) + ')' : '') : '') + (d.note ? ' · ' + e(d.note) : '') + '</div>' +
-      (sum.receipts.length ? '<div class="iv-mut" style="margin-top:4px">📥 קבלות סחורה לפי ההזמנה: ' + sum.receipts.map((x) => when(x.opened_at) + (x.doc_no ? ' (ת.מ. ' + e(x.doc_no) + ')' : '') + (x.status === 'open' ? ' — פתוחה' : '')).join(' · ') + '</div>' : '') + '</div>' +
+      (sum.receipts.length ? '<div class="iv-mut" style="margin-top:4px">📥 קבלות סחורה לפי ההזמנה: ' + sum.receipts.map((x) => when(x.opened_at) + (x.doc_no ? ' (' + (x.doc_type === 'invoice' ? 'חשבונית ' : 'ת.מ. ') + e(x.doc_no) + ')' : '') + (x.status === 'open' ? ' — פתוחה' : '')).join(' · ') + '</div>' : '') + '</div>' +
       '<div class="iv-kpis"><div class="iv-kpi"><b>' + fmt(R.length) + '</b><span>פריטים</span></div><div class="iv-kpi"><b>' + fmt(units) + '</b><span>יחידות</span></div>' +
       '<div class="iv-kpi"><b style="color:' + (nw.length ? '#6d28d9' : '#16a34a') + '">' + nw.length + '</b><span>פריטים חדשים</span></div><div class="iv-kpi"><b>' + (sum.receipts.length) + '</b><span>קבלות סחורה</span></div></div>';
     if (nw.length) h += '<div class="iv-card po-new" style="padding:12px 16px"><h3 style="color:#6d28d9">🆕 ' + nw.length + ' פריטים חדשים</h3><div class="iv-mut">לא קיימים בקטלוג — להקים בקומקס (עם המחיר המוסכם) לפני קבלת הסחורה והחשבונית. הם לא נכנסים לקובץ לקומקס.</div>' +

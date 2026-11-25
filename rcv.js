@@ -40,7 +40,8 @@
   const gs1Ok = (d) => { let sum = 0; for (let i = d.length - 2, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += Number(d[i]) * w; return (10 - (sum % 10)) % 10 === Number(d[d.length - 1]); };
   const upcE2A = (e8) => { const m = e8.slice(1, 7), x = m[5]; return e8[0] + (x <= '2' ? m.slice(0, 2) + x + '0000' + m.slice(2, 5) : x === '3' ? m.slice(0, 3) + '00000' + m.slice(3, 5) : x === '4' ? m.slice(0, 4) + '00000' + m[4] : m.slice(0, 5) + '0000' + x) + e8[7]; };
   const bcCheck = (b) => !/^\d+$/.test(b) ? 'confirm' : [12, 13, 14].includes(b.length) ? (gs1Ok(b) ? 'ok' : 'bad') : b.length === 8 ? (gs1Ok(b) || (/^[01]/.test(b) && gs1Ok(upcE2A(b))) ? 'ok' : 'bad') : 'confirm';
-  const dname = (d) => (d.supplier_name || 'ספק') + (d.doc_no ? ' · ת.מ. ' + d.doc_no : '');
+  const dtype = (d) => (d.doc_type === 'invoice' ? 'חשבונית' : 'ת.מ.');
+  const dname = (d) => (d.supplier_name || 'ספק') + ' · ' + dtype(d) + (d.doc_no ? ' ' + d.doc_no : '');
   const NOT_IN = '⛔ לא במגוון — להקים בקומקס';
 
   let view = 'list', L = null, cur = null, lines = [], item = null, sum = null, sFilter = 'all', sQ = '', camWanted = false, busy = false, sups = null, kt = [];
@@ -55,6 +56,8 @@
     '.gr-sup{max-height:240px;overflow:auto;margin-top:6px;border:1.5px solid #e2e8f0;border-radius:12px}' +
     '.gr-sup button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:right;background:#fff;border:0;border-bottom:1px solid #f1f5f9;padding:10px 12px;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;color:#0f172a}' +
     '.gr-sup button small{color:#94a3b8;font-weight:600;white-space:nowrap}.gr-sup button.on{background:#eef2ff;color:#3730a3}' +
+    '.gr-dt{display:flex;gap:8px;margin-top:10px}.gr-dt button{flex:1;padding:11px 8px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;font:inherit;font-size:15px;font-weight:800;color:#475569;cursor:pointer}' +
+    '.gr-dt button.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}' +
     '.iv-tbl tr.rr td{background:#fef2f2}.iv-ln.rr{background:#fef2f2}.iv-ln.rr .t b{color:#b91c1c}' +
     '</style>');
 
@@ -88,8 +91,9 @@
     L = r;
     const openD = r.docs.filter((d) => d.status === 'open'), done = r.docs.filter((d) => d.status !== 'open');
     let h = pendBar();
-    if (!old) h += '<div class="iv-card" style="background:linear-gradient(135deg,#ecfdf5,#eff6ff)"><h3>➕ קבלה חדשה</h3><div class="iv-mut">משאית / משלוח אחד = קבלה אחת. בוחרים ספק, ואם יש — מספר תעודת המשלוח.</div>' +
+    if (!old) h += '<div class="iv-card" style="background:linear-gradient(135deg,#ecfdf5,#eff6ff)"><h3>➕ קבלה חדשה</h3><div class="iv-mut">משאית / משלוח אחד = קבלה אחת. בוחרים ספק, סוג התעודה שהגיעה עם הסחורה, ואם יש — את המספר שלה.</div>' +
       '<input class="iv-in" id="grSupQ" style="margin-top:10px;font-size:15px" placeholder="🔎 ספק — הקלידו חלק מהשם" autocomplete="off"><div class="gr-sup" id="grSupL"><div class="iv-mut" style="padding:10px">טוען ספקים…</div></div><div id="grOrd"></div>' +
+      '<div class="gr-dt" id="grDt"><button type="button" data-t="delivery" class="on">📄 תעודת משלוח</button><button type="button" data-t="invoice">🧾 חשבונית</button></div>' +
       '<div class="iv-row" style="margin-top:8px"><input class="iv-in" id="grDocNo" style="font-size:15px" inputmode="numeric" placeholder="מספר תעודת משלוח (לא חובה)"></div>' +
       '<input class="iv-in" id="grNote" style="margin-top:8px;font-size:14px" placeholder="הערה (לא חובה)" maxlength="200">' +
       '<div class="iv-acts"><button class="iv-btn iv-pri" id="grNew" style="flex:1" disabled>פתיחת קבלה</button></div></div>';
@@ -117,7 +121,13 @@
       (L.admin ? '<button class="iv-btn" data-arc="' + d.id + '" data-back="' + (d.archived ? '1' : '0') + '" style="margin-inline-start:auto;color:#64748b">' + (d.archived ? '↩ החזרה מהארכיון' : '🗄 לארכיון') + '</button>' : '') + '</div></div>';
   }
   async function supPicker() {
-    let chosen = null, ordSel = 0, ordSeq = 0;
+    let chosen = null, ordSel = 0, ordSeq = 0, docType = 'delivery';
+    // 25/11 (the owner): the goods came with a delivery note or straight with an invoice
+    $('grDt').querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => {
+      docType = b.dataset.t;
+      $('grDt').querySelectorAll('[data-t]').forEach((x) => x.classList.toggle('on', x === b));
+      $('grDocNo').placeholder = docType === 'invoice' ? 'מספר חשבונית (לא חובה)' : 'מספר תעודת משלוח (לא חובה)';
+    }));
     // 📝 the chosen supplier's sent orders: the delivery is received against one of them (or without an order)
     const orders = async () => {
       ordSel = 0; const box = $('grOrd'); if (!box) return;
@@ -151,7 +161,7 @@
     $('grNew').onclick = async () => {
       if (!chosen) return say('בחרו ספק מהרשימה', 'err');
       const b = $('grNew'); b.disabled = true;
-      const x = await api('rcvOpen', { supplier: chosen.code, supplierName: chosen.name, docNo: $('grDocNo').value.trim(), note: $('grNote').value.trim(), orderId: ordSel || undefined });
+      const x = await api('rcvOpen', { supplier: chosen.code, supplierName: chosen.name, docType, docNo: $('grDocNo').value.trim(), note: $('grNote').value.trim(), orderId: ordSel || undefined });
       b.disabled = false;
       if (!x.ok) return say(x.error, 'err');
       startDoc(x.doc);
@@ -453,7 +463,7 @@
     const wb = X.utils.book_new(), txt = (v) => ({ t: 's', v: String(v) }), nm = (v) => (v == null ? '' : { t: 'n', v: Number(v) });
     const hd = (a) => a.map((v) => ({ t: 's', v, s: { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } } }));
     const stamp = new Date(d.opened_at).toISOString().slice(0, 10).split('-').reverse().join('-');
-    const base = (d.supplier_name || 'ספק').replace(/[\\/:*?"<>|]/g, ' ').trim() + (d.doc_no ? ' ' + String(d.doc_no).replace(/[\\/:*?"<>|]/g, '') : '') + ' ' + stamp;
+    const base = (d.supplier_name || 'ספק').replace(/[\\/:*?"<>|]/g, ' ').trim() + (d.doc_type === 'invoice' ? ' חשבונית' : ' תמ') + (d.doc_no ? ' ' + String(d.doc_no).replace(/[\\/:*?"<>|]/g, '') : '') + ' ' + stamp;
     const known = R.filter((x) => x.known);
     if (!full) {
       // the invoices' "SAP מערכת" template — A serial · B barcode · C name · D qty · E/F blank · G price (empty here)

@@ -69,6 +69,8 @@
     '.ic-row .top button.on{background:#f59e0b;color:#fff}' +
     '.ic-pages{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.ic-pages a{flex:none;width:64px;height:84px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;background:#f8fafc;display:grid;place-items:center;font-size:22px;text-decoration:none}' +
     '.ic-pages img{width:100%;height:100%;object-fit:cover}' +
+    '.ic-dt{display:flex;gap:8px;margin:0 0 10px}.ic-dt button{flex:1;padding:10px 8px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;font:inherit;font-size:14.5px;font-weight:800;color:#475569;cursor:pointer}' +
+    '.ic-dt button.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}.ic-dt button:disabled{cursor:default}' +
     '.ic-opt{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-top:6px;cursor:pointer}.ic-opt input{width:20px;height:20px;accent-color:#4f46e5}' +
     '.ic-acc{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #f1f5f9;font-size:14.5px;font-weight:700}.ic-acc input{width:22px;height:22px;accent-color:#16a34a}' +
     '</style>');
@@ -118,10 +120,10 @@
       const x = await api('icArchive', { docId: Number(b.dataset.arc), back: b.dataset.back === '1' }); if (!x.ok) say(x.error, 'err'); showList(old);
     }));
     function card(d) {
-      return '<div class="iv-card"><h3>🧾 ' + e(d.supplier_name || d.ai_supplier || 'חשבונית #' + d.id) + (d.invoice_no ? ' · ' + e(d.invoice_no) : '') +
+      return '<div class="iv-card"><h3>' + (d.doc_type === 'delivery' ? '📄 ' : '🧾 ') + e(d.supplier_name || d.ai_supplier || 'מסמך #' + d.id) + ' · ' + (d.doc_type === 'delivery' ? 'ת.מ.' : 'חשבונית') + (d.invoice_no ? ' ' + e(d.invoice_no) : '') +
         (d.status === 'draft' ? '<span class="iv-badge" style="background:#fef3c7;color:#92400e">בעבודה</span>' : '<span class="iv-badge" style="background:#dcfce7;color:#166534">הסתיימה</span>') +
         (d.exported_at ? '<span class="iv-badge" style="background:#eef2ff;color:#4338ca">יוצאה ' + dm(d.exported_at) + '</span>' : '') + (d.archived ? '<span class="iv-badge" style="background:#f1f5f9;color:#64748b">🗄 ארכיון</span>' : '') + '</h3>' +
-        '<div class="iv-mut">👤 ' + e(d.created_by || '') + ' · ' + when(d.created_at) + (d.invoice_date ? ' · תאריך חשבונית ' + e(d.invoice_date) : '') + '</div>' +
+        '<div class="iv-mut">👤 ' + e(d.created_by || '') + ' · ' + when(d.created_at) + (d.invoice_date ? ' · תאריך ' + e(d.invoice_date) : '') + '</div>' +
         '<div class="iv-pills"><span>' + d.pageCount + ' עמודים</span><span>' + d.lines + ' שורות</span>' + (d.total != null ? '<span>' + money(d.total) + '</span>' : '') + (d.receipt_id ? '<span>📥 מול קבלה</span>' : '') + '</div>' +
         '<div class="iv-acts"><button class="iv-btn ' + (d.status === 'draft' ? 'iv-pri' : '') + '" data-go="' + d.id + '">' + (d.status === 'draft' ? '▶ להמשיך' : '📄 פתיחה') + '</button>' +
         (r.admin ? '<button class="iv-btn" data-arc="' + d.id + '" data-back="' + (d.archived ? '1' : '0') + '" style="margin-inline-start:auto;color:#64748b">' + (d.archived ? '↩ החזרה מהארכיון' : '🗄 לארכיון') + '</button>' : '') + '</div></div>';
@@ -159,8 +161,10 @@
     if (fresh && !links.length) setTimeout(() => $('icShot') && $('icShot').click(), 50);
   }
   const ro = () => D && D.status !== 'draft';
+  // 25/11 (the owner): the scanned paper is an invoice or a delivery note — the reading guesses, the person decides
+  const isDel = () => D && D.doc_type === 'delivery', tname = () => (isDel() ? 'תעודת משלוח' : 'חשבונית'), tno = () => (isDel() ? 'מספר תעודה' : 'מספר חשבונית');
   function draw() {
-    head('🧾 ' + (D.supplier_name || D.ai_supplier || 'חשבונית #' + D.id), true);
+    head((isDel() ? '📄 ' : '🧾 ') + (D.supplier_name || D.ai_supplier || tname() + ' #' + D.id), true);
     const st = stats();
     let h = '';
     // pages
@@ -169,8 +173,10 @@
         '<div class="iv-mut" id="icProg" style="margin-top:6px">' + (links.length ? 'עמוד נוסף? מצלמים אותו — השורות שלו מתווספות.' : 'מצלמים את העמוד הראשון (דף שלם, ישר, באור טוב), או מעלים קובץ סרוק — PDF של כמה עמודים מתפצל לבד.') +
         (window.matchMedia && matchMedia('(pointer:fine)').matches ? ' במחשב אפשר גם לגרור את הקובץ לכאן.' : '') + '</div>') + '</div>';
     // header
-    h += '<div class="iv-card"><h3>פרטי החשבונית</h3>' + (ro() ? '' : '<div class="iv-acts" style="margin:0 0 6px"><button class="iv-btn" id="icSupBtn" style="font-size:13px">' + (D.supplier ? '🔄 החלפת ספק' : '🔎 בחירת הספק מקומקס') + '</button>' + (D.supplier ? '<span class="iv-mut" style="align-self:center">✓ מקושר לספק בקומקס</span>' : '<span class="iv-mut" style="align-self:center;color:#c2410c">הספק לא מקושר לקומקס — בחרו אותו כדי לראות את קבלות הסחורה</span>') + '</div><div id="icSupBox"></div>') + '<div class="ic-f">' +
-      fld('ספק', 'supplier_name', D.supplier_name) + fld('מספר חשבונית', 'invoice_no', D.invoice_no) + fld('תאריך', 'invoice_date', D.invoice_date) + fld('סה"כ נטו (חייב מע"מ)', 'subtotal', D.subtotal, 1) +
+    h += '<div class="iv-card"><h3>פרטי המסמך</h3>' +
+      '<div class="ic-dt" id="icDt">' + [['invoice', '🧾 חשבונית'], ['delivery', '📄 תעודת משלוח']].map(([t, l]) => '<button type="button" data-t="' + t + '"' + ((D.doc_type || 'invoice') === t ? ' class="on"' : '') + (ro() ? ' disabled' : '') + '>' + l + '</button>').join('') + '</div>' +
+      (ro() ? '' : '<div class="iv-acts" style="margin:0 0 6px"><button class="iv-btn" id="icSupBtn" style="font-size:13px">' + (D.supplier ? '🔄 החלפת ספק' : '🔎 בחירת הספק מקומקס') + '</button>' + (D.supplier ? '<span class="iv-mut" style="align-self:center">✓ מקושר לספק בקומקס</span>' : '<span class="iv-mut" style="align-self:center;color:#c2410c">הספק לא מקושר לקומקס — בחרו אותו כדי לראות את קבלות הסחורה</span>') + '</div><div id="icSupBox"></div>') + '<div class="ic-f">' +
+      fld('ספק', 'supplier_name', D.supplier_name) + fld(tno(), 'invoice_no', D.invoice_no) + fld('תאריך', 'invoice_date', D.invoice_date) + fld('סה"כ נטו (חייב מע"מ)', 'subtotal', D.subtotal, 1) +
       fld('מע"מ', 'vat', D.vat, 1) + fld('סה"כ לתשלום', 'total', D.total, 1) + '</div>' +
       (D.ai_supplier && D.ai_supplier !== D.supplier_name ? '<div class="iv-mut" style="margin-top:6px">נקרא מהחשבונית: ' + e(D.ai_supplier) + (D.supplier ? '' : ' — לא נמצא ספק תואם בקומקס, אפשר לתקן את השם') + '</div>' : '') +
       '<label class="ic-opt"><input type="checkbox" id="icO1"' + (opts.priceFromTotal ? ' checked' : '') + (ro() ? ' disabled' : '') + '>מחיר ליחידה = סה"כ שורה ÷ כמות (מנטרל הנחות שורה)</label>' +
@@ -180,7 +186,7 @@
     h += '<div id="icBans">' + bans(st) + '</div>';
     // receipt
     h += '<div class="iv-card"><h3>📥 מול קבלת הסחורה</h3>' + (receipts.length ? '<select class="iv-in" id="icRcv" style="font-size:14.5px"' + (ro() ? ' disabled' : '') + '><option value="">— בלי השוואה —</option>' +
-      receipts.map((x) => '<option value="' + x.id + '"' + (Number(D.receipt_id) === x.id ? ' selected' : '') + '>קבלה ' + when(x.opened_at) + (x.doc_no ? ' · ת.מ. ' + e(x.doc_no) : '') + (x.opened_by ? ' · ' + e(x.opened_by) : '') + (x.status === 'open' ? ' (פתוחה)' : '') + '</option>').join('') + '</select>'
+      receipts.map((x) => '<option value="' + x.id + '"' + (Number(D.receipt_id) === x.id ? ' selected' : '') + '>קבלה ' + when(x.opened_at) + (x.doc_no ? (x.doc_type === 'invoice' ? ' · חשבונית ' : ' · ת.מ. ') + e(x.doc_no) : '') + (x.opened_by ? ' · ' + e(x.opened_by) : '') + (x.status === 'open' ? ' (פתוחה)' : '') + '</option>').join('') + '</select>'
       : '<div class="iv-mut">אין קבלות סחורה של הספק הזה מ-21 הימים האחרונים' + (D.supplier ? '' : ' (או שהספק לא זוהה בקומקס)') + '.</div>') + '<div id="icCmp"></div></div>';
     // rows
     h += '<div class="iv-card"><h3>שורות (' + rows.length + ')</h3><div class="iv-chips" id="icChips"></div><div id="icRows"></div>' + (ro() ? '' : '<div class="iv-acts"><button class="iv-btn" id="icAdd">+ שורה</button></div>') + '</div>';
@@ -199,6 +205,11 @@
       [['icO1', 'priceFromTotal'], ['icO2', 'packMode'], ['icO3', 'vatIncluded']].forEach(([id, k]) => $(id).addEventListener('change', () => { opts[k] = $(id).checked; if (k === 'vatIncluded') vatAuto = true; queue(); refresh(); drawRows(); }));
     }
     if ($('icSupBtn')) $('icSupBtn').onclick = supPick;
+    if (!ro()) $('icDt').querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', async () => {
+      if ((D.doc_type || 'invoice') === b.dataset.t) return;
+      D.doc_type = b.dataset.t; draw();
+      const x = await api('icSave', { docId: D.id, doc_type: D.doc_type }); if (!x.ok) say(x.error, 'err');
+    }));
     if ($('icRcv')) $('icRcv').onchange = async () => { D.receipt_id = Number($('icRcv').value) || null; await api('icSave', { docId: D.id, receiptId: D.receipt_id }); showDoc(D.id); };
     drawRows(); drawCmp(); drawEnd();
   }
@@ -353,13 +364,13 @@
   function diffText(L) {
     const c = L.filter((x) => x.iq > x.rq + 0.001);
     const tot = c.reduce((t, x) => t + (x.price != null ? (x.iq - x.rq) * x.price : 0), 0);
-    return 'הפרשים בחשבונית ' + (D.invoice_no || '') + ' (' + (D.invoice_date || '') + ') — סופרסטאר פלוס\nספק: ' + (D.supplier_name || '') + '\n\n' +
+    return 'הפרשים ב' + tname() + ' ' + (D.invoice_no || '') + ' (' + (D.invoice_date || '') + ') — סופרסטאר פלוס\nספק: ' + (D.supplier_name || '') + '\n\n' +
       c.map((x, i) => (i + 1) + '. ' + x.name + ' — ברקוד ' + x.bcs.join(' / ') + '\n   חויב ' + fmt(x.iq) + ', התקבל ' + fmt(x.rq) + ', חסר ' + fmt(x.iq - x.rq) + (x.price != null ? ' × ' + money(x.price) + ' = ' + money((x.iq - x.rq) * x.price) : '')).join('\n') +
       '\n\nסה"כ לזיכוי: ' + money(tot) + ' לפני מע"מ';
   }
   async function diffShare(L) {
     const t = diffText(L);
-    if (navigator.share) { try { await navigator.share({ title: 'הפרשים בחשבונית', text: t }); return; } catch (x) { if (/Abort/i.test(String(x && x.name))) return; } }
+    if (navigator.share) { try { await navigator.share({ title: 'הפרשים ב' + tname(), text: t }); return; } catch (x) { if (/Abort/i.test(String(x && x.name))) return; } }
     try { await navigator.clipboard.writeText(t); say('✓ ההפרשים הועתקו — הדביקו בוואטסאפ או במייל לספק'); } catch (_) { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); }
   }
   async function diffXlsx(L) {
@@ -370,7 +381,7 @@
     const hd = (a) => a.map((v) => ({ t: 's', v, s: { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } } }));
     const c = L.filter((x) => x.iq > x.rq + 0.001), ex = L.filter((x) => x.rq > x.iq + 0.001);
     const tot = c.reduce((s2, x) => s2 + (x.price != null ? (x.iq - x.rq) * x.price : 0), 0);
-    const a1 = [[t('ספק: ' + (D.supplier_name || '') + ' · חשבונית ' + (D.invoice_no || '') + ' · ' + (D.invoice_date || ''))], []]
+    const a1 = [[t('ספק: ' + (D.supplier_name || '') + ' · ' + tname() + ' ' + (D.invoice_no || '') + ' · ' + (D.invoice_date || ''))], []]
       .concat([hd(['ברקוד', 'שם', 'חויב', 'התקבל', 'חסר', 'מחיר ליחידה (לפני מע"מ)', 'לזיכוי'])])
       .concat(c.map((x) => [t(x.bcs.join(' / ')), x.name, n(x.iq), n(x.rq), n(x.iq - x.rq), n(x.price), n(x.price != null ? (x.iq - x.rq) * x.price : null)]))
       .concat([[], ['', 'סה"כ לזיכוי (לפני מע"מ)', '', '', '', '', n(tot)]]);
@@ -417,7 +428,7 @@
       return;
     }
     box.innerHTML = '<h3>✓ סיום וייצוא לקומקס</h3>' +
-      (metaMissing ? '<div class="ic-ban o">⚠ חסר ' + [!D.supplier_name && 'ספק', !D.invoice_no && 'מספר חשבונית', !D.invoice_date && 'תאריך'].filter(Boolean).join(', ') + ' — צריך אותם במסך הקליטה בקומקס.</div>' : '') +
+      (metaMissing ? '<div class="ic-ban o">⚠ חסר ' + [!D.supplier_name && 'ספק', !D.invoice_no && tno(), !D.invoice_date && 'תאריך'].filter(Boolean).join(', ') + ' — צריך אותם במסך הקליטה בקומקס.</div>' : '') +
       (s.nw ? '<label class="ic-opt" style="background:#fef2f2;border-radius:12px;padding:10px"><input type="checkbox" id="icConf"' + (opts.newConfirmed ? ' checked' : '') + '>✓ הקמתי בקומקס את ' + s.nw + ' הפריטים החדשים</label>' : '') +
       '<div class="iv-acts"><button class="iv-btn iv-ok" id="icDone" style="flex:1"' + (s.nw && !opts.newConfirmed ? ' disabled' : '') + '>✓ סיום ⬇ קובץ לקומקס</button></div>' +
       '<div class="iv-mut" style="margin-top:6px">הקובץ: מספר שורה, ברקוד, שם, כמות' + (opts.packMode ? ' (× מארז)' : '') + ', ריק, ריק, מחיר ליחידה' + (opts.vatIncluded ? ' אחרי הורדת מע"מ' : '') + '. בקומקס: קליטה ← "ללא הזמנות" ← ייבוא מאקסל ← תבנית "SAP מערכת".</div>';
@@ -439,7 +450,7 @@
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 8 }, { wch: 16 }, { wch: 34 }, { wch: 8 }, { wch: 6 }, { wch: 6 }, { wch: 10 }];
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'חשבונית');
     const clean = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 40);
-    X.writeFile(wb, 'חשבונית לקומקס - ' + (clean(D.supplier_name) || 'ספק') + ' - ' + (clean(D.invoice_no) || D.id) + '.xlsx');
+    X.writeFile(wb, tname() + ' לקומקס - ' + (clean(D.supplier_name) || 'ספק') + ' - ' + (clean(D.invoice_no) || D.id) + '.xlsx');
     api('icExported', { docId: D.id });
   }
 
