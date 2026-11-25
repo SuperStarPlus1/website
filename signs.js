@@ -159,13 +159,16 @@
       $('sgX').addEventListener('click', close);
       $('sgCalBtn').addEventListener('click', showCal);
     }
+    if (!hist && window.OvBack) hist = OvBack('sgOv', 'sgBack', close);
+    if (hist) hist.arm();
     $('sgOv').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     if (!slots.length) slots = Array(PAPERS[kind].n).fill(null);
     draw();
     load().catch(() => say('לא הצלחתי לטעון את המחירים והמבצעים — בדקו חיבור', 'err'));
   }
-  function close() { camStop(); $('sgOv').classList.add('hidden'); document.body.style.overflow = ''; }
+  let hist = null;   // the phone's BACK button (scan-cam.js OvBack)
+  function close(byBack) { camStop(); $('sgOv').classList.add('hidden'); document.body.style.overflow = ''; if (hist && byBack !== true) hist.done(); }
 
   function setKind(k) {
     if (k === kind) return;

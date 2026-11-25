@@ -81,14 +81,17 @@
     if (!$('icOv')) {
       document.body.insertAdjacentHTML('beforeend', '<div id="icOv" class="hidden"><div class="iv-top"><button id="icBack" hidden>→</button><h2 id="icTitle">🧾 קליטת חשבונית</h2><span class="sp"></span>' +
         '<button id="icX">✕ סגירה</button></div><div class="iv-body" id="icBody"></div></div>');
-      $('icX').addEventListener('click', close);
+      $('icX').addEventListener('click', () => { if (view === 'doc' || view === 'acc') { flushSave(); showList(); } else close(); });
       $('icBack').addEventListener('click', () => { flushSave(); showList(); });
     }
+    if (!hist && window.OvBack) hist = OvBack('icOv', 'icBack', close);
+    if (hist) hist.arm();
     $('icOv').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     showList();
   }
-  function close() { flushSave(); $('icOv').classList.add('hidden'); document.body.style.overflow = ''; }
+  let hist = null;   // the phone's BACK button (scan-cam.js OvBack)
+  function close(byBack) { flushSave(); $('icOv').classList.add('hidden'); document.body.style.overflow = ''; if (hist && byBack !== true) hist.done(); }
   function head(t, back) { $('icTitle').textContent = t; $('icBack').hidden = !back; }
 
   /* ================= the list ================= */

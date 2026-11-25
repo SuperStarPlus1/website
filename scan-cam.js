@@ -128,3 +128,22 @@
   }
   window.ScanCam = { start, stop, photo, on: () => on };
 })();
+
+// 25/11 (the owner: "closing an invoice closes the whole system"): the full-screen screens (📦 📥 📝 🧾 🏷️) never told the
+// browser about themselves, so the phone's BACK button left the site. Each screen now holds one history entry while it is
+// open: BACK goes one level up inside it (its → button), or closes it on its first page — never out of the system.
+window.OvBack = function (ovId, backId, closeFn) {
+  let armed = false;
+  const arm = () => { if (!armed) { try { history.pushState({ ov: ovId }, ''); armed = true; } catch (_) { /* old browser */ } } };
+  window.addEventListener('popstate', () => {
+    if (!armed) return;
+    armed = false;
+    const ov = document.getElementById(ovId);
+    if (!ov || ov.classList.contains('hidden')) return;
+    const b = document.getElementById(backId);
+    if (b && !b.hidden) { b.click(); arm(); } else closeFn(true);
+  });
+  // closed by its own ✕ — take our history entry back out (its popstate is then ignored)
+  const done = () => { if (armed) { armed = false; try { history.back(); } catch (_) { /* fine */ } } };
+  return { arm, done };
+};

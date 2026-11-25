@@ -72,12 +72,15 @@
       document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && $('grOv') && !$('grOv').classList.contains('hidden') && !(window.ScanCam && ScanCam.on())) close(); });
       window.addEventListener('online', flush);
     }
+    if (!hist && window.OvBack) hist = OvBack('grOv', 'grBack', close);
+    if (hist) hist.arm();
     $('grOv').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     showList();
     flush();
   }
-  function close() { camOff(); $('grOv').classList.add('hidden'); document.body.style.overflow = ''; }
+  let hist = null;   // the phone's BACK button (scan-cam.js OvBack)
+  function close(byBack) { camOff(); $('grOv').classList.add('hidden'); document.body.style.overflow = ''; if (hist && byBack !== true) hist.done(); }
   function head(t, back) { $('grTitle').textContent = t; $('grBack').hidden = !back; }
   function camOff() { camWanted = false; if (window.ScanCam) ScanCam.stop(); }
 

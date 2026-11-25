@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>בדיקת מחיר — סופרסטאר</title>
 <script src="img.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 <style>
   :root {
     --bg:      #f0f2f5;
@@ -455,8 +454,6 @@
 //  CONFIG
 // ════════════════════════════════════════════
 const CLOUD = "dj56w7nb9";
-const CSV_PRODUCTS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRQkkYTwMe4n3ViI8N474bKHGGNwqa0GTMwskoWEEOrWJeA-BUrCcK95FZHNqcNqxhlF2INxL9GO70z/pub?output=csv&gid=1527287591";
-const CSV_OFFERS   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMs2l8El7mo_qSLYEg7w2r2nE1rB65cenJvnspZOedBlCwDGAdsWLvT6NC8VTkOlYxBn7MI-1qW9n5/pub?output=csv&gid=361402565";
 
 let products = [];
 let offers   = [];
@@ -499,45 +496,32 @@ function saveToCache(key, data) {
     try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
 }
 
+// 25/11/2026: the old Google sheets are gone (the products one comes back empty) — the site's own files, sent by the main
+// register every morning (the same ones the 🏷️ signs use): data/products-he.json + data/promos-he.json ({cols, rows}).
+const DATA_V = () => new Date().toISOString().slice(0, 13);
+const asObjs = (f) => (f && f.rows ? f.rows.map((r) => Object.fromEntries(f.cols.map((c, i) => [c, r[i] == null ? '' : String(r[i])]))) : []);
+const getData = (f) => fetch('data/' + f + '?v=' + DATA_V(), { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+
 async function loadProducts() {
-    const cached = loadFromCache('products_cache_v2');
-    if (cached && cached.length) {
-        products = cached;
-        console.log('products from cache:', products.length);
-        return;
-    }
-    return new Promise(resolve => {
-        Papa.parse(CSV_PRODUCTS, {
-            download: true, header: true,
-            complete: r => {
-                products = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('products_cache_v2', products);
-                console.log('products loaded:', products.length);
-                resolve();
-            }, error: resolve
-        });
-    });
+    try { products = asObjs(await getData('products-he.json')).filter(x => x.Barcode && x.Barcode.trim()); }
+    catch (e) { products = []; console.log('products failed', e); }
+    console.log('products loaded:', products.length);
 }
 
 async function loadOffers() {
-    const cached = loadFromCache('offers_cache_v4');
-    if (cached && cached.length && cached[0].hasOwnProperty('AllBarcodes')) {
-        offers = cached;
-        console.log('offers from cache v4:', offers.length);
-        return;
-    }
-    return new Promise(resolve => {
-        Papa.parse(CSV_OFFERS, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: r => {
-                offers = r.data.filter(x => x.Barcode && x.Barcode.trim());
-                saveToCache('offers_cache_v4', offers);
-                const withAll = offers.filter(o=>o.AllBarcodes && o.AllBarcodes.length > 4);
-                console.log('[OFFERS] טעון:', offers.length, '| עם AllBarcodes:', withAll.length, '| דוגמה:', withAll[0]?.AllBarcodes?.slice(0,60));
-                resolve();
-            }, error: resolve
-        });
-    });
+    try { offers = asObjs(await getData('promos-he.json')).filter(x => x.Barcode && x.Barcode.trim()); }
+    catch (e) { offers = []; console.log('offers failed', e); }
+    console.log('offers loaded:', offers.length);
+}
+
+// Comax's EXTRA barcode (e.g. the same chocolate in another pack print) → the product's main barcode
+const API = 'https://otjhhljgdevazanrretx.supabase.co/functions/v1/api';
+async function altMain(bc) {
+    try {
+        const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'pcAlt', barcode: bc }) });
+        const j = await r.json();
+        return j && j.ok && j.main ? String(j.main) : null;
+    } catch (e) { return null; }
 }
 
 // ════════════════════════════════════════════
@@ -592,8 +576,12 @@ function lookup(bc) {
     });
 
     if (matches.length === 0) {
-        document.getElementById('not-found-bc').textContent = input;
-        document.getElementById('not-found').style.display = 'block';
+        if (/^\d{6,}$/.test(input) && !bc_alt_tried) {
+            bc_alt_tried = true;
+            altMain(input).then((main) => { if (main) { document.getElementById('barcode-input').value = main; lookup(main); } else lookupNotFound(input); bc_alt_tried = false; });
+            return;
+        }
+        lookupNotFound(input);
         return;
     }
     if (matches.length === 1) {
@@ -612,6 +600,12 @@ function lookup(bc) {
     showMultiResults(matches, input);
 }
 
+
+let bc_alt_tried = false;
+function lookupNotFound(input) {
+    document.getElementById('not-found-bc').textContent = input;
+    document.getElementById('not-found').style.display = 'block';
+}
 
 function showSingleResult(barcode, product, offer) {
     const imgUrl = `${prodImg(barcode)}`;

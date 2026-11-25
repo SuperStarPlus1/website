@@ -140,12 +140,15 @@
       document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && $('ivOv') && !$('ivOv').classList.contains('hidden') && !camOn) close(); });
       window.addEventListener('online', flush);
     }
+    if (!hist && window.OvBack) hist = OvBack('ivOv', 'ivBack', close);
+    if (hist) hist.arm();
     $('ivOv').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     showList();
     flush();
   }
-  function close() { camStop(); $('ivOv').classList.add('hidden'); document.body.style.overflow = ''; }
+  let hist = null;   // the phone's BACK button (scan-cam.js OvBack)
+  function close(byBack) { camStop(); $('ivOv').classList.add('hidden'); document.body.style.overflow = ''; if (hist && byBack !== true) hist.done(); }
   function head(title, back) { $('ivTitle').textContent = title; $('ivBack').hidden = !back; }
 
   /* ================= the list ================= */
