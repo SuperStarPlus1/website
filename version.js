@@ -1,10 +1,11 @@
 // The system's version — shown by the help icon (about.js). On each release: update here and bump CACHE in sw.js.
 window.APP_VERSION = {
   name: 'סופרסטאר פלוס — פורטל עובדים',
-  version: '2.39.6',
+  version: '2.39.7',
   date: '25/11/2026',
   guides: { employee: 'https://www.superstar-plus.co.il/shifts-guide.pdf', manager: 'https://www.superstar-plus.co.il/manager-guide.pdf' },
   notes: [
+    'שילוט: המחירים והמבצעים נטענים מחדש כל 5 דקות (בלי לרענן את הדף)',
     'שילוט מבצעים: שם הפריט מ"תאור להדפסה" של המבצע בקומקס (ולא משם המבצע עם המחיר); גם "3 ב 12.90ש" מזוהה כמחיר',
     'כפתור "חזור" של הטלפון במסכי ספירת מלאי, קבלת סחורה, הזמנות, חשבוניות ושילוט — חוזר שלב אחד אחורה בתוך המסך (ולא יוצא מהמערכת); ✕ בתוך חשבונית חוזר לרשימת החשבוניות',
     'בדיקת מחיר ללקוחות: מחירים ומבצעים מהקטלוג היומי של הקופה (במקום הגיליונות הישנים), ומזהה גם ברקודים נוספים מקומקס',

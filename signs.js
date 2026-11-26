@@ -47,15 +47,16 @@
   /* ---------- the data: the site's catalog and promotions ---------- */
   const nb = (b) => String(b || '').replace(/\D/g, '').replace(/^0+/, '');
   function load() {
-    if (data) return Promise.resolve(data);
+    // 26/11: the register sends every 10 minutes — data older than 5 minutes is read again (the old one serves meanwhile)
+    if (data && Date.now() - data.at < 5 * 60e3) return Promise.resolve(data);
     if (dataP) return dataP;
-    const get = (f) => fetch('data/' + f + '?v=' + new Date().toISOString().slice(0, 13), { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    const get = (f) => fetch('data/' + f + '?v=' + new Date().toISOString().slice(0, 16), { cache: 'no-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     dataP = Promise.all([get('promos-he.json'), get('products-he.json')]).then(([pr, pp]) => {
       const obj = (f) => f.rows.map((r) => Object.fromEntries(f.cols.map((c, i) => [c, r[i] == null ? '' : String(r[i])])));
       const promos = obj(pr), prods = new Map();
       for (const p of obj(pp)) prods.set(nb(p.Barcode), p);
       for (const o of promos) { let a = []; try { a = JSON.parse(o.AllBarcodes || '[]'); } catch (_) { a = []; } o._bcs = (a.length ? a : [o.Barcode]).map(String).filter(Boolean); o._keys = new Set(o._bcs.map(nb)); }
-      data = { promos, prods };
+      data = { promos, prods, at: Date.now() };
       return data;
     }).catch((x) => { dataP = null; throw x; });
     return dataP;
