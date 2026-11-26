@@ -64,7 +64,8 @@
   // 25/11/2026 (the owner: "some items have more than one promotion — how do I choose which to print?"): all of them
   const promosFor = (bc) => data.promos.filter((o) => o._keys.has(nb(bc)));
   // "קופסת גבינת אלרוחה 700 גרם 35.90 ש"ח" / "תפוזים ברשת 4 ק"ג ב 10 ש"ח" / "... 2 ב 10" → the name, the quantity, the price
-  const PRICE_RE = /\s*(?:(\d+(?:\.\d+)?)\s*(ק"ג|קג|ק״ג|יח'?|יח׳)?\s*ב[-\s]*)?(\d+(?:\.\d+)?)\s*(ש"ח|ש״ח|ש"|₪)?\s*$/;
+  // 26/11: also a bare ש ("3 ב 12.90ש")
+  const PRICE_RE = /\s*(?:(\d+(?:\.\d+)?)\s*(ק"ג|קג|ק״ג|יח'?|יח׳)?\s*ב[-\s]*)?(\d+(?:\.\d+)?)\s*(ש"ח|ש״ח|ש"|ש|₪)?\s*$/;
   const money = (v) => { const n = Number(v); return isFinite(n) ? n.toFixed(2) : ''; };
   const codesLine = (bcs) => bcs.length > 6 ? 'קודים שונים' : (bcs.length > 1 ? 'קודים: ' : 'קוד: ') + bcs.map((b) => String(b).slice(-6)).join(' / ');
   function fromPromo(o, bc) {
@@ -75,6 +76,8 @@
     if (priced) { qty = m[1] || ''; unit = m[2] ? (/^ק/.test(m[2]) ? 'ק"ג' : '') : ''; price = m[3]; }
     else { price = Number(o.Quanity) > 1 ? o.PriceDiscount : (o.UnitPrice || o.PriceDiscount); qty = Number(o.Quanity) > 1 ? String(Number(o.Quanity)) : ''; }
     if (!name) name = o.Name || desc;
+    // 26/11/2026 (the owner: "the signs take the promotion's name, not its description"): Comax's "תאור להדפסה" first
+    if (String(o.PrintName || '').trim()) name = String(o.PrintName).trim();
     const reg = data.prods.get(nb(o.Barcode)) || data.prods.get(nb(bc));
     const lines = [codesLine(o._bcs)];
     if (reg && Number(reg.Price) > 0) lines.push((weight ? 'מחיר רגיל לק"ג ' : "מחיר רגיל ליח' ") + money(reg.Price) + ' ₪');
